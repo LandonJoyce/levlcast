@@ -79,6 +79,85 @@ Return up to 5 peaks, sorted by score descending. If the transcript is too short
   }
 }
 
+export interface CoachReport {
+  overall_score: number;
+  stream_summary: string;
+  energy_trend: "building" | "declining" | "consistent" | "volatile";
+  strengths: string[];
+  improvements: string[];
+  best_moment: { time: string; description: string };
+  content_mix: { category: string; percentage: number }[];
+  recommendation: string;
+}
+
+/**
+ * Generate an AI stream coaching report from a transcript and detected peaks.
+ * Gives the streamer actionable feedback on what worked and what to improve.
+ */
+export async function generateCoachReport(
+  segments: TranscriptSegment[],
+  vodTitle: string,
+  peaks: Peak[]
+): Promise<CoachReport | null> {
+  const anthropic = new Anthropic();
+
+  const transcript = segments
+    .map((s) => `[${formatTime(s.start)}] ${s.text}`)
+    .join("\n");
+
+  const peaksSummary = peaks
+    .map((p) => `- ${p.title} at ${formatTime(p.start)} (${p.category}, score: ${p.score.toFixed(2)}): ${p.reason}`)
+    .join("\n");
+
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: `You are an expert Twitch stream growth coach. Analyze this stream and give the streamer specific, actionable feedback.
+
+Stream title: "${vodTitle}"
+
+Top moments detected:
+${peaksSummary || "No standout moments detected."}
+
+Transcript sample (first 4000 chars):
+${transcript.slice(0, 4000)}
+
+Give honest, specific coaching feedback. Be direct and actionable — not generic.
+
+IMPORTANT: No emojis anywhere in your response.
+
+Respond with ONLY a JSON object (no markdown, no code fences):
+{
+  "overall_score": <0-100 integer based on stream quality, engagement, and content variety>,
+  "stream_summary": "<2-3 sentence honest summary of the stream>",
+  "energy_trend": "<one of: building, declining, consistent, volatile>",
+  "strengths": ["<specific strength 1>", "<specific strength 2>"],
+  "improvements": ["<specific actionable improvement 1>", "<specific actionable improvement 2>"],
+  "best_moment": { "time": "<MM:SS>", "description": "<what happened and why it worked>" },
+  "content_mix": [
+    { "category": "<hype|funny|educational|gameplay|chat interaction>", "percentage": <0-100 integer> }
+  ],
+  "recommendation": "<single most important thing to do differently next stream>"
+}`,
+      },
+    ],
+  });
+
+  const text =
+    response.content[0].type === "text" ? response.content[0].text : "";
+
+  try {
+    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    return JSON.parse(cleaned) as CoachReport;
+  } catch {
+    console.error("Failed to parse coach report:", text);
+    return null;
+  }
+}
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);

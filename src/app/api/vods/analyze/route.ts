@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { downloadTwitchVodAudio } from "@/lib/twitch";
 import { transcribeBuffer } from "@/lib/deepgram";
-import { detectPeaks } from "@/lib/analyze";
+import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { getUserUsage } from "@/lib/limits";
 import { NextResponse } from "next/server";
 
@@ -86,12 +86,16 @@ export async function POST(request: Request) {
 
     console.log("[analyze] Peaks detected:", peaks.length);
 
-    // Step 3: Save results
+    // Step 3: Generate coach report
+    const coachReport = await generateCoachReport(segments, vod.title, peaks);
+
+    // Step 4: Save results
     await supabase
       .from("vods")
       .update({
         status: "ready",
         peak_data: peaks,
+        coach_report: coachReport,
       })
       .eq("id", vodId);
 

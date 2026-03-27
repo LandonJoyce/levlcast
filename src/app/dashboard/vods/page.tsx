@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { formatDuration } from "@/lib/utils";
-import { Film, Clock, Calendar } from "lucide-react";
+import { Film, Clock, Calendar, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 /** Status badge colors */
 function statusStyle(status: string) {
@@ -87,9 +88,14 @@ export default async function VodsPage() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-sm truncate mb-1.5">
-                  {vod.title}
-                </h3>
+                {vod.status === "ready" ? (
+                  <Link href={`/dashboard/vods/${vod.id}`} className="group flex items-center gap-1 mb-1.5">
+                    <h3 className="font-bold text-sm truncate group-hover:text-accent-light transition-colors">{vod.title}</h3>
+                    <ChevronRight size={14} className="flex-shrink-0 text-muted group-hover:text-accent-light transition-colors" />
+                  </Link>
+                ) : (
+                  <h3 className="font-bold text-sm truncate mb-1.5">{vod.title}</h3>
+                )}
                 <div className="flex items-center gap-4 text-xs text-muted mb-2">
                   <span className="inline-flex items-center gap-1">
                     <Calendar size={12} />
