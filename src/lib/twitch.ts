@@ -23,7 +23,8 @@ export async function getAppAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to get Twitch app token: ${res.status}`);
+    const body = await res.text();
+    throw new Error(`Failed to get Twitch app token: ${res.status} - ${body}`);
   }
 
   const json = await res.json();
