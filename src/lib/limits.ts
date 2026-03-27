@@ -3,7 +3,7 @@
  */
 
 export const FREE_LIMITS = {
-  analyses_per_month: 3,
+  analyses_per_month: 1,
   clips_total: 5,
 };
 
@@ -36,7 +36,8 @@ export async function getUserUsage(
 
   const limits = plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
 
-  // Count VODs analyzed this month (status = 'ready', created_at within current month)
+  // Count VODs analyzed this month by analyzed_at (set when analysis completes)
+  // Using analyzed_at prevents bypass where old synced VODs are analyzed without counting
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
@@ -45,9 +46,9 @@ export async function getUserUsage(
     .from("vods")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .eq("status", "ready")
-    .gte("created_at", monthStart)
-    .lt("created_at", monthEnd);
+    .not("analyzed_at", "is", null)
+    .gte("analyzed_at", monthStart)
+    .lt("analyzed_at", monthEnd);
 
   // Count total clips
   const { count: clipsTotal } = await supabase

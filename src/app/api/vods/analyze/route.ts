@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: "limit_reached",
-        message: "You've used all 3 free analyses this month. Upgrade to Pro for unlimited.",
+        message: "You've used your 1 free analysis this month. Upgrade to Pro for unlimited.",
         upgrade: true,
       },
       { status: 403 }
@@ -39,23 +39,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing vodId" }, { status: 400 });
   }
 
-  // Get the VOD
-  const { data: vod, error: vodError } = await supabase
-    .from("vods")
-    .select("*")
-    .eq("id", vodId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (vodError || !vod) {
-    return NextResponse.json({ error: "VOD not found" }, { status: 404 });
-  }
-
-  // Update status to transcribing
-  await supabase
+  // Atomic check: only allow analyzing if status is 'pending' or 'failed'
+  // This prevents re-analysis of already-ready VODs and race conditions from
+  // simultaneous requests both passing the limit check
+  const { data: claimedVod, error: claimError } = await supabase
     .from("vods")
     .update({ status: "transcribing" })
-    .eq("id", vodId);
+    .eq("id", vodId)
+    .eq("user_id", user.id)
+    .in("status", ["pending", "failed"])
+    .select()
+    .single();
+
+  if (claimError || !claimedVod) {
+    // Either VOD not found, doesn't belong to user, or already being/been analyzed
+    const { data: existing } = await supabase
+      .from("vods")
+      .select("status")
+      .eq("id", vodId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: "VOD not found" }, { status: 404 });
+    }
+    if (existing.status === "ready") {
+      return NextResponse.json({ error: "VOD already analyzed" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Analysis already in progress" }, { status: 409 });
+  }
+
+  const vod = claimedVod;
 
   try {
     // Download the actual video audio data
@@ -89,13 +103,14 @@ export async function POST(request: Request) {
     // Step 3: Generate coach report
     const coachReport = await generateCoachReport(segments, vod.title, peaks);
 
-    // Step 4: Save results
+    // Step 4: Save results — set analyzed_at to now so monthly limit counts correctly
     await supabase
       .from("vods")
       .update({
         status: "ready",
         peak_data: peaks,
         coach_report: coachReport,
+        analyzed_at: new Date().toISOString(),
       })
       .eq("id", vodId);
 
