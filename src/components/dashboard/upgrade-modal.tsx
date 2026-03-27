@@ -33,9 +33,12 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
       containerRef.current.innerHTML = "";
     }
 
+    const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+    const planId = process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID;
+
     const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription&currency=USD`;
-    script.setAttribute("data-sdk-integration-source", "button-factory");
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&intent=subscription&vault=true&currency=USD`;
+    script.setAttribute("data-sdk-integration-source", "developer-studio");
     scriptRef.current = script;
 
     script.onload = () => {
@@ -50,9 +53,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
             label: "subscribe",
           },
           createSubscription: (_data: any, actions: any) => {
-            return actions.subscription.create({
-              plan_id: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID,
-            });
+            return actions.subscription.create({ plan_id: planId });
           },
           onApprove: async (data: any) => {
             await fetch("/api/subscription/paypal", {
@@ -69,7 +70,11 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
             console.error("[PayPal] Button error:", err);
           },
         })
-        .render("#paypal-button-container");
+        .render(containerRef.current);
+    };
+
+    script.onerror = (e) => {
+      console.error("[PayPal] Script load error:", e);
     };
 
     document.body.appendChild(script);
@@ -131,7 +136,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
           </ul>
 
           {/* PayPal button */}
-          <div id="paypal-button-container" ref={containerRef} />
+          <div ref={containerRef} />
         </div>
       </div>
     </div>
