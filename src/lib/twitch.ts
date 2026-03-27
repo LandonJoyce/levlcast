@@ -12,7 +12,6 @@ export async function getAppAccessToken(): Promise<string> {
     return cachedAppToken.token;
   }
 
-  console.log("[debug] client_id:", process.env.TWITCH_CLIENT_ID?.slice(0, 6), "secret:", process.env.TWITCH_CLIENT_SECRET?.slice(0, 6), "secret_len:", process.env.TWITCH_CLIENT_SECRET?.length);
   const res = await fetch("https://id.twitch.tv/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
