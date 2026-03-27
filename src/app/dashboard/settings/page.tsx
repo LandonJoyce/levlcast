@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { Settings } from "lucide-react";
+import { getUserUsage, FREE_LIMITS, PRO_LIMITS } from "@/lib/limits";
+import { SubscriptionSection } from "./subscription-section";
 
 /** Settings page — account info and plan */
 export default async function SettingsPage() {
@@ -13,6 +14,9 @@ export default async function SettingsPage() {
     .select("*")
     .eq("id", user!.id)
     .single();
+
+  const usage = await getUserUsage(user!.id, supabase);
+  const limits = usage.plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
 
   return (
     <div>
@@ -51,25 +55,14 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      {/* Plan card */}
-      <div className="bg-surface border border-border rounded-2xl p-6">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
-          Plan
-        </h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold capitalize">{profile?.plan || "free"}</p>
-            <p className="text-sm text-muted">
-              {profile?.plan === "free"
-                ? "60 minutes of processing per month"
-                : "Upgrade for more processing time"}
-            </p>
-          </div>
-          <button className="bg-accent/10 text-accent-light text-sm font-semibold px-4 py-2 rounded-lg hover:bg-accent/20 transition-colors">
-            Upgrade
-          </button>
-        </div>
-      </div>
+      {/* Subscription section (client component for interactivity) */}
+      <SubscriptionSection
+        plan={usage.plan}
+        analysesUsed={usage.analyses_this_month}
+        analysesLimit={limits.analyses_per_month}
+        clipsUsed={usage.clips_total}
+        clipsLimit={limits.clips_total}
+      />
     </div>
   );
 }

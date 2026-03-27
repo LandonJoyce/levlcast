@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { downloadTwitchVodAudio } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
+import { getUserUsage } from "@/lib/limits";
 import { NextResponse } from "next/server";
 
 /**
@@ -16,6 +17,19 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check plan limits before generating clip
+  const usage = await getUserUsage(user.id, supabase);
+  if (!usage.can_generate_clip) {
+    return NextResponse.json(
+      {
+        error: "limit_reached",
+        message: "You've reached the 5 clip limit on the free plan. Upgrade to Pro for unlimited clips.",
+        upgrade: true,
+      },
+      { status: 403 }
+    );
   }
 
   const { vodId, peakIndex } = await request.json();

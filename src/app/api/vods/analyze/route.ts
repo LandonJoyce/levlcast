@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { downloadTwitchVodAudio } from "@/lib/twitch";
 import { transcribeBuffer } from "@/lib/deepgram";
 import { detectPeaks } from "@/lib/analyze";
+import { getUserUsage } from "@/lib/limits";
 import { NextResponse } from "next/server";
 
 /**
@@ -18,6 +19,19 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check plan limits before starting analysis
+  const usage = await getUserUsage(user.id, supabase);
+  if (!usage.can_analyze) {
+    return NextResponse.json(
+      {
+        error: "limit_reached",
+        message: "You've used all 3 free analyses this month. Upgrade to Pro for unlimited.",
+        upgrade: true,
+      },
+      { status: 403 }
+    );
   }
 
   const { vodId } = await request.json();
