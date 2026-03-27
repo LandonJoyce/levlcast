@@ -34,7 +34,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
     }
 
     const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription&currency=USD`;
     script.setAttribute("data-sdk-integration-source", "button-factory");
     scriptRef.current = script;
 
