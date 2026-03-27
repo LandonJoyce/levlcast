@@ -18,7 +18,7 @@ export default function LoginPage() {
       provider: "twitch",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: "user:read:email user:read:follows",
+        scopes: "user:read:email user:read:follows moderator:read:followers",
       },
     });
 
