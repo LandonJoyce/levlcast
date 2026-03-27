@@ -1,5 +1,6 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * OAuth callback — exchanges the auth code for a session,
@@ -7,7 +8,7 @@ import { NextResponse } from "next/server";
  * Uses admin client for the upsert to bypass RLS (session cookies
  * aren't fully set during the callback).
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
 
@@ -15,7 +16,25 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/login?error=no_code`);
   }
 
-  const supabase = await createClient();
+  // Create the redirect response first so we can attach cookies to it
+  const response = NextResponse.redirect(`${origin}/dashboard`);
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options as never);
+          });
+        },
+      },
+    }
+  );
 
   // Exchange code for session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
@@ -24,6 +43,7 @@ export async function GET(request: Request) {
     console.error("Auth callback error:", error?.message);
     return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);
   }
+
 
   // Extract Twitch data from the session
   const user = data.session.user;
@@ -52,5 +72,5 @@ export async function GET(request: Request) {
     console.error("Profile upsert error:", profileError.message);
   }
 
-  return NextResponse.redirect(`${origin}/dashboard`);
+  return response;
 }
