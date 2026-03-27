@@ -92,13 +92,16 @@ export function Sidebar({ user }: SidebarProps) {
             <p className="text-xs text-muted truncate">@{user.login}</p>
           </div>
         </div>
-        <Link
-          href="/auth/logout"
-          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/[0.04] transition-all"
+        <button
+          onClick={async () => {
+            await fetch("/auth/logout", { method: "POST" });
+            window.location.href = "/auth/login";
+          }}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/[0.04] transition-all w-full"
         >
           <LogOut size={16} />
           Log out
-        </Link>
+        </button>
       </div>
     </aside>
   );
