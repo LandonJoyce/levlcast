@@ -34,6 +34,9 @@ export async function cutClip(
 
     const duration = endSeconds - startSeconds;
 
+    // Ensure ffmpeg binary is executable (required on Vercel)
+    await execAsync(`chmod +x "${ffmpegPath}"`).catch(() => {});
+
     // Cut clip with ffmpeg
     // -ss before -i for fast seeking
     // -t for duration
