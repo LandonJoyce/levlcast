@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { CopyCaption, DownloadClip } from "@/components/dashboard/clip-actions";
+import { CopyCaption, DownloadClip, PostToYouTube } from "@/components/dashboard/clip-actions";
 import { Scissors, Sparkles, Clock, Film } from "lucide-react";
 import Link from "next/link";
 
@@ -49,6 +49,24 @@ export default async function ClipsPage() {
     .eq("user_id", user!.id)
     .eq("status", "ready")
     .order("created_at", { ascending: false });
+
+  // Get YouTube connection status
+  const { data: ytConnection } = await supabase
+    .from("social_connections")
+    .select("platform")
+    .eq("user_id", user!.id)
+    .eq("platform", "youtube")
+    .single();
+
+  const isYouTubeConnected = !!ytConnection;
+
+  // Get existing YouTube posts for these clips
+  const clipIds = (clips || []).map((c) => c.id);
+  const { data: ytPosts } = clipIds.length > 0
+    ? await supabase.from("social_posts").select("clip_id, platform_url").eq("user_id", user!.id).eq("platform", "youtube").in("clip_id", clipIds)
+    : { data: [] };
+
+  const ytPostMap = new Map((ytPosts || []).map((p) => [p.clip_id, p.platform_url]));
 
   // Get analyzed VODs with peaks (for ungenerated peaks)
   const { data: vods } = await supabase
@@ -166,6 +184,11 @@ export default async function ClipsPage() {
                       <div className="flex items-center gap-4">
                         <DownloadClip url={clip.video_url} title={clip.title} />
                         <CopyCaption caption={clip.caption_text} />
+                        <PostToYouTube
+                          clipId={clip.id}
+                          isConnected={isYouTubeConnected}
+                          existingUrl={ytPostMap.get(clip.id)}
+                        />
                       </div>
                     </div>
                   </div>
