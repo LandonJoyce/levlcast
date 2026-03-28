@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { Youtube, CheckCircle, AlertCircle } from "lucide-react";
-import Link from "next/link";
 
 export default async function ConnectionsPage({
   searchParams,
@@ -54,12 +53,12 @@ export default async function ConnectionsPage({
               <span className="ml-auto text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded-full">Connected</span>
             )}
           </div>
-          <Link
+          <a
             href="/api/auth/youtube"
             className="block w-full text-center bg-red-500 hover:opacity-85 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-opacity"
           >
             {isYouTubeConnected ? "Reconnect YouTube" : "Connect YouTube"}
-          </Link>
+          </a>
         </div>
 
         {/* TikTok — coming soon */}
