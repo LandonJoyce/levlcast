@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserUsage, FREE_LIMITS, PRO_LIMITS } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
+import { DeleteAccountSection } from "./delete-account-section";
 
 /** Settings page — account info and plan */
 export default async function SettingsPage() {
@@ -63,6 +64,8 @@ export default async function SettingsPage() {
         clipsUsed={usage.clips_total}
         clipsLimit={limits.clips_total}
       />
+
+      <DeleteAccountSection />
     </div>
   );
 }
