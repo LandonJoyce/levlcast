@@ -42,13 +42,16 @@ export default async function ClipsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Get generated clips
-  const { data: clips } = await supabase
+  // Get generated clips (ready) and in-progress ones (processing) so we can
+  // correctly track which peaks are already claimed and avoid showing them as available
+  const { data: allClips } = await supabase
     .from("clips")
     .select("*")
     .eq("user_id", user!.id)
-    .eq("status", "ready")
+    .in("status", ["ready", "processing"])
     .order("created_at", { ascending: false });
+
+  const clips = (allClips || []).filter((c) => c.status === "ready");
 
   // Get social connections
   const { data: connections } = await supabase
@@ -79,7 +82,7 @@ export default async function ClipsPage() {
 
   // Flatten ungenerated peaks
   const generatedKeys = new Set(
-    (clips || []).map((c) => `${c.vod_id}-${c.start_time_seconds}`)
+    (allClips || []).map((c) => `${c.vod_id}-${c.start_time_seconds}`)
   );
 
   const ungeneratedPeaks: (Peak & { vodTitle: string; vodId: string; vodThumbnail: string; peakIndex: number })[] = [];
