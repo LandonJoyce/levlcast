@@ -50,11 +50,12 @@ export async function getUserUsage(
     .gte("analyzed_at", monthStart)
     .lt("analyzed_at", monthEnd);
 
-  // Count total clips
+  // Count total successfully generated clips (not failed/processing attempts)
   const { count: clipsTotal } = await supabase
     .from("clips")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("status", "ready");
 
   const analyses_this_month = analysesThisMonth ?? 0;
   const clips_total = clipsTotal ?? 0;
