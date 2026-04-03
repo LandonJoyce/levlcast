@@ -15,49 +15,64 @@ export const analyzeVod = inngest.createFunction(
     const { vodId, userId } = event.data as { vodId: string; userId: string };
     const supabase = createAdminClient();
 
-    // Step 1: Get Twitch audio URL (no download)
-    const audioUrl = await step.run("get-audio-url", async () => {
-      const { data: vod } = await supabase
-        .from("vods")
-        .select("twitch_vod_id")
-        .eq("id", vodId)
-        .eq("user_id", userId)
-        .single();
+    try {
+      // Step 1: Get Twitch audio URL (no download)
+      const audioUrl = await step.run("get-audio-url", async () => {
+        const { data: vod } = await supabase
+          .from("vods")
+          .select("twitch_vod_id")
+          .eq("id", vodId)
+          .eq("user_id", userId)
+          .single();
 
-      if (!vod) throw new Error("VOD not found");
-      return getTwitchVodAudioUrl(vod.twitch_vod_id);
-    });
+        if (!vod) throw new Error("VOD not found");
+        return getTwitchVodAudioUrl(vod.twitch_vod_id);
+      });
 
-    // Step 2: Transcribe via Deepgram URL (no file download)
-    const segments = await step.run("transcribe", async () => {
-      await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
-      const result = await transcribeFromUrl(audioUrl);
-      if (result.length === 0) throw new Error("No speech detected in video");
-      return result;
-    });
+      // Step 2: Transcribe via Deepgram URL (no file download)
+      const segments = await step.run("transcribe", async () => {
+        await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
+        const result = await transcribeFromUrl(audioUrl);
+        if (result.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+        return result;
+      });
 
-    // Step 3: Detect peaks + coach report
-    const { peaks, coachReport } = await step.run("analyze", async () => {
-      await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
+      // Step 3: Detect peaks + coach report
+      const { peaks, coachReport } = await step.run("analyze", async () => {
+        await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
 
-      const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
-      const title = vod?.title || "Stream";
+        const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
+        const title = vod?.title || "Stream";
 
-      const peaks = await detectPeaks(segments, title);
-      const coachReport = await generateCoachReport(segments, title, peaks);
-      return { peaks, coachReport };
-    });
+        const peaks = await detectPeaks(segments, title);
+        const coachReport = await generateCoachReport(segments, title, peaks);
+        return { peaks, coachReport };
+      });
 
-    // Step 4: Save results
-    await step.run("save", async () => {
+      // Step 4: Save results
+      await step.run("save", async () => {
+        await supabase.from("vods").update({
+          status: "ready",
+          peak_data: peaks,
+          coach_report: coachReport,
+          analyzed_at: new Date().toISOString(),
+        }).eq("id", vodId);
+      });
+
+      return { peaks: peaks.length, segments: segments.length };
+    } catch (err) {
+      // Mark the VOD as failed so the user can see it and retry —
+      // without this, the VOD would be stuck in "transcribing" or "analyzing" forever.
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[inngest] analyze-vod failed for ${vodId}:`, message);
+
       await supabase.from("vods").update({
-        status: "ready",
-        peak_data: peaks,
-        coach_report: coachReport,
-        analyzed_at: new Date().toISOString(),
+        status: "failed",
+        failed_reason: message,
       }).eq("id", vodId);
-    });
 
-    return { peaks: peaks.length, segments: segments.length };
+      // Re-throw so Inngest marks the run as failed and triggers retry logic
+      throw err;
+    }
   }
 );

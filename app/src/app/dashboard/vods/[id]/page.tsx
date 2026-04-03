@@ -79,8 +79,8 @@ export default async function VodDetailPage({
             {vod.status === "pending"
               ? "This VOD hasn't been analyzed yet."
               : vod.status === "failed"
-              ? "Analysis failed. Try re-analyzing from the VODs page."
-              : "Analysis in progress..."}
+              ? `Analysis failed${vod.failed_reason ? `: ${vod.failed_reason}` : ""}. Go back and try analyzing again.`
+              : "Analysis in progress — check back in a few minutes."}
           </p>
         </div>
       ) : (
