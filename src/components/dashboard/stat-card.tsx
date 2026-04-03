@@ -5,13 +5,10 @@ interface StatCardProps {
   value: string;
   detail?: string;
   accent?: boolean;
+  icon?: React.ReactNode;
 }
 
-/**
- * Stat card — matches the analytics dashboard from levlcast.com.
- * Use `accent` prop for the highlighted purple variant.
- */
-export function StatCard({ label, value, detail, accent }: StatCardProps) {
+export function StatCard({ label, value, detail, accent, icon }: StatCardProps) {
   return (
     <div
       className={cn(
@@ -21,9 +18,12 @@ export function StatCard({ label, value, detail, accent }: StatCardProps) {
           : "bg-surface border-border hover:border-white/10"
       )}
     >
-      <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-        {label}
-      </p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+          {label}
+        </p>
+        {icon && <span className="text-muted">{icon}</span>}
+      </div>
       <p
         className={cn(
           "text-2xl font-extrabold tracking-tight",

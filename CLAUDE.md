@@ -6,14 +6,14 @@ AI-powered Twitch stream analysis platform. Automatically finds peak moments in 
 ## Monorepo Structure
 ```
 levlcast/
-├── app/        # Next.js 15 web app (main product)
+├── src/        # Next.js 15 web app source (main product)
 ├── mobile/     # Expo / React Native mobile app
 └── upload/     # Static marketing site (Cloudflare Pages)
 ```
 
 ## Tech Stack
 
-### Web App (`app/`)
+### Web App (`src/`)
 - **Framework**: Next.js 15 App Router, React 19, TypeScript
 - **Styling**: TailwindCSS, Framer Motion
 - **Database**: Supabase (PostgreSQL + RLS + Storage)
@@ -59,21 +59,21 @@ levlcast/
 - FFmpeg handles both local (ffmpeg-static) and Vercel (Linux binary download)
 
 ## Key Files
-- `app/src/lib/analyze.ts` — Claude peak detection + coaching prompts
-- `app/src/lib/limits.ts` — Free/Pro quota enforcement
-- `app/src/lib/twitch.ts` — Twitch Helix API + VOD download
-- `app/src/lib/deepgram.ts` — Transcription
-- `app/src/lib/ffmpeg.ts` — Clip cutting
-- `app/src/lib/youtube.ts` — YouTube OAuth + upload
-- `app/src/middleware.ts` — Auth guard for /dashboard routes
+- `src/lib/analyze.ts` — Claude peak detection + coaching prompts
+- `src/lib/limits.ts` — Free/Pro quota enforcement
+- `src/lib/twitch.ts` — Twitch Helix API + VOD download
+- `src/lib/deepgram.ts` — Transcription
+- `src/lib/ffmpeg.ts` — Clip cutting
+- `src/lib/youtube.ts` — YouTube OAuth + upload
+- `src/middleware.ts` — Auth guard for /dashboard routes
 - `mobile/lib/supabase.ts` — Supabase client with SecureStore adapter
 - `mobile/lib/revenuecat.ts` — IAP integration
 
 ## Conventions
 - No emojis in AI-generated content (explicitly instructed in Claude prompts)
 - Server-side Supabase uses service role only in API routes, never exposed to client
-- Cliet-side uses anon key with RLS
-- API routes in `app/src/app/api/` follow Next.js App Router conventions
+- Client-side uses anon key with RLS
+- API routes in `src/app/api/` follow Next.js App Router conventions
 
 ## Deployment
 - **Web**: Vercel
