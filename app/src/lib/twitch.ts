@@ -126,6 +126,78 @@ export interface VodDownloadResult {
  *
  * Segments are downloaded with a per-segment timeout to prevent hangs.
  */
+
+/**
+ * Get the audio-only M3U8 URL for a Twitch VOD without downloading it.
+ * Used by Deepgram URL transcription to avoid downloading to disk.
+ */
+export async function getTwitchVodAudioUrl(vodId: string): Promise<string> {
+  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
+  const gqlRes = await fetch("https://gql.twitch.tv/gql", {
+    method: "POST",
+    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      operationName: "PlaybackAccessToken",
+      query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
+        videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) {
+          value
+          signature
+        }
+      }`,
+      variables: { vodID: vodId, playerType: "site" },
+    }),
+  });
+
+  if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+
+  const gqlData = await gqlRes.json();
+  const token = gqlData.data?.videoPlaybackAccessToken;
+  if (!token) throw new Error("Could not get video playback token");
+
+  const usherParams = new URLSearchParams({
+    allow_source: "true",
+    allow_audio_only: "true",
+    allow_spectre: "true",
+    player: "twitchweb",
+    playlist_include_framerate: "true",
+    sig: token.signature,
+    token: token.value,
+  });
+
+  const masterUrl = `https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`;
+  const masterRes = await fetch(masterUrl);
+  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+
+  const lines = (await masterRes.text()).split("\n");
+
+  let streamUrl = "";
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes("audio_only") || lines[i].includes('VIDEO="audio_only"')) {
+      for (let j = i + 1; j < lines.length; j++) {
+        if (lines[j].trim() && !lines[j].startsWith("#")) {
+          streamUrl = lines[j].trim();
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  if (!streamUrl) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith("#") && line.startsWith("http")) {
+        streamUrl = line;
+        break;
+      }
+    }
+  }
+
+  if (!streamUrl) throw new Error("No stream URL found");
+  return streamUrl;
+}
+
 export async function downloadTwitchVodAudio(
   vodId: string
 ): Promise<VodDownloadResult> {
