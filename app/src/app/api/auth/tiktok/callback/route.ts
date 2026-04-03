@@ -12,11 +12,20 @@ export async function GET(req: NextRequest) {
   }
 
   let userId: string;
+  let nonce: string;
   try {
     const parsed = JSON.parse(Buffer.from(state, "base64").toString("utf-8"));
     userId = parsed.userId;
-    if (!userId) throw new Error("Invalid state");
+    nonce = parsed.nonce;
+    if (!userId || !nonce) throw new Error("Missing fields");
   } catch {
+    return NextResponse.redirect(new URL("/dashboard/connections?error=invalid_state", req.url));
+  }
+
+  // Verify nonce matches the cookie set during OAuth initiation — prevents CSRF
+  const cookieNonce = req.cookies.get("tt_oauth_nonce")?.value;
+  if (!cookieNonce || cookieNonce !== nonce) {
+    console.warn("[tiktok/callback] Nonce mismatch — possible CSRF attempt");
     return NextResponse.redirect(new URL("/dashboard/connections?error=invalid_state", req.url));
   }
 
@@ -39,7 +48,9 @@ export async function GET(req: NextRequest) {
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,platform" });
 
-    return NextResponse.redirect(new URL("/dashboard/connections?success=tiktok", req.url));
+    const response = NextResponse.redirect(new URL("/dashboard/connections?success=tiktok", req.url));
+    response.cookies.set("tt_oauth_nonce", "", { maxAge: 0, path: "/" });
+    return response;
   } catch (e: any) {
     console.error("TikTok OAuth error:", e);
     return NextResponse.redirect(new URL("/dashboard/connections?error=oauth_failed", req.url));

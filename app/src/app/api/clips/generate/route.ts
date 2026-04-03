@@ -39,6 +39,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing or invalid vodId or peakIndex" }, { status: 400 });
   }
 
+  const idx = Number(peakIndex);
+  if (!Number.isInteger(idx) || idx < 0) {
+    return NextResponse.json({ error: "Invalid peakIndex" }, { status: 400 });
+  }
+
   // Get VOD with peak data — RLS ensures this user owns it
   const { data: vod } = await supabase
     .from("vods")
@@ -61,35 +66,70 @@ export async function POST(request: Request) {
     caption: string;
   }>;
 
-  const peak = peaks[peakIndex];
+  const peak = peaks[idx];
   if (!peak) {
     return NextResponse.json({ error: "Peak not found" }, { status: 404 });
   }
 
+  const admin = createAdminClient();
+
+  // Race condition guard — check if this peak is already being generated.
+  // Insert a "processing" record first; if one already exists, reject the duplicate.
+  const { data: existing } = await admin
+    .from("clips")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .eq("vod_id", vodId)
+    .eq("start_time_seconds", Math.round(peak.start))
+    .eq("status", "processing")
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json({ error: "Clip already being generated" }, { status: 409 });
+  }
+
+  // Insert a processing record now — this is the source of truth for the clip
+  const { data: clipRecord, error: insertError } = await admin
+    .from("clips")
+    .insert({
+      user_id: user.id,
+      vod_id: vodId,
+      title: peak.title,
+      description: peak.reason,
+      start_time_seconds: Math.round(peak.start),
+      end_time_seconds: Math.round(peak.end),
+      caption_text: peak.caption,
+      peak_score: peak.score,
+      peak_category: peak.category,
+      peak_reason: peak.reason,
+      status: "processing",
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !clipRecord) {
+    return NextResponse.json({ error: "Failed to create clip record" }, { status: 500 });
+  }
+
+  const clipId = clipRecord.id;
   let cleanup: (() => Promise<void>) | null = null;
 
   try {
     console.log(`[clip] Downloading VOD ${vod.twitch_vod_id} for clip "${peak.title}"`);
 
-    // Download VOD to disk — avoids loading entire VOD into memory
     const download = await downloadTwitchVodAudio(vod.twitch_vod_id);
     cleanup = download.cleanup;
 
     console.log(`[clip] Cutting clip: ${peak.start}s - ${peak.end}s`);
-
-    // Cut from file path — no buffer needed
     const clipBuffer = await cutClip(download.filePath, peak.start, peak.end);
-
     console.log(`[clip] Clip generated: ${clipBuffer.length} bytes`);
-
-    const admin = createAdminClient();
 
     await admin.storage.createBucket("clips", {
       public: true,
       fileSizeLimit: 104857600,
     }).catch(() => {});
 
-    const fileName = `${user.id}/${vod.id}-peak${peakIndex}-${Date.now()}.mp4`;
+    const fileName = `${user.id}/${vod.id}-peak${idx}-${Date.now()}.mp4`;
 
     const { error: uploadError } = await admin.storage
       .from("clips")
@@ -104,24 +144,10 @@ export async function POST(request: Request) {
 
     const { data: urlData } = admin.storage.from("clips").getPublicUrl(fileName);
 
-    const { error: insertError } = await supabase.from("clips").insert({
-      user_id: user.id,
-      vod_id: vodId,
-      title: peak.title,
-      description: peak.reason,
-      start_time_seconds: Math.round(peak.start),
-      end_time_seconds: Math.round(peak.end),
+    await admin.from("clips").update({
       video_url: urlData.publicUrl,
-      caption_text: peak.caption,
-      peak_score: peak.score,
-      peak_category: peak.category,
-      peak_reason: peak.reason,
       status: "ready",
-    });
-
-    if (insertError) {
-      throw new Error(`Clip record insert failed: ${insertError.message}`);
-    }
+    }).eq("id", clipId);
 
     console.log(`[clip] Clip saved: "${peak.title}"`);
 
@@ -129,9 +155,12 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[clip] Generation failed:", message);
+
+    // Mark clip as failed so it doesn't stay "processing" forever
+    await admin.from("clips").update({ status: "failed" }).eq("id", clipId);
+
     return NextResponse.json({ error: "Clip generation failed", detail: message }, { status: 500 });
   } finally {
-    // Always clean up temp VOD file — even on failure
     if (cleanup) await cleanup();
   }
 }
