@@ -36,19 +36,27 @@ export async function getUserUsage(
 
   const limits = plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
 
-  // Count VODs analyzed this month by analyzed_at (set when analysis completes)
-  // Using analyzed_at prevents bypass where old synced VODs are analyzed without counting
+  // Count VODs analyzed this month (completed) + any currently in-progress.
+  // Including in-progress prevents a race where multiple simultaneous requests
+  // all pass the limit check before any analysis completes.
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-  const { count: analysesThisMonth } = await supabase
-    .from("vods")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .not("analyzed_at", "is", null)
-    .gte("analyzed_at", monthStart)
-    .lt("analyzed_at", monthEnd);
+  const [{ count: completedThisMonth }, { count: inProgress }] = await Promise.all([
+    supabase
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .not("analyzed_at", "is", null)
+      .gte("analyzed_at", monthStart)
+      .lt("analyzed_at", monthEnd),
+    supabase
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .in("status", ["transcribing", "analyzing"]),
+  ]);
 
   // Count total successfully generated clips (not failed/processing attempts)
   const { count: clipsTotal } = await supabase
@@ -57,7 +65,7 @@ export async function getUserUsage(
     .eq("user_id", userId)
     .eq("status", "ready");
 
-  const analyses_this_month = analysesThisMonth ?? 0;
+  const analyses_this_month = (completedThisMonth ?? 0) + (inProgress ?? 0);
   const clips_total = clipsTotal ?? 0;
 
   return {

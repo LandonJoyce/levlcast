@@ -53,6 +53,19 @@ export async function POST(request: Request) {
     }
 
     try {
+      // Reject if this subscription ID is already claimed by a different user
+      const { data: existingOwner } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("paypal_subscription_id", subscriptionId)
+        .neq("id", user.id)
+        .maybeSingle();
+
+      if (existingOwner) {
+        console.warn(`[subscription] Subscription ${subscriptionId} already claimed by another user`);
+        return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
+      }
+
       const token = await getPayPalToken();
 
       // Verify subscription is active with PayPal
