@@ -11,7 +11,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/connections?error=missing_params", req.url));
   }
 
-  const userId = Buffer.from(state, "base64").toString("utf-8");
+  let userId: string;
+  try {
+    const parsed = JSON.parse(Buffer.from(state, "base64").toString("utf-8"));
+    userId = parsed.userId;
+    if (!userId) throw new Error("Invalid state");
+  } catch {
+    return NextResponse.redirect(new URL("/dashboard/connections?error=invalid_state", req.url));
+  }
 
   try {
     const tokens = await exchangeYouTubeCode(code);

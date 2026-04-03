@@ -4,6 +4,11 @@ import { transcribeBuffer } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { getUserUsage } from "@/lib/limits";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const analyzeSchema = z.object({
+  vodId: z.string().uuid(),
+});
 
 /**
  * POST /api/vods/analyze
@@ -34,10 +39,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { vodId } = await request.json();
-  if (!vodId) {
-    return NextResponse.json({ error: "Missing vodId" }, { status: 400 });
+  const body = analyzeSchema.safeParse(await request.json());
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid request", detail: body.error.flatten() }, { status: 400 });
   }
+  const { vodId } = body.data;
 
   // Atomic check: only allow analyzing if status is 'pending' or 'failed'
   // This prevents re-analysis of already-ready VODs and race conditions from

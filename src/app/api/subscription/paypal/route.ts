@@ -1,5 +1,11 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const paypalSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("activate"), subscriptionId: z.string().min(1).max(100) }),
+  z.object({ action: z.literal("cancel") }),
+]);
 
 const PAYPAL_BASE = "https://api-m.paypal.com";
 
@@ -39,10 +45,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { action } = body;
+  const parsed = paypalSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", detail: parsed.error.flatten() }, { status: 400 });
+  }
+  const body = parsed.data;
 
-  if (action === "activate") {
+  if (body.action === "activate") {
     const { subscriptionId } = body;
 
     if (!subscriptionId) {
@@ -100,7 +109,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (action === "cancel") {
+  if (body.action === "cancel") {
     try {
       // Get current subscription id from profile
       const { data: profile } = await supabase

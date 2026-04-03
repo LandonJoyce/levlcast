@@ -3,6 +3,12 @@ import { downloadTwitchVodAudio } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
 import { getUserUsage } from "@/lib/limits";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const generateSchema = z.object({
+  vodId: z.string().uuid(),
+  peakIndex: z.number().int().min(0).max(10),
+});
 
 /**
  * POST /api/clips/generate
@@ -32,11 +38,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { vodId, peakIndex } = await request.json();
-
-  if (!vodId || peakIndex === undefined) {
-    return NextResponse.json({ error: "Missing vodId or peakIndex" }, { status: 400 });
+  const body = generateSchema.safeParse(await request.json());
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid request", detail: body.error.flatten() }, { status: 400 });
   }
+  const { vodId, peakIndex } = body.data;
 
   // Get the VOD with peak data
   const { data: vod } = await supabase

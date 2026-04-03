@@ -1,14 +1,20 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { uploadToYouTube, refreshYouTubeToken } from "@/lib/youtube";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const uploadSchema = z.object({
+  clipId: z.string().uuid(),
+});
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { clipId } = await req.json();
-  if (!clipId) return NextResponse.json({ error: "Missing clipId" }, { status: 400 });
+  const body = uploadSchema.safeParse(await req.json());
+  if (!body.success) return NextResponse.json({ error: "Invalid request", detail: body.error.flatten() }, { status: 400 });
+  const { clipId } = body.data;
 
   const admin = createAdminClient();
 

@@ -7,7 +7,8 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const state = Buffer.from(user.id).toString("base64");
+  const nonce = crypto.randomUUID();
+  const state = Buffer.from(JSON.stringify({ userId: user.id, nonce })).toString("base64");
   const authUrl = getYouTubeAuthUrl(state);
   redirect(authUrl);
 }
