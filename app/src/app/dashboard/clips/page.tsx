@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { CopyCaption, DownloadClip, PostToYouTube } from "@/components/dashboard/clip-actions";
+import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip } from "@/components/dashboard/clip-actions";
 import { Scissors, Sparkles, Clock, Film } from "lucide-react";
 import Link from "next/link";
 
@@ -50,23 +50,23 @@ export default async function ClipsPage() {
     .eq("status", "ready")
     .order("created_at", { ascending: false });
 
-  // Get YouTube connection status
-  const { data: ytConnection } = await supabase
+  // Get social connections
+  const { data: connections } = await supabase
     .from("social_connections")
     .select("platform")
-    .eq("user_id", user!.id)
-    .eq("platform", "youtube")
-    .single();
+    .eq("user_id", user!.id);
 
-  const isYouTubeConnected = !!ytConnection;
+  const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
+  const isTikTokConnected = connections?.some((c) => c.platform === "tiktok") ?? false;
 
-  // Get existing YouTube posts for these clips
+  // Get existing social posts for these clips
   const clipIds = (clips || []).map((c) => c.id);
-  const { data: ytPosts } = clipIds.length > 0
-    ? await supabase.from("social_posts").select("clip_id, platform_url").eq("user_id", user!.id).eq("platform", "youtube").in("clip_id", clipIds)
+  const { data: socialPosts } = clipIds.length > 0
+    ? await supabase.from("social_posts").select("clip_id, platform, platform_url, platform_video_id").eq("user_id", user!.id).in("clip_id", clipIds)
     : { data: [] };
 
-  const ytPostMap = new Map((ytPosts || []).map((p) => [p.clip_id, p.platform_url]));
+  const ytPostMap = new Map((socialPosts || []).filter((p) => p.platform === "youtube").map((p) => [p.clip_id, p.platform_url]));
+  const ttPostMap = new Map((socialPosts || []).filter((p) => p.platform === "tiktok").map((p) => [p.clip_id, p.platform_video_id]));
 
   // Get analyzed VODs with peaks (for ungenerated peaks)
   const { data: vods } = await supabase
@@ -181,7 +181,7 @@ export default async function ClipsPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-4">
                         <DownloadClip url={clip.video_url} title={clip.title} />
                         <CopyCaption caption={clip.caption_text} />
                         <PostToYouTube
@@ -189,6 +189,12 @@ export default async function ClipsPage() {
                           isConnected={isYouTubeConnected}
                           existingUrl={ytPostMap.get(clip.id)}
                         />
+                        <PostToTikTok
+                          clipId={clip.id}
+                          isConnected={isTikTokConnected}
+                          existingPostId={ttPostMap.get(clip.id)}
+                        />
+                        <DeleteClip clipId={clip.id} />
                       </div>
                     </div>
                   </div>

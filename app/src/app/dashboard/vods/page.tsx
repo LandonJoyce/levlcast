@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
+import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { formatDuration } from "@/lib/utils";
 import { Film, Clock, Calendar, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -33,9 +34,12 @@ export default async function VodsPage() {
     .order("stream_date", { ascending: false });
 
   const vodList = vods || [];
+  const hasProcessing = vodList.some((v) => v.status === "transcribing" || v.status === "analyzing");
 
   return (
     <div>
+      <VodStatusPoller hasProcessing={hasProcessing} />
+
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>

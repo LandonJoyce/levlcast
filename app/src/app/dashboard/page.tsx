@@ -12,20 +12,15 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch counts for overview
-  const [vodsResult, clipsResult] = await Promise.all([
-    supabase
-      .from("vods")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user!.id),
-    supabase
-      .from("clips")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user!.id),
+  const [vodsResult, clipsResult, peaksResult] = await Promise.all([
+    supabase.from("vods").select("id, peak_data", { count: "exact" }).eq("user_id", user!.id),
+    supabase.from("clips").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
+    supabase.from("vods").select("peak_data").eq("user_id", user!.id).eq("status", "ready").not("peak_data", "is", null),
   ]);
 
   const totalVods = vodsResult.count || 0;
   const totalClips = clipsResult.count || 0;
+  const totalPeaks = (peaksResult.data || []).reduce((sum, v) => sum + ((v.peak_data as any[])?.length || 0), 0);
 
   // Check if user has any content yet
   const isEmpty = totalVods === 0 && totalClips === 0;
@@ -73,13 +68,17 @@ export default async function DashboardPage() {
             <StatCard
               label="Clips Generated"
               value={totalClips.toString()}
-              detail="AI-detected peaks"
+              detail="Ready to post"
             />
-            <StatCard label="Clip Views" value="—" detail="Connect socials" />
             <StatCard
-              label="Growth"
-              value="—"
-              detail="Start posting clips"
+              label="Peaks Detected"
+              value={totalPeaks.toString()}
+              detail="Across analyzed VODs"
+            />
+            <StatCard
+              label="Ready to Clip"
+              value={(totalPeaks - totalClips).toString()}
+              detail="Ungenerated peaks"
               accent
             />
           </div>
