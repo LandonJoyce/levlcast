@@ -8,7 +8,7 @@ export const analyzeVod = inngest.createFunction(
   {
     id: "analyze-vod",
     retries: 1,
-    timeouts: { finish: "30m" },
+    timeouts: { finish: "2h" },
   },
   { event: "vod/analyze" },
   async ({ event, step }) => {

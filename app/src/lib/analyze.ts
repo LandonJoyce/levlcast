@@ -17,24 +17,7 @@ export interface Peak {
  * Analyze a transcript with Claude to find peak/viral moments.
  * Returns scored peaks with clip boundaries, captions, and scroll-stopping hooks.
  */
-export async function detectPeaks(
-  segments: TranscriptSegment[],
-  vodTitle: string
-): Promise<Peak[]> {
-  const anthropic = new Anthropic();
-
-  const transcript = segments
-    .map((s) => `[${formatTime(s.start)}-${formatTime(s.end)}] ${s.text}`)
-    .join("\n");
-
-  const response = await withRetry(() => anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 2048,
-    system: `You are a viral content strategist who specializes in Twitch-to-TikTok clip selection. You have deep knowledge of what makes gaming and streaming content stop people mid-scroll. You understand pacing, emotional peaks, and the psychology of short-form content. You are ruthlessly selective — you only flag moments that could genuinely perform.`,
-    messages: [
-      {
-        role: "user",
-        content: `Find the top viral clip moments from this Twitch stream transcript.
+const PEAK_DETECTION_PROMPT = (vodTitle: string, transcript: string) => `Find the top viral clip moments from this Twitch stream transcript.
 
 Stream title: "${vodTitle}"
 
@@ -83,26 +66,110 @@ Respond with ONLY a JSON array (no markdown, no code fences):
   }
 ]
 
-Return 3-5 peaks sorted by score descending. Be selective — 3 great clips beats 5 mediocre ones. If there are no moments scoring above 0.5, return [].`,
-      },
-    ],
+Return 3-5 peaks sorted by score descending. Be selective — 3 great clips beats 5 mediocre ones. If there are no moments scoring above 0.5, return [].`;
+
+async function runPeakDetection(
+  anthropic: Anthropic,
+  vodTitle: string,
+  transcript: string
+): Promise<Peak[]> {
+  const response = await withRetry(() => anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 2048,
+    system: `You are a viral content strategist who specializes in Twitch-to-TikTok clip selection. You have deep knowledge of what makes gaming and streaming content stop people mid-scroll. You understand pacing, emotional peaks, and the psychology of short-form content. You are ruthlessly selective — you only flag moments that could genuinely perform.`,
+    messages: [{ role: "user", content: PEAK_DETECTION_PROMPT(vodTitle, transcript) }],
   }), 3, 1000);
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const peaks: Peak[] = JSON.parse(cleaned);
-    return peaks
-      .filter((p) => p.start >= 0 && p.end > p.start && p.score >= 0.5)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+    return peaks.filter((p) => p.start >= 0 && p.end > p.start && p.score >= 0.5);
   } catch {
     console.error("Failed to parse Claude peak response:", text);
     return [];
   }
 }
+
+// 20-minute windows — keeps each Claude call manageable regardless of VOD length
+const CHUNK_SECONDS = 20 * 60;
+
+export async function detectPeaks(
+  segments: TranscriptSegment[],
+  vodTitle: string
+): Promise<Peak[]> {
+  const anthropic = new Anthropic();
+
+  const vodDuration = segments.length > 0 ? segments[segments.length - 1].end : 0;
+
+  // Short VODs (<= 25 min): single pass, no chunking needed
+  if (vodDuration <= CHUNK_SECONDS + 5 * 60) {
+    const transcript = segments
+      .map((s) => `[${formatTime(s.start)}-${formatTime(s.end)}] ${s.text}`)
+      .join("\n");
+
+    const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
+    return peaks.sort((a, b) => b.score - a.score).slice(0, 5);
+  }
+
+  // Long VODs: split into 20-min chunks, run each, then re-rank the top candidates
+  const chunks: TranscriptSegment[][] = [];
+  let chunkStart = 0;
+  while (chunkStart < vodDuration) {
+    const chunkEnd = chunkStart + CHUNK_SECONDS;
+    chunks.push(segments.filter((s) => s.start >= chunkStart && s.start < chunkEnd));
+    chunkStart = chunkEnd;
+  }
+
+  // Process chunks sequentially to avoid hammering the API
+  const allPeaks: Peak[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length === 0) continue;
+    const transcript = chunk
+      .map((s) => `[${formatTime(s.start)}-${formatTime(s.end)}] ${s.text}`)
+      .join("\n");
+    const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
+    allPeaks.push(...peaks);
+  }
+
+  // If we have enough candidates, do a final re-ranking pass with the best 3 from each chunk
+  const topCandidates = allPeaks
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 15);
+
+  if (topCandidates.length <= 5) {
+    return topCandidates;
+  }
+
+  // Re-rank pass: ask Claude to pick the best 5 from all candidates
+  const candidateSummary = topCandidates
+    .map((p, i) => `${i + 1}. [${formatTime(p.start)}-${formatTime(p.end)}] "${p.title}" (score: ${p.score.toFixed(2)}) — ${p.reason}`)
+    .join("\n");
+
+  const rerankResponse = await withRetry(() => anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    system: `You are a viral content strategist selecting the best clips from a Twitch stream.`,
+    messages: [{
+      role: "user",
+      content: `From these ${topCandidates.length} candidate clips from a long stream, pick the 5 best based on viral potential. Return ONLY a JSON array of their numbers (1-based), e.g. [2, 5, 7, 11, 14]. No explanation.\n\nCandidates:\n${candidateSummary}`,
+    }],
+  }), 3, 1000);
+
+  try {
+    const rerankText = rerankResponse.content[0].type === "text" ? rerankResponse.content[0].text : "";
+    const cleaned = rerankText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const indices: number[] = JSON.parse(cleaned);
+    return indices
+      .filter((i) => i >= 1 && i <= topCandidates.length)
+      .map((i) => topCandidates[i - 1])
+      .slice(0, 5);
+  } catch {
+    // Fallback: just return top 5 by score
+    return topCandidates.slice(0, 5);
+  }
+}
+
 
 export interface CoachReport {
   overall_score: number;
