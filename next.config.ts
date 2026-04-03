@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  eslint: {
+    ignoreDuringBuilds: false,
+    dirs: ["src"],
+  },
+  typescript: {
+    ignoreBuildErrors: false,
+  },
   // Images from Twitch CDN and Supabase Storage
   images: {
     remotePatterns: [
