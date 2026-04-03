@@ -4,11 +4,12 @@
 
 const YOUTUBE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const YOUTUBE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const YOUTUBE_REDIRECT_URI = "https://www.levlcast.com/api/auth/youtube/callback";
 
 export function getYouTubeAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_id: process.env.YOUTUBE_CLIENT_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/youtube/callback`,
+    redirect_uri: YOUTUBE_REDIRECT_URI,
     response_type: "code",
     scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly",
     access_type: "offline",
@@ -26,7 +27,7 @@ export async function exchangeYouTubeCode(code: string) {
       code,
       client_id: process.env.YOUTUBE_CLIENT_ID!,
       client_secret: process.env.YOUTUBE_CLIENT_SECRET!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/youtube/callback`,
+      redirect_uri: YOUTUBE_REDIRECT_URI,
       grant_type: "authorization_code",
     }),
   });
