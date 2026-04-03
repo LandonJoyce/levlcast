@@ -309,18 +309,6 @@ export default function LandingPage() {
             LevlCast was built out of frustration with not knowing why growth stalled. The coaching report is the feature we always wished existed.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
-            {[
-              { stat: "0.007%", label: "of Twitch streamers needed to make this a real business" },
-              { stat: "7M+", label: "Twitch streamers looking for an edge" },
-              { stat: "No one", label: "else gives you a post-stream coaching report" },
-            ].map((item) => (
-              <div key={item.stat} className="bg-surface border border-border rounded-2xl p-6">
-                <div className="text-3xl font-extrabold text-accent-light mb-2">{item.stat}</div>
-                <p className="text-sm text-muted">{item.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
