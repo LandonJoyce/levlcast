@@ -1,10 +1,11 @@
 const TIKTOK_AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/";
 const TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
+const TIKTOK_REDIRECT_URI = "https://www.levlcast.com/api/auth/tiktok/callback";
 
 export function getTikTokAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_key: process.env.TIKTOK_CLIENT_KEY!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/tiktok/callback`,
+    redirect_uri: TIKTOK_REDIRECT_URI,
     response_type: "code",
     scope: "user.info.basic,video.upload,video.publish",
     state,
@@ -21,7 +22,7 @@ export async function exchangeTikTokCode(code: string) {
       client_secret: process.env.TIKTOK_CLIENT_SECRET!,
       code,
       grant_type: "authorization_code",
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/tiktok/callback`,
+      redirect_uri: TIKTOK_REDIRECT_URI,
     }),
   });
   return res.json();
