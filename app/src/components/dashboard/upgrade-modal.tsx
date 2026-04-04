@@ -37,7 +37,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
     const planId = process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID;
 
     const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&intent=subscription&vault=true&currency=USD`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&intent=subscription&vault=true&currency=USD&disable-funding=card`;
     script.setAttribute("data-sdk-integration-source", "developer-studio");
     scriptRef.current = script;
 
