@@ -79,26 +79,6 @@ const freeFeatures = [
   "YouTube auto-post",
 ];
 
-const testimonials = [
-  {
-    quote:
-      "LevlCast found a clip from my stream that blew up on TikTok. Gained 300 followers in a week without doing anything extra.",
-    name: "GardenGamer_",
-    role: "Twitch Affiliate",
-  },
-  {
-    quote:
-      "The coaching report told me my energy drops at hour 3 every single stream. I adjusted and my retention went up noticeably.",
-    name: "NightOwlPlays",
-    role: "Twitch Partner",
-  },
-  {
-    quote:
-      "Auto-posting to YouTube while I sleep? This is exactly what I needed as a solo streamer with no editor.",
-    name: "SpeedrunSteve",
-    role: "Twitch Affiliate",
-  },
-];
 
 export default function LandingPage() {
   return (
@@ -167,7 +147,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-xs text-muted">
-            Already helping <span className="text-white font-semibold">200+ streamers</span> grow without hiring an editor.
+            No upload required. Connect with Twitch and get your first report in minutes.
           </p>
 
           {/* Mock dashboard preview card */}
@@ -201,15 +181,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Social proof bar ── */}
+      {/* ── Stats bar ── */}
       <section className="py-10 border-y border-border">
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="flex flex-wrap items-center justify-center gap-10 text-center">
             {[
-              { stat: "200+", label: "Active streamers" },
-              { stat: "10,000+", label: "Clips generated" },
-              { stat: "5 min", label: "Avg. analysis time" },
+              { stat: "~5 min", label: "Avg. analysis time" },
+              { stat: "4 types", label: "Peak categories detected" },
               { stat: "Free", label: "To start, always" },
+              { stat: "0", label: "Uploads required" },
             ].map((item) => (
               <div key={item.label}>
                 <div className="text-2xl font-extrabold text-gradient">{item.stat}</div>
@@ -353,28 +333,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section className="py-28 border-b border-border">
-        <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-xs font-bold tracking-[1.5px] uppercase text-accent-light mb-4">
-            What Streamers Say
-          </p>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-[-1.5px] text-center mb-16 leading-tight">
-            Real results, real streamers.
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {testimonials.map((t) => (
-              <div key={t.name} className="glass border border-border rounded-2xl p-7">
-                <p className="text-sm text-muted leading-relaxed mb-6">&ldquo;{t.quote}&rdquo;</p>
-                <div>
-                  <div className="font-bold text-sm">{t.name}</div>
-                  <div className="text-xs text-accent-light">{t.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── FAQ ── */}
       <FaqSection />
@@ -387,7 +345,7 @@ export default function LandingPage() {
             Ready to LvL Up?
           </h2>
           <p className="text-muted mb-10 leading-relaxed">
-            Join 200+ streamers who are growing without spending hours editing clips.
+            Stop spending hours editing clips. Let AI handle it so you can focus on streaming.
             Start free — no credit card required.
           </p>
           <Link
