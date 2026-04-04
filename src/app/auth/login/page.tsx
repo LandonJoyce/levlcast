@@ -68,7 +68,11 @@ export default function LoginPage() {
         </div>
 
         <p className="text-xs text-muted mt-8">
-          By connecting, you agree to our Terms of Service and Privacy Policy.
+          By connecting, you agree to our{" "}
+          <a href="/terms" className="underline hover:text-white transition-colors">Terms of Service</a>
+          {" "}and{" "}
+          <a href="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</a>
+          .
         </p>
       </div>
     </main>

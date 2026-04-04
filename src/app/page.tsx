@@ -387,8 +387,8 @@ export default function LandingPage() {
             <div>
               <p className="text-xs font-bold tracking-wider uppercase text-muted mb-4">Legal</p>
               <ul className="space-y-3 text-sm">
-                <li><Link href="/auth/login" className="text-muted hover:text-white transition-colors">Terms of Service</Link></li>
-                <li><Link href="/auth/login" className="text-muted hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="text-muted hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="text-muted hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
 
