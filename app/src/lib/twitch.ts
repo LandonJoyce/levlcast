@@ -2,6 +2,7 @@ import { createWriteStream } from "fs";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { PassThrough } from "stream";
 
 const HELIX_BASE = "https://api.twitch.tv/helix";
 
@@ -355,6 +356,111 @@ export async function downloadTwitchVodAudio(
     await cleanup();
     throw err;
   }
+}
+
+/**
+ * Stream Twitch VOD audio segments directly into a PassThrough — no disk writes.
+ * The returned PassThrough is written to in the background; pass it straight to
+ * transcribePassThrough() so Deepgram receives data as it downloads.
+ */
+export function streamTwitchVodAudio(vodId: string): PassThrough {
+  const passThrough = new PassThrough();
+
+  (async () => {
+    const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
+    const gqlRes = await fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        operationName: "PlaybackAccessToken",
+        query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
+          videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) {
+            value
+            signature
+          }
+        }`,
+        variables: { vodID: vodId, playerType: "site" },
+      }),
+    });
+
+    if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+    const gqlData = await gqlRes.json();
+    const token = gqlData.data?.videoPlaybackAccessToken;
+    if (!token) throw new Error("Could not get video playback token");
+
+    const usherParams = new URLSearchParams({
+      allow_source: "true",
+      allow_audio_only: "true",
+      allow_spectre: "true",
+      player: "twitchweb",
+      playlist_include_framerate: "true",
+      sig: token.signature,
+      token: token.value,
+    });
+
+    const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
+    if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+
+    const lines = (await masterRes.text()).split("\n");
+    let streamUrl = "";
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes("audio_only") || lines[i].includes('VIDEO="audio_only"')) {
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j].trim() && !lines[j].startsWith("#")) {
+            streamUrl = lines[j].trim();
+            break;
+          }
+        }
+        break;
+      }
+    }
+    if (!streamUrl) {
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line && !line.startsWith("#") && line.startsWith("http")) {
+          streamUrl = line;
+          break;
+        }
+      }
+    }
+    if (!streamUrl) throw new Error("No stream URL found");
+
+    const subRes = await fetch(streamUrl);
+    if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
+    const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
+    const segmentUrls = (await subRes.text())
+      .split("\n")
+      .filter((l) => l.trim() && !l.startsWith("#"))
+      .map((l) => (l.trim().startsWith("http") ? l.trim() : baseUrl + l.trim()));
+
+    if (segmentUrls.length === 0) throw new Error("No segments found");
+
+    console.log(`[twitch] Streaming ${segmentUrls.length} segments to Deepgram`);
+
+    for (const url of segmentUrls) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const segRes = await fetch(url, { signal: controller.signal });
+        if (!segRes.ok) continue;
+        const buf = Buffer.from(await segRes.arrayBuffer());
+        passThrough.write(buf);
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          console.warn(`[twitch] Segment timeout, skipping: ${url}`);
+          continue;
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    passThrough.end();
+  })().catch((err) => passThrough.destroy(err));
+
+  return passThrough;
 }
 
 /** Convert a raw Twitch VOD into the shape we store in Supabase */

@@ -1,6 +1,6 @@
 import { inngest } from "./client";
-import { downloadTwitchVodAudio } from "@/lib/twitch";
-import { transcribeFile } from "@/lib/deepgram";
+import { streamTwitchVodAudio } from "@/lib/twitch";
+import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -16,9 +16,8 @@ export const analyzeVod = inngest.createFunction(
     const supabase = createAdminClient();
 
     try {
-      // Step 1: Download audio + transcribe in one step — file must exist on disk
-      // during transcription so both happen in the same execution context
-      const segments = await step.run("download-and-transcribe", async () => {
+      // Step 1: Stream audio directly to Deepgram — no disk writes, no disk space issues
+      const segments = await step.run("transcribe", async () => {
         const { data: vod } = await supabase
           .from("vods")
           .select("twitch_vod_id")
@@ -29,14 +28,10 @@ export const analyzeVod = inngest.createFunction(
         if (!vod) throw new Error("VOD not found");
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
 
-        const download = await downloadTwitchVodAudio(vod.twitch_vod_id);
-        try {
-          const result = await transcribeFile(download.filePath);
-          if (result.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
-          return result;
-        } finally {
-          await download.cleanup();
-        }
+        const stream = streamTwitchVodAudio(vod.twitch_vod_id);
+        const result = await transcribePassThrough(stream);
+        if (result.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+        return result;
       });
 
       // Step 3: Detect peaks + coach report
