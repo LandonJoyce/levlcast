@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 import { CoachReportCard } from "@/components/dashboard/coach-report-card";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
+import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { ArrowLeft, Calendar, Clock, Film } from "lucide-react";
@@ -21,7 +22,7 @@ export default async function VodDetailPage({
 
   const { data: vod } = await supabase
     .from("vods")
-    .select("*")
+    .select("*, share_token")
     .eq("id", id)
     .eq("user_id", user!.id)
     .single();
@@ -97,6 +98,11 @@ export default async function VodDetailPage({
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Share button */}
+          <div className="flex justify-end">
+            <ShareReportButton vodId={vod.id} existingToken={vod.share_token} />
+          </div>
+
           {/* Coach Report */}
           {coachReport ? (
             <CoachReportCard report={coachReport} />
