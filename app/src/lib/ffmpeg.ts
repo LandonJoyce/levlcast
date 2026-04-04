@@ -1,3 +1,20 @@
+/**
+ * lib/ffmpeg.ts — video clip cutting using FFmpeg.
+ *
+ * WHAT IT DOES:
+ *   cutClip(vodUrl, start, end) downloads the relevant portion of a Twitch VOD
+ *   as an MP4, cuts it to the exact start/end times, and returns the file as a Buffer.
+ *
+ * PLATFORM DIFFERENCES:
+ *   - macOS / Windows (local dev): uses ffmpeg-static npm package (bundled binary)
+ *   - Linux / Vercel (production): downloads a static ffmpeg binary to /tmp on first use
+ *     and reuses it for subsequent calls within the same function invocation.
+ *
+ * WHY /tmp ON VERCEL:
+ *   Vercel serverless functions are read-only except for /tmp.
+ *   The binary download only happens once per cold start (~2-3 seconds).
+ */
+
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeFile, unlink, readFile, mkdtemp, access, chmod } from "fs/promises";

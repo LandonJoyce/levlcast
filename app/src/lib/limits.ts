@@ -1,6 +1,27 @@
 /**
- * Plan limits and usage checking for LevlCast subscription system.
+ * lib/limits.ts — subscription plan limits and usage enforcement.
+ *
+ * PLAN LIMITS:
+ *   Free: 1 VOD analysis/month, 5 clips total (lifetime)
+ *   Pro:  10 VOD analyses/month, 999 clips total
+ *
+ * HOW USAGE IS COUNTED:
+ *   - Analyses: completed VODs (analyzed_at not null) + in-progress VODs
+ *     (status = transcribing | analyzing). In-progress are counted to prevent
+ *     a race condition where two simultaneous requests both pass the limit check
+ *     before either analysis finishes.
+ *   - Clips: total rows in the clips table with status = "ready" for this user.
+ *
+ * HOW PLAN IS DETERMINED:
+ *   getUserUsage() reads the profile's plan field, then checks subscription_expires_at.
+ *   If a Pro subscription has lapsed, it auto-downgrades the user to Free silently.
+ *
+ * USAGE:
+ *   const usage = await getUserUsage(userId, supabase);
+ *   if (!usage.can_analyze) return { error: "limit_reached" };
  */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const FREE_LIMITS = {
   analyses_per_month: 1,
@@ -22,7 +43,7 @@ export interface UserUsage {
 
 export async function getUserUsage(
   userId: string,
-  supabase: any
+  supabase: SupabaseClient
 ): Promise<UserUsage> {
   // Get plan from profile — also check expiry so lapsed subscriptions auto-downgrade
   const { data: profile } = await supabase

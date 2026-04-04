@@ -1,3 +1,23 @@
+/**
+ * POST /api/clips/generate
+ *
+ * Generates a video clip from a specific peak moment in an analyzed VOD.
+ * This is a long-running route (~30-60s) — it downloads audio, runs FFmpeg,
+ * and uploads the result to Supabase Storage.
+ *
+ * REQUEST BODY:
+ *   { vodId: string, peakIndex: number }
+ *   peakIndex is the index into the vod's peak_data array (0-based).
+ *
+ * RESPONSES:
+ *   200 { clipId: string, storageUrl: string } — clip ready
+ *   400 { error: "..." }          — missing/invalid input
+ *   401                           — not authenticated
+ *   403 { error: "limit_reached", upgrade: true } — clip limit hit
+ *   404 { error: "not_found" }    — VOD or peak not found
+ *   409 { error: "already_exists" }              — clip already generated
+ */
+
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { downloadTwitchVodAudio } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";

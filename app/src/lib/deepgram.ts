@@ -1,3 +1,24 @@
+/**
+ * lib/deepgram.ts — audio transcription via the Deepgram API.
+ *
+ * FUNCTIONS:
+ *   transcribePassThrough(stream) — preferred. Streams audio directly from a
+ *     Node.js PassThrough (e.g. piped from Twitch M3U8) with no disk writes.
+ *     Used in the Inngest analysis pipeline.
+ *
+ *   transcribeFile(filePath) — transcribes a local audio file already on disk.
+ *     Used after FFmpeg has cut a clip to verify timing.
+ *
+ *   transcribeFromUrl(url) — asks Deepgram to fetch the URL itself.
+ *     Currently unused — kept for reference. Deepgram's URL fetch doesn't work
+ *     well with Twitch M3U8 playlists that require auth headers.
+ *
+ * SETTINGS (DEEPGRAM_PARAMS):
+ *   model=nova-3      — Deepgram's best accuracy model
+ *   utterances=true   — splits transcript by natural speech pauses (used for timestamps)
+ *   utt_split=1.5     — 1.5 second silence = new utterance boundary
+ */
+
 import { createReadStream } from "fs";
 import { PassThrough } from "stream";
 import { withRetry } from "./retry";

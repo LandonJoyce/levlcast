@@ -1,3 +1,22 @@
+/**
+ * lib/analyze.ts — AI peak detection and coaching report generation.
+ *
+ * This is the core of LevlCast. It uses Claude to:
+ *   1. detectPeaks()      — find the best viral clip moments in a VOD transcript
+ *   2. generateCoachReport() — produce a scored coaching report for the streamer
+ *
+ * HOW PEAK DETECTION WORKS:
+ *   - Short VODs (<= 25 min): single Claude call on the full transcript
+ *   - Long VODs: split into 20-minute chunks, run each independently,
+ *     then do a final re-ranking pass to pick the best 5 overall
+ *
+ * MODELS USED:
+ *   - Peak detection: claude-haiku-4-5 (fast, cheap, good enough for scoring)
+ *   - Coaching report: claude-sonnet-4-6 (slower, higher quality — flagship feature)
+ *
+ * See src/types/index.ts for the Peak and CoachReport type definitions.
+ */
+
 import Anthropic from "@anthropic-ai/sdk";
 import { TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
@@ -84,15 +103,27 @@ async function runPeakDetection(
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const peaks: Peak[] = JSON.parse(cleaned);
-    return peaks.filter((p) => p.start >= 0 && p.end > p.start && p.score >= 0.5);
+    return peaks.filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE);
   } catch {
     console.error("Failed to parse Claude peak response:", text);
     return [];
   }
 }
 
-// 20-minute windows — keeps each Claude call manageable regardless of VOD length
+// How long each transcript chunk is when splitting long VODs.
+// 20 minutes keeps each Claude call fast and within token limits.
 const CHUNK_SECONDS = 20 * 60;
+
+// Maximum peaks returned per VOD. Keeping this low forces quality over quantity.
+const MAX_PEAKS = 5;
+
+// Top candidates to consider during the re-ranking pass on long VODs.
+// We take the best 3 from each chunk (up to 15 total) and re-rank them.
+const RERANK_CANDIDATE_LIMIT = 15;
+
+// Minimum virality score for a peak to be included. Claude's rubric:
+//   0.5–0.69 = decent clip (niche appeal), 0.7+ = strong clip, 0.9+ = viral
+const MIN_PEAK_SCORE = 0.5;
 
 export async function detectPeaks(
   segments: TranscriptSegment[],
@@ -109,7 +140,7 @@ export async function detectPeaks(
       .join("\n");
 
     const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
-    return peaks.sort((a, b) => b.score - a.score).slice(0, 5);
+    return peaks.sort((a, b) => b.score - a.score).slice(0, MAX_PEAKS);
   }
 
   // Long VODs: split into 20-min chunks, run each, then re-rank the top candidates
@@ -135,9 +166,9 @@ export async function detectPeaks(
   // If we have enough candidates, do a final re-ranking pass with the best 3 from each chunk
   const topCandidates = allPeaks
     .sort((a, b) => b.score - a.score)
-    .slice(0, 15);
+    .slice(0, RERANK_CANDIDATE_LIMIT);
 
-  if (topCandidates.length <= 5) {
+  if (topCandidates.length <= MAX_PEAKS) {
     return topCandidates;
   }
 
@@ -152,7 +183,7 @@ export async function detectPeaks(
     system: `You are a viral content strategist selecting the best clips from a Twitch stream.`,
     messages: [{
       role: "user",
-      content: `From these ${topCandidates.length} candidate clips from a long stream, pick the 5 best based on viral potential. Return ONLY a JSON array of their numbers (1-based), e.g. [2, 5, 7, 11, 14]. No explanation.\n\nCandidates:\n${candidateSummary}`,
+      content: `From these ${topCandidates.length} candidate clips from a long stream, pick the ${MAX_PEAKS} best based on viral potential. Return ONLY a JSON array of their numbers (1-based), e.g. [2, 5, 7, 11, 14]. No explanation.\n\nCandidates:\n${candidateSummary}`,
     }],
   }), 3, 1000);
 
@@ -163,7 +194,7 @@ export async function detectPeaks(
     return indices
       .filter((i) => i >= 1 && i <= topCandidates.length)
       .map((i) => topCandidates[i - 1])
-      .slice(0, 5);
+      .slice(0, MAX_PEAKS);
   } catch {
     // Fallback: just return top 5 by score
     return topCandidates.slice(0, 5);

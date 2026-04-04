@@ -1,3 +1,21 @@
+/**
+ * POST /api/vods/analyze
+ *
+ * Starts a VOD analysis job. Does NOT run the analysis itself —
+ * it validates the request, then fires an Inngest background event.
+ * The actual work (transcription + AI) happens in lib/inngest/functions.ts.
+ *
+ * REQUEST BODY:
+ *   { vodId: string, startSeconds?: number, endSeconds?: number }
+ *
+ * RESPONSES:
+ *   200 { ok: true }              — job queued successfully
+ *   400 { error: "..." }          — missing/invalid input
+ *   401                           — not authenticated
+ *   403 { error: "limit_reached", upgrade: true } — plan limit hit
+ *   409 { error: "already_analyzed" }             — VOD already done
+ */
+
 import { createClientFromRequest } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { inngest } from "@/lib/inngest/client";

@@ -1,3 +1,30 @@
+/**
+ * lib/inngest/functions.ts — background VOD analysis job.
+ *
+ * This file defines the analyzeVod Inngest function, which is the core
+ * background job that runs whenever a user submits a VOD for analysis.
+ *
+ * PIPELINE (runs in the background, not in the HTTP request):
+ *   1. Stream audio from Twitch → pipe directly to Deepgram (no disk writes)
+ *   2. Deepgram returns a timestamped transcript
+ *   3. Claude (Haiku) detects peak moments in the transcript
+ *   4. Claude (Sonnet) generates a full coaching report
+ *   5. Save peaks + report to the vods table, set status = "ready"
+ *
+ * STATUS UPDATES:
+ *   The VOD status is updated at each step so the dashboard can show progress:
+ *     pending → transcribing → analyzing → ready (or failed)
+ *
+ * WHY INNGEST:
+ *   This pipeline takes 2-5 minutes per VOD. Inngest lets it run as a
+ *   durable background job with automatic retries, timeouts, and step logging —
+ *   without blocking the HTTP response or hitting Vercel's 60s function limit.
+ *
+ * HOW IT'S TRIGGERED:
+ *   POST /api/vods/analyze sends an Inngest event ("vod/analyze") with
+ *   { vodId, userId, startSeconds?, endSeconds? } as the payload.
+ */
+
 import { inngest } from "./client";
 import { streamTwitchVodAudio } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";

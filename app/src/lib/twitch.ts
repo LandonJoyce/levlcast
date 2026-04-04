@@ -1,3 +1,24 @@
+/**
+ * lib/twitch.ts — Twitch API integration and VOD audio handling.
+ *
+ * WHAT THIS FILE DOES:
+ *   - Authenticates with Twitch using client credentials (App Access Token)
+ *   - Fetches a user's VOD list from the Twitch Helix API
+ *   - Gets the M3U8 audio stream URL for a VOD (via Twitch's internal GraphQL API)
+ *   - Provides two ways to get VOD audio:
+ *       downloadTwitchVodAudio() — downloads segments to a temp file on disk
+ *       streamTwitchVodAudio()   — streams segments directly as a PassThrough (no disk)
+ *
+ * WHICH AUDIO METHOD TO USE:
+ *   - Use streamTwitchVodAudio() in the analysis pipeline (Inngest job).
+ *     It pipes audio directly to Deepgram with no disk writes — faster and safer on Vercel.
+ *   - Use downloadTwitchVodAudio() for clip generation, which needs a local file for FFmpeg.
+ *
+ * TOKEN CACHING:
+ *   The App Access Token is cached in memory until expiry. On Vercel (serverless),
+ *   this cache only lives for the duration of the function invocation.
+ */
+
 import { createWriteStream } from "fs";
 import { mkdtemp, unlink, rmdir } from "fs/promises";
 import { join } from "path";
