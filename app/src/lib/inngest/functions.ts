@@ -1,6 +1,6 @@
 import { inngest } from "./client";
-import { getTwitchVodAudioUrl } from "@/lib/twitch";
-import { transcribeFromUrl } from "@/lib/deepgram";
+import { downloadTwitchVodAudio } from "@/lib/twitch";
+import { transcribeFile } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -16,8 +16,9 @@ export const analyzeVod = inngest.createFunction(
     const supabase = createAdminClient();
 
     try {
-      // Step 1: Get Twitch audio URL (no download)
-      const audioUrl = await step.run("get-audio-url", async () => {
+      // Step 1: Download audio + transcribe in one step — file must exist on disk
+      // during transcription so both happen in the same execution context
+      const segments = await step.run("download-and-transcribe", async () => {
         const { data: vod } = await supabase
           .from("vods")
           .select("twitch_vod_id")
@@ -26,15 +27,16 @@ export const analyzeVod = inngest.createFunction(
           .single();
 
         if (!vod) throw new Error("VOD not found");
-        return getTwitchVodAudioUrl(vod.twitch_vod_id);
-      });
-
-      // Step 2: Transcribe via Deepgram URL (no file download)
-      const segments = await step.run("transcribe", async () => {
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
-        const result = await transcribeFromUrl(audioUrl);
-        if (result.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
-        return result;
+
+        const download = await downloadTwitchVodAudio(vod.twitch_vod_id);
+        try {
+          const result = await transcribeFile(download.filePath);
+          if (result.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+          return result;
+        } finally {
+          await download.cleanup();
+        }
       });
 
       // Step 3: Detect peaks + coach report
