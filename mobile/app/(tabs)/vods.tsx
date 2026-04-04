@@ -37,7 +37,11 @@ export default function VodsScreen() {
   async function syncVods() {
     setSyncing(true);
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/vods/sync`, { method: 'POST' });
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/twitch/vods`, {
+        method: 'POST',
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
       if (!res.ok) throw new Error('Sync failed');
       await loadVods();
     } catch {
@@ -112,9 +116,9 @@ export default function VodsScreen() {
               <View style={styles.vodFooter}>
                 <View style={[styles.statusDot, { backgroundColor: statusColor(item.status) }]} />
                 <Text style={[styles.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
-                {item.status === 'pending' && (
+                {(item.status === 'pending' || item.status === 'failed') && (
                   <TouchableOpacity style={styles.analyzeBtn} onPress={() => analyzeVod(item.id)}>
-                    <Text style={styles.analyzeBtnText}>Analyze</Text>
+                    <Text style={styles.analyzeBtnText}>{item.status === 'failed' ? 'Retry' : 'Analyze'}</Text>
                   </TouchableOpacity>
                 )}
                 {item.status === 'ready' && (

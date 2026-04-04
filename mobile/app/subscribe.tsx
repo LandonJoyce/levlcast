@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, ScrollView, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { getProPackage, getAnnualPackage, purchasePro, restorePurchases } from '@/lib/revenuecat';
 import { colors } from '@/lib/colors';
 import { PurchasesPackage } from 'react-native-purchases';
@@ -39,6 +40,22 @@ export default function SubscribeScreen() {
     if (!activePkg) return;
     setPurchasing(true);
     const success = await purchasePro(activePkg);
+
+    if (success) {
+      // Sync the verified purchase to our backend so Supabase plan is updated
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/subscription/revenuecat`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+        }
+      } catch {
+        // Non-fatal — RevenueCat webhook will sync it as a fallback
+      }
+    }
+
     setPurchasing(false);
     if (success) {
       Alert.alert('Welcome to Pro!', 'Your subscription is now active.', [
