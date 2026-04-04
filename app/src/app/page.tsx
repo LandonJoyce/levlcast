@@ -1,24 +1,30 @@
 import Link from "next/link";
-import { Zap, BarChart2, Scissors, MessageSquare, Check, Star } from "lucide-react";
+import { BarChart2, Scissors, MessageSquare, Check } from "lucide-react";
+import FaqSection from "@/components/FaqSection";
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-bg">
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border">
-        <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-extrabold tracking-tight text-gradient">
+        <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between gap-6">
+          <span className="text-xl font-extrabold tracking-tight text-gradient flex-shrink-0">
             LevlCast
           </span>
-          <div className="flex items-center gap-4">
-            <a href="#pricing" className="text-sm text-muted hover:text-white transition-colors hidden sm:block">
-              Pricing
-            </a>
+          <div className="hidden md:flex items-center gap-7 text-sm text-muted font-medium">
+            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/auth/login" className="hidden md:block text-sm text-muted hover:text-white transition-colors font-medium">
+              Log in
+            </Link>
             <Link
               href="/auth/login"
               className="bg-accent text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:opacity-85 transition-opacity"
             >
-              Get Started Free
+              Analyze Free
             </Link>
           </div>
         </div>
@@ -48,6 +54,25 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="text-xs text-muted mt-4">Free to start. No credit card required.</p>
+        </div>
+      </section>
+
+      {/* Stats bar */}
+      <section className="py-10 border-y border-border">
+        <div className="max-w-[1080px] mx-auto px-6">
+          <div className="flex flex-wrap items-center justify-center gap-10 text-center">
+            {[
+              { stat: "~5 min", label: "Avg. analysis time" },
+              { stat: "4 types", label: "Peak categories detected" },
+              { stat: "Free", label: "To start, always" },
+              { stat: "0", label: "Uploads required" },
+            ].map((item) => (
+              <div key={item.label}>
+                <div className="text-2xl font-extrabold text-accent-light">{item.stat}</div>
+                <div className="text-xs text-muted mt-1">{item.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -89,7 +114,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="py-24 border-t border-border">
+      <section className="py-24 border-t border-border" id="how-it-works">
         <div className="max-w-[1080px] mx-auto px-6">
           <p className="text-center text-xs font-bold tracking-[1.5px] uppercase text-accent-light mb-4">
             How it works
@@ -296,25 +321,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Social proof / trust */}
+      {/* Built by a streamer */}
       <section className="py-20 border-t border-border bg-surface/20">
         <div className="max-w-[1080px] mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-1 mb-3">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
-            ))}
-          </div>
           <p className="text-lg font-bold mb-2">Built by a streamer, for streamers.</p>
           <p className="text-sm text-muted max-w-[480px] mx-auto leading-relaxed">
             LevlCast was built out of frustration with not knowing why growth stalled. The coaching report is the feature we always wished existed.
           </p>
-
         </div>
       </section>
 
+      {/* FAQ */}
+      <FaqSection />
+
       {/* Final CTA */}
-      <section className="py-28 border-t border-border text-center">
-        <div className="max-w-[1080px] mx-auto px-6">
+      <section className="py-28 border-t border-border text-center relative overflow-hidden">
+        <div className="absolute inset-0 glow-bg pointer-events-none" />
+        <div className="max-w-[1080px] mx-auto px-6 relative">
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6">
             Your next stream deserves feedback.
           </h2>
@@ -332,14 +355,39 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-10">
-        <div className="max-w-[1080px] mx-auto px-6 flex items-center justify-between flex-wrap gap-4">
-          <span className="text-xl font-extrabold text-gradient">LevlCast</span>
-          <div className="flex items-center gap-6 text-sm text-muted">
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+      <footer className="border-t border-border py-14">
+        <div className="max-w-[1080px] mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+            <div className="md:col-span-1">
+              <span className="text-xl font-extrabold text-gradient block mb-3">LevlCast</span>
+              <p className="text-xs text-muted leading-relaxed">Built by a streamer, for streamers.</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold tracking-wider uppercase text-muted mb-4">Product</p>
+              <ul className="space-y-3 text-sm">
+                <li><a href="#how-it-works" className="text-muted hover:text-white transition-colors">How It Works</a></li>
+                <li><a href="#pricing" className="text-muted hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#faq" className="text-muted hover:text-white transition-colors">FAQ</a></li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-bold tracking-wider uppercase text-muted mb-4">Legal</p>
+              <ul className="space-y-3 text-sm">
+                <li><Link href="/terms" className="text-muted hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="text-muted hover:text-white transition-colors">Privacy Policy</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-bold tracking-wider uppercase text-muted mb-4">Contact</p>
+              <ul className="space-y-3 text-sm">
+                <li><a href="mailto:support@levlcast.com" className="text-muted hover:text-white transition-colors">support@levlcast.com</a></li>
+              </ul>
+            </div>
           </div>
-          <p className="text-sm text-muted">© 2026 LevlCast. All rights reserved.</p>
+          <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-muted">© 2026 LevlCast. All rights reserved.</p>
+            <p className="text-xs text-muted">Built by a streamer, for streamers.</p>
+          </div>
         </div>
       </footer>
     </main>

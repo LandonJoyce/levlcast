@@ -9,9 +9,41 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "LevlCast — LvL Up Your Stream",
+  metadataBase: new URL("https://www.levlcast.com"),
+  title: {
+    default: "LevlCast — LvL Up Your Stream",
+    template: "%s | LevlCast",
+  },
   description:
-    "AI-powered tools that turn your stream into clips, content, and a bigger audience — automatically.",
+    "AI-powered tools that turn your Twitch stream into clips, content, and a bigger audience — automatically. Start free, no credit card required.",
+  keywords: [
+    "Twitch clips",
+    "stream highlights",
+    "AI stream analysis",
+    "Twitch growth",
+    "auto clips",
+    "streamer tools",
+    "stream coaching",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://www.levlcast.com",
+    title: "LevlCast — LvL Up Your Stream",
+    description:
+      "AI-powered tools that turn your Twitch stream into clips, content, and a bigger audience — automatically.",
+    siteName: "LevlCast",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "LevlCast — AI-powered Twitch stream tools",
+      },
+    ],
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -28,6 +60,21 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "LevlCast",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Web, iOS",
+  description:
+    "AI-powered tools that turn your Twitch stream into clips, content, and a bigger audience — automatically.",
+  url: "https://www.levlcast.com",
+  offers: [
+    { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "9.99", priceCurrency: "USD" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -42,6 +89,10 @@ export default function RootLayout({
         <meta
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
