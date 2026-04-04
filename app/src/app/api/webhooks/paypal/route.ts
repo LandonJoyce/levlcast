@@ -133,19 +133,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
+  // 35-day expiry window — 5-day buffer over the 30-day billing cycle.
+  // Extended on every successful payment so lapsed billing auto-revokes access.
+  const renewedExpiresAt = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString();
+
   switch (eventType) {
-    case "BILLING.SUBSCRIPTION.ACTIVATED": {
+    case "BILLING.SUBSCRIPTION.ACTIVATED":
+    case "PAYMENT.SALE.COMPLETED": {
       await admin
         .from("profiles")
-        .update({ plan: "pro", updated_at: new Date().toISOString() })
+        .update({ plan: "pro", subscription_expires_at: renewedExpiresAt, updated_at: new Date().toISOString() })
         .eq("id", userId);
 
       await admin
         .from("subscriptions")
-        .update({ plan: "pro", status: "active", updated_at: new Date().toISOString() })
+        .update({ plan: "pro", status: "active", subscription_expires_at: renewedExpiresAt, updated_at: new Date().toISOString() })
         .eq("user_id", userId);
 
-      console.log(`[webhook/paypal] User ${userId} upgraded to pro`);
+      console.log(`[webhook/paypal] User ${userId} pro access extended to ${renewedExpiresAt} (${eventType})`);
       break;
     }
 

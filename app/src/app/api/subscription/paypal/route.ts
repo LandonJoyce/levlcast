@@ -83,12 +83,17 @@ export async function POST(request: Request) {
         );
       }
 
+      // Set expiry 35 days from now (5-day buffer over 30-day billing cycle)
+      // If PayPal fails to deliver a renewal webhook, access lapses automatically
+      const expiresAt = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString();
+
       // Update profile plan to pro
       await admin
         .from("profiles")
         .update({
           plan: "pro",
           paypal_subscription_id: subscriptionId,
+          subscription_expires_at: expiresAt,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
@@ -100,6 +105,7 @@ export async function POST(request: Request) {
           paypal_subscription_id: subscriptionId,
           plan: "pro",
           status: "active",
+          subscription_expires_at: expiresAt,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }

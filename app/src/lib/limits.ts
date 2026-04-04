@@ -24,15 +24,28 @@ export async function getUserUsage(
   userId: string,
   supabase: any
 ): Promise<UserUsage> {
-  // Get plan from profile
+  // Get plan from profile — also check expiry so lapsed subscriptions auto-downgrade
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan")
+    .select("plan, subscription_expires_at")
     .eq("id", userId)
     .single();
 
+  const isExpired =
+    profile?.plan === "pro" &&
+    profile?.subscription_expires_at &&
+    new Date(profile.subscription_expires_at) < new Date();
+
+  if (isExpired) {
+    // Subscription lapsed — downgrade silently so the user can't abuse expired pro access
+    await supabase
+      .from("profiles")
+      .update({ plan: "free", updated_at: new Date().toISOString() })
+      .eq("id", userId);
+  }
+
   const plan: "free" | "pro" =
-    profile?.plan === "pro" ? "pro" : "free";
+    profile?.plan === "pro" && !isExpired ? "pro" : "free";
 
   const limits = plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
 
