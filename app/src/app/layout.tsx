@@ -31,18 +31,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast — LvL Up Your Stream",
+    title: "LevlCast — Your AI Coach. Every Stream.",
     description:
-      "AI-powered tools that turn your Twitch stream into clips, content, and a bigger audience — automatically.",
+      "AI-powered tools that analyze your Twitch VODs, generate clips, and tell you exactly what to improve.",
     siteName: "LevlCast",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "LevlCast — AI-powered Twitch stream tools",
-      },
-    ],
   },
   manifest: "/manifest.json",
   appleWebApp: {
