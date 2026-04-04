@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 /**
@@ -34,6 +35,28 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * Create a Supabase client authenticated via Bearer token from the
+ * Authorization header. Used by mobile API calls which can't set cookies.
+ * Returns null if no valid Bearer token is present.
+ */
+export async function createClientFromRequest(request: Request) {
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (token) {
+    const client = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+    return client;
+  }
+
+  // Fall back to cookie-based auth (web)
+  return createClient();
 }
 
 /**

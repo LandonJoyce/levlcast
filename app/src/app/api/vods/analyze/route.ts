@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClientFromRequest } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { inngest } from "@/lib/inngest/client";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const supabase = await createClientFromRequest(request);
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

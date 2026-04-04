@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClientFromRequest } from "@/lib/supabase/server";
 import { fetchTwitchVods, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
 import { NextResponse } from "next/server";
 
@@ -8,8 +8,8 @@ import { NextResponse } from "next/server";
  * Uses a Twitch App Access Token (client credentials) since VODs are public.
  * Skips VODs that already exist (by twitch_vod_id).
  */
-export async function POST() {
-  const supabase = await createClient();
+export async function POST(request: Request) {
+  const supabase = await createClientFromRequest(request);
 
   // 1. Get authenticated user
   const {
