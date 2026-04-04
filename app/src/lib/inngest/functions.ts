@@ -12,7 +12,12 @@ export const analyzeVod = inngest.createFunction(
   },
   { event: "vod/analyze" },
   async ({ event, step }) => {
-    const { vodId, userId } = event.data as { vodId: string; userId: string };
+    const { vodId, userId, startSeconds, endSeconds } = event.data as {
+      vodId: string;
+      userId: string;
+      startSeconds?: number;
+      endSeconds?: number;
+    };
     const supabase = createAdminClient();
 
     try {
@@ -34,15 +39,24 @@ export const analyzeVod = inngest.createFunction(
         return result;
       });
 
-      // Step 3: Detect peaks + coach report
+      // Step 2: Detect peaks + coach report (filtered to selected range if provided)
       const { peaks, coachReport } = await step.run("analyze", async () => {
         await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
 
         const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
         const title = vod?.title || "Stream";
 
-        const peaks = await detectPeaks(segments, title);
-        const coachReport = await generateCoachReport(segments, title, peaks);
+        // Filter to selected time range — if no range specified, use all segments
+        const filtered = (startSeconds !== undefined && endSeconds !== undefined)
+          ? segments.filter(s => s.start >= startSeconds && s.end <= endSeconds)
+          : segments;
+
+        if (filtered.length === 0) {
+          throw new Error("No speech found in the selected time range — try a wider range");
+        }
+
+        const peaks = await detectPeaks(filtered, title);
+        const coachReport = await generateCoachReport(filtered, title, peaks);
         return { peaks, coachReport };
       });
 

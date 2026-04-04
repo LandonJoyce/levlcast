@@ -23,9 +23,26 @@ export async function POST(request: Request) {
     );
   }
 
-  const { vodId } = await request.json();
+  const { vodId, startSeconds, endSeconds } = await request.json();
   if (!vodId || typeof vodId !== "string") {
     return NextResponse.json({ error: "Missing or invalid vodId" }, { status: 400 });
+  }
+
+  // Validate optional time range
+  const hasRange = startSeconds !== undefined || endSeconds !== undefined;
+  if (hasRange) {
+    if (typeof startSeconds !== "number" || typeof endSeconds !== "number") {
+      return NextResponse.json({ error: "startSeconds and endSeconds must be numbers" }, { status: 400 });
+    }
+    if (startSeconds < 0 || endSeconds < 0) {
+      return NextResponse.json({ error: "Time values cannot be negative" }, { status: 400 });
+    }
+    if (endSeconds <= startSeconds) {
+      return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
+    }
+    if (endSeconds - startSeconds < 60) {
+      return NextResponse.json({ error: "Range must be at least 1 minute" }, { status: 400 });
+    }
   }
 
   // Atomic status claim — prevents duplicate jobs
@@ -54,7 +71,11 @@ export async function POST(request: Request) {
   // Fire Inngest event — analysis runs in background, no timeout risk
   await inngest.send({
     name: "vod/analyze",
-    data: { vodId, userId: user.id },
+    data: {
+      vodId,
+      userId: user.id,
+      ...(hasRange ? { startSeconds, endSeconds } : {}),
+    },
   });
 
   return NextResponse.json({ queued: true });
