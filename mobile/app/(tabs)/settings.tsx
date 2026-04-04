@@ -17,13 +17,21 @@ export default function SettingsScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [profileRes, usageRes] = await Promise.all([
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+    const [profileRes, analysesRes] = await Promise.all([
       supabase.from('profiles').select('twitch_display_name, twitch_login, twitch_avatar_url, plan').eq('id', user.id).single(),
-      supabase.from('usage_logs').select('*').eq('user_id', user.id).single(),
+      supabase.from('vods').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .not('analyzed_at', 'is', null)
+        .gte('analyzed_at', monthStart)
+        .lt('analyzed_at', monthEnd),
     ]);
 
     setProfile(profileRes.data);
-    setUsage(usageRes.data);
+    setUsage({ analyses_this_month: analysesRes.count ?? 0 });
   }
 
   async function handleRestore() {
@@ -83,7 +91,7 @@ export default function SettingsScreen() {
 
   const isPro = profile?.plan === 'pro';
   const analysesUsed = usage?.analyses_this_month || 0;
-  const analysesLimit = isPro ? 999 : 1;
+  const analysesLimit = isPro ? 10 : 1;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
