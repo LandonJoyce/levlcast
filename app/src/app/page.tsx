@@ -336,8 +336,8 @@ export default function LandingPage() {
         <div className="max-w-[1080px] mx-auto px-6 flex items-center justify-between flex-wrap gap-4">
           <span className="text-xl font-extrabold text-gradient">LevlCast</span>
           <div className="flex items-center gap-6 text-sm text-muted">
-            <a href="https://levlcast.com/terms" className="hover:text-white transition-colors">Terms</a>
-            <a href="https://levlcast.com/privacy" className="hover:text-white transition-colors">Privacy</a>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
           </div>
           <p className="text-sm text-muted">© 2026 LevlCast. All rights reserved.</p>
         </div>
