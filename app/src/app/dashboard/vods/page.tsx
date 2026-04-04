@@ -4,6 +4,7 @@ import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { formatDuration } from "@/lib/utils";
 import { Film, Clock, Calendar, ChevronRight } from "lucide-react";
+import { VodProgress } from "@/components/dashboard/vod-progress";
 import Link from "next/link";
 
 /** Status badge colors */
@@ -115,12 +116,20 @@ export default async function VodsPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusStyle(vod.status)}`}
-                  >
-                    {vod.status}
-                  </span>
-                  <AnalyzeButton vodId={vod.id} status={vod.status} />
+                  {vod.status === "transcribing" || vod.status === "analyzing" ? (
+                    <VodProgress
+                      status={vod.status}
+                      durationSeconds={vod.duration_seconds}
+                      compact
+                    />
+                  ) : (
+                    <>
+                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusStyle(vod.status)}`}>
+                        {vod.status}
+                      </span>
+                      <AnalyzeButton vodId={vod.id} status={vod.status} />
+                    </>
+                  )}
                 </div>
               </div>
             </div>

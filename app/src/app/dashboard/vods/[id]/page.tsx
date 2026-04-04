@@ -4,6 +4,8 @@ import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 import { CoachReportCard } from "@/components/dashboard/coach-report-card";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
+import { VodProgress } from "@/components/dashboard/vod-progress";
+import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { ArrowLeft, Calendar, Clock, Film } from "lucide-react";
 
 export default async function VodDetailPage({
@@ -29,8 +31,11 @@ export default async function VodDetailPage({
   const peaks = (vod.peak_data as any[]) || [];
   const coachReport = vod.coach_report as any;
 
+  const isProcessing = vod.status === "transcribing" || vod.status === "analyzing";
+
   return (
     <div>
+      <VodStatusPoller hasProcessing={isProcessing} />
       {/* Back + Header */}
       <div className="mb-6">
         <Link
@@ -73,15 +78,22 @@ export default async function VodDetailPage({
       </div>
 
       {vod.status !== "ready" ? (
-        <div className="bg-surface border border-border rounded-2xl p-10 text-center">
-          <Film size={24} className="text-muted mx-auto mb-3" />
-          <p className="text-sm text-muted">
-            {vod.status === "pending"
-              ? "This VOD hasn't been analyzed yet."
-              : vod.status === "failed"
-              ? `Analysis failed${vod.failed_reason ? `: ${vod.failed_reason}` : ""}. Go back and try analyzing again.`
-              : "Analysis in progress — check back in a few minutes."}
-          </p>
+        <div>
+          {vod.status === "transcribing" || vod.status === "analyzing" ? (
+            <VodProgress
+              status={vod.status}
+              durationSeconds={vod.duration_seconds}
+            />
+          ) : (
+            <div className="bg-surface border border-border rounded-2xl p-10 text-center">
+              <Film size={24} className="text-muted mx-auto mb-3" />
+              <p className="text-sm text-muted">
+                {vod.status === "pending"
+                  ? "This VOD hasn't been analyzed yet. Go back and click Analyze."
+                  : `Analysis failed${vod.failed_reason ? `: ${vod.failed_reason}` : ""}. Go back and try analyzing again.`}
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
