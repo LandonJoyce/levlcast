@@ -34,12 +34,6 @@ export default function NavBar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/auth/login"
-            className="text-sm font-semibold text-muted hover:text-white transition-colors px-3 py-2"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/auth/login"
             className="btn-accent text-sm px-5 py-2.5"
           >
             Analyze Free
@@ -69,17 +63,10 @@ export default function NavBar() {
               {l.label}
             </a>
           ))}
-          <div className="border-t border-border pt-4 flex flex-col gap-3">
+          <div className="border-t border-border pt-4">
             <Link
               href="/auth/login"
-              className="text-sm font-semibold text-center text-muted border border-border rounded-xl py-3 hover:border-accent/40 hover:text-white transition-all"
-              onClick={() => setOpen(false)}
-            >
-              Log in
-            </Link>
-            <Link
-              href="/auth/login"
-              className="btn-accent text-sm text-center py-3"
+              className="btn-accent text-sm text-center py-3 block"
               onClick={() => setOpen(false)}
             >
               Analyze Free

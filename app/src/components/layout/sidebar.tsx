@@ -11,6 +11,7 @@ import {
   Link2,
   Settings,
   LogOut,
+  ArrowLeft,
 } from "lucide-react";
 
 const navItems = [
@@ -92,6 +93,13 @@ export function Sidebar({ user }: SidebarProps) {
             <p className="text-xs text-muted truncate">@{user.login}</p>
           </div>
         </div>
+        <Link
+          href="/"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted hover:text-white hover:bg-white/[0.04] transition-all w-full"
+        >
+          <ArrowLeft size={16} />
+          Back to Home
+        </Link>
         <button
           onClick={async () => {
             await fetch("/auth/logout", { method: "POST" });

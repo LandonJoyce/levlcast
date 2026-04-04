@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 
@@ -44,9 +45,9 @@ export default async function DashboardLayout({
       {/* Mobile top bar */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 glass border-b border-border safe-top">
         <div className="h-14 flex items-center justify-between px-5">
-          <span className="text-lg font-extrabold text-gradient">
+          <Link href="/" className="text-lg font-extrabold text-gradient">
             LevlCast
-          </span>
+          </Link>
           {userData.avatar_url ? (
             <img
               src={userData.avatar_url}

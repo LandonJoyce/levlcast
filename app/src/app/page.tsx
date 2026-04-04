@@ -350,7 +350,9 @@ export default function LandingPage() {
                 {/* Clips ready */}
                 <div className="flex items-center justify-between py-3 border-t border-border">
                   <span className="text-xs text-muted">5 clips ready to export</span>
-                  <button className="btn-accent text-xs px-4 py-2">Export All Clips →</button>
+                  <span className="text-xs bg-accent/10 border border-accent/20 text-accent-light px-4 py-2 rounded-xl font-semibold cursor-default select-none">
+                    Export All Clips →
+                  </span>
                 </div>
               </div>
             </div>
