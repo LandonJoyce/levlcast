@@ -81,7 +81,7 @@ export default function SettingsScreen() {
               await supabase.auth.signOut();
               router.replace('/login');
             } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Could not delete account. Please contact support at mototoka14@gmail.com.');
+              Alert.alert('Error', e?.message || 'Could not delete account. Please contact support at support@levlcast.com.');
             }
           },
         },
@@ -156,7 +156,7 @@ export default function SettingsScreen() {
           <Text style={styles.legalText}>Terms of Service</Text>
         </TouchableOpacity>
         <View style={styles.divider} />
-        <TouchableOpacity style={styles.legalRow} onPress={() => Linking.openURL('mailto:mototoka14@gmail.com')}>
+        <TouchableOpacity style={styles.legalRow} onPress={() => Linking.openURL('mailto:support@levlcast.com')}>
           <Text style={styles.legalText}>Contact Support</Text>
         </TouchableOpacity>
       </View>
