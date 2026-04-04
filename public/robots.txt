@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /dashboard/
-Disallow: /auth/
-Disallow: /api/
-
-Sitemap: https://www.levlcast.com/sitemap.xml
