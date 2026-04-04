@@ -16,17 +16,12 @@ export default function LandingPage() {
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="hidden md:block text-sm text-muted hover:text-white transition-colors font-medium">
-              Log in
-            </Link>
-            <Link
-              href="/auth/login"
-              className="bg-accent text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:opacity-85 transition-opacity"
-            >
-              Analyze Free
-            </Link>
-          </div>
+          <Link
+            href="/auth/login"
+            className="bg-accent text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:opacity-85 transition-opacity"
+          >
+            Analyze Free
+          </Link>
         </div>
       </nav>
 
