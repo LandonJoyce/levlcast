@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "LevlCast — Your AI Coach. Every Stream.";
+export const alt = "LevlCast — Your Coach. Every Stream.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -63,7 +63,7 @@ export default function Image() {
             maxWidth: 900,
           }}
         >
-          Your AI Coach.{" "}
+          Your Coach.{" "}
           <span style={{ color: "#A855F7" }}>Every Stream.</span>
         </div>
 

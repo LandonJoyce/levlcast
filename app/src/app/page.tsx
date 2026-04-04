@@ -79,7 +79,7 @@ export default function LandingPage() {
 
           {/* Headline */}
           <h1 className="text-5xl sm:text-7xl md:text-8xl font-extrabold tracking-[-3px] leading-[1.02] mb-6">
-            Your AI Coach.
+            Your Coach.
             <br />
             <span className="text-gradient">Every Stream.</span>
           </h1>
@@ -445,7 +445,7 @@ export default function LandingPage() {
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
             Your next stream.
             <br />
-            <span className="text-gradient">Your AI coach.</span>
+            <span className="text-gradient">Your coach.</span>
           </h2>
           <p className="text-muted text-sm mb-10 max-w-[400px] mx-auto leading-relaxed">
             Analyze your first VOD for free. No credit card. No setup. Just connect your Twitch and go.

@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast — Your AI Coach. Every Stream.",
+    title: "LevlCast — Your Coach. Every Stream.",
     description:
       "AI-powered tools that analyze your Twitch VODs, generate clips, and tell you exactly what to improve.",
     siteName: "LevlCast",
