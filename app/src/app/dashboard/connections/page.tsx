@@ -62,8 +62,8 @@ export default async function ConnectionsPage({
           </a>
         </div>
 
-        {/* TikTok */}
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        {/* TikTok — coming soon */}
+        <div className="bg-surface border border-border rounded-2xl p-6 opacity-60">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
               <Music size={20} className="text-white" />
@@ -72,16 +72,11 @@ export default async function ConnectionsPage({
               <h2 className="font-bold">TikTok</h2>
               <p className="text-xs text-muted">Auto-post clips to TikTok</p>
             </div>
-            {isTikTokConnected && (
-              <span className="ml-auto text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded-full">Connected</span>
-            )}
+            <span className="ml-auto text-xs font-semibold text-muted bg-white/5 px-2 py-1 rounded-full">Coming Soon</span>
           </div>
-          <a
-            href="/api/auth/tiktok"
-            className="block w-full text-center bg-white/10 hover:bg-white/15 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
-          >
-            {isTikTokConnected ? "Reconnect TikTok" : "Connect TikTok"}
-          </a>
+          <div className="block w-full text-center bg-white/5 text-muted font-semibold px-4 py-2.5 rounded-xl text-sm cursor-not-allowed">
+            Coming Soon
+          </div>
         </div>
       </div>
     </div>

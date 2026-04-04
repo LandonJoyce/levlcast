@@ -192,11 +192,7 @@ export default async function ClipsPage() {
                           isConnected={isYouTubeConnected}
                           existingUrl={ytPostMap.get(clip.id)}
                         />
-                        <PostToTikTok
-                          clipId={clip.id}
-                          isConnected={isTikTokConnected}
-                          existingPostId={ttPostMap.get(clip.id)}
-                        />
+                        <PostToTikTok />
                         <DeleteClip clipId={clip.id} />
                       </div>
                     </div>

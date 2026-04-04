@@ -176,88 +176,11 @@ export function PostToYouTube({
   );
 }
 
-export function PostToTikTok({
-  clipId,
-  isConnected,
-  existingPostId,
-}: {
-  clipId: string;
-  isConnected: boolean;
-  existingPostId?: string | null;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(!!existingPostId);
-  const [error, setError] = useState<string | null>(null);
-  const [reposting, setReposting] = useState(false);
-
-  if (!isConnected) {
-    return (
-      <a
-        href="/dashboard/connections"
-        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
-      >
-        <Music size={12} />
-        Connect TikTok
-      </a>
-    );
-  }
-
-  if (done && !reposting) {
-    return (
-      <div className="inline-flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs text-green-400">
-          <Check size={12} />
-          Posted to TikTok
-        </span>
-        <button
-          onClick={() => setReposting(true)}
-          className="inline-flex items-center gap-1 text-xs text-muted hover:text-white transition-colors"
-        >
-          <RotateCcw size={11} />
-          Re-post
-        </button>
-      </div>
-    );
-  }
-
-  async function handlePost() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/tiktok/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clipId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setDone(true);
-      setReposting(false);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export function PostToTikTok() {
   return (
-    <div className="inline-flex flex-col">
-      <div className="inline-flex items-center gap-2">
-        <button
-          onClick={handlePost}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 text-xs text-white/70 hover:text-white transition-colors disabled:opacity-50"
-        >
-          <Music size={12} />
-          {loading ? "Uploading..." : "Post to TikTok"}
-        </button>
-        {reposting && (
-          <button onClick={() => setReposting(false)} className="text-xs text-muted hover:text-white transition-colors">
-            Cancel
-          </button>
-        )}
-      </div>
-      {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
-    </div>
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted/50 cursor-not-allowed">
+      <Music size={12} />
+      TikTok — Coming Soon
+    </span>
   );
 }
