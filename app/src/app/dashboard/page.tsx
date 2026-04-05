@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/dashboard/stat-card";
+import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
 import { Film, Scissors, BarChart3 } from "lucide-react";
 
@@ -12,21 +13,25 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [vodsResult, clipsResult, peaksResult] = await Promise.all([
+  const [vodsResult, clipsResult, peaksResult, profileResult] = await Promise.all([
     supabase.from("vods").select("id, peak_data", { count: "exact" }).eq("user_id", user!.id),
     supabase.from("clips").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
     supabase.from("vods").select("peak_data").eq("user_id", user!.id).eq("status", "ready").not("peak_data", "is", null),
+    supabase.from("profiles").select("twitch_display_name").eq("id", user!.id).single(),
   ]);
 
   const totalVods = vodsResult.count || 0;
   const totalClips = clipsResult.count || 0;
   const totalPeaks = (peaksResult.data || []).reduce((sum, v) => sum + ((v.peak_data as any[])?.length || 0), 0);
+  const displayName = profileResult.data?.twitch_display_name || "Streamer";
 
   // Check if user has any content yet
   const isEmpty = totalVods === 0 && totalClips === 0;
 
   return (
     <div>
+      {isEmpty && <WelcomeModal name={displayName} />}
+
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1">
