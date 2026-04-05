@@ -98,10 +98,11 @@ export default function LandingPage() {
               Analyze Your First VOD Free
             </Link>
             <button
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 border border-border hover:border-accent/40 text-white/70 hover:text-white font-semibold px-8 py-4 rounded-xl transition-all text-base"
+              disabled
+              className="w-full sm:w-auto flex items-center justify-center gap-2.5 border border-border text-white/30 font-semibold px-8 py-4 rounded-xl text-base cursor-not-allowed opacity-50"
             >
               <Play className="w-4 h-4 fill-current" />
-              Watch Demo
+              Demo Coming Soon
             </button>
           </div>
           <p className="text-xs text-muted">Free to start. No credit card required.</p>
