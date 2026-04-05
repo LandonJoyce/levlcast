@@ -11,19 +11,29 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.levlcast.com"),
   title: {
-    default: "LevlCast — LvL Up Your Stream",
+    default: "LevlCast — Twitch VOD Analyzer, Clip Generator & AI Stream Coach",
     template: "%s | LevlCast",
   },
   description:
-    "AI-powered tools that turn your Twitch stream into clips, content, and a bigger audience — automatically. Start free, no credit card required.",
+    "LevlCast analyzes your Twitch VODs, finds your best moments, generates clips automatically, and gives you an AI coaching report after every stream. Free to start — no credit card required.",
   keywords: [
-    "Twitch clips",
-    "stream highlights",
+    "twitch vod analyzer",
+    "twitch clip maker",
+    "twitch highlights generator",
+    "auto clip generator twitch",
+    "twitch stream coaching",
+    "how to grow on twitch",
+    "twitch stream analytics",
+    "twitch content tools",
+    "vod to clips",
+    "twitch peak moments",
     "AI stream analysis",
-    "Twitch growth",
-    "auto clips",
+    "twitch growth tools",
     "streamer tools",
-    "stream coaching",
+    "stream coaching app",
+    "twitch clip generator",
+    "twitch performance analytics",
+    "best tools for twitch streamers",
   ],
   alternates: {
     canonical: "/",
@@ -31,10 +41,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast — Your Coach. Every Stream.",
+    title: "LevlCast — Twitch VOD Analyzer & AI Stream Coach",
     description:
-      "AI-powered tools that analyze your Twitch VODs, generate clips, and tell you exactly what to improve.",
+      "Automatically analyze your Twitch VODs, generate clips from your best moments, and get an AI coaching report after every stream. Free to start.",
     siteName: "LevlCast",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LevlCast — Twitch VOD Analyzer & AI Stream Coach",
+    description:
+      "Automatically analyze your Twitch VODs, generate clips from your best moments, and get an AI coaching report after every stream. Free to start.",
+    site: "@levlcast",
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -67,6 +84,61 @@ const structuredData = {
   ],
 };
 
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How long does Twitch VOD analysis take?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Most VODs are analyzed within 2–5 minutes depending on stream length. We process audio transcription and AI peak detection in parallel so you're not waiting long.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Does LevlCast store my Twitch VODs?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. We stream your VOD directly from Twitch, analyze it, then discard it. Only the transcription data and generated clip files are stored in your account.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Does LevlCast work with YouTube?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. You can connect your YouTube channel from the dashboard and post clips directly. TikTok and Instagram integrations are coming soon.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Is LevlCast free to use?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes — no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips total. Upgrade to Pro for unlimited analyses and clips.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Does LevlCast work with any Twitch streamer?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "LevlCast works with any Twitch account. Just connect with Twitch OAuth and start analyzing your past VODs immediately.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What is a peak moment on Twitch?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Our AI detects moments by category: hype (chat spikes, hype trains), funny (laughter, reactions), clutch (key gameplay moments), and educational (insight or tips you drop mid-stream).",
+      },
+    },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -85,6 +157,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
         />
       </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
