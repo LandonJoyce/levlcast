@@ -92,9 +92,6 @@ export default function VodDetailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
       <Text style={styles.title} numberOfLines={3}>{vod.title}</Text>
       <Text style={styles.date}>
         {new Date(vod.stream_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}

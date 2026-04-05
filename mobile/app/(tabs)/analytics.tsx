@@ -140,15 +140,7 @@ function SparkLine({ data }: { data: number[] }) {
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const W = 300;
-  const H = 60;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * W;
-    const y = H - ((v - min) / range) * H;
-    return `${x},${y}`;
-  }).join(' ');
-
-  // Use View-based bar chart since SVG may not be available
+  // View-based bar chart
   return (
     <View style={sparkStyles.container}>
       {data.map((v, i) => {
