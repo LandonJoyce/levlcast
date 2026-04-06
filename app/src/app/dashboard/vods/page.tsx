@@ -116,13 +116,25 @@ export default async function VodsPage() {
                       compact
                     />
                   ) : vod.status === "ready" ? (
-                    <Link
-                      href={`/dashboard/vods/${vod.id}`}
-                      className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity"
-                    >
-                      View Coach Report
-                      <ChevronRight size={12} />
-                    </Link>
+                    <>
+                      {(() => {
+                        const score = (vod.coach_report as any)?.overall_score as number | undefined;
+                        if (score === undefined) return null;
+                        const color = score >= 75 ? "text-green-400" : score >= 50 ? "text-yellow-400" : "text-red-400";
+                        return (
+                          <span className={`text-sm font-extrabold ${color}`}>
+                            {score}<span className="text-xs font-normal text-white/30">/100</span>
+                          </span>
+                        );
+                      })()}
+                      <Link
+                        href={`/dashboard/vods/${vod.id}`}
+                        className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity"
+                      >
+                        View Coach Report
+                        <ChevronRight size={12} />
+                      </Link>
+                    </>
                   ) : (
                     <>
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusStyle(vod.status)}`}>
