@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Play, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare } from "lucide-react";
+import { Check, Play, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare, Gamepad2, MessageCircle, Shuffle } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import FaqSection from "@/components/FaqSection";
 
@@ -357,6 +357,160 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Streamer Type Examples ─── */}
+      <section className="py-24 border-t border-border">
+        <div className="max-w-[1080px] mx-auto px-6">
+          <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
+            Adapts To You
+          </p>
+          <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
+            Coaching built for your stream type.
+          </h2>
+          <p className="text-center text-muted text-sm max-w-[480px] mx-auto mb-14 leading-relaxed">
+            LevlCast detects whether you&apos;re a gaming streamer, just chatting, variety, or more — and tailors every piece of feedback accordingly.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            {/* Gaming */}
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                <span className="text-xs font-bold text-white/60">Stream Coach Report</span>
+                <span className="text-xs text-purple-400 font-semibold">Building energy</span>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Type badge */}
+                <div className="flex items-center gap-2.5 bg-purple-500/10 border border-purple-500/20 rounded-xl px-3.5 py-2.5">
+                  <Gamepad2 size={14} className="text-purple-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-purple-400">Gaming Streamer</p>
+                    <p className="text-[11px] text-muted">Coaching for gameplay commentary and hype moments.</p>
+                  </div>
+                </div>
+                {/* Score + summary */}
+                <div className="flex gap-3 items-center">
+                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-green-400/50 bg-green-400/5 flex-shrink-0">
+                    <span className="text-lg font-extrabold text-green-400">81</span>
+                    <span className="text-[9px] text-muted">/100</span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">Strong hype moments and sharp callouts — your reactions at 1:12:04 are exactly what clips are made of.</p>
+                </div>
+                {/* Bullets */}
+                <div className="space-y-1.5">
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
+                    Genuine hype reactions — you don&apos;t fake excitement
+                  </div>
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
+                    Clear game narration keeps new viewers oriented
+                  </div>
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
+                    22s dead air at 47:15 — fill slow moments with commentary
+                  </div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+                  <p className="text-[11px] font-bold text-accent-light mb-1">Coach&apos;s Take</p>
+                  <p className="text-xs text-muted leading-relaxed">Your peak moments are genuinely clip-worthy. The gap is consistency — the slow stretches between kills lose the energy you built.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Just Chatting */}
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                <span className="text-xs font-bold text-white/60">Stream Coach Report</span>
+                <span className="text-xs text-yellow-400 font-semibold">Volatile energy</span>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Type badge */}
+                <div className="flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl px-3.5 py-2.5">
+                  <MessageCircle size={14} className="text-blue-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-blue-400">Just Chatting</p>
+                    <p className="text-[11px] text-muted">Coaching for conversational energy and viewer connection.</p>
+                  </div>
+                </div>
+                {/* Score + summary */}
+                <div className="flex gap-3 items-center">
+                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-yellow-400/50 bg-yellow-400/5 flex-shrink-0">
+                    <span className="text-lg font-extrabold text-yellow-400">63</span>
+                    <span className="text-[9px] text-muted">/100</span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">Strong personality in bursts but long stretches without talking to chat made the middle hour feel like a solo stream.</p>
+                </div>
+                {/* Bullets */}
+                <div className="space-y-1.5">
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
+                    Hot takes land well — your opinion at 34:20 sparked real debate
+                  </div>
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
+                    Chat went unread for 8+ minutes twice — viewers feel ignored
+                  </div>
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
+                    Opening 15 minutes too slow — hook the audience immediately
+                  </div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+                  <p className="text-[11px] font-bold text-accent-light mb-1">Coach&apos;s Take</p>
+                  <p className="text-xs text-muted leading-relaxed">You have the personality. The problem is consistency — chat interaction has to be constant, not occasional, for a just chatting stream to retain viewers.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Variety */}
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                <span className="text-xs font-bold text-white/60">Stream Coach Report</span>
+                <span className="text-xs text-green-400 font-semibold">Building energy</span>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Type badge */}
+                <div className="flex items-center gap-2.5 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3.5 py-2.5">
+                  <Shuffle size={14} className="text-orange-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-orange-400">Variety Streamer</p>
+                    <p className="text-[11px] text-muted">Coaching for content flexibility and audience versatility.</p>
+                  </div>
+                </div>
+                {/* Score + summary */}
+                <div className="flex gap-3 items-center">
+                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-green-400/50 bg-green-400/5 flex-shrink-0">
+                    <span className="text-lg font-extrabold text-green-400">74</span>
+                    <span className="text-[9px] text-muted">/100</span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">Good energy across multiple games — transitions were smooth but the audience reset each time you switched content.</p>
+                </div>
+                {/* Bullets */}
+                <div className="space-y-1.5">
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
+                    Comfortable across all content — personality stays consistent
+                  </div>
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
+                    Funny moments spread evenly — not dependent on one game
+                  </div>
+                  <div className="flex gap-2 items-start text-xs text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
+                    Announce transitions to chat — switching games without warning loses context
+                  </div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+                  <p className="text-[11px] font-bold text-accent-light mb-1">Coach&apos;s Take</p>
+                  <p className="text-xs text-muted leading-relaxed">Variety works when your personality is the constant. You have that — now make transitions feel intentional, not accidental.</p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
