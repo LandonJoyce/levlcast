@@ -1,6 +1,7 @@
-import { createClientFromRequest } from "@/lib/supabase/server";
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { fetchTwitchVods, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
 import { NextResponse } from "next/server";
+import { sendPush } from "@/lib/push";
 
 /**
  * POST /api/twitch/vods
@@ -96,6 +97,25 @@ export async function POST(request: Request) {
       { error: "Failed to save VODs", detail: insertError.message },
       { status: 500 }
     );
+  }
+
+  // Push notification — let the streamer know new streams are ready to analyze
+  try {
+    const adminSupabase = await createAdminClient();
+    const { data: profile } = await adminSupabase
+      .from("profiles")
+      .select("expo_push_token")
+      .eq("id", user.id)
+      .single();
+
+    const count = newVods.length;
+    await sendPush(profile?.expo_push_token, {
+      title: count === 1 ? "New stream detected" : `${count} new streams detected`,
+      body: "Analyze it on LevlCast to get your coach report.",
+      data: { screen: "vods" },
+    });
+  } catch {
+    // Non-fatal
   }
 
   return NextResponse.json({

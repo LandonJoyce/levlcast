@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle,
   Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map,
   Shuffle, BookOpen, ChevronDown, ChevronUp, Zap, Volume2, VolumeX,
-  Pause, Play, Loader2,
+  Pause, Play, Loader2, Flame,
 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
@@ -71,6 +71,19 @@ function ScoreDeltaBadge({ score, previousScore }: { score: number; previousScor
   return (
     <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/40">
       <Minus size={11} />Same as last stream
+    </span>
+  );
+}
+
+/** Renders "**Bold Label** — rest of text" with the bold part highlighted. Falls back to plain text. */
+function BoldLeadText({ text, className }: { text: string; className?: string }) {
+  const match = text.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
+  if (!match) return <span className={className}>{text}</span>;
+  return (
+    <span className={className}>
+      <span className="font-bold text-white/90">{match[1]}</span>
+      <span className="text-white/40"> — </span>
+      {match[2]}
     </span>
   );
 }
@@ -209,9 +222,11 @@ function useReportAudio(report: CoachReport, previousScore?: number) {
 export function CoachReportCard({
   report,
   previousScore,
+  streak = 0,
 }: {
   report: CoachReport;
   previousScore?: number;
+  streak?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { playState, play, pause, stop } = useReportAudio(report, previousScore);
@@ -265,6 +280,12 @@ export function CoachReportCard({
             <span className="font-extrabold text-sm tracking-tight text-white">Stream Debrief</span>
           </div>
           <div className="flex items-center gap-2">
+            {streak >= 2 && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-400/30 text-orange-300">
+                <Flame size={11} />
+                {streak} stream streak
+              </span>
+            )}
             {typeConfig && (
               <span
                 className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${typeConfig.bg} ${typeConfig.color} border ${typeConfig.border}`}
@@ -416,7 +437,7 @@ export function CoachReportCard({
                     {(report.strengths ?? []).map((s, i) => (
                       <li key={i} className="text-sm text-white/65 flex gap-2">
                         <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400/70" />
-                        {s}
+                        <BoldLeadText text={s} />
                       </li>
                     ))}
                   </ul>
@@ -430,7 +451,7 @@ export function CoachReportCard({
                     {(report.improvements ?? []).map((s, i) => (
                       <li key={i} className="text-sm text-white/65 flex gap-2">
                         <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-yellow-400/70" />
-                        {s}
+                        <BoldLeadText text={s} />
                       </li>
                     ))}
                   </ul>

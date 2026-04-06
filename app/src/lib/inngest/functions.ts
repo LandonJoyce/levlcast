@@ -31,6 +31,7 @@ import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
 import { createAdminClient } from "@/lib/supabase/server";
+import { sendPush } from "@/lib/push";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -141,6 +142,25 @@ export const analyzeVod = inngest.createFunction(
             { onConflict: "user_id,month" }
           ),
         ]);
+      });
+
+      // Send push notification — fire and forget, never block on this
+      await step.run("notify", async () => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("expo_push_token")
+          .eq("id", userId)
+          .single();
+
+        const score = (coachReport as any)?.overall_score;
+        const priority = (coachReport as any)?.recommendation ?? "";
+        const snippet = priority.length > 80 ? priority.slice(0, 77) + "..." : priority;
+
+        await sendPush(profile?.expo_push_token, {
+          title: score !== undefined ? `Stream graded: ${score}/100` : "Your stream report is ready",
+          body: snippet || "Open LevlCast to see your coach report.",
+          data: { vodId },
+        });
       });
 
       return { peaks: peaks.length, segments: segments.length };

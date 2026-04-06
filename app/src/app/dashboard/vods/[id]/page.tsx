@@ -25,7 +25,7 @@ export default async function VodDetailPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: vod }, { data: allClips }, { data: connections }, { data: prevVod }] = await Promise.all([
+  const [{ data: vod }, { data: allClips }, { data: connections }, { data: prevVod }, { data: recentVods }] = await Promise.all([
     supabase
       .from("vods")
       .select("*, share_token")
@@ -51,6 +51,12 @@ export default async function VodDetailPage({
       .order("stream_date", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("vods")
+      .select("status")
+      .eq("user_id", user!.id)
+      .order("stream_date", { ascending: false })
+      .limit(20),
   ]);
 
   if (!vod) notFound();
@@ -58,6 +64,14 @@ export default async function VodDetailPage({
   const peaks = (vod.peak_data as any[]) || [];
   const coachReport = vod.coach_report as any;
   const previousScore = (prevVod?.coach_report as any)?.overall_score as number | undefined;
+
+  // Count consecutive analyzed streams (streak)
+  let streak = 0;
+  for (const v of (recentVods ?? [])) {
+    if (v.status === "ready") streak++;
+    else break;
+  }
+
   const isVodProcessing = vod.status === "transcribing" || vod.status === "analyzing";
 
   const readyClips = (allClips || []).filter((c) => c.status === "ready");
@@ -133,7 +147,7 @@ export default async function VodDetailPage({
 
           {/* Coach Report */}
           {coachReport ? (
-            <CoachReportCard report={coachReport} previousScore={previousScore} />
+            <CoachReportCard report={coachReport} previousScore={previousScore} streak={streak} />
           ) : (
             <div className="bg-surface border border-border rounded-2xl p-6 text-sm text-muted">
               Coach report not available for this VOD. Re-analyze to generate one.

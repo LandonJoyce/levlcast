@@ -431,8 +431,8 @@ VIEWER RETENTION RISK:
 
 OUTPUT RULES — follow these exactly:
 - Reference timestamps and describe what happened in your own words. NEVER quote the transcript directly — Deepgram transcription has errors and any direct quote will look wrong.
-- Strengths: what worked AND one specific way to do more of it next stream
-- Improvements: what the problem was (with timestamp or example) AND one concrete fix to try next stream — not a general tip, a specific action
+- Strengths: start with **2-3 word bold label** (e.g. "**Chat Energy**", "**Hype Moments**") then " — " then what worked and how to do more of it
+- Improvements: start with **2-3 word bold label** (e.g. "**Dead Air**", "**Low Energy**", "**Chat Ignored**") then " — " then what happened and one concrete next-stream fix. The bold label must be skimmable — someone reading just the bold words should understand the key issue at a glance
 - Goals: specific enough that the streamer knows exactly what to do, doable in a single stream
 - Recommendation: the single highest-leverage change. If they do one thing from this report, this is it.
 - No emojis. No generic advice. If feedback doesn't apply specifically to this stream, cut it.
@@ -445,14 +445,14 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
   "strengths": [
-    "<what worked in this stream + timestamp or example + how to do more of it next stream>",
-    "<what worked in this stream + timestamp or example + how to do more of it next stream>",
-    "<what worked in this stream + timestamp or example + how to do more of it next stream>"
+    "**Short Label** — what worked (timestamp if relevant) and how to do more of it next stream",
+    "**Short Label** — what worked (timestamp if relevant) and how to do more of it next stream",
+    "**Short Label** — what worked (timestamp if relevant) and how to do more of it next stream"
   ],
   "improvements": [
-    "<specific problem with timestamp or example> — Next stream: <one concrete action to fix it>",
-    "<specific problem with timestamp or example> — Next stream: <one concrete action to fix it>",
-    "<specific problem with timestamp or example> — Next stream: <one concrete action to fix it>"
+    "**Problem Label** — what happened (timestamp if relevant). Next stream: one concrete fix.",
+    "**Problem Label** — what happened (timestamp if relevant). Next stream: one concrete fix.",
+    "**Problem Label** — what happened (timestamp if relevant). Next stream: one concrete fix."
   ],
   "best_moment": {
     "time": "<MM:SS>",
