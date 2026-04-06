@@ -74,23 +74,28 @@ export async function getUserUsage(
   // Including in-progress prevents a race where multiple simultaneous requests
   // all pass the limit check before any analysis completes.
   const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-  const [{ count: completedThisMonth }, { count: inProgress }] = await Promise.all([
+  // Primary: count from usage_logs — tamper-proof because only the admin
+  // client (Inngest) writes to it. Deleting or re-syncing VODs has no effect.
+  // Fallback to vods table for users who analyzed before usage_logs tracking existed.
+  const [{ data: usageLog }, { count: inProgress }] = await Promise.all([
     supabase
-      .from("vods")
-      .select("id", { count: "exact", head: true })
+      .from("usage_logs")
+      .select("analyses_count")
       .eq("user_id", userId)
-      .not("analyzed_at", "is", null)
-      .gte("analyzed_at", monthStart)
-      .lt("analyzed_at", monthEnd),
+      .eq("month", month)
+      .single(),
     supabase
       .from("vods")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .in("status", ["transcribing", "analyzing"]),
   ]);
+
+  const completedThisMonth = usageLog?.analyses_count ?? 0;
 
   // Count only successfully generated clips this month.
   // Failed and stuck clips do not count — users only pay for what they actually received.
@@ -102,7 +107,7 @@ export async function getUserUsage(
     .gte("created_at", monthStart)
     .lt("created_at", monthEnd);
 
-  const analyses_this_month = (completedThisMonth ?? 0) + (inProgress ?? 0);
+  const analyses_this_month = completedThisMonth + (inProgress ?? 0);
   const clips_this_month = clipsThisMonth ?? 0;
 
   return {

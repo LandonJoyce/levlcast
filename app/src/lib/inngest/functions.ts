@@ -92,14 +92,54 @@ export const analyzeVod = inngest.createFunction(
         return { peaks, coachReport };
       });
 
-      // Step 4: Save results
+      // Step 4: Save results + record usage
       await step.run("save", async () => {
-        await supabase.from("vods").update({
-          status: "ready",
-          peak_data: peaks,
-          coach_report: coachReport,
-          analyzed_at: new Date().toISOString(),
-        }).eq("id", vodId);
+        const now = new Date();
+        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+        // Double-check limit before recording success.
+        // This catches anyone who bypassed the API-level check (e.g. deleted
+        // their analyzed VOD to reset the count, then triggered a new job).
+        const { data: usageLog } = await supabase
+          .from("usage_logs")
+          .select("analyses_count")
+          .eq("user_id", userId)
+          .eq("month", month)
+          .single();
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .single();
+
+        const plan = profile?.plan === "pro" ? "pro" : "free";
+        const limit = plan === "pro" ? 20 : 1;
+        const alreadyUsed = usageLog?.analyses_count ?? 0;
+
+        if (alreadyUsed >= limit) {
+          // Limit exceeded — mark as failed so the user sees it, but don't charge usage
+          await supabase.from("vods").update({
+            status: "failed",
+            failed_reason: "Monthly analysis limit reached. Upgrade to Pro for more analyses.",
+          }).eq("id", vodId);
+          console.warn(`[inngest] analyze-vod blocked at save — user ${userId} already used ${alreadyUsed}/${limit} analyses`);
+          return;
+        }
+
+        // Save results and increment usage counter atomically
+        await Promise.all([
+          supabase.from("vods").update({
+            status: "ready",
+            peak_data: peaks,
+            coach_report: coachReport,
+            analyzed_at: now.toISOString(),
+          }).eq("id", vodId),
+          supabase.from("usage_logs").upsert(
+            { user_id: userId, month, analyses_count: alreadyUsed + 1 },
+            { onConflict: "user_id,month" }
+          ),
+        ]);
       });
 
       return { peaks: peaks.length, segments: segments.length };
