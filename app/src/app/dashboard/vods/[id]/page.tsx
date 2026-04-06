@@ -20,12 +20,19 @@ export default async function VodDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: vod } = await supabase
-    .from("vods")
-    .select("*, share_token")
-    .eq("id", id)
-    .eq("user_id", user!.id)
-    .single();
+  const [{ data: vod }, { count: processingClipCount }] = await Promise.all([
+    supabase
+      .from("vods")
+      .select("*, share_token")
+      .eq("id", id)
+      .eq("user_id", user!.id)
+      .single(),
+    supabase
+      .from("clips")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user!.id)
+      .eq("status", "processing"),
+  ]);
 
   if (!vod) notFound();
 
@@ -33,6 +40,7 @@ export default async function VodDetailPage({
   const coachReport = vod.coach_report as any;
 
   const isProcessing = vod.status === "transcribing" || vod.status === "analyzing";
+  const hasProcessingClip = (processingClipCount ?? 0) > 0;
 
   return (
     <div>
@@ -141,7 +149,7 @@ export default async function VodDetailPage({
                           Score {Math.round(peak.score * 100)}
                         </span>
                       </div>
-                      <GenerateClipButton vodId={vod.id} peakIndex={i} />
+                      <GenerateClipButton vodId={vod.id} peakIndex={i} hasProcessing={hasProcessingClip} />
                     </div>
                   </div>
                 ))}
