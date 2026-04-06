@@ -23,7 +23,11 @@ function EnergyIcon({ trend }: { trend: string }) {
 function ScoreRing({ score, size = "sm" }: { score: number; size?: "sm" | "lg" }) {
   const color  = score >= 75 ? "#4ade80" : score >= 50 ? "#facc15" : "#f87171";
   const label  = score >= 75 ? "text-green-400" : score >= 50 ? "text-yellow-400" : "text-red-400";
+  // "lg": r=36, cx/cy=48, viewBox=96 → 12px padding each side (glow-safe)
+  // "sm": r=28, cx/cy=32, viewBox=64 → matches original dimensions
   const r      = size === "lg" ? 36 : 28;
+  const cx     = size === "lg" ? 48 : 32;
+  const vb     = size === "lg" ? "0 0 96 96" : "0 0 64 64";
   const dim    = size === "lg" ? "w-28 h-28" : "w-20 h-20";
   const numCls = size === "lg" ? "text-4xl" : "text-xl";
   const circ   = 2 * Math.PI * r;
@@ -31,10 +35,10 @@ function ScoreRing({ score, size = "sm" }: { score: number; size?: "sm" | "lg" }
 
   return (
     <div className={`relative flex-shrink-0 ${dim} flex items-center justify-center`}>
-      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox={vb}>
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
         <circle
-          cx="40" cy="40" r={r}
+          cx={cx} cy={cx} r={r}
           fill="none"
           stroke={color}
           strokeWidth="4"
@@ -107,22 +111,32 @@ type PlayState = "idle" | "loading" | "playing" | "paused";
 
 function useReportAudio(report: CoachReport, previousScore?: number) {
   const [playState, setPlayState] = useState<PlayState>("idle");
-  const audioRef   = useRef<HTMLAudioElement | null>(null);
-  const blobUrlRef = useRef<string | null>(null);
+  const audioRef      = useRef<HTMLAudioElement | null>(null);
+  const blobUrlRef    = useRef<string | null>(null);
+  const usingSpeechRef = useRef(false); // true when browser speech fallback is active
 
   useEffect(() => {
     return () => {
       audioRef.current?.pause();
       if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+      window.speechSynthesis?.cancel();
     };
   }, []);
 
   const play = useCallback(async () => {
+    // Resume from pause — speech synthesis path
+    if (playState === "paused" && usingSpeechRef.current) {
+      window.speechSynthesis?.resume();
+      setPlayState("playing");
+      return;
+    }
+    // Resume from pause — HTML audio path
     if (playState === "paused" && audioRef.current) {
       audioRef.current.play();
       setPlayState("playing");
       return;
     }
+    // Replay cached audio
     if (blobUrlRef.current && audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play();
@@ -144,6 +158,7 @@ function useReportAudio(report: CoachReport, previousScore?: number) {
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
       blobUrlRef.current = url;
+      usingSpeechRef.current = false;
 
       const audio = new Audio(url);
       audio.onended = () => setPlayState("idle");
@@ -163,8 +178,9 @@ function useReportAudio(report: CoachReport, previousScore?: number) {
           /david|mark|daniel|google uk english male|microsoft david|alex/i.test(v.name)
         );
         if (male) utterance.voice = male;
-        utterance.onend  = () => setPlayState("idle");
-        utterance.onerror = () => setPlayState("idle");
+        utterance.onend   = () => { usingSpeechRef.current = false; setPlayState("idle"); };
+        utterance.onerror = () => { usingSpeechRef.current = false; setPlayState("idle"); };
+        usingSpeechRef.current = true;
         window.speechSynthesis.speak(utterance);
         setPlayState("playing");
       } else {
@@ -174,14 +190,14 @@ function useReportAudio(report: CoachReport, previousScore?: number) {
   }, [playState, report, previousScore]);
 
   const pause = useCallback(() => {
-    if (audioRef.current) audioRef.current.pause();
-    else window.speechSynthesis?.pause();
+    if (usingSpeechRef.current) window.speechSynthesis?.pause();
+    else audioRef.current?.pause();
     setPlayState("paused");
   }, []);
 
   const stop = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    else window.speechSynthesis?.cancel();
+    if (usingSpeechRef.current) { window.speechSynthesis?.cancel(); usingSpeechRef.current = false; }
+    else if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     setPlayState("idle");
   }, []);
 
@@ -397,7 +413,7 @@ export function CoachReportCard({
                     <span className="text-xs font-bold uppercase tracking-widest text-green-400">What Worked</span>
                   </div>
                   <ul className="space-y-2.5">
-                    {report.strengths.map((s, i) => (
+                    {(report.strengths ?? []).map((s, i) => (
                       <li key={i} className="text-sm text-white/65 flex gap-2">
                         <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400/70" />
                         {s}
@@ -411,7 +427,7 @@ export function CoachReportCard({
                     <span className="text-xs font-bold uppercase tracking-widest text-yellow-400">Fix for Next Stream</span>
                   </div>
                   <ul className="space-y-2.5">
-                    {report.improvements.map((s, i) => (
+                    {(report.improvements ?? []).map((s, i) => (
                       <li key={i} className="text-sm text-white/65 flex gap-2">
                         <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-yellow-400/70" />
                         {s}
