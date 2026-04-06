@@ -272,6 +272,5 @@ export function CoachReportCard({ report }: { report: CoachReport }) {
           </div>
         </div>
       </div>
-    </div>
   );
 }
