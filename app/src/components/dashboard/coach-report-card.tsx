@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map, Shuffle, BookOpen, ChevronDown, ChevronUp, Zap } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map, Shuffle, BookOpen, ChevronDown, ChevronUp, Zap, Volume2, VolumeX, Pause, Play } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
 function EnergyIcon({ trend }: { trend: string }) {
@@ -52,8 +52,99 @@ const STREAMER_TYPE_CONFIG: Record<string, {
   educational:   { label: "Educational",   icon: <BookOpen size={12} />,      color: "text-cyan-300",   bg: "bg-cyan-500/15",   border: "border-cyan-400/30",   glow: "#22d3ee" },
 };
 
+function buildReportScript(report: CoachReport): string {
+  const lines: string[] = [];
+
+  lines.push(`Stream Coach Report. Overall score: ${report.overall_score} out of 100.`);
+  lines.push(report.stream_summary);
+  lines.push(`Energy trend: ${report.energy_trend}. Viewer retention risk: ${report.viewer_retention_risk}.`);
+  lines.push(`Coach's take. ${report.recommendation}`);
+
+  if (report.strengths?.length) {
+    lines.push("What worked this stream.");
+    report.strengths.forEach((s, i) => lines.push(`Strength ${i + 1}. ${s}`));
+  }
+
+  if (report.improvements?.length) {
+    lines.push("Areas to improve.");
+    report.improvements.forEach((s, i) => lines.push(`Improvement ${i + 1}. ${s}`));
+  }
+
+  if (report.best_moment) {
+    lines.push(`Best moment at ${report.best_moment.time}. ${report.best_moment.description}`);
+  }
+
+  if (report.next_stream_goals?.length) {
+    lines.push("Goals for next stream.");
+    report.next_stream_goals.forEach((g, i) => lines.push(`Goal ${i + 1}. ${g}`));
+  }
+
+  return lines.join(" ");
+}
+
+type PlayState = "idle" | "playing" | "paused";
+
+function useReportSpeech(report: CoachReport) {
+  const [playState, setPlayState] = useState<PlayState>("idle");
+  const [supported, setSupported] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    setSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  const play = useCallback(() => {
+    if (!supported) return;
+
+    if (playState === "paused") {
+      window.speechSynthesis.resume();
+      setPlayState("playing");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const script = buildReportScript(report);
+    const utterance = new SpeechSynthesisUtterance(script);
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // Pick a decent voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find((v) =>
+      v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Alex")
+    );
+    if (preferred) utterance.voice = preferred;
+
+    utterance.onend = () => setPlayState("idle");
+    utterance.onerror = () => setPlayState("idle");
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setPlayState("playing");
+  }, [supported, playState, report]);
+
+  const pause = useCallback(() => {
+    if (!supported) return;
+    window.speechSynthesis.pause();
+    setPlayState("paused");
+  }, [supported]);
+
+  const stop = useCallback(() => {
+    if (!supported) return;
+    window.speechSynthesis.cancel();
+    setPlayState("idle");
+  }, [supported]);
+
+  return { playState, supported, play, pause, stop };
+}
+
 export function CoachReportCard({ report }: { report: CoachReport }) {
   const [expanded, setExpanded] = useState(false);
+  const { playState, supported, play, pause, stop } = useReportSpeech(report);
 
   const typeConfig = report.streamer_type ? STREAMER_TYPE_CONFIG[report.streamer_type] : null;
   const glowColor = typeConfig?.glow ?? "#8b5cf6";
@@ -124,6 +215,60 @@ export function CoachReportCard({ report }: { report: CoachReport }) {
                 <EnergyIcon trend={report.energy_trend} />
                 <span className="capitalize">{report.energy_trend}</span>
               </div>
+              {/* Listen button */}
+              {supported && (
+                <div className="flex items-center gap-1 ml-1">
+                  {playState === "idle" && (
+                    <button
+                      onClick={play}
+                      title="Listen to report"
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/40 hover:text-white/80 transition-all"
+                      style={{ background: "rgba(255,255,255,0.03)" }}
+                    >
+                      <Volume2 size={12} />
+                      Listen
+                    </button>
+                  )}
+                  {playState === "playing" && (
+                    <>
+                      <button
+                        onClick={pause}
+                        title="Pause"
+                        className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/60 hover:text-white transition-all"
+                        style={{ background: "rgba(255,255,255,0.04)" }}
+                      >
+                        <Pause size={12} />
+                      </button>
+                      <button
+                        onClick={stop}
+                        title="Stop"
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white/30 hover:text-red-400 transition-colors"
+                      >
+                        <VolumeX size={12} />
+                      </button>
+                    </>
+                  )}
+                  {playState === "paused" && (
+                    <>
+                      <button
+                        onClick={play}
+                        title="Resume"
+                        className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/60 hover:text-white transition-all"
+                        style={{ background: "rgba(255,255,255,0.04)" }}
+                      >
+                        <Play size={12} />
+                      </button>
+                      <button
+                        onClick={stop}
+                        title="Stop"
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white/30 hover:text-red-400 transition-colors"
+                      >
+                        <VolumeX size={12} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
