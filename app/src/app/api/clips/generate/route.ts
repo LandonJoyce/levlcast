@@ -1,53 +1,37 @@
 /**
  * POST /api/clips/generate
  *
- * Generates a video clip from a specific peak moment in an analyzed VOD.
- * This is a long-running route (~30-60s) — it downloads audio, runs FFmpeg,
- * and uploads the result to Supabase Storage.
- *
- * REQUEST BODY:
- *   { vodId: string, peakIndex: number }
- *   peakIndex is the index into the vod's peak_data array (0-based).
+ * Validates the request, creates a "processing" clip record, then fires an
+ * Inngest background job to do the actual work (download → FFmpeg → upload).
+ * Returns immediately — the clip appears on the dashboard when Inngest finishes.
  *
  * RESPONSES:
- *   200 { clipId: string, storageUrl: string } — clip ready
- *   400 { error: "..." }          — missing/invalid input
- *   401                           — not authenticated
- *   403 { error: "limit_reached", upgrade: true } — clip limit hit
- *   404 { error: "not_found" }    — VOD or peak not found
- *   409 { error: "already_exists" }              — clip already generated
+ *   200 { clipId }                              — job queued
+ *   400 { error }                               — missing/invalid input
+ *   401                                         — not authenticated
+ *   403 { error, upgrade: true }                — clip limit hit
+ *   404 { error }                               — VOD or peak not found
+ *   409 { error }                               — clip already being generated
  */
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { downloadTwitchVodAudio } from "@/lib/twitch";
-import { cutClip } from "@/lib/ffmpeg";
 import { getUserUsage } from "@/lib/limits";
+import { inngest } from "@/lib/inngest/client";
 import { NextResponse } from "next/server";
 
-/**
- * POST /api/clips/generate
- * Body: { vodId, peakIndex } — generates an mp4 clip from a detected peak.
- */
 export async function POST(request: Request) {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Check plan limits before any expensive work
   const usage = await getUserUsage(user.id, supabase);
   if (!usage.can_generate_clip) {
+    const limitMsg = usage.plan === "pro"
+      ? "You've reached your 20 clip limit for this month."
+      : "You've reached your 5 clip limit for this month. Upgrade to Pro for 20 clips per month.";
     return NextResponse.json(
-      {
-        error: "limit_reached",
-        message: "You've reached the 5 clip limit on the free plan. Upgrade to Pro for unlimited clips.",
-        upgrade: true,
-      },
+      { error: "limit_reached", message: limitMsg, upgrade: true },
       { status: 403 }
     );
   }
@@ -64,10 +48,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid peakIndex" }, { status: 400 });
   }
 
-  // Get VOD with peak data — RLS ensures this user owns it
+  // Get VOD + verify ownership via RLS
   const { data: vod } = await supabase
     .from("vods")
-    .select("*")
+    .select("id, twitch_vod_id, peak_data")
     .eq("id", vodId)
     .eq("user_id", user.id)
     .single();
@@ -77,27 +61,19 @@ export async function POST(request: Request) {
   }
 
   const peaks = vod.peak_data as Array<{
-    title: string;
-    start: number;
-    end: number;
-    score: number;
-    category: string;
-    reason: string;
-    caption: string;
+    title: string; start: number; end: number;
+    score: number; category: string; reason: string; caption: string;
   }>;
 
   const peak = peaks[idx];
-  if (!peak) {
-    return NextResponse.json({ error: "Peak not found" }, { status: 404 });
-  }
+  if (!peak) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
 
   const admin = createAdminClient();
 
-  // Race condition guard — check if this peak is already being generated.
-  // Insert a "processing" record first; if one already exists, reject the duplicate.
+  // Guard against duplicate generation for the same peak
   const { data: existing } = await admin
     .from("clips")
-    .select("id, status")
+    .select("id")
     .eq("user_id", user.id)
     .eq("vod_id", vodId)
     .eq("start_time_seconds", Math.round(peak.start))
@@ -108,7 +84,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Clip already being generated" }, { status: 409 });
   }
 
-  // Insert a processing record now — this is the source of truth for the clip
+  // Insert a "processing" record immediately so the UI shows the clip in progress
   const { data: clipRecord, error: insertError } = await admin
     .from("clips")
     .insert({
@@ -131,56 +107,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create clip record" }, { status: 500 });
   }
 
-  const clipId = clipRecord.id;
-  let cleanup: (() => Promise<void>) | null = null;
+  // Fire background job — Inngest handles the download, FFmpeg, and upload
+  await inngest.send({
+    name: "clip/generate",
+    data: {
+      clipId: clipRecord.id,
+      vodId: vod.id,
+      twitchVodId: vod.twitch_vod_id,
+      userId: user.id,
+      peakIndex: idx,
+      peak,
+    },
+  });
 
-  try {
-    console.log(`[clip] Downloading VOD ${vod.twitch_vod_id} for clip "${peak.title}"`);
-
-    const download = await downloadTwitchVodAudio(vod.twitch_vod_id);
-    cleanup = download.cleanup;
-
-    console.log(`[clip] Cutting clip: ${peak.start}s - ${peak.end}s`);
-    const clipBuffer = await cutClip(download.filePath, peak.start, peak.end);
-    console.log(`[clip] Clip generated: ${clipBuffer.length} bytes`);
-
-    await admin.storage.createBucket("clips", {
-      public: true,
-      fileSizeLimit: 104857600,
-    }).catch(() => {});
-
-    const fileName = `${user.id}/${vod.id}-peak${idx}-${Date.now()}.mp4`;
-
-    const { error: uploadError } = await admin.storage
-      .from("clips")
-      .upload(fileName, clipBuffer, {
-        contentType: "video/mp4",
-        upsert: false,
-      });
-
-    if (uploadError) {
-      throw new Error(`Upload failed: ${uploadError.message}`);
-    }
-
-    const { data: urlData } = admin.storage.from("clips").getPublicUrl(fileName);
-
-    await admin.from("clips").update({
-      video_url: urlData.publicUrl,
-      status: "ready",
-    }).eq("id", clipId);
-
-    console.log(`[clip] Clip saved: "${peak.title}"`);
-
-    return NextResponse.json({ success: true, title: peak.title, url: urlData.publicUrl });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[clip] Generation failed:", message);
-
-    // Mark clip as failed so it doesn't stay "processing" forever
-    await admin.from("clips").update({ status: "failed" }).eq("id", clipId);
-
-    return NextResponse.json({ error: "Clip generation failed", detail: message }, { status: 500 });
-  } finally {
-    if (cleanup) await cleanup();
-  }
+  return NextResponse.json({ clipId: clipRecord.id, queued: true });
 }

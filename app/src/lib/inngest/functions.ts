@@ -26,9 +26,10 @@
  */
 
 import { inngest } from "./client";
-import { streamTwitchVodAudio } from "@/lib/twitch";
+import { streamTwitchVodAudio, downloadTwitchVodAudio } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
+import { cutClip } from "@/lib/ffmpeg";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export const analyzeVod = inngest.createFunction(
@@ -110,6 +111,84 @@ export const analyzeVod = inngest.createFunction(
       }).eq("id", vodId);
 
       // Re-throw so Inngest marks the run as failed and triggers retry logic
+      throw err;
+    }
+  }
+);
+
+export const generateClip = inngest.createFunction(
+  {
+    id: "generate-clip",
+    retries: 1,
+    timeouts: { finish: "10m" },
+  },
+  { event: "clip/generate" },
+  async ({ event, step }) => {
+    const { clipId, vodId, twitchVodId, userId, peakIndex, peak } = event.data as {
+      clipId: string;
+      vodId: string;
+      twitchVodId: string;
+      userId: string;
+      peakIndex: number;
+      peak: {
+        title: string;
+        start: number;
+        end: number;
+        score: number;
+        category: string;
+        reason: string;
+        caption: string;
+      };
+    };
+
+    const supabase = createAdminClient();
+
+    try {
+      // Download VOD audio and cut the clip
+      const clipBuffer = await step.run("download-and-cut", async () => {
+        console.log(`[clip] Downloading VOD ${twitchVodId} for clip "${peak.title}"`);
+        const download = await downloadTwitchVodAudio(twitchVodId);
+        try {
+          console.log(`[clip] Cutting: ${peak.start}s - ${peak.end}s`);
+          const buffer = await cutClip(download.filePath, peak.start, peak.end);
+          console.log(`[clip] Cut complete: ${buffer.length} bytes`);
+          return Array.from(buffer);
+        } finally {
+          await download.cleanup();
+        }
+      });
+
+      // Upload to Supabase Storage
+      await step.run("upload", async () => {
+        await supabase.storage.createBucket("clips", {
+          public: true,
+          fileSizeLimit: 104857600,
+        }).catch(() => {});
+
+        const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
+        const buffer = Buffer.from(clipBuffer);
+
+        const { error: uploadError } = await supabase.storage
+          .from("clips")
+          .upload(fileName, buffer, { contentType: "video/mp4", upsert: false });
+
+        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+        const { data: urlData } = supabase.storage.from("clips").getPublicUrl(fileName);
+
+        await supabase.from("clips").update({
+          video_url: urlData.publicUrl,
+          status: "ready",
+        }).eq("id", clipId);
+
+        console.log(`[clip] Saved: "${peak.title}"`);
+      });
+
+      return { clipId, title: peak.title };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[inngest] generate-clip failed for ${clipId}:`, message);
+      await supabase.from("clips").update({ status: "failed" }).eq("id", clipId);
       throw err;
     }
   }

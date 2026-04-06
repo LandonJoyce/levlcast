@@ -25,18 +25,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const FREE_LIMITS = {
   analyses_per_month: 1,
-  clips_total: 5,
+  clips_per_month: 5,
 };
 
 export const PRO_LIMITS = {
-  analyses_per_month: 10,
-  clips_total: 999,
+  analyses_per_month: 20,
+  clips_per_month: 20,
 };
 
 export interface UserUsage {
   plan: "free" | "pro";
   analyses_this_month: number;
-  clips_total: number;
+  clips_this_month: number;
   can_analyze: boolean;
   can_generate_clip: boolean;
 }
@@ -92,21 +92,23 @@ export async function getUserUsage(
       .in("status", ["transcribing", "analyzing"]),
   ]);
 
-  // Count total successfully generated clips (not failed/processing attempts)
-  const { count: clipsTotal } = await supabase
+  // Count clips generated this month (ready + processing to prevent race conditions)
+  const { count: clipsThisMonth } = await supabase
     .from("clips")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .eq("status", "ready");
+    .in("status", ["ready", "processing"])
+    .gte("created_at", monthStart)
+    .lt("created_at", monthEnd);
 
   const analyses_this_month = (completedThisMonth ?? 0) + (inProgress ?? 0);
-  const clips_total = clipsTotal ?? 0;
+  const clips_this_month = clipsThisMonth ?? 0;
 
   return {
     plan,
     analyses_this_month,
-    clips_total,
+    clips_this_month,
     can_analyze: analyses_this_month < limits.analyses_per_month,
-    can_generate_clip: clips_total < limits.clips_total,
+    can_generate_clip: clips_this_month < limits.clips_per_month,
   };
 }

@@ -10,9 +10,9 @@ import { colors } from '@/lib/colors';
 import { PurchasesPackage } from 'react-native-purchases';
 
 const FEATURES = [
-  '10 VOD analyses per month',
+  '20 VOD analyses per month',
   'AI coaching report after every stream',
-  'Unlimited clip generation',
+  '20 clips per month',
   'Growth attribution tracking',
   'Priority processing',
 ];

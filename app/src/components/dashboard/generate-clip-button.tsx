@@ -43,6 +43,7 @@ export function GenerateClipButton({
         return;
       }
 
+      // Clip is now queued as a background job — refresh to show "processing" state
       setDone(true);
       router.refresh();
     } catch {
@@ -54,9 +55,9 @@ export function GenerateClipButton({
 
   if (done) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-green-400 font-medium">
-        <Check size={13} />
-        Clip saved
+      <span className="inline-flex items-center gap-1 text-xs text-accent-light font-medium">
+        <Loader2 size={13} className="animate-spin" />
+        Processing — check back in a minute
       </span>
     );
   }
