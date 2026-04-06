@@ -37,6 +37,10 @@ export const analyzeVod = inngest.createFunction(
     id: "analyze-vod",
     retries: 1,
     timeouts: { finish: "2h" },
+    concurrency: {
+      limit: 1, // one VOD analysis at a time per user — prevents resource overload
+      key: "event.data.userId",
+    },
   },
   { event: "vod/analyze" },
   async ({ event, step }) => {
@@ -113,6 +117,33 @@ export const analyzeVod = inngest.createFunction(
       // Re-throw so Inngest marks the run as failed and triggers retry logic
       throw err;
     }
+  }
+);
+
+// Runs every 15 minutes — marks any VOD stuck in "transcribing" or "analyzing"
+// for >90 minutes as failed so users see a clear error instead of an infinite spinner.
+export const cleanupStuckVods = inngest.createFunction(
+  { id: "cleanup-stuck-vods" },
+  { cron: "*/15 * * * *" },
+  async () => {
+    const supabase = createAdminClient();
+    const cutoff = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+
+    const { data: stuck } = await supabase
+      .from("vods")
+      .select("id")
+      .in("status", ["transcribing", "analyzing"])
+      .lt("updated_at", cutoff);
+
+    if (!stuck || stuck.length === 0) return { cleaned: 0 };
+
+    await supabase
+      .from("vods")
+      .update({ status: "failed", failed_reason: "Analysis timed out — please try again" })
+      .in("id", stuck.map((v: { id: string }) => v.id));
+
+    console.log(`[cleanup] Marked ${stuck.length} stuck VODs as failed`);
+    return { cleaned: stuck.length };
   }
 );
 

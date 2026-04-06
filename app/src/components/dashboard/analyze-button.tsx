@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { AnalyzeModal } from "./analyze-modal";
 import { UpgradeModal } from "./upgrade-modal";
 
@@ -10,11 +10,13 @@ export function AnalyzeButton({
   status,
   vodTitle,
   durationSeconds,
+  hasProcessing,
 }: {
   vodId: string;
   status: string;
   vodTitle: string;
   durationSeconds: number;
+  hasProcessing?: boolean;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -31,6 +33,16 @@ export function AnalyzeButton({
 
   if (isProcessing) {
     return null; // VodProgress handles the display
+  }
+
+  // Another VOD is already being analyzed — block this one
+  if (hasProcessing) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted cursor-not-allowed opacity-60">
+        <Loader2 size={13} className="animate-spin" />
+        Wait for current analysis to finish
+      </span>
+    );
   }
 
   return (

@@ -127,7 +127,7 @@ export default async function VodsPage() {
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusStyle(vod.status)}`}>
                         {vod.status}
                       </span>
-                      <AnalyzeButton vodId={vod.id} status={vod.status} vodTitle={vod.title} durationSeconds={vod.duration_seconds} />
+                      <AnalyzeButton vodId={vod.id} status={vod.status} vodTitle={vod.title} durationSeconds={vod.duration_seconds} hasProcessing={hasProcessing} />
                     </>
                   )}
                 </div>
