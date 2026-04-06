@@ -175,13 +175,16 @@ export const generateClip = inngest.createFunction(
     const supabase = createAdminClient();
 
     try {
-      // Download VOD audio and cut the clip
+      // Download only the segments needed for this clip (not the full VOD)
       const clipBuffer = await step.run("download-and-cut", async () => {
-        console.log(`[clip] Downloading VOD ${twitchVodId} for clip "${peak.title}"`);
-        const download = await downloadTwitchVodAudio(twitchVodId);
+        console.log(`[clip] Downloading segments for "${peak.title}" (${peak.start}s - ${peak.end}s)`);
+        const download = await downloadTwitchVodAudio(twitchVodId, peak.start, peak.end);
         try {
-          console.log(`[clip] Cutting: ${peak.start}s - ${peak.end}s`);
-          const buffer = await cutClip(download.filePath, peak.start, peak.end);
+          // Adjust timestamps relative to where our downloaded segments actually start
+          const adjustedStart = peak.start - download.segmentStartSeconds;
+          const adjustedEnd = peak.end - download.segmentStartSeconds;
+          console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (segment offset: ${download.segmentStartSeconds}s)`);
+          const buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
           console.log(`[clip] Cut complete: ${buffer.length} bytes`);
           return Array.from(buffer);
         } finally {

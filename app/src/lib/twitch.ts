@@ -136,6 +136,7 @@ export async function fetchTwitchVods(
 
 export interface VodDownloadResult {
   filePath: string;
+  segmentStartSeconds: number; // actual start time of first downloaded segment
   cleanup: () => Promise<void>;
 }
 
@@ -220,18 +221,26 @@ export async function getTwitchVodAudioUrl(vodId: string): Promise<string> {
   return streamUrl;
 }
 
+/**
+ * Download only the segments of a Twitch VOD needed for a clip.
+ * Instead of downloading the entire VOD (which fills Vercel's 512MB /tmp),
+ * we parse segment durations from the M3U8 playlist and only download
+ * the segments that cover [startSeconds - 10, endSeconds + 10].
+ *
+ * Returns filePath, segmentStartSeconds (the actual start time of the first
+ * downloaded segment — used to adjust FFmpeg timestamps), and a cleanup function.
+ */
 export async function downloadTwitchVodAudio(
-  vodId: string
+  vodId: string,
+  startSeconds: number,
+  endSeconds: number
 ): Promise<VodDownloadResult> {
   const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
   // Step 1: Get playback access token via GQL
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
-    headers: {
-      "Client-Id": GQL_CLIENT_ID,
-      "Content-Type": "application/json",
-    },
+    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
     body: JSON.stringify({
       operationName: "PlaybackAccessToken",
       query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
@@ -244,17 +253,10 @@ export async function downloadTwitchVodAudio(
     }),
   });
 
-  if (!gqlRes.ok) {
-    throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
-  }
-
+  if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
-
-  if (!token) {
-    // Don't log gqlData here — it may contain auth tokens
-    throw new Error("Could not get video playback token from Twitch GQL");
-  }
+  if (!token) throw new Error("Could not get video playback token from Twitch GQL");
 
   // Step 2: Get M3U8 master playlist
   const usherParams = new URLSearchParams({
@@ -267,96 +269,93 @@ export async function downloadTwitchVodAudio(
     token: token.value,
   });
 
-  const masterUrl = `https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`;
-  const masterRes = await fetch(masterUrl);
-  if (!masterRes.ok) {
-    throw new Error(`Usher failed: ${masterRes.status}`);
-  }
+  const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
+  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
 
-  const masterPlaylist = await masterRes.text();
-  const lines = masterPlaylist.split("\n");
-
-  // Prefer audio_only stream, fall back to lowest quality
+  const masterLines = (await masterRes.text()).split("\n");
   let streamUrl = "";
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("audio_only") || lines[i].includes('VIDEO="audio_only"')) {
-      for (let j = i + 1; j < lines.length; j++) {
-        if (lines[j].trim() && !lines[j].startsWith("#")) {
-          streamUrl = lines[j].trim();
+  for (let i = 0; i < masterLines.length; i++) {
+    if (masterLines[i].includes("audio_only") || masterLines[i].includes('VIDEO="audio_only"')) {
+      for (let j = i + 1; j < masterLines.length; j++) {
+        if (masterLines[j].trim() && !masterLines[j].startsWith("#")) {
+          streamUrl = masterLines[j].trim();
           break;
         }
       }
       break;
     }
   }
-
   if (!streamUrl) {
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (line && !line.startsWith("#") && line.startsWith("http")) {
-        streamUrl = line;
-        break;
+    for (let i = masterLines.length - 1; i >= 0; i--) {
+      const line = masterLines[i].trim();
+      if (line && !line.startsWith("#") && line.startsWith("http")) { streamUrl = line; break; }
+    }
+  }
+  if (!streamUrl) throw new Error("No stream URL found in master playlist");
+
+  // Step 3: Parse sub-playlist — extract segment URLs AND their durations
+  const subRes = await fetch(streamUrl);
+  if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
+
+  const subLines = (await subRes.text()).split("\n");
+  const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
+
+  // Build list of { url, duration, startTime } for every segment
+  const segments: { url: string; startTime: number; duration: number }[] = [];
+  let cursor = 0;
+  for (let i = 0; i < subLines.length; i++) {
+    const line = subLines[i].trim();
+    if (line.startsWith("#EXTINF:")) {
+      const duration = parseFloat(line.replace("#EXTINF:", "").replace(",", "")) || 10;
+      const nextLine = subLines[i + 1]?.trim();
+      if (nextLine && !nextLine.startsWith("#")) {
+        const url = nextLine.startsWith("http") ? nextLine : baseUrl + nextLine;
+        segments.push({ url, startTime: cursor, duration });
+        cursor += duration;
+        i++;
       }
     }
   }
 
-  if (!streamUrl) {
-    throw new Error("No stream URL found in master playlist");
-  }
+  if (segments.length === 0) throw new Error("No segments found in playlist");
 
-  // Step 3: Get segment URLs from sub-playlist
-  const subRes = await fetch(streamUrl);
-  if (!subRes.ok) {
-    throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
-  }
+  // Step 4: Only download segments that overlap our clip window (with 10s buffer each side)
+  const fetchFrom = Math.max(0, startSeconds - 10);
+  const fetchTo = endSeconds + 10;
 
-  const subPlaylist = await subRes.text();
-  const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
-  const segmentUrls = subPlaylist
-    .split("\n")
-    .filter((l) => l.trim() && !l.startsWith("#"))
-    .map((l) => {
-      const trimmed = l.trim();
-      return trimmed.startsWith("http") ? trimmed : baseUrl + trimmed;
-    });
+  const needed = segments.filter(
+    (s) => s.startTime + s.duration > fetchFrom && s.startTime < fetchTo
+  );
 
-  if (segmentUrls.length === 0) {
-    throw new Error("No segments found in playlist");
-  }
+  if (needed.length === 0) throw new Error("No segments found for clip time range");
 
-  console.log(`[twitch] Downloading ${segmentUrls.length} segments to disk`);
+  const segmentStartSeconds = needed[0].startTime;
+  console.log(`[twitch] Downloading ${needed.length}/${segments.length} segments for clip (${Math.round(fetchFrom)}s-${Math.round(fetchTo)}s)`);
 
-  // Step 4: Stream segments directly to a temp file — never load all into memory
-  const tempDir = await mkdtemp(join(tmpdir(), "levlcast-vod-"));
+  // Step 5: Write only the needed segments to a temp file
+  const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
   const filePath = join(tempDir, "audio.ts");
   const writeStream = createWriteStream(filePath);
 
   const cleanup = async () => {
-    try {
-      await unlink(filePath);
-    } catch {}
-    try {
-      await rmdir(tempDir);
-    } catch {}
+    try { await unlink(filePath); } catch {}
+    try { await rmdir(tempDir); } catch {}
   };
 
   try {
-    for (const url of segmentUrls) {
-      // Per-segment timeout of 15 seconds — prevents a stalled segment from hanging forever
+    for (const seg of needed) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
-
       try {
-        const segRes = await fetch(url, { signal: controller.signal });
+        const segRes = await fetch(seg.url, { signal: controller.signal });
         if (!segRes.ok) continue;
-
         const buf = Buffer.from(await segRes.arrayBuffer());
         await new Promise<void>((resolve, reject) => {
           writeStream.write(buf, (err) => (err ? reject(err) : resolve()));
         });
       } catch (err: any) {
         if (err.name === "AbortError") {
-          console.warn(`[twitch] Segment timeout, skipping: ${url}`);
+          console.warn(`[twitch] Segment timeout, skipping: ${seg.url}`);
           continue;
         }
         throw err;
@@ -369,10 +368,9 @@ export async function downloadTwitchVodAudio(
       writeStream.end((err: any) => (err ? reject(err) : resolve()));
     });
 
-    console.log(`[twitch] VOD written to disk: ${filePath}`);
-    return { filePath, cleanup };
+    console.log(`[twitch] Clip segments written to disk: ${filePath}`);
+    return { filePath, segmentStartSeconds, cleanup };
   } catch (err) {
-    // Clean up temp file if download fails partway through
     writeStream.destroy();
     await cleanup();
     throw err;
