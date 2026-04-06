@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Tv2 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
 function EnergyIcon({ trend }: { trend: string }) {
@@ -29,9 +29,17 @@ export function CoachReportCard({ report }: { report: CoachReport }) {
       {/* Header */}
       <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <h2 className="font-extrabold text-base tracking-tight">Stream Coach Report</h2>
-        <div className="flex items-center gap-1.5 text-xs text-muted">
-          <EnergyIcon trend={report.energy_trend} />
-          <span className="capitalize">{report.energy_trend} energy</span>
+        <div className="flex items-center gap-3">
+          {report.streamer_type && (
+            <div className="flex items-center gap-1.5 text-xs text-muted">
+              <Tv2 size={13} />
+              <span className="capitalize">{report.streamer_type.replace("_", " ")}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <EnergyIcon trend={report.energy_trend} />
+            <span className="capitalize">{report.energy_trend} energy</span>
+          </div>
         </div>
       </div>
 

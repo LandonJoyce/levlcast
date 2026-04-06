@@ -208,6 +208,7 @@ export async function detectPeaks(
 
 export interface CoachReport {
   overall_score: number;
+  streamer_type: "gaming" | "just_chatting" | "irl" | "variety" | "educational";
   stream_summary: string;
   energy_trend: "building" | "declining" | "consistent" | "volatile";
   strengths: string[];
@@ -291,19 +292,28 @@ ${peaksSummary}
 TRANSCRIPT SAMPLE (5 sections evenly spaced across the full stream):
 ${transcript}
 
+STEP 1 — IDENTIFY STREAMER TYPE from the transcript and title:
+- "gaming": primarily playing a video game, commentary focused on gameplay
+- "just_chatting": talking to chat, no game or game is secondary
+- "irl": real life content, outdoors, events, daily life
+- "variety": mix of games or switching between formats
+- "educational": tutorials, guides, how-to content
+
+This matters because coaching standards differ by type. A gaming streamer is judged on gameplay commentary and hype. A just chatting streamer is judged on personality and conversation. Adapt your feedback accordingly.
+
 WHAT TO EVALUATE — be specific and reference actual timestamps and quotes:
 
 1. ENERGY & CONSISTENCY: Was the streamer engaged and entertaining throughout? Did energy drop? Were there long silences or dead air? Reference the dead air gaps above.
 
 2. PERSONALITY & AUTHENTICITY: Does the streamer have a clear, memorable personality? Do they talk TO the viewer or just narrate to themselves? Would a new viewer immediately understand who this person is?
 
-3. CHAT INTERACTION: Does the streamer read and respond to chat? Streamers who ignore chat lose viewers. Look for evidence of chat interaction in the transcript.
+3. CHAT INTERACTION: Look for evidence of the streamer reading and responding to chat. Streamers who ignore chat lose viewers.
 
-4. CLIP-WORTHY MOMENTS: The detected peaks tell you what stood out. Were these genuinely strong moments or were there few/no peaks (meaning the stream was flat)?
+4. CLIP-WORTHY MOMENTS: The detected peaks tell you what stood out. Were these genuinely strong moments? Were there few/no peaks (stream was flat)?
 
-5. TALKING PACE & DEAD AIR: Long silences kill viewer retention. More than 15 seconds of silence is a problem. Reference specific gaps from the dead air data.
+5. TALKING PACE & DEAD AIR: Long silences kill viewer retention. Reference specific gaps from the dead air data.
 
-6. CONTENT CLARITY: Is it clear what the streamer is playing/doing and why it's worth watching? Would a new viewer understand the context?
+6. CONTENT FIT: Is the streamer's style well-suited to their content type? Are they playing to their strengths?
 
 SCORING — be honest and calibrated (most streams score 50-75):
 - 85-100: Exceptional. High energy, strong personality, chat interaction, clip-worthy moments throughout. Rare.
@@ -332,6 +342,7 @@ RULES:
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "overall_score": <integer 0-100>,
+  "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
   "stream_summary": "<2-3 honest sentences: what kind of stream, the vibe, and the single most important thing to know about it>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
