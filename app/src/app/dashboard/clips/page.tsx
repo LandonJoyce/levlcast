@@ -49,11 +49,12 @@ export default async function ClipsPage() {
     .from("clips")
     .select("*")
     .eq("user_id", user!.id)
-    .in("status", ["ready", "processing"])
+    .in("status", ["ready", "processing", "failed"])
     .order("created_at", { ascending: false });
 
   const clips = (allClips || []).filter((c) => c.status === "ready");
   const processingClips = (allClips || []).filter((c) => c.status === "processing");
+  const failedClips = (allClips || []).filter((c) => c.status === "failed");
   const hasProcessing = processingClips.length > 0;
 
   // Get social connections
@@ -108,7 +109,7 @@ export default async function ClipsPage() {
 
   ungeneratedPeaks.sort((a, b) => b.score - a.score);
 
-  const hasContent = (clips?.length || 0) > 0 || ungeneratedPeaks.length > 0;
+  const hasContent = (clips?.length || 0) > 0 || ungeneratedPeaks.length > 0 || failedClips.length > 0 || processingClips.length > 0;
 
   return (
     <div>
@@ -154,6 +155,26 @@ export default async function ClipsPage() {
                       <p className="font-semibold text-sm">{clip.title}</p>
                       <p className="text-xs text-muted mt-0.5">Processing in background — this page will update automatically.</p>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Failed clips */}
+          {failedClips.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+                Failed ({failedClips.length})
+              </h2>
+              <div className="space-y-3">
+                {failedClips.map((clip) => (
+                  <div key={clip.id} className="bg-surface border border-red-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-sm">{clip.title}</p>
+                      <p className="text-xs text-red-400 mt-0.5">Generation failed — delete and try again from the peak below.</p>
+                    </div>
+                    <DeleteClip clipId={clip.id} />
                   </div>
                 ))}
               </div>

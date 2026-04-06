@@ -1,8 +1,8 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
-import { analyzeVod, generateClip } from "@/lib/inngest/functions";
+import { analyzeVod, generateClip, cleanupStuckClips } from "@/lib/inngest/functions";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [analyzeVod, generateClip],
+  functions: [analyzeVod, generateClip, cleanupStuckClips],
 });
