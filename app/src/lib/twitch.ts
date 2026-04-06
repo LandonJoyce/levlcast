@@ -293,44 +293,32 @@ export async function downloadTwitchVodAudio(
   }
   if (!streamUrl) throw new Error("No stream URL found in master playlist");
 
-  // Step 3: Parse sub-playlist — extract segment URLs AND their durations
+  // Step 3: Parse sub-playlist — collect all segment URLs in order
   const subRes = await fetch(streamUrl);
   if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
 
-  const subLines = (await subRes.text()).split("\n");
+  const subText = await subRes.text();
   const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
 
-  // Build list of { url, duration, startTime } for every segment
-  const segments: { url: string; startTime: number; duration: number }[] = [];
-  let cursor = 0;
-  for (let i = 0; i < subLines.length; i++) {
-    const line = subLines[i].trim();
-    if (line.startsWith("#EXTINF:")) {
-      const duration = parseFloat(line.replace("#EXTINF:", "").replace(",", "")) || 10;
-      const nextLine = subLines[i + 1]?.trim();
-      if (nextLine && !nextLine.startsWith("#")) {
-        const url = nextLine.startsWith("http") ? nextLine : baseUrl + nextLine;
-        segments.push({ url, startTime: cursor, duration });
-        cursor += duration;
-        i++;
-      }
-    }
-  }
+  // Collect all segment URLs — skip any # comment/tag lines
+  const allSegmentUrls = subText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"))
+    .map((l) => (l.startsWith("http") ? l : baseUrl + l));
 
-  if (segments.length === 0) throw new Error("No segments found in playlist");
+  if (allSegmentUrls.length === 0) throw new Error("No segments found in playlist");
 
-  // Step 4: Only download segments that overlap our clip window (with 10s buffer each side)
-  const fetchFrom = Math.max(0, startSeconds - 10);
-  const fetchTo = endSeconds + 10;
+  // Step 4: Use index-based slicing — Twitch segments are reliably ~10s each.
+  // This avoids fragile EXTINF duration parsing which breaks with extra M3U8 tags.
+  const SEG_DURATION = 10;
+  const startIdx = Math.max(0, Math.floor(startSeconds / SEG_DURATION) - 2);
+  const endIdx = Math.min(allSegmentUrls.length - 1, Math.ceil(endSeconds / SEG_DURATION) + 2);
 
-  const needed = segments.filter(
-    (s) => s.startTime + s.duration > fetchFrom && s.startTime < fetchTo
-  );
+  const needed = allSegmentUrls.slice(startIdx, endIdx + 1);
+  const segmentStartSeconds = startIdx * SEG_DURATION;
 
-  if (needed.length === 0) throw new Error("No segments found for clip time range");
-
-  const segmentStartSeconds = needed[0].startTime;
-  console.log(`[twitch] Downloading ${needed.length}/${segments.length} segments for clip (${Math.round(fetchFrom)}s-${Math.round(fetchTo)}s)`);
+  console.log(`[twitch] Downloading segments ${startIdx}-${endIdx} of ${allSegmentUrls.length} for clip (peak: ${Math.round(startSeconds)}s-${Math.round(endSeconds)}s)`);
 
   // Step 5: Write only the needed segments to a temp file
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
@@ -343,11 +331,11 @@ export async function downloadTwitchVodAudio(
   };
 
   try {
-    for (const seg of needed) {
+    for (const segUrl of needed) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
       try {
-        const segRes = await fetch(seg.url, { signal: controller.signal });
+        const segRes = await fetch(segUrl, { signal: controller.signal });
         if (!segRes.ok) continue;
         const buf = Buffer.from(await segRes.arrayBuffer());
         await new Promise<void>((resolve, reject) => {
@@ -355,7 +343,7 @@ export async function downloadTwitchVodAudio(
         });
       } catch (err: any) {
         if (err.name === "AbortError") {
-          console.warn(`[twitch] Segment timeout, skipping: ${seg.url}`);
+          console.warn(`[twitch] Segment timeout, skipping: ${segUrl}`);
           continue;
         }
         throw err;
