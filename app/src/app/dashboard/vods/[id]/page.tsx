@@ -44,7 +44,7 @@ export default async function VodDetailPage({
 
   return (
     <div>
-      <VodStatusPoller hasProcessing={isProcessing} />
+      <VodStatusPoller hasProcessing={isProcessing || hasProcessingClip} />
       {/* Back + Header */}
       <div className="mb-6">
         <Link
