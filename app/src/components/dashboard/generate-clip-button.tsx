@@ -8,9 +8,11 @@ import { UpgradeModal } from "./upgrade-modal";
 export function GenerateClipButton({
   vodId,
   peakIndex,
+  hasProcessing,
 }: {
   vodId: string;
   peakIndex: number;
+  hasProcessing?: boolean;
 }) {
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
@@ -62,6 +64,15 @@ export function GenerateClipButton({
     );
   }
 
+  if (hasProcessing && !generating && !done) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted cursor-not-allowed opacity-60">
+        <Loader2 size={13} className="animate-spin" />
+        Wait for current clip to finish
+      </span>
+    );
+  }
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -75,7 +86,7 @@ export function GenerateClipButton({
           ) : (
             <Scissors size={13} />
           )}
-          {generating ? "Generating..." : "Generate Clip"}
+          {generating ? "Queuing..." : "Generate Clip"}
         </button>
         {error && <span className="text-xs text-red-400">{error}</span>}
       </div>

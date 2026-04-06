@@ -303,7 +303,7 @@ export default async function ClipsPage() {
 
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-muted/50">from: {peak.vodTitle}</p>
-                          <GenerateClipButton vodId={peak.vodId} peakIndex={peak.peakIndex} />
+                          <GenerateClipButton vodId={peak.vodId} peakIndex={peak.peakIndex} hasProcessing={hasProcessing} />
                         </div>
                       </div>
                     </div>

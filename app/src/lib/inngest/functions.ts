@@ -116,14 +116,14 @@ export const analyzeVod = inngest.createFunction(
   }
 );
 
-// Runs every 10 minutes — marks any clip stuck in "processing" for >10 min as failed
+// Runs every 5 minutes — marks any clip stuck in "processing" for >5 min as failed
 // so users see a clear error instead of an infinite spinner.
 export const cleanupStuckClips = inngest.createFunction(
   { id: "cleanup-stuck-clips" },
-  { cron: "*/10 * * * *" },
+  { cron: "*/5 * * * *" },
   async () => {
     const supabase = createAdminClient();
-    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
     const { data: stuck } = await supabase
       .from("clips")
@@ -146,11 +146,11 @@ export const cleanupStuckClips = inngest.createFunction(
 export const generateClip = inngest.createFunction(
   {
     id: "generate-clip",
-    retries: 1,
-    timeouts: { finish: "10m" },
+    retries: 0,
+    timeouts: { finish: "5m" },
     concurrency: {
-      limit: 2, // max 2 clips generating at once — prevents memory overload
-      key: "event.data.userId", // per-user limit so one user can't block others
+      limit: 1, // one clip at a time per user — prevents memory overload
+      key: "event.data.userId",
     },
   },
   { event: "clip/generate" },
