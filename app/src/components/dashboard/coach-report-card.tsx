@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Tv2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map, Shuffle, BookOpen } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
 function EnergyIcon({ trend }: { trend: string }) {
@@ -23,27 +23,79 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+const STREAMER_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
+  gaming: {
+    label: "Gaming",
+    icon: <Gamepad2 size={14} />,
+    color: "text-purple-400",
+    bg: "bg-purple-500/10",
+    border: "border-purple-500/20",
+  },
+  just_chatting: {
+    label: "Just Chatting",
+    icon: <MessageCircle size={14} />,
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/20",
+  },
+  irl: {
+    label: "IRL",
+    icon: <Map size={14} />,
+    color: "text-green-400",
+    bg: "bg-green-500/10",
+    border: "border-green-500/20",
+  },
+  variety: {
+    label: "Variety",
+    icon: <Shuffle size={14} />,
+    color: "text-orange-400",
+    bg: "bg-orange-500/10",
+    border: "border-orange-500/20",
+  },
+  educational: {
+    label: "Educational",
+    icon: <BookOpen size={14} />,
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "border-cyan-500/20",
+  },
+};
+
 export function CoachReportCard({ report }: { report: CoachReport }) {
+  const typeConfig = report.streamer_type ? STREAMER_TYPE_CONFIG[report.streamer_type] : null;
+
   return (
     <div className="bg-surface border border-border rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <h2 className="font-extrabold text-base tracking-tight">Stream Coach Report</h2>
-        <div className="flex items-center gap-3">
-          {report.streamer_type && (
-            <div className="flex items-center gap-1.5 text-xs text-muted">
-              <Tv2 size={13} />
-              <span className="capitalize">{report.streamer_type.replace("_", " ")}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5 text-xs text-muted">
-            <EnergyIcon trend={report.energy_trend} />
-            <span className="capitalize">{report.energy_trend} energy</span>
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <EnergyIcon trend={report.energy_trend} />
+          <span className="capitalize">{report.energy_trend} energy</span>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
+
+        {/* Streamer Type Banner */}
+        {typeConfig && (
+          <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${typeConfig.bg} ${typeConfig.border}`}>
+            <span className={typeConfig.color}>{typeConfig.icon}</span>
+            <div>
+              <span className={`text-xs font-bold uppercase tracking-wider ${typeConfig.color}`}>
+                {typeConfig.label} Streamer
+              </span>
+              <p className="text-xs text-muted mt-0.5">
+                {report.streamer_type === "gaming" && "Coaching adapted for gameplay commentary, hype moments, and gaming personality."}
+                {report.streamer_type === "just_chatting" && "Coaching adapted for conversational energy, personality, and viewer connection."}
+                {report.streamer_type === "irl" && "Coaching adapted for real-life engagement, authenticity, and live energy."}
+                {report.streamer_type === "variety" && "Coaching adapted for content flexibility, transitions, and audience versatility."}
+                {report.streamer_type === "educational" && "Coaching adapted for clarity, pacing, and value delivery."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Score + Summary */}
         <div className="flex gap-5 items-start">
           <ScoreRing score={report.overall_score} />
