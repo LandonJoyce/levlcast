@@ -75,12 +75,14 @@ CLIP BOUNDARIES:
 
 IMPORTANT: No emojis anywhere. Clean text only.
 
+IMPORTANT: The transcript uses plain integer seconds (e.g. 813s means 813 seconds). Output "start" and "end" as plain integers in seconds — NOT as decimals, NOT as MM:SS format. A clip must be at least 20 seconds long.
+
 Respond with ONLY a JSON array (no markdown, no code fences):
 [
   {
     "title": "<hook-style title under 60 chars — based only on what the streamer clearly said, not guessed gameplay>",
-    "start": <start time in seconds>,
-    "end": <end time in seconds>,
+    "start": <start time as plain integer seconds, e.g. 813>,
+    "end": <end time as plain integer seconds, e.g. 868>,
     "score": <virality score 0.0-1.0>,
     "category": "<hype | funny | emotional | educational>",
     "reason": "<why this moment will perform — quote the specific words from the transcript that confirm the emotion>",
@@ -140,7 +142,7 @@ export async function detectPeaks(
   // Short VODs (<= 25 min): single pass, no chunking needed
   if (vodDuration <= CHUNK_SECONDS + 5 * 60) {
     const transcript = segments
-      .map((s) => `[${formatTime(s.start)}-${formatTime(s.end)}] ${s.text}`)
+      .map((s) => `[${toSeconds(s.start)}-${toSeconds(s.end)}] ${s.text}`)
       .join("\n");
 
     const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
@@ -161,7 +163,7 @@ export async function detectPeaks(
   for (const chunk of chunks) {
     if (chunk.length === 0) continue;
     const transcript = chunk
-      .map((s) => `[${formatTime(s.start)}-${formatTime(s.end)}] ${s.text}`)
+      .map((s) => `[${toSeconds(s.start)}-${toSeconds(s.end)}] ${s.text}`)
       .join("\n");
     const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
     allPeaks.push(...peaks);
@@ -390,4 +392,12 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// Used in transcript lines fed to Claude for peak detection.
+// Plain integer seconds (e.g. "813s") avoids the M:SS colon being
+// misread as a decimal point, which caused Claude to output start=13.33
+// instead of start=813 — producing 0.1-second "clips" that fail validation.
+function toSeconds(seconds: number): string {
+  return `${Math.round(seconds)}s`;
 }
