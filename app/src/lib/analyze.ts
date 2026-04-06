@@ -60,7 +60,7 @@ WHAT TO AVOID — BE STRICT:
 - Inside jokes or moments needing too much context
 - Filler content: loading screens, AFK, dead air
 - If the transcript words seem garbled, misheard, or don't make sense in context — skip it
-- BACKGROUND MUSIC: Streamers often play music. If the transcript contains lyrics (rhyming phrases, repetitive lines, poetic or song-like structure, words that don't fit natural conversation), it is background music being transcribed — NOT the streamer speaking. Skip these entirely. Never clip background music.
+- BACKGROUND AUDIO: Streamers play music and watch videos (YouTube, clips, etc.) on stream. If the transcript contains lyrics (rhyming, repetitive lines, song-like structure), scripted dialogue, news-anchor speech, or any audio that sounds like it came from a video/media source rather than a natural live conversation — skip it entirely. You are only looking for the streamer's own authentic reactions and commentary. When in doubt about whether words came from the streamer or background media, skip it.
 
 SCORING RUBRIC (0.0 - 1.0):
 - 0.9-1.0: Will stop mid-scroll. The streamer's reaction is unmistakably clear and universally relatable. No context needed.
