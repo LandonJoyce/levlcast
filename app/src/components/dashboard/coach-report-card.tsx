@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map, Shuffle, BookOpen, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
@@ -45,18 +45,15 @@ const STREAMER_TYPE_CONFIG: Record<string, {
   label: string; icon: React.ReactNode;
   color: string; bg: string; border: string; glow: string;
 }> = {
-  gaming:       { label: "Gaming",       icon: <Gamepad2 size={12} />,    color: "text-purple-300", bg: "bg-purple-500/15",  border: "border-purple-400/30", glow: "#a855f7" },
-  just_chatting:{ label: "Just Chatting",icon: <MessageCircle size={12} />,color: "text-blue-300",   bg: "bg-blue-500/15",    border: "border-blue-400/30",   glow: "#60a5fa" },
-  irl:          { label: "IRL",          icon: <Map size={12} />,          color: "text-green-300",  bg: "bg-green-500/15",   border: "border-green-400/30",  glow: "#4ade80" },
-  variety:      { label: "Variety",      icon: <Shuffle size={12} />,      color: "text-orange-300", bg: "bg-orange-500/15",  border: "border-orange-400/30", glow: "#fb923c" },
-  educational:  { label: "Educational",  icon: <BookOpen size={12} />,     color: "text-cyan-300",   bg: "bg-cyan-500/15",    border: "border-cyan-400/30",   glow: "#22d3ee" },
+  gaming:        { label: "Gaming",        icon: <Gamepad2 size={12} />,     color: "text-purple-300", bg: "bg-purple-500/15", border: "border-purple-400/30", glow: "#a855f7" },
+  just_chatting: { label: "Just Chatting", icon: <MessageCircle size={12} />, color: "text-blue-300",   bg: "bg-blue-500/15",   border: "border-blue-400/30",   glow: "#60a5fa" },
+  irl:           { label: "IRL",           icon: <Map size={12} />,           color: "text-green-300",  bg: "bg-green-500/15",  border: "border-green-400/30",  glow: "#4ade80" },
+  variety:       { label: "Variety",       icon: <Shuffle size={12} />,       color: "text-orange-300", bg: "bg-orange-500/15", border: "border-orange-400/30", glow: "#fb923c" },
+  educational:   { label: "Educational",   icon: <BookOpen size={12} />,      color: "text-cyan-300",   bg: "bg-cyan-500/15",   border: "border-cyan-400/30",   glow: "#22d3ee" },
 };
 
 export function CoachReportCard({ report }: { report: CoachReport }) {
   const [expanded, setExpanded] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
-  const [hovered, setHovered] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const typeConfig = report.streamer_type ? STREAMER_TYPE_CONFIG[report.streamer_type] : null;
   const glowColor = typeConfig?.glow ?? "#8b5cf6";
@@ -66,75 +63,37 @@ export function CoachReportCard({ report }: { report: CoachReport }) {
   const retentionBg = report.viewer_retention_risk === "low" ? "bg-green-400/10 border-green-400/20" :
     report.viewer_retention_risk === "medium" ? "bg-yellow-400/10 border-yellow-400/20" : "bg-red-400/10 border-red-400/20";
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    setMousePos({
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
-    });
-  }, []);
-
-  // Holographic tilt values
-  const rotateX = hovered ? (mousePos.y - 0.5) * -12 : 0;
-  const rotateY = hovered ? (mousePos.x - 0.5) * 12 : 0;
-  const shineX = mousePos.x * 100;
-  const shineY = mousePos.y * 100;
-
   return (
-    <div
-      style={{ perspective: "1000px" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setMousePos({ x: 0.5, y: 0.5 }); }}
-    >
+    <div className="relative rounded-2xl overflow-hidden">
+
+      {/* Subtle static holographic border — diagonal rainbow shimmer */}
       <div
-        ref={cardRef}
-        onMouseMove={handleMouseMove}
+        className="absolute inset-0 rounded-2xl pointer-events-none"
         style={{
-          transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
-          transition: hovered ? "transform 0.1s ease-out" : "transform 0.4s ease-out",
-          transformStyle: "preserve-3d",
+          padding: "1px",
+          background: `linear-gradient(135deg, ${glowColor}80, #ff008040, #facc1540, #4ade8040, #60a5fa40, ${glowColor}80)`,
+          WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+          WebkitMaskComposite: "xor",
+          maskComposite: "exclude",
         }}
+      />
+
+      {/* Scanlines — very subtle */}
+      <div
+        className="absolute inset-0 pointer-events-none z-10 rounded-2xl"
+        style={{
+          backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)",
+        }}
+      />
+
+      {/* Card body */}
+      <div
         className="relative rounded-2xl overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, rgba(20,18,38,0.99) 0%, rgba(14,13,26,0.99) 50%, rgba(18,14,32,0.99) 100%)`,
+          boxShadow: `0 0 0 1px rgba(255,255,255,0.07), 0 4px 32px ${glowColor}18`,
+        }}
       >
-        {/* Holographic rainbow shimmer layer */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10 rounded-2xl opacity-0 transition-opacity duration-300"
-          style={{
-            opacity: hovered ? 0.18 : 0,
-            background: `radial-gradient(circle at ${shineX}% ${shineY}%,
-              #ff0080, #ff8c00, #ffd700, #00ff88, #00cfff, #a855f7, #ff0080)`,
-            mixBlendMode: "screen",
-          }}
-        />
-
-        {/* Edge glow on hover */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10 rounded-2xl transition-opacity duration-300"
-          style={{
-            opacity: hovered ? 1 : 0,
-            boxShadow: `0 0 0 1px ${glowColor}55, 0 0 30px ${glowColor}22, inset 0 0 30px ${glowColor}08`,
-          }}
-        />
-
-        {/* Scanline texture overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10 rounded-2xl opacity-[0.03]"
-          style={{
-            backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 3px)",
-          }}
-        />
-
-        {/* Card body */}
-        <div
-          className="relative bg-surface border border-white/10 rounded-2xl overflow-hidden"
-          style={{
-            background: `linear-gradient(135deg,
-              rgba(20,20,35,0.98) 0%,
-              rgba(15,15,28,0.98) 50%,
-              rgba(20,15,35,0.98) 100%)`,
-          }}
-        >
           {/* Header */}
           <div
             className="px-5 py-4 flex items-center justify-between border-b border-white/8"
