@@ -78,9 +78,10 @@ export const analyzeVod = inngest.createFunction(
         const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
         const title = vod?.title || "Stream";
 
-        // Filter to selected time range — if no range specified, use all segments
+        // Filter to selected time range — overlap check so utterances spanning
+        // the boundary are included, not silently dropped
         const filtered = (startSeconds !== undefined && endSeconds !== undefined)
-          ? segments.filter(s => s.start >= startSeconds && s.end <= endSeconds)
+          ? segments.filter(s => s.start < endSeconds && s.end > startSeconds)
           : segments;
 
         if (filtered.length === 0) {

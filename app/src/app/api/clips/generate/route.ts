@@ -68,6 +68,12 @@ export async function POST(request: Request) {
   const peak = peaks[idx];
   if (!peak) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
 
+  // Validate peak timestamps — bad AI output could produce negatives or inverted times
+  if (typeof peak.start !== "number" || typeof peak.end !== "number" ||
+      peak.start < 0 || peak.end <= peak.start || peak.end - peak.start < 2) {
+    return NextResponse.json({ error: "Peak has invalid timestamps" }, { status: 400 });
+  }
+
   const admin = createAdminClient();
 
   // Guard against duplicate generation for the same peak

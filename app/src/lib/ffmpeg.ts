@@ -58,17 +58,23 @@ export async function cutClip(
   startSeconds: number,
   endSeconds: number
 ): Promise<Buffer> {
+  // Validate inputs — negative or inverted times cause silent FFmpeg failures
+  const safeStart = Math.max(0, startSeconds);
+  const safeEnd = endSeconds;
+  if (safeEnd <= safeStart) throw new Error(`Invalid clip bounds: start=${safeStart} end=${safeEnd}`);
+  if (safeEnd - safeStart < 2) throw new Error(`Clip too short: ${safeEnd - safeStart}s`);
+
   const ffmpegPath = await getFFmpegPath();
 
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
   const outputPath = join(tempDir, "clip.mp4");
 
   try {
-    const duration = endSeconds - startSeconds;
+    const duration = safeEnd - safeStart;
 
     const cmd = [
       `"${ffmpegPath}"`,
-      `-ss ${startSeconds}`,
+      `-ss ${safeStart}`,
       `-i "${inputFilePath}"`,
       `-t ${duration}`,
       `-c:v libx264`,
@@ -81,7 +87,13 @@ export async function cutClip(
       `"${outputPath}"`,
     ].join(" ");
 
-    await execAsync(cmd, { timeout: 120000 });
+    try {
+      await execAsync(cmd, { timeout: 120000 });
+    } catch (err: any) {
+      console.error("[ffmpeg] Command failed:", cmd);
+      console.error("[ffmpeg] stderr:", err.stderr);
+      throw new Error(`FFmpeg failed: ${err.stderr?.slice(0, 300) || err.message}`);
+    }
 
     const clipBuffer = await readFile(outputPath);
     return clipBuffer;

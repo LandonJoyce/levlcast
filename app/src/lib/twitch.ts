@@ -470,67 +470,6 @@ export function streamTwitchVodAudio(vodId: string): PassThrough {
   return passThrough;
 }
 
-export interface ChatSample {
-  timestamp: number; // seconds into the VOD
-  messages: string[]; // up to 20 raw chat messages from this window
-}
-
-/**
- * Sample chat from 5 evenly-spaced points in a Twitch VOD.
- * Used to give the AI coach context about viewer engagement.
- * Returns empty array silently if chat is unavailable (private VOD, API error, etc).
- */
-export async function fetchVodChatSample(
-  twitchVodId: string,
-  durationSeconds: number
-): Promise<ChatSample[]> {
-  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
-  const samples: ChatSample[] = [];
-
-  for (let i = 0; i < 5; i++) {
-    const offsetSeconds = Math.floor((i / 4) * durationSeconds);
-    try {
-      const res = await fetch("https://gql.twitch.tv/gql", {
-        method: "POST",
-        headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operationName: "VideoCommentsByOffsetOrCursor",
-          variables: { videoID: twitchVodId, contentOffsetSeconds: offsetSeconds },
-          query: `query VideoCommentsByOffsetOrCursor($videoID: ID!, $contentOffsetSeconds: Int) {
-            video(id: $videoID) {
-              comments(contentOffsetSeconds: $contentOffsetSeconds) {
-                edges {
-                  node {
-                    contentOffsetSeconds
-                    message { fragments { text } }
-                    commenter { displayName }
-                  }
-                }
-              }
-            }
-          }`,
-        }),
-      });
-
-      if (!res.ok) continue;
-      const data = await res.json();
-      const edges = data.data?.video?.comments?.edges || [];
-      const messages: string[] = edges
-        .slice(0, 25)
-        .map((e: any) => e.node.message.fragments.map((f: any) => f.text).join("").trim())
-        .filter((m: string) => m.length > 0);
-
-      if (messages.length > 0) {
-        samples.push({ timestamp: offsetSeconds, messages });
-      }
-    } catch {
-      // Chat unavailable for this point — skip silently
-    }
-  }
-
-  return samples;
-}
-
 /** Convert a raw Twitch VOD into the shape we store in Supabase */
 export function mapVodToRow(vod: TwitchVod, userId: string) {
   return {
