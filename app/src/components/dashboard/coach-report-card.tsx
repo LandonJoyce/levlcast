@@ -113,17 +113,17 @@ function useReportAudio(report: CoachReport) {
       return;
     }
 
-    // Fetch audio from API
+    // Fetch audio from API, fall back to browser speech if unavailable
     setPlayState("loading");
+    const script = buildReportScript(report);
     try {
-      const script = buildReportScript(report);
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: script }),
       });
 
-      if (!res.ok) throw new Error("TTS failed");
+      if (!res.ok) throw new Error("TTS unavailable");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -137,12 +137,33 @@ function useReportAudio(report: CoachReport) {
       await audio.play();
       setPlayState("playing");
     } catch {
-      setPlayState("idle");
+      // Fallback: browser Web Speech API
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(script);
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        const voices = window.speechSynthesis.getVoices();
+        const male = voices.find((v) =>
+          /david|mark|daniel|google uk english male|microsoft david|alex/i.test(v.name)
+        );
+        if (male) utterance.voice = male;
+        utterance.onend = () => setPlayState("idle");
+        utterance.onerror = () => setPlayState("idle");
+        window.speechSynthesis.speak(utterance);
+        setPlayState("playing");
+      } else {
+        setPlayState("idle");
+      }
     }
   }, [playState, report]);
 
   const pause = useCallback(() => {
-    audioRef.current?.pause();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    } else {
+      window.speechSynthesis?.pause();
+    }
     setPlayState("paused");
   }, []);
 
@@ -150,6 +171,8 @@ function useReportAudio(report: CoachReport) {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+    } else {
+      window.speechSynthesis?.cancel();
     }
     setPlayState("idle");
   }, []);
