@@ -43,26 +43,29 @@ Stream title: "${vodTitle}"
 Timestamped transcript:
 ${transcript}
 
-WHAT MAKES A GREAT TWITCH CLIP:
-- A moment where the streamer's emotion spikes suddenly (shock, hype, laughter, rage, disbelief)
-- A payoff moment after visible buildup (clutch play, comeback, funny fail)
-- A hot take or strong opinion that would spark debate in comments
-- A genuinely funny or unexpected reaction that doesn't need context to land
-- A teaching moment with a clear insight that viewers would screenshot or save
-- The streamer saying something that would make viewers tag a friend
-- Moments where chat would have exploded (even if you can't see chat, look for verbal cues like "let's go", "no way", "chat", laughter, repeated excitement)
+CRITICAL RULE — CLARITY FIRST:
+You are working from a speech transcript, not video. Audio transcription is imperfect — gaming terms, names, and in-game callouts are frequently misheard. You must ONLY clip moments where the streamer's emotional reaction is unmistakably clear in their own spoken words. Never infer what happened in the game from unclear transcript text. If you are not certain what the streamer said and why they reacted, skip it. A missed clip is better than a wrong one.
 
-WHAT TO AVOID:
-- Slow moments with no clear payoff
-- Inside jokes that need too much context
-- Moments that are mid-sentence or cut off awkwardly
-- Filler content (bathroom breaks, loading screens, AFK moments)
+WHAT MAKES A GREAT TWITCH CLIP:
+- The streamer explicitly expresses a clear emotion in words — laughter, yelling, shock, hype, disbelief
+- Verbal cues that are unambiguous: "let's go", "no way", "are you kidding me", audible laughter, genuine rage
+- A strong opinion or hot take stated clearly in words that would spark debate
+- A funny moment where the streamer's reaction is the clip — not what happened in the game
+- A teaching moment where the streamer explains something clearly and confidently
+
+WHAT TO AVOID — BE STRICT:
+- Any moment where you are guessing what happened based on unclear or potentially misheard words
+- Gameplay callouts that depend on knowing what happened on screen — you cannot see the screen
+- Moments where the emotion is mild or ambiguous — only clip strong, obvious reactions
+- Inside jokes or moments needing too much context
+- Filler content: loading screens, AFK, dead air
+- If the transcript words seem garbled, misheard, or don't make sense in context — skip it
 
 SCORING RUBRIC (0.0 - 1.0):
-- 0.9-1.0: Will stop mid-scroll. Universally funny, hype, or emotionally resonant. No context needed.
-- 0.7-0.89: Strong clip. Clear emotion or payoff. Works for the streamer's audience.
-- 0.5-0.69: Decent clip. Has a moment but needs context or niche appeal.
-- Below 0.5: Do not include.
+- 0.9-1.0: Will stop mid-scroll. The streamer's reaction is unmistakably clear and universally relatable. No context needed.
+- 0.75-0.89: Strong clip. Clear emotion or payoff that is obvious from the words alone.
+- 0.65-0.74: Decent clip. Reaction is clear but may need some context.
+- Below 0.65: Do not include. When in doubt, leave it out.
 
 CLIP BOUNDARIES:
 - Include 3-5 seconds of buildup before the peak so viewers feel the tension
@@ -74,18 +77,18 @@ IMPORTANT: No emojis anywhere. Clean text only.
 Respond with ONLY a JSON array (no markdown, no code fences):
 [
   {
-    "title": "<hook-style title under 60 chars — make it a statement or reaction, not a description>",
+    "title": "<hook-style title under 60 chars — based only on what the streamer clearly said, not guessed gameplay>",
     "start": <start time in seconds>,
     "end": <end time in seconds>,
     "score": <virality score 0.0-1.0>,
     "category": "<hype | funny | emotional | educational>",
-    "reason": "<why this moment will perform — be specific about the emotional trigger>",
+    "reason": "<why this moment will perform — quote the specific words from the transcript that confirm the emotion>",
     "hook": "<describe the opening 3 seconds of this clip that will stop someone from scrolling>",
     "caption": "<TikTok caption under 150 chars — conversational, not salesy, with 3-4 relevant hashtags>"
   }
 ]
 
-Return 3-5 peaks sorted by score descending. Be selective — 3 great clips beats 5 mediocre ones. If there are no moments scoring above 0.5, return [].`;
+Return 3-5 peaks sorted by score descending. Be selective — 3 accurate clips beats 5 guessed ones. If there are no moments scoring above 0.65, return [].`;
 
 async function runPeakDetection(
   anthropic: Anthropic,
@@ -122,8 +125,8 @@ const MAX_PEAKS = 5;
 const RERANK_CANDIDATE_LIMIT = 15;
 
 // Minimum virality score for a peak to be included. Claude's rubric:
-//   0.5–0.69 = decent clip (niche appeal), 0.7+ = strong clip, 0.9+ = viral
-const MIN_PEAK_SCORE = 0.5;
+//   0.65–0.74 = decent clip (clear reaction), 0.75+ = strong clip, 0.9+ = viral
+const MIN_PEAK_SCORE = 0.65;
 
 export async function detectPeaks(
   segments: TranscriptSegment[],
