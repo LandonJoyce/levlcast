@@ -230,95 +230,133 @@ export async function generateCoachReport(
 ): Promise<CoachReport | null> {
   const anthropic = new Anthropic();
 
-  const allLines = segments.map((s) => `[${formatTime(s.start)}] ${s.text}`);
+  if (segments.length === 0) return null;
 
-  // Sample beginning, middle, and end to see the full arc of the stream
-  const chunkSize = 80;
-  const mid = Math.floor(allLines.length / 2);
-  const beginningLines = allLines.slice(0, chunkSize);
-  const middleLines = allLines.slice(Math.max(0, mid - Math.floor(chunkSize / 2)), mid + Math.floor(chunkSize / 2));
-  const endLines = allLines.slice(Math.max(0, allLines.length - chunkSize));
+  const vodDuration = segments[segments.length - 1].end;
+  const totalMinutes = Math.round(vodDuration / 60);
 
-  const transcript = [
-    "--- Stream Opening (first ~10 minutes) ---",
-    beginningLines.join("\n"),
-    "\n--- Stream Middle ---",
-    middleLines.join("\n"),
-    "\n--- Stream Closing (last ~10 minutes) ---",
-    endLines.join("\n"),
-  ].join("\n");
+  // Sample 5 evenly-spaced sections across the full stream so Claude sees the whole arc
+  const LINES_PER_SECTION = 100;
+  const sectionLabels = ["Opening", "Early", "Middle", "Late", "Closing"];
+  const sectionTranscripts: string[] = [];
+
+  for (let i = 0; i < 5; i++) {
+    const centerFraction = i / 4; // 0, 0.25, 0.5, 0.75, 1.0
+    const centerIdx = Math.floor(centerFraction * (segments.length - 1));
+    const start = Math.max(0, centerIdx - Math.floor(LINES_PER_SECTION / 2));
+    const end = Math.min(segments.length, start + LINES_PER_SECTION);
+    const lines = segments.slice(start, end).map((s) => `[${formatTime(s.start)}] ${s.text}`);
+    sectionTranscripts.push(`--- ${sectionLabels[i]} ---\n${lines.join("\n")}`);
+  }
+
+  const transcript = sectionTranscripts.join("\n\n");
+
+  // Detect dead air — gaps of 10+ seconds between transcript segments
+  const deadAirGaps: string[] = [];
+  for (let i = 1; i < segments.length; i++) {
+    const gap = segments[i].start - segments[i - 1].end;
+    if (gap >= 10) {
+      deadAirGaps.push(`${formatTime(segments[i - 1].end)}–${formatTime(segments[i].start)} (${Math.round(gap)}s silence)`);
+    }
+  }
+  const deadAirSummary = deadAirGaps.length > 0
+    ? `Dead air detected at: ${deadAirGaps.slice(0, 8).join(", ")}${deadAirGaps.length > 8 ? ` and ${deadAirGaps.length - 8} more` : ""}`
+    : "No significant dead air detected.";
+
+  // Stream stats to help Claude calibrate
+  const wordsPerMinute = totalMinutes > 0 ? Math.round(segments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / totalMinutes) : 0;
 
   const peaksSummary = peaks.length > 0
-    ? peaks.map((p) => `- "${p.title}" at ${formatTime(p.start)} [${p.category}, score: ${p.score.toFixed(2)}]\n  Why it worked: ${p.reason}`).join("\n")
-    : "No standout moments were detected in this stream.";
+    ? peaks.map((p) => `- "${p.title}" at ${formatTime(p.start)}–${formatTime(p.end)} [${p.category}, score: ${p.score.toFixed(2)}]\n  Reason: ${p.reason}`).join("\n")
+    : "No standout moments were detected — the stream lacked clear viral peaks.";
 
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 2000,
-    system: `You are an elite Twitch growth coach with a track record of helping streamers go from 0 to full-time. You are direct, honest, and specific. You never give generic advice. You watch the actual footage (in this case the transcript) and give feedback that is tailored to exactly what happened in this stream. You know the difference between a streamer who is one habit away from breaking through and one who has fundamental problems to fix. Your feedback is valuable because it is true, not because it is kind.`,
+    max_tokens: 2500,
+    system: `You are an elite Twitch growth coach. You have helped dozens of streamers go from 0 to full-time by identifying exactly what is holding them back and what they are already doing well. You are direct and honest — you never pad feedback with compliments that aren't earned. You know what separates streamers who grow from those who stay stuck: consistent energy, strong personality, chat interaction, clip-worthy moments, and clear value to the viewer. You base all feedback on what actually happened in the stream — you never give generic advice that could apply to any streamer.`,
     messages: [
       {
         role: "user",
-        content: `Review this Twitch stream and give the streamer a coaching report.
+        content: `Review this Twitch stream and give the streamer a detailed, honest coaching report.
 
-Stream title: "${vodTitle}"
+STREAM INFO:
+- Title: "${vodTitle}"
+- Duration: ${totalMinutes} minutes
+- Talking pace: ~${wordsPerMinute} words/minute (normal conversation is ~130 wpm; high energy streamers often hit 150-180 wpm)
+- ${deadAirSummary}
 
-AI-detected peak moments:
+AI-DETECTED PEAK MOMENTS (the best moments in this stream):
 ${peaksSummary}
 
-Transcript sample (opening, middle, and closing of the stream):
+TRANSCRIPT SAMPLE (5 sections evenly spaced across the full stream):
 ${transcript}
 
-SCORING GUIDE — be honest and calibrated:
-- 85-100: Exceptional stream. High energy throughout, strong chat engagement, clear personality, memorable moments. Rare.
-- 70-84: Good stream with real strengths. A few clear things to fix but the foundation is solid.
-- 55-69: Average stream. Watchable but forgettable. Needs work on consistency and engagement.
-- 40-54: Below average. Energy problems, dead air, or weak content. Significant improvement needed.
-- Below 40: Serious issues. Fundamental problems with delivery, content, or engagement.
+WHAT TO EVALUATE — be specific and reference actual timestamps and quotes:
 
-Most streams score between 50-75. Be honest — a streamer who scores 90 on a mediocre stream learns nothing.
+1. ENERGY & CONSISTENCY: Was the streamer engaged and entertaining throughout? Did energy drop? Were there long silences or dead air? Reference the dead air gaps above.
 
-ENERGY TREND DEFINITIONS:
-- building: stream clearly got better as it went on, energy increased
-- declining: started strong but faded, energy dropped noticeably
-- consistent: maintained the same level throughout (good or bad)
-- volatile: big spikes and drops, unpredictable energy
+2. PERSONALITY & AUTHENTICITY: Does the streamer have a clear, memorable personality? Do they talk TO the viewer or just narrate to themselves? Would a new viewer immediately understand who this person is?
+
+3. CHAT INTERACTION: Does the streamer read and respond to chat? Streamers who ignore chat lose viewers. Look for evidence of chat interaction in the transcript.
+
+4. CLIP-WORTHY MOMENTS: The detected peaks tell you what stood out. Were these genuinely strong moments or were there few/no peaks (meaning the stream was flat)?
+
+5. TALKING PACE & DEAD AIR: Long silences kill viewer retention. More than 15 seconds of silence is a problem. Reference specific gaps from the dead air data.
+
+6. CONTENT CLARITY: Is it clear what the streamer is playing/doing and why it's worth watching? Would a new viewer understand the context?
+
+SCORING — be honest and calibrated (most streams score 50-75):
+- 85-100: Exceptional. High energy, strong personality, chat interaction, clip-worthy moments throughout. Rare.
+- 70-84: Good foundation. Real strengths, a few clear things to fix.
+- 55-69: Average. Watchable but not memorable. Needs work on energy or engagement.
+- 40-54: Below average. Dead air, low energy, or weak content. Significant work needed.
+- Below 40: Fundamental problems with delivery or engagement.
+
+ENERGY TREND:
+- building: energy clearly increased as the stream went on
+- declining: started strong, faded noticeably
+- consistent: same level throughout (good or bad)
+- volatile: big spikes and drops, unpredictable
 
 VIEWER RETENTION RISK:
 - low: viewers would likely stay the whole stream
-- medium: some drop-off points but mostly retaining
+- medium: some drop-off points, mostly retaining
 - high: multiple moments where viewers would click away
 
-IMPORTANT: No emojis. Be direct. Reference specific things from the transcript, not generic advice.
+RULES:
+- Every strength and improvement MUST reference a specific timestamp or quote from the transcript
+- Do not give advice that could apply to any streamer — make it specific to THIS stream
+- If the stream had real problems, say so clearly — sugarcoating helps no one
+- No emojis
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
-  "overall_score": <integer 0-100, calibrated honestly>,
-  "stream_summary": "<2-3 sentences that honestly summarize the stream — what kind of stream it was, the general vibe, and the most notable thing about it>",
+  "overall_score": <integer 0-100>,
+  "stream_summary": "<2-3 honest sentences: what kind of stream, the vibe, and the single most important thing to know about it>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
   "strengths": [
-    "<specific strength with an example from the stream>",
-    "<specific strength with an example from the stream>",
-    "<specific strength with an example from the stream>"
+    "<specific strength — quote or timestamp from THIS stream, explain why it works>",
+    "<specific strength — quote or timestamp from THIS stream, explain why it works>",
+    "<specific strength — quote or timestamp from THIS stream, explain why it works>"
   ],
   "improvements": [
-    "<specific problem + exactly what to do differently, with a concrete example from this stream>",
-    "<specific problem + exactly what to do differently, with a concrete example from this stream>",
-    "<specific problem + exactly what to do differently, with a concrete example from this stream>"
+    "<specific problem with timestamp or example + exactly what to do differently next stream>",
+    "<specific problem with timestamp or example + exactly what to do differently next stream>",
+    "<specific problem with timestamp or example + exactly what to do differently next stream>"
   ],
   "best_moment": {
     "time": "<MM:SS>",
-    "description": "<what happened, why it worked, and what it reveals about the streamer's strengths>"
+    "description": "<what happened, why it worked, what it reveals about the streamer's potential>"
   },
   "content_mix": [
     { "category": "<gameplay | chat interaction | commentary | educational | funny | hype>", "percentage": <integer 0-100> }
   ],
-  "recommendation": "<the single highest-leverage thing this streamer should do differently next stream — be specific, actionable, and direct>",
+  "recommendation": "<the single most impactful change this streamer can make next stream — specific, actionable, based on what you saw>",
   "next_stream_goals": [
-    "<specific measurable goal for next stream>",
-    "<specific measurable goal for next stream>",
-    "<specific measurable goal for next stream>"
+    "<measurable, specific goal based on a weakness you identified>",
+    "<measurable, specific goal based on a weakness you identified>",
+    "<measurable, specific goal based on a weakness you identified>"
   ]
 }`,
       },
