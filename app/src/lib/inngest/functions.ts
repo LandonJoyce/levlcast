@@ -206,47 +206,48 @@ export const generateClip = inngest.createFunction(
     const supabase = createAdminClient();
 
     try {
-      // Download only the segments needed for this clip (not the full VOD)
-      const clipBuffer = await step.run("download-and-cut", async () => {
+      // Single step: download → cut → upload → save.
+      // Do NOT split into multiple steps — passing a video buffer between Inngest steps
+      // serializes it as JSON, which blows past Inngest's step state size limit and
+      // causes silent failures where the clip appears "completed" but stays processing.
+      await step.run("generate-and-upload", async () => {
         console.log(`[clip] Downloading segments for "${peak.title}" (${peak.start}s - ${peak.end}s)`);
         const download = await downloadTwitchVodAudio(twitchVodId, peak.start, peak.end);
+
+        let buffer: Buffer;
         try {
-          // Adjust timestamps relative to where our downloaded segments actually start
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
-          console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (segment offset: ${download.segmentStartSeconds}s)`);
-          const buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
+          console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
+          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
           console.log(`[clip] Cut complete: ${buffer.length} bytes`);
-          return Array.from(buffer);
         } finally {
           await download.cleanup();
         }
-      });
 
-      // Upload to Supabase Storage
-      await step.run("upload", async () => {
         await supabase.storage.createBucket("clips", {
           public: true,
           fileSizeLimit: 104857600,
         }).catch(() => {});
 
         const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
-        const buffer = Buffer.from(clipBuffer);
 
         const { error: uploadError } = await supabase.storage
           .from("clips")
-          .upload(fileName, buffer, { contentType: "video/mp4", upsert: false });
+          .upload(fileName, buffer!, { contentType: "video/mp4", upsert: false });
 
         if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
         const { data: urlData } = supabase.storage.from("clips").getPublicUrl(fileName);
 
-        await supabase.from("clips").update({
+        const { error: updateError } = await supabase.from("clips").update({
           video_url: urlData.publicUrl,
           status: "ready",
         }).eq("id", clipId);
 
-        console.log(`[clip] Saved: "${peak.title}"`);
+        if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
+
+        console.log(`[clip] Saved: "${peak.title}" → ${urlData.publicUrl}`);
       });
 
       return { clipId, title: peak.title };
