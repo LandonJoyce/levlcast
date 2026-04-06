@@ -93,15 +93,8 @@ export default async function VodsPage() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                {vod.status === "ready" ? (
-                  <Link href={`/dashboard/vods/${vod.id}`} className="group flex items-center gap-1 mb-1.5">
-                    <h3 className="font-bold text-sm truncate group-hover:text-accent-light transition-colors">{vod.title}</h3>
-                    <ChevronRight size={14} className="flex-shrink-0 text-muted group-hover:text-accent-light transition-colors" />
-                  </Link>
-                ) : (
-                  <h3 className="font-bold text-sm truncate mb-1.5">{vod.title}</h3>
-                )}
-                <div className="flex items-center gap-4 text-xs text-muted mb-2">
+                <h3 className="font-bold text-sm truncate mb-1.5">{vod.title}</h3>
+                <div className="flex items-center gap-4 text-xs text-muted mb-3">
                   <span className="inline-flex items-center gap-1">
                     <Calendar size={12} />
                     {new Date(vod.stream_date).toLocaleDateString("en-US", {
@@ -122,6 +115,14 @@ export default async function VodsPage() {
                       durationSeconds={vod.duration_seconds}
                       compact
                     />
+                  ) : vod.status === "ready" ? (
+                    <Link
+                      href={`/dashboard/vods/${vod.id}`}
+                      className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity"
+                    >
+                      View Coach Report
+                      <ChevronRight size={12} />
+                    </Link>
                   ) : (
                     <>
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusStyle(vod.status)}`}>

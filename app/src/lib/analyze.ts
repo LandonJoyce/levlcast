@@ -334,7 +334,7 @@ VIEWER RETENTION RISK:
 - high: multiple moments where viewers would click away
 
 RULES:
-- Every strength and improvement MUST reference a specific timestamp or quote from the transcript
+- Reference specific timestamps (e.g. "around 3:52") and describe what happened — but NEVER directly quote the transcript. Deepgram transcription is imperfect and misheard words will appear verbatim in any quote, making feedback look wrong or confusing. Describe the moment in your own words instead.
 - Do not give advice that could apply to any streamer — make it specific to THIS stream
 - If the stream had real problems, say so clearly — sugarcoating helps no one
 - No emojis
