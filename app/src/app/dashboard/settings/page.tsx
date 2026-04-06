@@ -61,8 +61,8 @@ export default async function SettingsPage() {
         plan={usage.plan}
         analysesUsed={usage.analyses_this_month}
         analysesLimit={limits.analyses_per_month}
-        clipsUsed={usage.clips_total}
-        clipsLimit={limits.clips_total}
+        clipsUsed={usage.clips_this_month}
+        clipsLimit={limits.clips_per_month}
       />
 
       <DeleteAccountSection />

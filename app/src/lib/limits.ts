@@ -2,15 +2,15 @@
  * lib/limits.ts — subscription plan limits and usage enforcement.
  *
  * PLAN LIMITS:
- *   Free: 1 VOD analysis/month, 5 clips total (lifetime)
- *   Pro:  10 VOD analyses/month, 999 clips total
+ *   Free: 1 VOD analysis/month, 5 clips/month
+ *   Pro:  20 VOD analyses/month, 20 clips/month
  *
  * HOW USAGE IS COUNTED:
  *   - Analyses: completed VODs (analyzed_at not null) + in-progress VODs
  *     (status = transcribing | analyzing). In-progress are counted to prevent
  *     a race condition where two simultaneous requests both pass the limit check
  *     before either analysis finishes.
- *   - Clips: total rows in the clips table with status = "ready" for this user.
+ *   - Clips: rows created this calendar month with status = "ready" or "processing".
  *
  * HOW PLAN IS DETERMINED:
  *   getUserUsage() reads the profile's plan field, then checks subscription_expires_at.
