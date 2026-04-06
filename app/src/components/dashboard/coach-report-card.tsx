@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map, Shuffle, BookOpen, ChevronDown, ChevronUp, Zap, Volume2, VolumeX, Pause, Play } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle, Lightbulb, Target, ShieldAlert, Gamepad2, MessageCircle, Map, Shuffle, BookOpen, ChevronDown, ChevronUp, Zap, Volume2, VolumeX, Pause, Play, Loader2 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
 function EnergyIcon({ trend }: { trend: string }) {
@@ -82,69 +82,84 @@ function buildReportScript(report: CoachReport): string {
   return lines.join(" ");
 }
 
-type PlayState = "idle" | "playing" | "paused";
+type PlayState = "idle" | "loading" | "playing" | "paused";
 
-function useReportSpeech(report: CoachReport) {
+function useReportAudio(report: CoachReport) {
   const [playState, setPlayState] = useState<PlayState>("idle");
-  const [supported, setSupported] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
+  // Cleanup on unmount
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "speechSynthesis" in window);
     return () => {
-      window.speechSynthesis?.cancel();
+      audioRef.current?.pause();
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
     };
   }, []);
 
-  const play = useCallback(() => {
-    if (!supported) return;
-
-    if (playState === "paused") {
-      window.speechSynthesis.resume();
+  const play = useCallback(async () => {
+    // Resume from pause
+    if (playState === "paused" && audioRef.current) {
+      audioRef.current.play();
       setPlayState("playing");
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const script = buildReportScript(report);
-    const utterance = new SpeechSynthesisUtterance(script);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+    // Already have cached audio — play from start
+    if (blobUrlRef.current && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+      setPlayState("playing");
+      return;
+    }
 
-    // Pick a decent voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find((v) =>
-      v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Alex")
-    );
-    if (preferred) utterance.voice = preferred;
+    // Fetch audio from API
+    setPlayState("loading");
+    try {
+      const script = buildReportScript(report);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: script }),
+      });
 
-    utterance.onend = () => setPlayState("idle");
-    utterance.onerror = () => setPlayState("idle");
+      if (!res.ok) throw new Error("TTS failed");
 
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-    setPlayState("playing");
-  }, [supported, playState, report]);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      blobUrlRef.current = url;
+
+      const audio = new Audio(url);
+      audio.onended = () => setPlayState("idle");
+      audio.onerror = () => setPlayState("idle");
+      audioRef.current = audio;
+
+      await audio.play();
+      setPlayState("playing");
+    } catch {
+      setPlayState("idle");
+    }
+  }, [playState, report]);
 
   const pause = useCallback(() => {
-    if (!supported) return;
-    window.speechSynthesis.pause();
+    audioRef.current?.pause();
     setPlayState("paused");
-  }, [supported]);
+  }, []);
 
   const stop = useCallback(() => {
-    if (!supported) return;
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setPlayState("idle");
-  }, [supported]);
+  }, []);
 
-  return { playState, supported, play, pause, stop };
+  return { playState, play, pause, stop };
 }
 
 export function CoachReportCard({ report }: { report: CoachReport }) {
   const [expanded, setExpanded] = useState(false);
-  const { playState, supported, play, pause, stop } = useReportSpeech(report);
+  const { playState, play, pause, stop } = useReportAudio(report);
 
   const typeConfig = report.streamer_type ? STREAMER_TYPE_CONFIG[report.streamer_type] : null;
   const glowColor = typeConfig?.glow ?? "#8b5cf6";
@@ -216,59 +231,63 @@ export function CoachReportCard({ report }: { report: CoachReport }) {
                 <span className="capitalize">{report.energy_trend}</span>
               </div>
               {/* Listen button */}
-              {supported && (
-                <div className="flex items-center gap-1 ml-1">
-                  {playState === "idle" && (
+              <div className="flex items-center gap-1 ml-1">
+                {playState === "idle" && (
+                  <button
+                    onClick={play}
+                    title="Listen to report"
+                    className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/40 hover:text-white/80 transition-all"
+                    style={{ background: "rgba(255,255,255,0.03)" }}
+                  >
+                    <Volume2 size={12} />
+                    Listen
+                  </button>
+                )}
+                {playState === "loading" && (
+                  <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 text-white/30">
+                    <Loader2 size={12} className="animate-spin" />
+                    Loading...
+                  </span>
+                )}
+                {playState === "playing" && (
+                  <>
+                    <button
+                      onClick={pause}
+                      title="Pause"
+                      className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/60 hover:text-white transition-all"
+                      style={{ background: "rgba(255,255,255,0.04)" }}
+                    >
+                      <Pause size={12} />
+                    </button>
+                    <button
+                      onClick={stop}
+                      title="Stop"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white/30 hover:text-red-400 transition-colors"
+                    >
+                      <VolumeX size={12} />
+                    </button>
+                  </>
+                )}
+                {playState === "paused" && (
+                  <>
                     <button
                       onClick={play}
-                      title="Listen to report"
-                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/40 hover:text-white/80 transition-all"
-                      style={{ background: "rgba(255,255,255,0.03)" }}
+                      title="Resume"
+                      className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/60 hover:text-white transition-all"
+                      style={{ background: "rgba(255,255,255,0.04)" }}
                     >
-                      <Volume2 size={12} />
-                      Listen
+                      <Play size={12} />
                     </button>
-                  )}
-                  {playState === "playing" && (
-                    <>
-                      <button
-                        onClick={pause}
-                        title="Pause"
-                        className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/60 hover:text-white transition-all"
-                        style={{ background: "rgba(255,255,255,0.04)" }}
-                      >
-                        <Pause size={12} />
-                      </button>
-                      <button
-                        onClick={stop}
-                        title="Stop"
-                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white/30 hover:text-red-400 transition-colors"
-                      >
-                        <VolumeX size={12} />
-                      </button>
-                    </>
-                  )}
-                  {playState === "paused" && (
-                    <>
-                      <button
-                        onClick={play}
-                        title="Resume"
-                        className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border border-white/10 hover:border-white/25 text-white/60 hover:text-white transition-all"
-                        style={{ background: "rgba(255,255,255,0.04)" }}
-                      >
-                        <Play size={12} />
-                      </button>
-                      <button
-                        onClick={stop}
-                        title="Stop"
-                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white/30 hover:text-red-400 transition-colors"
-                      >
-                        <VolumeX size={12} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+                    <button
+                      onClick={stop}
+                      title="Stop"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white/30 hover:text-red-400 transition-colors"
+                    >
+                      <VolumeX size={12} />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

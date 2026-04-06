@@ -223,6 +223,85 @@ export interface CoachReport {
 }
 
 /**
+ * Category-specific coaching knowledge derived from studying what separates
+ * top performers in each streaming category. Used to give targeted advice
+ * that goes beyond generic streaming tips.
+ */
+const CATEGORY_COACHING_GUIDE: Record<string, string> = {
+  gaming: `GAMING STREAMER COACHING STANDARDS:
+What separates top gaming streamers from average ones:
+- The commentary IS the content — not just narrating what is happening on screen, but adding personality, prediction, and emotion on top of it. Silence during intense gameplay can be fine, but silence during downtime is dead content.
+- Live vocal reactions matter more than the outcome. A loud genuine reaction to a near-miss is more entertaining than winning silently. Top gaming streamers make the viewer FEEL the stakes.
+- Downtime between action (loading, menus, queue waiting) is when great gaming streamers build community. They tell personal stories, ask chat questions, or give hot takes on the game or gaming culture. This is where personality is built.
+- Confident voice even in failure. The best gaming streamers are entertaining whether winning or losing because they frame both as stories. Self-deprecating humor in failure keeps viewers invested.
+- Strong opinions on the game — patches, meta, other players' decisions, bad design choices. Opinion-driven commentary creates clips and debate, which drives growth.
+- Treating chat like a stadium crowd — big moments are announced with energy. Low moments are narrated with drama. The streamer creates the emotional arc for the viewer, not just the game.
+
+Key coaching focus areas for gaming streamers:
+- Is their commentary track adding value or just narrating the obvious?
+- Are they energizing dead moments between gameplay action?
+- Are they sharing opinions that would make a viewer want to clip and share?
+- Is the energy proportional to what is happening on screen?`,
+
+  just_chatting: `JUST CHATTING STREAMER COACHING STANDARDS:
+What separates top just chatting streamers from average ones:
+- Radical authenticity is the product. Audiences watch just chatting streams because they want to feel like they know someone. Performed emotions, forced reactions, or overly polished delivery kills this. The most growth comes from unfiltered, genuine personality.
+- React content done right requires genuine real-time processing — the streamer's first authentic reaction, not a performed one. Top streamers react before they think about how they look. That realness is what gets clipped.
+- Parasocial relationship building is a skill. Remembering regular chatters by name, referencing past streams, sharing personal updates, and treating chat like a room of friends they know — this is what converts casual viewers into loyal regulars.
+- Hot takes create organic clip spread. A strong opinion stated clearly — even a controversial one — generates debate, sharing, and return visits. Streamers who avoid controversy also avoid organic growth.
+- Long-form conversation skills: the ability to hold attention through 2-4 hours with just personality and talk. This requires having genuine interests, stories, and opinions — not just reacting to other people's content.
+- Making chat part of the content: the best just chatting streamers turn chat messages into comedic material, debate partners, or story prompts. Chat is a co-star, not a side element.
+
+Key coaching focus areas for just chatting streamers:
+- Is the streamer showing genuine unfiltered personality or performing for the camera?
+- Are they building real relationships with chat or talking at them?
+- Are they sharing opinions strong enough to make someone want to clip and argue?
+- Is there a clear point of view that a viewer could describe to someone else?`,
+
+  irl: `IRL STREAMER COACHING STANDARDS:
+What separates top IRL streamers from average ones:
+- Environmental storytelling: the location is a co-character. Top IRL streamers narrate their environment, comment on what they see, and treat the real world as content. They do not just carry a camera — they give the viewer a perspective.
+- Engaging strangers authentically. The best IRL moments come from genuine interactions, not forced ones. A natural conversation with a stranger that goes somewhere unexpected beats a scripted interaction every time.
+- Narrating internal thoughts in real time. Top IRL streamers voice what they are thinking as they experience it — this creates intimacy and makes the viewer feel like they are inside the streamer's head. This is the IRL version of personality building.
+- Reacting naturally to unexpected moments is the content. When something unexpected happens, the streamer's genuine unscripted reaction is the clip. Trying to manage or control these moments kills them.
+- Building recurring arcs across streams. Top IRL streamers have ongoing threads — a place they keep returning to, a project they are working toward, a relationship with a recurring person in their life. Viewers follow arcs, not random days.
+- Chat as a companion on the journey. The best IRL streamers loop chat in — reading chat reactions to what is happening, asking chat what to do next, sharing moments with chat like a friend who is there with them.
+
+Key coaching focus areas for IRL streamers:
+- Is the streamer giving the viewer a genuine perspective on the world they are moving through?
+- Are they narrating thoughts and reactions out loud, or going quiet and losing the viewer?
+- Are there natural moments that would feel authentic clipped out of context?
+- Is chat being treated as a companion or ignored?`,
+
+  variety: `VARIETY STREAMER COACHING STANDARDS:
+What separates top variety streamers from average ones:
+- The personality, not the game, is what viewers follow. Top variety streamers have a consistent identity that makes them recognizable whether they are playing an FPS, a simulator, or a cozy game. The content changes — the character does not.
+- Smooth transitions between content types require narrative connective tissue. Top variety streamers frame transitions as part of the show: "alright we are done with that, let me tell you what we are getting into next." They bring chat along, they do not just switch.
+- Building loyal audience who follow the person, not the category. This happens through consistent personality, consistent values, and making viewers feel like they know who this person is regardless of what they are playing.
+- Cross-content chemistry: the best variety streamers find ways to connect different games or content types to their personality and to each other. They are not playing games — they are experiencing things and sharing that experience.
+- Energy management across long variety sessions. Switching games can re-energize a stream, but it can also reset momentum. Top variety streamers read when energy is dropping and time switches to capitalize on it, not escape it.
+
+Key coaching focus areas for variety streamers:
+- Is there a consistent personality that would be recognizable across any game?
+- Are transitions handled smoothly with chat brought along?
+- Would a new viewer understand who this person is regardless of what they are playing?`,
+
+  educational: `EDUCATIONAL STREAMER COACHING STANDARDS:
+What separates top educational streamers from average ones:
+- Teaching as entertainment: the best educational streamers use Socratic method, real-time problem solving, and genuine curiosity to make learning feel like discovery. Dry lecture delivery drives viewers away. The best educational content feels like watching someone figure something out in real time.
+- Accessible complexity: top educational streamers find analogies, metaphors, and comparisons that make difficult topics click instantly. If a viewer needs background knowledge to follow along, most viewers leave. The skill is making complex things feel obvious.
+- Acknowledging mistakes and confusion builds trust. Streamers who pretend to know everything feel inauthentic. Saying "I'm not sure, let me think through this" and working through uncertainty live is more valuable than projecting false confidence.
+- Structured segments with clear payoffs keep retention high. Top educational streamers give the viewer a destination: "by the end of this I'm going to show you why X works." Viewers stay when they know where they are going.
+- Chat-driven content: letting chat questions steer the content creates investment. When chat influences where the stream goes, viewers feel ownership and stay to see their contribution play out.
+
+Key coaching focus areas for educational streamers:
+- Is the teaching style engaging or is it dry lecture delivery?
+- Are complex topics being made genuinely accessible with analogies or examples?
+- Is uncertainty handled authentically rather than with false confidence?
+- Is chat being used to shape the direction of the content?`,
+};
+
+/**
  * Generate an AI stream coaching report from a transcript and detected peaks.
  * Uses Sonnet for higher quality coaching feedback — this is the flagship feature.
  */
@@ -273,6 +352,12 @@ export async function generateCoachReport(
     ? peaks.map((p) => `- "${p.title}" at ${formatTime(p.start)}–${formatTime(p.end)} [${p.category}, score: ${p.score.toFixed(2)}]\n  Reason: ${p.reason}`).join("\n")
     : "No standout moments were detected — the stream lacked clear viral peaks.";
 
+  // Build category coaching context — all categories included so Claude can match
+  // after it identifies the streamer type. The relevant section becomes the benchmark.
+  const categoryGuideBlock = Object.entries(CATEGORY_COACHING_GUIDE)
+    .map(([key, guide]) => guide)
+    .join("\n\n");
+
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 2500,
@@ -312,7 +397,10 @@ STEP 1 — IDENTIFY STREAMER TYPE:
 - "variety": switching between games or formats
 - "educational": tutorials, guides, how-to content
 
-Adapt ALL feedback to what is appropriate for their type. A gaming streamer who is quiet during intense gameplay is normal. A just chatting streamer who goes quiet for 30 seconds is a problem.
+CATEGORY COACHING STANDARDS — use the section matching the streamer type you identify:
+${categoryGuideBlock}
+
+Adapt ALL feedback to the standards for their category. Every strength and improvement must be evaluated against what actually works for streamers in that specific category, not generic streaming advice.
 
 EVALUATION CHECKLIST — use this to find specific moments:
 
