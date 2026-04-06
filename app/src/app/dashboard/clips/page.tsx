@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip } from "@/components/dashboard/clip-actions";
-import { Scissors, Sparkles, Clock, Film } from "lucide-react";
+import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
+import { Scissors, Sparkles, Clock, Film, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -52,6 +53,8 @@ export default async function ClipsPage() {
     .order("created_at", { ascending: false });
 
   const clips = (allClips || []).filter((c) => c.status === "ready");
+  const processingClips = (allClips || []).filter((c) => c.status === "processing");
+  const hasProcessing = processingClips.length > 0;
 
   // Get social connections
   const { data: connections } = await supabase
@@ -109,6 +112,8 @@ export default async function ClipsPage() {
 
   return (
     <div>
+      <VodStatusPoller hasProcessing={hasProcessing} />
+
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1">Clips</h1>
         <p className="text-sm text-muted">
@@ -135,6 +140,26 @@ export default async function ClipsPage() {
         </div>
       ) : (
         <>
+          {/* Processing clips */}
+          {hasProcessing && (
+            <div className="mb-8">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+                Generating ({processingClips.length})
+              </h2>
+              <div className="space-y-3">
+                {processingClips.map((clip) => (
+                  <div key={clip.id} className="bg-surface border border-border rounded-2xl p-5 flex items-center gap-4">
+                    <Loader2 size={18} className="animate-spin text-accent-light flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-sm">{clip.title}</p>
+                      <p className="text-xs text-muted mt-0.5">Processing in background — this page will update automatically.</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Generated clips */}
           {clips && clips.length > 0 && (
             <div className="mb-10">
