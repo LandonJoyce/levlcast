@@ -430,42 +430,45 @@ VIEWER RETENTION RISK:
 - high: multiple moments where a viewer would leave
 
 OUTPUT RULES — follow these exactly:
-- Reference timestamps and describe what happened in your own words. NEVER quote the transcript directly — Deepgram transcription has errors and any direct quote will look wrong.
-- Strengths: start with **2-3 word bold label** (e.g. "**Chat Energy**", "**Hype Moments**") then " — " then what worked and how to do more of it
-- Improvements: start with **2-3 word bold label** (e.g. "**Dead Air**", "**Low Energy**", "**Chat Ignored**") then " — " then what happened and one concrete next-stream fix. The bold label must be skimmable — someone reading just the bold words should understand the key issue at a glance
-- Goals: specific enough that the streamer knows exactly what to do, doable in a single stream
-- Recommendation: the single highest-leverage change. If they do one thing from this report, this is it.
-- No emojis. No generic advice. If feedback doesn't apply specifically to this stream, cut it.
+- NEVER quote the transcript directly. Describe in your own words.
+- KEEP IT SHORT. Every field has a strict word limit. Do not exceed it.
+- Strengths: **2-3 word bold label** — one sentence on what worked. Max 20 words after the label.
+- Improvements: **2-3 word bold label** — one sentence on the problem. One sentence fix. Max 25 words after the label.
+- Recommendation: 1-2 sentences max. The single most impactful change. No explanation, no buildup.
+- Stream summary: 1-2 sentences max. What kind of stream, biggest takeaway. That's it.
+- Best moment description: 2 sentences max.
+- Goals: one sentence each. Concrete and measurable.
+- No emojis. No padding. If it can be said in 10 words, don't use 20.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "overall_score": <integer 0-100>,
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
-  "stream_summary": "<2-3 sentences: what kind of stream this was, the overall vibe, and the most important takeaway for the streamer>",
+  "stream_summary": "<1-2 sentences max: what kind of stream, single biggest takeaway>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
   "strengths": [
-    "**Short Label** — what worked (timestamp if relevant) and how to do more of it next stream",
-    "**Short Label** — what worked (timestamp if relevant) and how to do more of it next stream",
-    "**Short Label** — what worked (timestamp if relevant) and how to do more of it next stream"
+    "**Label** — one sentence, max 20 words.",
+    "**Label** — one sentence, max 20 words.",
+    "**Label** — one sentence, max 20 words."
   ],
   "improvements": [
-    "**Problem Label** — what happened (timestamp if relevant). Next stream: one concrete fix.",
-    "**Problem Label** — what happened (timestamp if relevant). Next stream: one concrete fix.",
-    "**Problem Label** — what happened (timestamp if relevant). Next stream: one concrete fix."
+    "**Label** — problem in one sentence. Fix: one sentence. Max 25 words total after label.",
+    "**Label** — problem in one sentence. Fix: one sentence. Max 25 words total after label.",
+    "**Label** — problem in one sentence. Fix: one sentence. Max 25 words total after label."
   ],
   "best_moment": {
     "time": "<MM:SS>",
-    "description": "<what happened, why it worked, and what it shows about what this streamer is capable of when they hit their stride>"
+    "description": "<2 sentences max: what happened and why it worked>"
   },
   "content_mix": [
     { "category": "<gameplay | chat interaction | commentary | educational | funny | hype>", "percentage": <integer 0-100> }
   ],
-  "recommendation": "<the single most impactful change this streamer can make next stream — specific to what you saw, actionable immediately>",
+  "recommendation": "<1-2 sentences max. Most impactful change. No buildup.>",
   "next_stream_goals": [
-    "<specific, doable action for next stream — not a vague goal, a concrete thing to try>",
-    "<specific, doable action for next stream — not a vague goal, a concrete thing to try>",
-    "<specific, doable action for next stream — not a vague goal, a concrete thing to try>"
+    "<one sentence, concrete and measurable>",
+    "<one sentence, concrete and measurable>",
+    "<one sentence, concrete and measurable>"
   ]
 }`,
       },
