@@ -201,24 +201,24 @@ export default async function ClipsPage() {
                       className="w-full aspect-video bg-black"
                     />
 
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-bold text-sm">{clip.title}</h3>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <Sparkles size={13} className={scoreColor(clip.peak_score)} />
+                    <div className="p-4 flex flex-col">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <h3 className="font-bold text-sm line-clamp-2 leading-snug">{clip.title}</h3>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Sparkles size={12} className={scoreColor(clip.peak_score)} />
                           <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>
                             {Math.round(clip.peak_score * 100)}
                           </span>
                         </div>
                       </div>
 
-                      <p className="text-xs text-muted mb-3">{clip.description}</p>
+                      <p className="text-xs text-muted mb-2.5 line-clamp-2">{clip.description}</p>
 
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${categoryStyle(clip.peak_category)}`}>
+                      <div className="flex items-center gap-3 mb-2.5">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${categoryStyle(clip.peak_category)}`}>
                           {clip.peak_category}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-xs text-muted">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted flex-shrink-0">
                           <Clock size={11} />
                           {clip.duration_seconds}s
                         </span>
@@ -226,11 +226,11 @@ export default async function ClipsPage() {
 
                       {/* Caption */}
                       <div className="bg-bg/50 rounded-lg px-3 py-2 mb-3">
-                        <p className="text-xs text-muted leading-relaxed">{clip.caption_text}</p>
+                        <p className="text-xs text-muted leading-relaxed line-clamp-3">{clip.caption_text}</p>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-auto">
                         <DownloadClip url={clip.video_url} title={clip.title} />
                         <CopyCaption caption={clip.caption_text} />
                         <PostToYouTube
