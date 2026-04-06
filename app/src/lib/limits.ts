@@ -10,7 +10,7 @@
  *     (status = transcribing | analyzing). In-progress are counted to prevent
  *     a race condition where two simultaneous requests both pass the limit check
  *     before either analysis finishes.
- *   - Clips: rows created this calendar month with status = "ready" or "processing".
+ *   - Clips: rows with status = "ready" created this calendar month. Failed/stuck clips never count.
  *
  * HOW PLAN IS DETERMINED:
  *   getUserUsage() reads the profile's plan field, then checks subscription_expires_at.
@@ -92,12 +92,13 @@ export async function getUserUsage(
       .in("status", ["transcribing", "analyzing"]),
   ]);
 
-  // Count clips generated this month (ready + processing to prevent race conditions)
+  // Count only successfully generated clips this month.
+  // Failed and stuck clips do not count — users only pay for what they actually received.
   const { count: clipsThisMonth } = await supabase
     .from("clips")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .in("status", ["ready", "processing"])
+    .eq("status", "ready")
     .gte("created_at", monthStart)
     .lt("created_at", monthEnd);
 
