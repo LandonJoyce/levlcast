@@ -695,18 +695,21 @@ export const computeCollabSuggestions = inngest.createFunction(
         internalMatches.sort((a, b) => b.score - a.score);
 
         for (const m of internalMatches.slice(0, 3)) {
-          await supabase.from("collab_suggestions").upsert(
-            {
-              user_id: userId,
-              match_user_id: m.matchUserId,
-              match_score: m.score,
-              reasons: m.reasons,
-              is_external: false,
-              status: "new",
-              computed_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id,match_user_id" }
-          );
+          // Delete existing suggestion for this pair, then insert fresh
+          await supabase.from("collab_suggestions")
+            .delete()
+            .eq("user_id", userId)
+            .eq("match_user_id", m.matchUserId);
+
+          await supabase.from("collab_suggestions").insert({
+            user_id: userId,
+            match_user_id: m.matchUserId,
+            match_score: m.score,
+            reasons: m.reasons,
+            is_external: false,
+            status: "new",
+            computed_at: new Date().toISOString(),
+          });
         }
 
         // 2. External matches (any Twitch streamer)

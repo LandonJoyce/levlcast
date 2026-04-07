@@ -211,8 +211,10 @@ const CATEGORY_SEARCH_TERMS: Record<string, string[]> = {
 
 /**
  * Find external Twitch streamers who could be good collab partners.
- * Uses Twitch Helix API to search channels by category, then filters
- * by audience size similarity.
+ * Uses Twitch Helix API search/channels (app access token — no user scopes needed).
+ *
+ * Note: Follower counts are NOT available via app tokens (requires moderator:read:followers).
+ * We score based on category match and live status instead.
  */
 export async function findExternalStreamers(
   userProfile: UserProfile,
@@ -233,7 +235,7 @@ export async function findExternalStreamers(
     for (const t of terms) searchTerms.add(t);
   }
 
-  // Search for channels in each category
+  // Search for channels in each relevant category
   const allStreamers: ExternalStreamer[] = [];
   const seenIds = new Set(excludeTwitchIds);
 
@@ -253,7 +255,7 @@ export async function findExternalStreamers(
           login: ch.broadcaster_login,
           displayName: ch.display_name,
           avatarUrl: ch.thumbnail_url,
-          followerCount: 0, // will be fetched below for top candidates
+          followerCount: 0, // not available via app token
           gameName: ch.game_name || term,
           isLive: ch.is_live,
         });
@@ -265,29 +267,13 @@ export async function findExternalStreamers(
 
   if (allStreamers.length === 0) return [];
 
-  // Get follower counts for top candidates (batch by 100)
-  const candidateIds = allStreamers.slice(0, 40).map((s) => s.twitchId);
+  // Fetch profile images from /helix/users (works with app token)
   try {
-    // Fetch follower counts using the channels endpoint
-    const chunks = [];
-    for (let i = 0; i < candidateIds.length; i += 100) {
-      chunks.push(candidateIds.slice(i, i + 100));
-    }
-
-    for (const chunk of chunks) {
-      const params = new URLSearchParams();
-      for (const id of chunk) params.append("broadcaster_id", id);
-      const res = await fetch(`https://api.twitch.tv/helix/channels?${params}`, { headers });
-      if (!res.ok) continue;
-      // Channels endpoint doesn't return followers, use users endpoint for basic info
-    }
-
-    // Get user info (includes view_count which correlates with size)
-    for (const chunk of chunks) {
-      const params = new URLSearchParams();
-      for (const id of chunk) params.append("id", id);
-      const res = await fetch(`https://api.twitch.tv/helix/users?${params}`, { headers });
-      if (!res.ok) continue;
+    const ids = allStreamers.slice(0, 100).map((s) => s.twitchId);
+    const params = new URLSearchParams();
+    for (const id of ids) params.append("id", id);
+    const res = await fetch(`https://api.twitch.tv/helix/users?${params}`, { headers });
+    if (res.ok) {
       const data = await res.json();
       for (const u of data.data || []) {
         const streamer = allStreamers.find((s) => s.twitchId === u.id);
@@ -296,67 +282,48 @@ export async function findExternalStreamers(
         }
       }
     }
-
-    // Get follower counts individually (Twitch requires per-broadcaster call)
-    for (const streamer of allStreamers.slice(0, 20)) {
-      try {
-        const res = await fetch(
-          `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${streamer.twitchId}&first=1`,
-          { headers }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          streamer.followerCount = data.total || 0;
-        }
-      } catch {}
-    }
   } catch {
-    // non-fatal
+    // non-fatal — keep the thumbnail_url from search
   }
 
-  // Score each candidate
+  // Score each candidate based on category relevance and live status
   const matches: ExternalMatch[] = [];
 
   for (const streamer of allStreamers) {
-    if (streamer.followerCount === 0) continue; // skip if we couldn't get count
-
     const reasons: string[] = [];
     let score = 0;
 
-    // Audience similarity (50% weight for external — most important signal)
-    const bigger = Math.max(userProfile.followerCount, streamer.followerCount);
-    const smaller = Math.min(userProfile.followerCount, streamer.followerCount);
-    const sizeRatio = bigger > 0 ? smaller / bigger : 1;
-    score += Math.min(sizeRatio * 1.5, 1) * 50;
-
-    if (sizeRatio >= 0.5) {
-      reasons.push("Similar audience size");
-    } else if (sizeRatio >= 0.1) {
-      reasons.push(`${streamer.followerCount.toLocaleString()} followers`);
-    }
-
-    // Category relevance (30%)
+    // Category relevance (60% weight — primary matching signal for external)
     const gameLower = streamer.gameName.toLowerCase();
     let categoryMatch = false;
     for (const cat of userProfile.topCategories) {
       const terms = CATEGORY_SEARCH_TERMS[cat] || [];
       if (terms.some((t) => t.toLowerCase() === gameLower)) {
         categoryMatch = true;
-        reasons.push(`Streams ${streamer.gameName}`);
         break;
       }
     }
-    score += categoryMatch ? 30 : 10;
 
-    // Live bonus (20%)
+    if (categoryMatch) {
+      score += 60;
+      reasons.push(`Streams ${streamer.gameName}`);
+    } else {
+      score += 20;
+      if (streamer.gameName) reasons.push(`Streams ${streamer.gameName}`);
+    }
+
+    // Live bonus (25% — live streamers are active and reachable)
     if (streamer.isLive) {
-      score += 15;
+      score += 25;
       reasons.push("Currently live");
     } else {
       score += 10;
     }
 
-    if (score < 30) continue;
+    // Base score for being a real candidate (15%)
+    score += 15;
+
+    if (score < 40) continue;
 
     matches.push({
       streamer,

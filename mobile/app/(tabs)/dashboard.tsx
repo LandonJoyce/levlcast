@@ -317,8 +317,9 @@ function formatWeekDate(dateStr: string): string {
 }
 
 function WeeklyDigestCard({ data, expanded, onToggle }: { data: any; expanded: boolean; onToggle: () => void }) {
-  const deltaColor = data.follower_delta >= 0 ? colors.green : colors.red;
-  const deltaStr = `${data.follower_delta >= 0 ? '+' : ''}${data.follower_delta}`;
+  const followerDelta = data.follower_delta ?? 0;
+  const deltaColor = followerDelta >= 0 ? colors.green : colors.red;
+  const deltaStr = `${followerDelta >= 0 ? '+' : ''}${followerDelta}`;
   const actions: string[] = data.action_items || [];
 
   return (
@@ -338,8 +339,8 @@ function WeeklyDigestCard({ data, expanded, onToggle }: { data: any; expanded: b
       <Text style={styles.digestHeadline}>{data.headline}</Text>
 
       <View style={styles.digestQuickStats}>
-        <Text style={styles.digestStat}>{data.streams_count} stream{data.streams_count !== 1 ? 's' : ''}</Text>
-        {data.avg_score && <Text style={styles.digestStat}>avg {data.avg_score}</Text>}
+        <Text style={styles.digestStat}>{data.streams_count || 0} stream{(data.streams_count || 0) !== 1 ? 's' : ''}</Text>
+        {data.avg_score != null && <Text style={styles.digestStat}>avg {data.avg_score}</Text>}
         <Text style={[styles.digestStat, { color: deltaColor }]}>{deltaStr} followers</Text>
       </View>
 

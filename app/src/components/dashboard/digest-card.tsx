@@ -34,8 +34,9 @@ export function DigestCard() {
 
   if (loading || !latest) return null;
 
-  const deltaColor = latest.follower_delta >= 0 ? "text-green-400" : "text-red-400";
-  const DeltaIcon = latest.follower_delta >= 0 ? TrendingUp : TrendingDown;
+  const followerDelta = latest.follower_delta ?? 0;
+  const deltaColor = followerDelta >= 0 ? "text-green-400" : "text-red-400";
+  const DeltaIcon = followerDelta >= 0 ? TrendingUp : TrendingDown;
 
   return (
     <div
@@ -66,11 +67,11 @@ export function DigestCard() {
 
       {/* Quick stats row */}
       <div className="flex items-center gap-4 text-xs text-muted">
-        <span>{latest.streams_count} stream{latest.streams_count !== 1 ? "s" : ""}</span>
-        {latest.avg_score && <span>avg {latest.avg_score}</span>}
+        <span>{latest.streams_count || 0} stream{(latest.streams_count || 0) !== 1 ? "s" : ""}</span>
+        {latest.avg_score != null && <span>avg {latest.avg_score}</span>}
         <span className={`flex items-center gap-1 ${deltaColor}`}>
           <DeltaIcon size={12} />
-          {latest.follower_delta >= 0 ? "+" : ""}{latest.follower_delta}
+          {followerDelta >= 0 ? "+" : ""}{followerDelta}
         </span>
       </div>
 
@@ -98,11 +99,11 @@ export function DigestCard() {
           </div>
 
           {/* Action items */}
-          {latest.action_items.length > 0 && (
+          {(latest.action_items || []).length > 0 && (
             <div>
               <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">This Week's Actions</p>
               <div className="space-y-2">
-                {latest.action_items.map((item, i) => (
+                {(latest.action_items || []).map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <CheckCircle2 size={14} className="text-accent-light mt-0.5 flex-shrink-0" />
                     <span className="text-sm text-white/90">{item}</span>

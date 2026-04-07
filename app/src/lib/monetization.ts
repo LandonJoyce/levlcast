@@ -82,7 +82,7 @@ export function computeContentReport(
     const avgPeakScore = categoryPeaks.length > 0
       ? Math.round(avg(categoryPeaks.map((p) => p.score)))
       : 0;
-    const avgDuration = Math.round(avg(catVods.map((v) => v.duration_seconds)) / 60);
+    const avgDuration = Math.round(avg(catVods.map((v) => v.duration_seconds || 0)) / 60);
 
     // Estimate follower impact: follower delta during periods when this category was streamed
     const followerDelta = estimateFollowerImpact(catVods, sortedFollowers);
