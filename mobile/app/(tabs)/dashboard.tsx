@@ -474,18 +474,29 @@ function CollabFinderCard({ collab, expanded, onToggle }: { collab: any; expande
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <Text style={styles.collabMatchName}>{s.display_name}</Text>
                   <Text style={styles.collabMatchScore}>{s.match_score}%</Text>
+                  {s.is_external && <Text style={styles.collabExternalBadge}>Twitch</Text>}
                 </View>
+                {s.follower_count > 0 && (
+                  <Text style={{ fontSize: 10, color: colors.muted, marginBottom: 3 }}>{s.follower_count?.toLocaleString()} followers</Text>
+                )}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
                   {(s.reasons || []).map((r: string, i: number) => (
                     <Text key={i} style={styles.collabReason}>{r}</Text>
                   ))}
                 </View>
               </View>
-              {s.twitch_login && (
-                <TouchableOpacity onPress={() => Linking.openURL(`https://twitch.tv/${s.twitch_login}`)} style={styles.collabTwitchBtn}>
-                  <Text style={styles.collabTwitchBtnText}>View</Text>
-                </TouchableOpacity>
-              )}
+              <View style={{ gap: 6 }}>
+                {s.twitch_login && (
+                  <TouchableOpacity onPress={() => Linking.openURL(`https://twitch.tv/message/compose?to=${s.twitch_login}`)} style={styles.collabMessageBtn}>
+                    <Text style={styles.collabMessageBtnText}>Message</Text>
+                  </TouchableOpacity>
+                )}
+                {s.twitch_login && (
+                  <TouchableOpacity onPress={() => Linking.openURL(`https://twitch.tv/${s.twitch_login}`)} style={styles.collabTwitchBtn}>
+                    <Text style={styles.collabTwitchBtnText}>View</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -672,8 +683,11 @@ const styles = StyleSheet.create({
   collabMatchName: { fontSize: 14, fontWeight: '700', color: colors.text },
   collabMatchScore: { fontSize: 12, fontWeight: '800', color: colors.accentLight },
   collabReason: { fontSize: 10, color: colors.muted, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
-  collabTwitchBtn: { backgroundColor: 'rgba(124,58,237,0.15)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  collabTwitchBtnText: { color: colors.accentLight, fontSize: 11, fontWeight: '700' },
+  collabExternalBadge: { fontSize: 9, color: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, fontWeight: '700', overflow: 'hidden' },
+  collabMessageBtn: { backgroundColor: 'rgba(124,58,237,0.25)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  collabMessageBtnText: { color: colors.accentLight, fontSize: 11, fontWeight: '700' },
+  collabTwitchBtn: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  collabTwitchBtnText: { color: colors.muted, fontSize: 11, fontWeight: '700' },
   digestCard: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)', padding: 16, marginBottom: 24 },
   digestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   digestLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1 },

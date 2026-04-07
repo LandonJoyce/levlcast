@@ -18,7 +18,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
-import { buildUserProfile, scoreMatch } from "@/lib/collab";
+import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -683,29 +683,75 @@ export const computeCollabSuggestions = inngest.createFunction(
           preferredCategories: collabUser.preferred_categories || undefined,
         };
 
-        const matches: { matchUserId: string; score: number; reasons: string[] }[] = [];
+        // 1. Internal matches (other LevlCast users)
+        const internalMatches: { matchUserId: string; score: number; reasons: string[] }[] = [];
 
         for (const [candidateId, candidateProfile] of Object.entries(profiles)) {
           if (candidateId === userId) continue;
           const match = scoreMatch(userProfile, candidateProfile, preferences);
-          if (match) matches.push(match);
+          if (match) internalMatches.push(match);
         }
 
-        matches.sort((a, b) => b.score - a.score);
-        const top5 = matches.slice(0, 5);
+        internalMatches.sort((a, b) => b.score - a.score);
 
-        for (const m of top5) {
+        for (const m of internalMatches.slice(0, 3)) {
           await supabase.from("collab_suggestions").upsert(
             {
               user_id: userId,
               match_user_id: m.matchUserId,
               match_score: m.score,
               reasons: m.reasons,
+              is_external: false,
               status: "new",
               computed_at: new Date().toISOString(),
             },
             { onConflict: "user_id,match_user_id" }
           );
+        }
+
+        // 2. External matches (any Twitch streamer)
+        // Get this user's twitch_id to exclude from results
+        const { data: userRow } = await supabase
+          .from("profiles")
+          .select("twitch_id")
+          .eq("id", userId)
+          .single();
+
+        // Exclude this user + all other LevlCast users from external results
+        const { data: allTwitchIds } = await supabase
+          .from("profiles")
+          .select("twitch_id")
+          .in("id", Object.keys(profiles));
+        const excludeIds = (allTwitchIds || []).map((r: any) => r.twitch_id).filter(Boolean);
+        if (userRow?.twitch_id) excludeIds.push(userRow.twitch_id);
+
+        try {
+          const externalMatches = await findExternalStreamers(userProfile, excludeIds, 5);
+
+          for (const em of externalMatches) {
+            // Delete old suggestion for this external streamer if exists, then insert fresh
+            await supabase.from("collab_suggestions")
+              .delete()
+              .eq("user_id", userId)
+              .eq("twitch_id", em.streamer.twitchId);
+
+            await supabase.from("collab_suggestions").insert({
+              user_id: userId,
+              match_user_id: null,
+              twitch_id: em.streamer.twitchId,
+              twitch_login: em.streamer.login,
+              twitch_display_name: em.streamer.displayName,
+              twitch_avatar_url: em.streamer.avatarUrl,
+              follower_count: em.streamer.followerCount,
+              is_external: true,
+              match_score: em.score,
+              reasons: em.reasons,
+              status: "new",
+              computed_at: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          console.warn(`[collab] External search failed for ${userId}:`, err);
         }
 
         processed++;

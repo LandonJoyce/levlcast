@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, ChevronDown, ChevronUp, ExternalLink, X } from "lucide-react";
+import { Users, ChevronDown, ChevronUp, ExternalLink, X, MessageCircle } from "lucide-react";
 
 interface CollabSuggestion {
   id: string;
-  match_user_id: string;
+  match_user_id: string | null;
   match_score: number;
   reasons: string[];
   status: string;
   display_name: string;
   avatar_url: string | null;
   twitch_login: string | null;
+  is_external: boolean;
+  follower_count: number | null;
 }
 
 interface CollabProfile {
@@ -152,6 +154,9 @@ function MatchRow({ suggestion, onDismiss }: { suggestion: CollabSuggestion; onD
   const twitchUrl = suggestion.twitch_login
     ? `https://twitch.tv/${suggestion.twitch_login}`
     : null;
+  const whisperUrl = suggestion.twitch_login
+    ? `https://twitch.tv/message/compose?to=${suggestion.twitch_login}`
+    : null;
 
   return (
     <div className="flex items-start gap-3 bg-white/[0.03] rounded-xl p-3 border border-white/5">
@@ -173,6 +178,12 @@ function MatchRow({ suggestion, onDismiss }: { suggestion: CollabSuggestion; onD
         <div className="flex items-center gap-2 mb-1">
           <span className="text-sm font-semibold text-white">{suggestion.display_name}</span>
           <span className="text-xs font-bold text-accent-light">{suggestion.match_score}%</span>
+          {suggestion.is_external && (
+            <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full font-semibold">Twitch</span>
+          )}
+          {suggestion.follower_count != null && suggestion.follower_count > 0 && (
+            <span className="text-[10px] text-muted">{suggestion.follower_count.toLocaleString()} followers</span>
+          )}
         </div>
         <div className="flex flex-wrap gap-1">
           {suggestion.reasons.map((r, i) => (
@@ -185,13 +196,25 @@ function MatchRow({ suggestion, onDismiss }: { suggestion: CollabSuggestion; onD
 
       {/* Actions */}
       <div className="flex items-center gap-1 flex-shrink-0">
+        {whisperUrl && (
+          <a
+            href={whisperUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-accent/10 hover:bg-accent/20 rounded-lg transition-colors text-xs font-semibold text-accent-light"
+            title="Send message on Twitch"
+          >
+            <MessageCircle size={12} />
+            Message
+          </a>
+        )}
         {twitchUrl && (
           <a
             href={twitchUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
-            title="View on Twitch"
+            title="View channel on Twitch"
           >
             <ExternalLink size={14} className="text-muted" />
           </a>
