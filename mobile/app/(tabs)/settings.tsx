@@ -26,7 +26,7 @@ export default function SettingsScreen() {
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
       const [profileRes, analysesRes] = await Promise.all([
-        supabase.from('profiles').select('twitch_display_name, twitch_login, twitch_avatar_url, plan, email').eq('id', user.id).single(),
+        supabase.from('profiles').select('twitch_display_name, twitch_login, twitch_avatar_url, plan').eq('id', user.id).single(),
         supabase.from('vods').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .not('analyzed_at', 'is', null)
@@ -115,7 +115,7 @@ export default function SettingsScreen() {
       {/* Account */}
       <Text style={styles.sectionLabel}>Account</Text>
       <View style={styles.card}>
-        <Text style={styles.displayName}>{profile?.twitch_display_name || profile?.email || 'Your Account'}</Text>
+        <Text style={styles.displayName}>{profile?.twitch_display_name || 'Your Account'}</Text>
         {profile?.twitch_login ? <Text style={styles.login}>@{profile.twitch_login}</Text> : null}
       </View>
 
