@@ -715,3 +715,184 @@ export const computeCollabSuggestions = inngest.createFunction(
     return { processed };
   }
 );
+
+// ─── Weekly Manager Digest ────────────────────────────────────────────────
+// Runs every Monday at 9:45 AM UTC (after burnout, content, collab crons).
+// Compiles a weekly summary for each active user with Claude-generated
+// headline and action items. Sends push notification.
+
+export const compileWeeklyDigest = inngest.createFunction(
+  { id: "compile-weekly-digest" },
+  { cron: "45 9 * * 1" },
+  async ({ step }) => {
+    const supabase = createAdminClient();
+
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const users = await step.run("find-active-users", async () => {
+      const { data } = await supabase
+        .from("vods")
+        .select("user_id")
+        .eq("status", "ready")
+        .gte("stream_date", cutoff);
+
+      if (!data) return [];
+      return [...new Set(data.map((r: any) => r.user_id))];
+    });
+
+    if (users.length === 0) return { processed: 0 };
+
+    let processed = 0;
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+    const weekStartStr = weekStart.toISOString().split("T")[0];
+    const weekStartIso = weekStart.toISOString();
+
+    for (const userId of users) {
+      await step.run(`digest-${(userId as string).slice(0, 8)}`, async () => {
+        const [vodsRes, clipsRes, followerRes, burnoutRes, contentRes, collabRes] = await Promise.all([
+          supabase.from("vods")
+            .select("duration_seconds, coach_report, peak_data")
+            .eq("user_id", userId).eq("status", "ready")
+            .gte("stream_date", weekStartIso),
+          supabase.from("clips")
+            .select("id")
+            .eq("user_id", userId)
+            .gte("created_at", weekStartIso),
+          supabase.from("follower_snapshots")
+            .select("follower_count, snapped_at")
+            .eq("user_id", userId).eq("platform", "twitch")
+            .gte("snapped_at", weekStartIso)
+            .order("snapped_at", { ascending: true }),
+          supabase.from("burnout_snapshots")
+            .select("score, insight")
+            .eq("user_id", userId)
+            .order("computed_at", { ascending: false })
+            .limit(1).maybeSingle(),
+          supabase.from("content_reports")
+            .select("top_category, insight")
+            .eq("user_id", userId)
+            .order("period_start", { ascending: false })
+            .limit(1).maybeSingle(),
+          supabase.from("collab_suggestions")
+            .select("id")
+            .eq("user_id", userId).eq("status", "new"),
+        ]);
+
+        const vods = vodsRes.data || [];
+        if (vods.length === 0) return;
+
+        const clips = clipsRes.data || [];
+        const followers = followerRes.data || [];
+        const burnout = burnoutRes.data;
+        const content = contentRes.data;
+        const collabCount = collabRes.data?.length || 0;
+
+        const streamsCount = vods.length;
+        const totalDurationMin = Math.round(vods.reduce((sum: number, v: any) => sum + (v.duration_seconds || 0), 0) / 60);
+        const scores = vods.map((v: any) => (v.coach_report as any)?.overall_score).filter(Boolean) as number[];
+        const avgScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : null;
+        const bestScore = scores.length > 0 ? Math.max(...scores) : null;
+        const peaksFound = vods.reduce((sum: number, v: any) => sum + ((v.peak_data as any[])?.length || 0), 0);
+        const clipsGenerated = clips.length;
+
+        let followerDelta = 0;
+        if (followers.length >= 2) {
+          followerDelta = followers[followers.length - 1].follower_count - followers[0].follower_count;
+        }
+
+        const healthSummary = burnout?.insight || (burnout?.score !== undefined
+          ? (burnout.score <= 25 ? "You're in good shape this week." : burnout.score <= 45 ? "A few minor signals, nothing concerning." : "Some fatigue signals — check your Health card.")
+          : null);
+
+        const contentSummary = content?.insight || (content?.top_category
+          ? `Your ${content.top_category} content performed best this week.`
+          : null);
+
+        const collabSummary = collabCount > 0
+          ? `${collabCount} new collab match${collabCount > 1 ? "es" : ""} waiting for you.`
+          : null;
+
+        let headline = `${streamsCount} stream${streamsCount !== 1 ? "s" : ""} this week`;
+        if (avgScore) headline += `, avg ${avgScore} score`;
+        if (followerDelta !== 0) headline += `, ${followerDelta >= 0 ? "+" : ""}${followerDelta} followers`;
+
+        let actionItems: string[] = [];
+
+        try {
+          const Anthropic = (await import("@anthropic-ai/sdk")).default;
+          const anthropic = new Anthropic();
+
+          const msg = await anthropic.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 300,
+            messages: [{
+              role: "user",
+              content: `You are a streamer's personal manager writing their Monday morning digest.
+
+This week's data:
+- Streams: ${streamsCount}, total ${totalDurationMin} minutes
+- Avg coach score: ${avgScore || "N/A"}, best: ${bestScore || "N/A"}
+- Peaks found: ${peaksFound}, clips generated: ${clipsGenerated}
+- Follower change: ${followerDelta >= 0 ? "+" : ""}${followerDelta}
+- Health status: ${healthSummary || "No data yet"}
+- Content insight: ${contentSummary || "No data yet"}
+- Collab matches: ${collabCount}
+
+Generate:
+1. "headline": One punchy sentence summarizing the week. Encouraging but honest. No fluff.
+2. "actions": Array of 2-3 short action items for this week. Specific, actionable, based on the data.
+
+JSON only: { "headline": "...", "actions": ["...", "..."] }`,
+            }],
+          });
+
+          const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+          const parsed = JSON.parse(text);
+          if (parsed.headline) headline = parsed.headline;
+          if (parsed.actions) actionItems = parsed.actions;
+        } catch (err) {
+          console.warn(`[digest] Claude failed for ${userId}:`, err);
+          if (avgScore && avgScore < 70) actionItems.push("Review your latest coach report for quick wins.");
+          if (peaksFound > 0 && clipsGenerated === 0) actionItems.push("You have peaks waiting — generate some clips.");
+          if (collabCount > 0) actionItems.push("Check your new collab matches.");
+        }
+
+        await supabase.from("weekly_digests").upsert(
+          {
+            user_id: userId,
+            week_start: weekStartStr,
+            streams_count: streamsCount,
+            total_duration_min: totalDurationMin,
+            avg_score: avgScore,
+            best_score: bestScore,
+            peaks_found: peaksFound,
+            clips_generated: clipsGenerated,
+            follower_delta: followerDelta,
+            headline,
+            health_summary: healthSummary,
+            content_summary: contentSummary,
+            collab_summary: collabSummary,
+            action_items: actionItems,
+          },
+          { onConflict: "user_id,week_start" }
+        );
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("expo_push_token")
+          .eq("id", userId)
+          .single();
+
+        await sendPush(profile?.expo_push_token, {
+          title: "Your Weekly Digest",
+          body: headline,
+          data: { type: "digest" },
+        });
+
+        processed++;
+      });
+    }
+
+    return { processed };
+  }
+);

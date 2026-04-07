@@ -21,6 +21,8 @@ export default function DashboardScreen() {
   const [contentExpanded, setContentExpanded] = useState(false);
   const [collab, setCollab] = useState<any>(null);
   const [collabExpanded, setCollabExpanded] = useState(false);
+  const [digest, setDigest] = useState<any>(null);
+  const [digestExpanded, setDigestExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -67,14 +69,16 @@ export default function DashboardScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const headers = { Authorization: `Bearer ${session.access_token}` };
-        const [burnoutRes, contentRes, collabRes] = await Promise.all([
+        const [burnoutRes, contentRes, collabRes, digestRes] = await Promise.all([
           fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/burnout`, { headers }),
           fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/monetization`, { headers }),
           fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/collab`, { headers }),
+          fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/digest`, { headers }),
         ]);
         if (burnoutRes.ok) setBurnout(await burnoutRes.json());
         if (contentRes.ok) setContentReport(await contentRes.json());
         if (collabRes.ok) setCollab(await collabRes.json());
+        if (digestRes.ok) setDigest(await digestRes.json());
       }
     } catch {} // non-fatal
 
@@ -148,6 +152,9 @@ export default function DashboardScreen() {
           <Text style={styles.streakSub}>Analyze a stream to begin tracking your consistency</Text>
         </View>
       )}
+
+      {/* Weekly Digest */}
+      {digest?.latest && <WeeklyDigestCard data={digest.latest} expanded={digestExpanded} onToggle={() => setDigestExpanded(!digestExpanded)} />}
 
       {/* Streamer Health */}
       {burnout?.latest && <BurnoutHealthCard data={burnout} expanded={burnoutExpanded} onToggle={() => setBurnoutExpanded(!burnoutExpanded)} />}
@@ -296,6 +303,91 @@ function BurnoutHealthCard({ data, expanded, onToggle }: { data: any; expanded: 
                   />
                 ))}
               </View>
+            </View>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function formatWeekDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function WeeklyDigestCard({ data, expanded, onToggle }: { data: any; expanded: boolean; onToggle: () => void }) {
+  const deltaColor = data.follower_delta >= 0 ? colors.green : colors.red;
+  const deltaStr = `${data.follower_delta >= 0 ? '+' : ''}${data.follower_delta}`;
+  const actions: string[] = data.action_items || [];
+
+  return (
+    <TouchableOpacity
+      style={styles.digestCard}
+      onPress={onToggle}
+      activeOpacity={0.8}
+    >
+      <View style={styles.digestHeader}>
+        <Text style={styles.digestLabel}>WEEKLY DIGEST</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.digestDate}>{formatWeekDate(data.week_start)}</Text>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{expanded ? '▲' : '▼'}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.digestHeadline}>{data.headline}</Text>
+
+      <View style={styles.digestQuickStats}>
+        <Text style={styles.digestStat}>{data.streams_count} stream{data.streams_count !== 1 ? 's' : ''}</Text>
+        {data.avg_score && <Text style={styles.digestStat}>avg {data.avg_score}</Text>}
+        <Text style={[styles.digestStat, { color: deltaColor }]}>{deltaStr} followers</Text>
+      </View>
+
+      {expanded && (
+        <View style={styles.digestExpanded}>
+          <View style={styles.digestMiniStats}>
+            <View style={styles.digestMiniStat}>
+              <Text style={styles.digestMiniValue}>{data.total_duration_min}m</Text>
+              <Text style={styles.digestMiniLabel}>DURATION</Text>
+            </View>
+            <View style={styles.digestMiniStat}>
+              <Text style={styles.digestMiniValue}>{data.peaks_found}</Text>
+              <Text style={styles.digestMiniLabel}>PEAKS</Text>
+            </View>
+            <View style={styles.digestMiniStat}>
+              <Text style={styles.digestMiniValue}>{data.clips_generated}</Text>
+              <Text style={styles.digestMiniLabel}>CLIPS</Text>
+            </View>
+          </View>
+
+          {data.health_summary && (
+            <View style={styles.digestSummaryRow}>
+              <Text style={styles.digestSummaryLabel}>Health</Text>
+              <Text style={styles.digestSummaryText}>{data.health_summary}</Text>
+            </View>
+          )}
+          {data.content_summary && (
+            <View style={styles.digestSummaryRow}>
+              <Text style={styles.digestSummaryLabel}>Content</Text>
+              <Text style={styles.digestSummaryText}>{data.content_summary}</Text>
+            </View>
+          )}
+          {data.collab_summary && (
+            <View style={styles.digestSummaryRow}>
+              <Text style={styles.digestSummaryLabel}>Collabs</Text>
+              <Text style={styles.digestSummaryText}>{data.collab_summary}</Text>
+            </View>
+          )}
+
+          {actions.length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.digestActionsTitle}>THIS WEEK'S ACTIONS</Text>
+              {actions.map((item: string, i: number) => (
+                <View key={i} style={styles.digestActionRow}>
+                  <Text style={styles.digestActionDot}>*</Text>
+                  <Text style={styles.digestActionText}>{item}</Text>
+                </View>
+              ))}
             </View>
           )}
         </View>
@@ -582,4 +674,23 @@ const styles = StyleSheet.create({
   collabReason: { fontSize: 10, color: colors.muted, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
   collabTwitchBtn: { backgroundColor: 'rgba(124,58,237,0.15)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   collabTwitchBtnText: { color: colors.accentLight, fontSize: 11, fontWeight: '700' },
+  digestCard: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)', padding: 16, marginBottom: 24 },
+  digestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  digestLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1 },
+  digestDate: { fontSize: 11, color: colors.muted },
+  digestHeadline: { fontSize: 14, fontWeight: '700', color: colors.text, lineHeight: 20, marginBottom: 8 },
+  digestQuickStats: { flexDirection: 'row', gap: 12 },
+  digestStat: { fontSize: 12, color: colors.muted },
+  digestExpanded: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  digestMiniStats: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  digestMiniStat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 10, alignItems: 'center' },
+  digestMiniValue: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 2 },
+  digestMiniLabel: { fontSize: 9, fontWeight: '700', color: colors.muted, letterSpacing: 0.5 },
+  digestSummaryRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  digestSummaryLabel: { fontSize: 10, fontWeight: '700', color: colors.muted, width: 52, paddingTop: 2 },
+  digestSummaryText: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18, flex: 1 },
+  digestActionsTitle: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 8 },
+  digestActionRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  digestActionDot: { fontSize: 13, color: colors.accentLight, fontWeight: '700' },
+  digestActionText: { fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 18, flex: 1 },
 });
