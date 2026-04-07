@@ -1,8 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
+
+function scoreColor(score: number) {
+  if (score >= 80) return colors.green;
+  if (score >= 60) return colors.yellow;
+  return colors.red;
+}
 
 function statusColor(status: string) {
   switch (status) {
@@ -33,6 +39,14 @@ export default function VodsScreen() {
   }, []);
 
   useEffect(() => { loadVods(); }, [loadVods]);
+
+  // Auto-poll every 8s while any VOD is processing
+  useEffect(() => {
+    const hasProcessing = vods.some(v => v.status === 'transcribing' || v.status === 'analyzing');
+    if (!hasProcessing) return;
+    const interval = setInterval(loadVods, 8000);
+    return () => clearInterval(interval);
+  }, [vods, loadVods]);
 
   async function syncVods() {
     setSyncing(true);
@@ -86,6 +100,7 @@ export default function VodsScreen() {
         data={vods}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={syncing} onRefresh={loadVods} tintColor={colors.accentLight} />}
         ListHeaderComponent={
           <View style={styles.header}>
             <View>
@@ -122,7 +137,14 @@ export default function VodsScreen() {
                   </TouchableOpacity>
                 )}
                 {item.status === 'ready' && (
-                  <Text style={styles.viewReport}>View Report →</Text>
+                  <>
+                    {(item.coach_report as any)?.overall_score !== undefined && (
+                      <Text style={[styles.scoreChip, { color: scoreColor((item.coach_report as any).overall_score) }]}>
+                        {(item.coach_report as any).overall_score}/100
+                      </Text>
+                    )}
+                    <Text style={styles.viewReport}>View Report →</Text>
+                  </>
                 )}
               </View>
             </View>
@@ -154,4 +176,5 @@ const styles = StyleSheet.create({
   analyzeBtn: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   analyzeBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   viewReport: { fontSize: 12, color: colors.accentLight, fontWeight: '600' },
+  scoreChip: { fontSize: 13, fontWeight: '800' },
 });
