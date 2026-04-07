@@ -172,11 +172,61 @@ function burnoutColor(score: number) {
   return { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', text: colors.red, label: 'Alert' };
 }
 
+/** Fallback insight when Claude returns null */
+function fallbackInsight(snap: any): string {
+  const issues: string[] = [];
+  if (snap.score_decline > 50) issues.push('your stream scores are trending down');
+  if (snap.energy_decline > 50) issues.push('your energy has been inconsistent');
+  if (snap.session_shortening > 50) issues.push('your sessions are getting shorter');
+  if (snap.frequency_drop > 50) issues.push("you're streaming less frequently");
+  if (snap.retention_risk > 50) issues.push('viewer retention risk is elevated');
+  if (snap.growth_stall > 50) issues.push('follower growth has slowed');
+  if (issues.length === 0) {
+    return snap.score <= 25 ? "Everything looks good. You're in a solid rhythm." : 'A few minor signals this week, but nothing to worry about yet.';
+  }
+  const joined = issues.length === 1 ? issues[0] : issues.slice(0, -1).join(', ') + ' and ' + issues[issues.length - 1];
+  return `Heads up: ${joined}. This isn't a big deal yet, but worth keeping an eye on.`;
+}
+
+function fallbackRecommendation(snap: any): string {
+  if (snap.frequency_drop > 60) return 'Try to get back to your normal schedule this week, even if the streams are shorter.';
+  if (snap.session_shortening > 60) return 'If your streams feel like a grind, take a day off and come back fresh. Short breaks help.';
+  if (snap.energy_decline > 60) return 'Switch up your content or try a collab this week. A change of pace can reset your energy.';
+  if (snap.score_decline > 60) return 'Review your last few coach reports and focus on the top improvement from each one.';
+  if (snap.score <= 25) return 'Keep doing what you\'re doing. Consistency is your best growth tool right now.';
+  return 'Focus on one small improvement from your latest coach report this week.';
+}
+
+function signalColor(value: number) {
+  if (value <= 25) return colors.green;
+  if (value <= 50) return colors.yellow;
+  if (value <= 75) return '#fb923c';
+  return colors.red;
+}
+
+function signalStatus(value: number) {
+  if (value <= 25) return 'Good';
+  if (value <= 50) return 'Okay';
+  if (value <= 75) return 'Watch';
+  return 'Concern';
+}
+
 function BurnoutHealthCard({ data, expanded, onToggle }: { data: any; expanded: boolean; onToggle: () => void }) {
   const latest = data.latest;
   const history: any[] = data.history || [];
   const bc = burnoutColor(latest.score);
   const healthPct = 100 - latest.score;
+  const insight = latest.insight || fallbackInsight(latest);
+  const recommendation = latest.recommendation || fallbackRecommendation(latest);
+
+  const signals = [
+    { label: 'Stream Scores', value: latest.score_decline },
+    { label: 'Energy Level', value: latest.energy_decline },
+    { label: 'Session Length', value: latest.session_shortening },
+    { label: 'Stream Frequency', value: latest.frequency_drop },
+    { label: 'Viewer Retention', value: latest.retention_risk },
+    { label: 'Follower Growth', value: latest.growth_stall },
+  ];
 
   return (
     <TouchableOpacity
@@ -186,29 +236,51 @@ function BurnoutHealthCard({ data, expanded, onToggle }: { data: any; expanded: 
     >
       <View style={styles.burnoutHeader}>
         <Text style={styles.burnoutLabel}>STREAMER HEALTH</Text>
-        <Text style={[styles.burnoutStatus, { color: bc.text }]}>{bc.label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={[styles.burnoutStatus, { color: bc.text }]}>{bc.label}</Text>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{expanded ? '▲' : '▼'}</Text>
+        </View>
       </View>
       <View style={styles.burnoutBarBg}>
         <View style={[styles.burnoutBarFill, { width: `${healthPct}%`, backgroundColor: bc.text }]} />
       </View>
-      {latest.insight && <Text style={styles.burnoutInsight}>{latest.insight}</Text>}
-      {expanded && latest.recommendation && (
+      <Text style={styles.burnoutInsight}>{insight}</Text>
+
+      {expanded && (
         <View style={styles.burnoutExpanded}>
-          <Text style={styles.burnoutRec}>
-            <Text style={styles.burnoutRecBold}>This week: </Text>
-            {latest.recommendation}
-          </Text>
+          {/* Recommendation */}
+          <View style={styles.burnoutRecCard}>
+            <Text style={styles.burnoutRecTitle}>THIS WEEK'S FOCUS</Text>
+            <Text style={styles.burnoutRecText}>{recommendation}</Text>
+          </View>
+
+          {/* Signal breakdown */}
+          <Text style={styles.burnoutSignalTitle}>WHAT WE'RE WATCHING</Text>
+          {signals.map((s) => (
+            <View key={s.label} style={styles.signalRow}>
+              <Text style={styles.signalLabel}>{s.label}</Text>
+              <View style={styles.signalBarBg}>
+                <View style={[styles.signalBarFill, { width: `${Math.min(s.value, 100)}%`, backgroundColor: signalColor(s.value) }]} />
+              </View>
+              <Text style={[styles.signalStatus, { color: signalColor(s.value) }]}>{signalStatus(s.value)}</Text>
+            </View>
+          ))}
+
+          {/* Sparkline */}
           {history.length > 1 && (
-            <View style={styles.burnoutSparkline}>
-              {history.map((snap: any, i: number) => (
-                <View
-                  key={snap.computed_at}
-                  style={[
-                    styles.burnoutBar,
-                    { height: Math.max(4, (100 - snap.score) * 0.3), backgroundColor: i === history.length - 1 ? bc.text : 'rgba(255,255,255,0.1)' },
-                  ]}
-                />
-              ))}
+            <View style={{ marginTop: 14 }}>
+              <Text style={styles.burnoutSignalTitle}>HEALTH TREND</Text>
+              <View style={styles.burnoutSparkline}>
+                {history.map((snap: any, i: number) => (
+                  <View
+                    key={snap.computed_at}
+                    style={[
+                      styles.burnoutBar,
+                      { height: Math.max(4, (100 - snap.score) * 0.3), backgroundColor: i === history.length - 1 ? bc.text : 'rgba(255,255,255,0.1)' },
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
           )}
         </View>
@@ -268,9 +340,16 @@ const styles = StyleSheet.create({
   burnoutBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 },
   burnoutBarFill: { height: '100%', borderRadius: 3 },
   burnoutInsight: { fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 19 },
-  burnoutExpanded: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
-  burnoutRec: { fontSize: 13, color: colors.muted, lineHeight: 19, marginBottom: 10 },
-  burnoutRecBold: { fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
+  burnoutExpanded: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  burnoutRecCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 14, marginBottom: 14 },
+  burnoutRecTitle: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 6 },
+  burnoutRecText: { fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 19 },
+  burnoutSignalTitle: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 10 },
+  signalRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  signalLabel: { fontSize: 11, color: colors.muted, width: 100 },
+  signalBarBg: { flex: 1, height: 5, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' },
+  signalBarFill: { height: '100%', borderRadius: 3 },
+  signalStatus: { fontSize: 11, fontWeight: '700', width: 52, textAlign: 'right' },
   burnoutSparkline: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24 },
   burnoutBar: { flex: 1, borderRadius: 2, minHeight: 4 },
 });

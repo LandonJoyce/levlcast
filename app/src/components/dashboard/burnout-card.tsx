@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HeartPulse, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { HeartPulse, TrendingDown, TrendingUp, Minus, ChevronDown, ChevronUp } from "lucide-react";
 
 interface BurnoutSnapshot {
   score: number;
@@ -30,13 +30,45 @@ function scoreLabel(score: number) {
   return "Alert";
 }
 
-function TrendIcon({ history }: { history: BurnoutSnapshot[] }) {
-  if (history.length < 2) return <Minus size={14} className="text-muted" />;
-  const prev = history[history.length - 2].score;
-  const curr = history[history.length - 1].score;
-  if (curr > prev + 5) return <TrendingUp size={14} className="text-red-400" />;
-  if (curr < prev - 5) return <TrendingDown size={14} className="text-green-400" />;
-  return <Minus size={14} className="text-muted" />;
+/** Generate a plain-English summary from raw signal values when Claude insight is missing */
+function fallbackInsight(snap: BurnoutSnapshot): string {
+  const issues: string[] = [];
+  if (snap.score_decline > 50) issues.push("your stream scores are trending down");
+  if (snap.energy_decline > 50) issues.push("your energy has been inconsistent");
+  if (snap.session_shortening > 50) issues.push("your sessions are getting shorter");
+  if (snap.frequency_drop > 50) issues.push("you're streaming less frequently");
+  if (snap.retention_risk > 50) issues.push("viewer retention risk is elevated");
+  if (snap.growth_stall > 50) issues.push("follower growth has slowed");
+
+  if (issues.length === 0) {
+    if (snap.score <= 25) return "Everything looks good. You're in a solid rhythm.";
+    return "A few minor signals this week, but nothing to worry about yet.";
+  }
+  const joined = issues.length === 1 ? issues[0] : issues.slice(0, -1).join(", ") + " and " + issues[issues.length - 1];
+  return `Heads up: ${joined}. This isn't a big deal yet, but worth keeping an eye on.`;
+}
+
+function fallbackRecommendation(snap: BurnoutSnapshot): string {
+  if (snap.frequency_drop > 60) return "Try to get back to your normal schedule this week, even if the streams are shorter.";
+  if (snap.session_shortening > 60) return "If your streams feel like a grind, take a day off and come back fresh. Short breaks help.";
+  if (snap.energy_decline > 60) return "Switch up your content or try a collab this week. A change of pace can reset your energy.";
+  if (snap.score_decline > 60) return "Review your last few coach reports and focus on the top improvement from each one.";
+  if (snap.score <= 25) return "Keep doing what you're doing. Consistency is your best growth tool right now.";
+  return "Focus on one small improvement from your latest coach report this week.";
+}
+
+/** Human-readable signal label */
+function signalExplain(label: string, value: number): string {
+  const status = value <= 25 ? "Good" : value <= 50 ? "Okay" : value <= 75 ? "Flagged" : "Concern";
+  const descriptions: Record<string, string> = {
+    "Stream Scores": "Are your coach scores going up or down?",
+    "Energy Level": "Is your on-stream energy staying consistent?",
+    "Session Length": "Are your streams getting shorter over time?",
+    "Stream Frequency": "Are you streaming as often as before?",
+    "Viewer Retention": "Are viewers at risk of dropping off?",
+    "Follower Growth": "Is your follower count still growing?",
+  };
+  return `${status} — ${descriptions[label] || ""}`;
 }
 
 export function BurnoutCard() {
@@ -56,13 +88,13 @@ export function BurnoutCard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !latest) return null; // don't render if no data yet
+  if (loading || !latest) return null;
 
   const colors = scoreColor(latest.score);
   const label = scoreLabel(latest.score);
-
-  // Invert: 100 = healthy, 0 = burnout (for the visual bar)
   const healthPercent = 100 - latest.score;
+  const insight = latest.insight || fallbackInsight(latest);
+  const recommendation = latest.recommendation || fallbackRecommendation(latest);
 
   return (
     <div
@@ -78,77 +110,88 @@ export function BurnoutCard() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <TrendIcon history={history} />
           <span className={`text-sm font-bold ${colors.text}`}>{label}</span>
+          {expanded
+            ? <ChevronUp size={14} className="text-muted" />
+            : <ChevronDown size={14} className="text-muted" />
+          }
         </div>
       </div>
 
       {/* Health bar */}
-      <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-3">
+      <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-4">
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${healthPercent}%`, backgroundColor: colors.fill }}
         />
       </div>
 
-      {/* Insight */}
-      {latest.insight && (
-        <p className="text-sm text-white/80 leading-relaxed">
-          {latest.insight}
-        </p>
-      )}
+      {/* Insight — always visible */}
+      <p className="text-sm text-white/80 leading-relaxed">{insight}</p>
 
-      {/* Expanded: recommendation + signal breakdown */}
+      {/* Expanded */}
       {expanded && (
-        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-          {latest.recommendation && (
-            <p className="text-sm text-muted leading-relaxed">
-              <span className="font-semibold text-white/90">This week:</span>{" "}
-              {latest.recommendation}
-            </p>
-          )}
+        <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
+          {/* Recommendation */}
+          <div className="bg-white/[0.03] rounded-xl p-4">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">This Week's Focus</p>
+            <p className="text-sm text-white/90 leading-relaxed">{recommendation}</p>
+          </div>
 
-          {/* Mini sparkline of last 8 scores */}
+          {/* Signal breakdown — human readable */}
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">What We're Watching</p>
+            <div className="space-y-2">
+              <SignalRow label="Stream Scores" value={latest.score_decline} />
+              <SignalRow label="Energy Level" value={latest.energy_decline} />
+              <SignalRow label="Session Length" value={latest.session_shortening} />
+              <SignalRow label="Stream Frequency" value={latest.frequency_drop} />
+              <SignalRow label="Viewer Retention" value={latest.retention_risk} />
+              <SignalRow label="Follower Growth" value={latest.growth_stall} />
+            </div>
+          </div>
+
+          {/* Mini sparkline of last 8 weeks */}
           {history.length > 1 && (
-            <div className="flex items-end gap-1 h-8">
-              {history.map((snap, i) => {
-                const height = Math.max(4, (100 - snap.score) * 0.3);
-                const isLast = i === history.length - 1;
-                return (
-                  <div
-                    key={snap.computed_at}
-                    className="flex-1 rounded-sm transition-all"
-                    style={{
-                      height: `${height}px`,
-                      backgroundColor: isLast ? colors.fill : "rgba(255,255,255,0.1)",
-                    }}
-                  />
-                );
-              })}
+            <div>
+              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Health Trend</p>
+              <div className="flex items-end gap-1 h-10">
+                {history.map((snap, i) => {
+                  const height = Math.max(6, (100 - snap.score) * 0.38);
+                  const isLast = i === history.length - 1;
+                  return (
+                    <div
+                      key={snap.computed_at}
+                      className="flex-1 rounded-sm transition-all"
+                      style={{
+                        height: `${height}px`,
+                        backgroundColor: isLast ? colors.fill : "rgba(255,255,255,0.08)",
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
-
-          {/* Signal breakdown */}
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <SignalDot label="Score" value={latest.score_decline} />
-            <SignalDot label="Energy" value={latest.energy_decline} />
-            <SignalDot label="Sessions" value={latest.session_shortening} />
-            <SignalDot label="Frequency" value={latest.frequency_drop} />
-            <SignalDot label="Retention" value={latest.retention_risk} />
-            <SignalDot label="Growth" value={latest.growth_stall} />
-          </div>
         </div>
       )}
     </div>
   );
 }
 
-function SignalDot({ label, value }: { label: string; value: number }) {
+function SignalRow({ label, value }: { label: string; value: number }) {
   const color = value <= 25 ? "bg-green-400" : value <= 50 ? "bg-yellow-400" : value <= 75 ? "bg-orange-400" : "bg-red-400";
+  const textColor = value <= 25 ? "text-green-400" : value <= 50 ? "text-yellow-400" : value <= 75 ? "text-orange-400" : "text-red-400";
+  const statusText = value <= 25 ? "Good" : value <= 50 ? "Okay" : value <= 75 ? "Watch" : "Concern";
+  const pct = Math.min(value, 100);
+
   return (
-    <div className="flex items-center gap-1.5">
-      <div className={`w-1.5 h-1.5 rounded-full ${color}`} />
-      <span className="text-muted">{label}</span>
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted w-28 flex-shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={`text-xs font-semibold w-14 text-right ${textColor}`}>{statusText}</span>
     </div>
   );
 }
