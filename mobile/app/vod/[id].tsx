@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share, Alert } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
@@ -44,6 +44,7 @@ interface Vod {
   status: string;
   coach_report: CoachReport | null;
   peak_data: Peak[] | null;
+  failed_reason: string | null;
 }
 
 function formatTime(seconds: number): string {
@@ -82,11 +83,13 @@ function BoldLeadText({ text, bulletColor }: { text: string; bulletColor: string
 
 export default function VodDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [vod, setVod] = useState<Vod | null>(null);
   const [previousScore, setPreviousScore] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -95,7 +98,7 @@ export default function VodDetailScreen() {
 
     const [vodRes, prevRes, streakRes, clipsRes] = await Promise.all([
       supabase.from('vods')
-        .select('id, title, stream_date, status, coach_report, peak_data')
+        .select('id, title, stream_date, status, coach_report, peak_data, failed_reason')
         .eq('id', id).single(),
       supabase.from('vods')
         .select('coach_report')
@@ -137,6 +140,30 @@ export default function VodDetailScreen() {
     return () => clearInterval(interval);
   }, [vod?.status, loadData]);
 
+  async function retryAnalysis() {
+    if (!id) return;
+    setRetrying(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/vods/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ vodId: id }),
+      });
+      const json = await res.json();
+      if (json.upgrade) {
+        router.push('/subscribe');
+      } else {
+        await loadData();
+      }
+    } catch {
+      Alert.alert('Retry failed', 'Could not start analysis. Try again.');
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   async function shareClip(clip: Clip) {
     const parts: string[] = [clip.title];
     if (clip.caption_text) parts.push('\n' + clip.caption_text);
@@ -176,6 +203,22 @@ export default function VodDetailScreen() {
             {vod.status === 'transcribing' ? 'Transcribing stream...' : 'Generating coaching report...'}
           </Text>
           <Text style={styles.processingText}>This usually takes 2–5 minutes. The page updates automatically.</Text>
+        </View>
+      )}
+
+      {/* Failed state */}
+      {vod.status === 'failed' && (
+        <View style={styles.failedCard}>
+          <Text style={styles.failedTitle}>Analysis failed</Text>
+          <Text style={styles.failedText}>
+            {vod.failed_reason || 'Something went wrong during analysis. You can retry below.'}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={retryAnalysis} disabled={retrying}>
+            {retrying
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.retryBtnText}>Retry Analysis</Text>
+            }
+          </TouchableOpacity>
         </View>
       )}
 
@@ -373,6 +416,11 @@ const styles = StyleSheet.create({
   processingCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 28, alignItems: 'center', marginBottom: 20 },
   processingTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 8 },
   processingText: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19 },
+  failedCard: { backgroundColor: 'rgba(248,113,113,0.08)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', padding: 24, alignItems: 'center', marginBottom: 20 },
+  failedTitle: { fontSize: 17, fontWeight: '700', color: colors.red, marginBottom: 8 },
+  failedText: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19, marginBottom: 16 },
+  retryBtn: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 },
+  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   // Score hero
   scoreHero: {

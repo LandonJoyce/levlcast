@@ -91,6 +91,9 @@ export const analyzeVod = inngest.createFunction(
 
         const peaks = await detectPeaks(filtered, title);
         const coachReport = await generateCoachReport(filtered, title, peaks);
+        if (!coachReport) {
+          throw new Error("Failed to generate coaching report — AI returned invalid response");
+        }
         return { peaks, coachReport };
       });
 
@@ -238,7 +241,7 @@ export const cleanupStuckClips = inngest.createFunction(
 export const generateClip = inngest.createFunction(
   {
     id: "generate-clip",
-    retries: 0,
+    retries: 1,
     timeouts: { finish: "5m" },
     concurrency: {
       limit: 1, // one clip at a time per user — prevents memory overload
