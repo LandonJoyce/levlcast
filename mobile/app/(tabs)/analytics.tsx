@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
@@ -18,10 +19,14 @@ export default function AnalyticsScreen() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [vodScores, setVodScores] = useState<VodScore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const loadData = useCallback(async () => {
+    try {
+    setError(null);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { router.replace('/login'); return; }
 
     const [snapshotRes, vodsRes] = await Promise.all([
       supabase
@@ -49,13 +54,29 @@ export default function AnalyticsScreen() {
           score: v.coach_report.overall_score,
         }))
     );
-    setLoading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator color={colors.accentLight} /></View>;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>Couldn't load analytics</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
+          <Text style={styles.retryBtnText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   const latestFollowers = snapshots.length > 0 ? snapshots[snapshots.length - 1].follower_count : null;
@@ -204,4 +225,8 @@ const styles = StyleSheet.create({
   scoreInfo: { width: 120 },
   scoreTitle: { fontSize: 13, fontWeight: '600', color: colors.text },
   scoreDate: { fontSize: 11, color: colors.muted, marginTop: 2 },
+  errorTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  retryBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
+  retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

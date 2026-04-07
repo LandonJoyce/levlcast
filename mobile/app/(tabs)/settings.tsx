@@ -11,27 +11,34 @@ export default function SettingsScreen() {
   const [restoring, setRestoring] = useState(false);
   const router = useRouter();
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      setLoadError(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace('/login'); return; }
 
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-    const [profileRes, analysesRes] = await Promise.all([
-      supabase.from('profiles').select('twitch_display_name, twitch_login, twitch_avatar_url, plan').eq('id', user.id).single(),
-      supabase.from('vods').select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .not('analyzed_at', 'is', null)
-        .gte('analyzed_at', monthStart)
-        .lt('analyzed_at', monthEnd),
-    ]);
+      const [profileRes, analysesRes] = await Promise.all([
+        supabase.from('profiles').select('twitch_display_name, twitch_login, twitch_avatar_url, plan').eq('id', user.id).single(),
+        supabase.from('vods').select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .not('analyzed_at', 'is', null)
+          .gte('analyzed_at', monthStart)
+          .lt('analyzed_at', monthEnd),
+      ]);
 
-    setProfile(profileRes.data);
-    setUsage({ analyses_this_month: analysesRes.count ?? 0 });
+      setProfile(profileRes.data);
+      setUsage({ analyses_this_month: analysesRes.count ?? 0 });
+    } catch (err: any) {
+      setLoadError(err?.message || 'Failed to load settings');
+    }
   }
 
   async function handleRestore() {
@@ -95,6 +102,16 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Error loading */}
+      {loadError && (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorCardText}>{loadError}</Text>
+          <TouchableOpacity onPress={loadData}>
+            <Text style={styles.errorRetryLink}>Tap to retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Account */}
       <Text style={styles.sectionLabel}>Account</Text>
       <View style={styles.card}>
@@ -214,4 +231,7 @@ const styles = StyleSheet.create({
   deleteCardDesc: { fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 16 },
   deleteBtn: { backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 10, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(248,113,113,0.4)' },
   deleteBtnText: { fontSize: 14, color: colors.red, fontWeight: '700' },
+  errorCard: { backgroundColor: 'rgba(248,113,113,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', padding: 16, marginBottom: 20, alignItems: 'center' },
+  errorCardText: { fontSize: 13, color: colors.muted, marginBottom: 8, textAlign: 'center' },
+  errorRetryLink: { fontSize: 14, color: colors.accentLight, fontWeight: '600' },
 });

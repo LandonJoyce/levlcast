@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
@@ -15,11 +15,15 @@ export default function DashboardScreen() {
   const [stats, setStats] = useState({ vods: 0, analyzed: 0, peaks: 0, clips: 0 });
   const [latestVod, setLatestVod] = useState<any>(null);
   const [streak, setStreak] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const loadData = useCallback(async () => {
+    try {
+    setError(null);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { router.replace('/login'); return; }
 
     const [profileRes, vodsRes, clipsRes, latestRes, streakRes] = await Promise.all([
       supabase.from('profiles').select('twitch_display_name, twitch_avatar_url, plan').eq('id', user.id).single(),
@@ -51,9 +55,30 @@ export default function DashboardScreen() {
       peaks,
       clips: clipsRes.data?.length || 0,
     });
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  if (loading) {
+    return <View style={styles.center}><ActivityIndicator color={colors.accentLight} /></View>;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>Couldn't load dashboard</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={loadData}>
+          <Text style={styles.retryBtnText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -162,4 +187,9 @@ const styles = StyleSheet.create({
   streakCard: { backgroundColor: 'rgba(124,58,237,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', padding: 16, marginBottom: 24 },
   streakText: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 2 },
   streakSub: { fontSize: 12, color: colors.muted },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 32 },
+  errorTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  retryBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
+  retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

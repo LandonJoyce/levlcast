@@ -90,11 +90,14 @@ export default function VodDetailScreen() {
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
+    try {
+    setLoadError(null);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { router.replace('/login'); return; }
 
     const [vodRes, prevRes, streakRes, clipsRes] = await Promise.all([
       supabase.from('vods')
@@ -127,18 +130,24 @@ export default function VodDetailScreen() {
     setStreak(count);
 
     setClips((clipsRes.data || []) as Clip[]);
-    setLoading(false);
+    } catch (err: any) {
+      setLoadError(err?.message || 'Failed to load stream report');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Auto-poll when still processing
+  // Auto-poll when VOD is processing OR any clip is generating
   useEffect(() => {
     if (!vod) return;
-    if (vod.status !== 'transcribing' && vod.status !== 'analyzing') return;
+    const vodProcessing = vod.status === 'transcribing' || vod.status === 'analyzing';
+    const clipProcessing = clips.some(c => c.status === 'processing');
+    if (!vodProcessing && !clipProcessing) return;
     const interval = setInterval(loadData, 8000);
     return () => clearInterval(interval);
-  }, [vod?.status, loadData]);
+  }, [vod?.status, clips, loadData]);
 
   async function retryAnalysis() {
     if (!id) return;
@@ -173,6 +182,18 @@ export default function VodDetailScreen() {
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator color={colors.accentLight} /></View>;
+  }
+
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.loadErrorTitle}>Couldn't load report</Text>
+        <Text style={styles.loadErrorText}>{loadError}</Text>
+        <TouchableOpacity style={styles.loadErrorBtn} onPress={loadData}>
+          <Text style={styles.loadErrorBtnText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   if (!vod) {
@@ -411,6 +432,10 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginBottom: 6, lineHeight: 26 },
   date: { fontSize: 12, color: colors.muted, marginBottom: 20 },
   errorText: { color: colors.muted, fontSize: 15 },
+  loadErrorTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  loadErrorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  loadErrorBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
+  loadErrorBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   // Processing
   processingCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 28, alignItems: 'center', marginBottom: 20 },

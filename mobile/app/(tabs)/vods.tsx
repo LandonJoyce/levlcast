@@ -24,18 +24,26 @@ export default function VodsScreen() {
   const [vods, setVods] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const loadVods = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase
-      .from('vods')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('stream_date', { ascending: false });
-    setVods(data || []);
-    setLoading(false);
+    try {
+      setError(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace('/login'); return; }
+      const { data, error: queryError } = await supabase
+        .from('vods')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('stream_date', { ascending: false });
+      if (queryError) throw queryError;
+      setVods(data || []);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load VODs');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadVods(); }, [loadVods]);
@@ -92,6 +100,18 @@ export default function VodsScreen() {
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator color={colors.accentLight} /></View>;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>Couldn't load VODs</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryFullBtn} onPress={loadVods}>
+          <Text style={styles.retryFullText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (
@@ -177,4 +197,8 @@ const styles = StyleSheet.create({
   analyzeBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   viewReport: { fontSize: 12, color: colors.accentLight, fontWeight: '600' },
   scoreChip: { fontSize: 13, fontWeight: '800' },
+  errorTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  retryFullBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
+  retryFullText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

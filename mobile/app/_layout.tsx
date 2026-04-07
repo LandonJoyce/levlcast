@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { initRevenueCat } from '@/lib/revenuecat';
+import { registerForPushNotifications } from '@/lib/notifications';
+import { ErrorBoundary } from '@/lib/error-boundary';
 import { colors } from '@/lib/colors';
 
 export default function RootLayout() {
@@ -15,6 +17,7 @@ export default function RootLayout() {
       setSession(session);
       if (session?.user) {
         initRevenueCat(session.user.id);
+        registerForPushNotifications(); // request permission + store token
       }
       setReady(true);
     });
@@ -23,6 +26,7 @@ export default function RootLayout() {
       setSession(session);
       if (session?.user) {
         initRevenueCat(session.user.id);
+        registerForPushNotifications(); // re-register on sign-in in case token changed
       }
     });
 
@@ -32,7 +36,7 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -47,6 +51,6 @@ export default function RootLayout() {
         <Stack.Screen name="vod/[id]" options={{ title: 'Stream Report', headerBackTitle: 'VODs' }} />
         <Stack.Screen name="subscribe" options={{ title: 'Upgrade to Pro', presentation: 'modal' }} />
       </Stack>
-    </>
+    </ErrorBoundary>
   );
 }
