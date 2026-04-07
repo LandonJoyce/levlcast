@@ -5,7 +5,7 @@ import { CollabCard } from "@/components/dashboard/collab-card";
 import { DigestCard } from "@/components/dashboard/digest-card";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
-import { Film, Zap, Scissors, TrendingUp } from "lucide-react";
+import { Film, Zap, Scissors, TrendingUp, CheckCircle2, Circle, ArrowRight } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -13,16 +13,18 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [vodsResult, clipsResult, peaksResult, profileResult, latestVodResult] = await Promise.all([
+  const [vodsResult, clipsResult, peaksResult, profileResult, latestVodResult, analyzedResult] = await Promise.all([
     supabase.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
     supabase.from("clips").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
     supabase.from("vods").select("peak_data").eq("user_id", user!.id).eq("status", "ready").not("peak_data", "is", null),
     supabase.from("profiles").select("twitch_display_name").eq("id", user!.id).single(),
     supabase.from("vods").select("id, title, coach_report, stream_date").eq("user_id", user!.id).eq("status", "ready").order("stream_date", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
   ]);
 
   const totalVods = vodsResult.count || 0;
   const totalClips = clipsResult.count || 0;
+  const totalAnalyzed = analyzedResult.count || 0;
   const totalPeaks = (peaksResult.data || []).reduce((sum, v) => sum + ((v.peak_data as any[])?.length || 0), 0);
   const displayName = profileResult.data?.twitch_display_name || "Streamer";
   const latestVod = latestVodResult.data;
@@ -30,6 +32,7 @@ export default async function DashboardPage() {
   const unclipped = Math.max(0, totalPeaks - totalClips);
 
   const isEmpty = totalVods === 0 && totalClips === 0;
+  const needsOnboarding = !isEmpty && (totalAnalyzed === 0 || totalClips === 0);
 
   return (
     <div>
@@ -41,7 +44,11 @@ export default async function DashboardPage() {
           Hey, {displayName}
         </h1>
         <p className="text-sm text-muted">
-          Here's what's happening with your stream.
+          {isEmpty
+            ? "Let's get your stream set up."
+            : needsOnboarding
+              ? "You're getting started — here's what to do next."
+              : "Here's what's happening with your stream."}
         </p>
       </div>
 
@@ -86,6 +93,39 @@ export default async function DashboardPage() {
             </Link>
           )}
 
+          {/* Getting Started — shows until user has analyzed + clipped */}
+          {needsOnboarding && (
+            <div className="rounded-2xl border border-accent/20 bg-accent/[0.04] p-6 mb-6">
+              <h2 className="text-sm font-bold text-white mb-4">Getting Started</h2>
+              <div className="space-y-3">
+                {/* Step 1: Sync VODs */}
+                <OnboardingStep
+                  done={totalVods > 0}
+                  label="Sync your Twitch VODs"
+                  detail={totalVods > 0 ? `${totalVods} VOD${totalVods !== 1 ? "s" : ""} synced` : "Import your recent streams from Twitch"}
+                  href="/dashboard/vods"
+                  cta="Go to VODs"
+                />
+                {/* Step 2: Analyze a stream */}
+                <OnboardingStep
+                  done={totalAnalyzed > 0}
+                  label="Analyze your first stream"
+                  detail={totalAnalyzed > 0 ? `${totalAnalyzed} stream${totalAnalyzed !== 1 ? "s" : ""} analyzed` : "Get a coach score, find your peak moments"}
+                  href="/dashboard/vods"
+                  cta="Pick a VOD"
+                />
+                {/* Step 3: Generate a clip */}
+                <OnboardingStep
+                  done={totalClips > 0}
+                  label="Generate your first clip"
+                  detail={totalClips > 0 ? `${totalClips} clip${totalClips !== 1 ? "s" : ""} generated` : "Turn your best moments into shareable clips"}
+                  href={latestVod ? `/dashboard/vods/${latestVod.id}` : "/dashboard/vods"}
+                  cta="Make a clip"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Weekly Digest */}
           <div className="mb-5">
             <DigestCard />
@@ -127,6 +167,43 @@ export default async function DashboardPage() {
             )}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function OnboardingStep({
+  done,
+  label,
+  detail,
+  href,
+  cta,
+}: {
+  done: boolean;
+  label: string;
+  detail: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      {done ? (
+        <CheckCircle2 size={18} className="text-green-400 flex-shrink-0" />
+      ) : (
+        <Circle size={18} className="text-white/20 flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-medium ${done ? "text-white/50 line-through" : "text-white"}`}>{label}</p>
+        <p className="text-xs text-muted">{detail}</p>
+      </div>
+      {!done && (
+        <Link
+          href={href}
+          className="flex items-center gap-1 text-xs font-semibold text-accent-light hover:underline flex-shrink-0"
+        >
+          {cta}
+          <ArrowRight size={12} />
+        </Link>
       )}
     </div>
   );
