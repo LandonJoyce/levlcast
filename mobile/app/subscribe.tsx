@@ -170,7 +170,7 @@ export default function SubscribeScreen() {
       <Text style={styles.disclosure}>
         {selected === 'annual' && annualPrice
           ? `${annualPrice}/year`
-          : `${monthlyPrice}/month`} after any free trial. Payment charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage subscriptions in your App Store account settings.
+          : `${monthlyPrice}/month`} charged to your Apple ID at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage subscriptions in your App Store account settings.
       </Text>
 
       {/* Required: ToS and Privacy links */}
