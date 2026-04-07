@@ -5,12 +5,15 @@ const RC_APPLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_APPLE_KEY!;
 const RC_GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_KEY!;
 
 export function initRevenueCat(userId?: string) {
-  Purchases.setLogLevel(LOG_LEVEL.ERROR);
-
-  if (Platform.OS === 'ios') {
-    Purchases.configure({ apiKey: RC_APPLE_KEY, appUserID: userId });
-  } else {
-    Purchases.configure({ apiKey: RC_GOOGLE_KEY, appUserID: userId });
+  try {
+    Purchases.setLogLevel(LOG_LEVEL.ERROR);
+    if (Platform.OS === 'ios') {
+      Purchases.configure({ apiKey: RC_APPLE_KEY, appUserID: userId });
+    } else {
+      Purchases.configure({ apiKey: RC_GOOGLE_KEY, appUserID: userId });
+    }
+  } catch (err) {
+    console.warn('[revenuecat] Init failed:', err);
   }
 }
 

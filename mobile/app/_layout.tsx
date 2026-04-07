@@ -16,7 +16,7 @@ export default function RootLayout() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        initRevenueCat(session.user.id);
+        try { initRevenueCat(session.user.id); } catch {}
         registerForPushNotifications(); // request permission + store token
       }
       setReady(true);
@@ -25,7 +25,7 @@ export default function RootLayout() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        initRevenueCat(session.user.id);
+        try { initRevenueCat(session.user.id); } catch {}
         registerForPushNotifications(); // re-register on sign-in in case token changed
       }
     });
