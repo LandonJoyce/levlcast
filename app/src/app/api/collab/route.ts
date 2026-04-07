@@ -85,20 +85,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
+    // --- Input validation ---
+    const tagline = typeof body.tagline === "string" ? body.tagline.slice(0, 200) : null;
+
+    let preferredCategories: string[] = [];
+    if (Array.isArray(body.preferred_categories)) {
+      const VALID_CATEGORIES = ["hype", "funny", "educational", "emotional", "clutch_play", "rage", "wholesome"];
+      preferredCategories = body.preferred_categories
+        .filter((c: unknown) => typeof c === "string" && VALID_CATEGORIES.includes(c))
+        .slice(0, 5);
+    }
+
+    const minFollowers = typeof body.min_followers === "number" && body.min_followers >= 0
+      ? Math.floor(body.min_followers)
+      : 0;
+
+    const maxFollowers = typeof body.max_followers === "number" && body.max_followers > 0
+      ? Math.floor(body.max_followers)
+      : null;
+
     const { error } = await supabase.from("collab_profiles").upsert(
       {
         user_id: user.id,
-        enabled: body.enabled ?? true,
-        tagline: body.tagline ?? null,
-        preferred_categories: body.preferred_categories ?? [],
-        min_followers: body.min_followers ?? 0,
-        max_followers: body.max_followers ?? null,
+        enabled: body.enabled === true,
+        tagline,
+        preferred_categories: preferredCategories,
+        min_followers: minFollowers,
+        max_followers: maxFollowers,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
     );
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[api/collab] Upsert failed:", error.message);
+      return NextResponse.json({ error: "Failed to save collab profile" }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

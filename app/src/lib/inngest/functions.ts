@@ -348,57 +348,58 @@ export const computeBurnoutScores = inngest.createFunction(
     let processed = 0;
 
     for (const userId of users) {
-      await step.run(`burnout-${userId.slice(0, 8)}`, async () => {
-        // Fetch last 12 analyzed VODs
-        const { data: vods } = await supabase
-          .from("vods")
-          .select("stream_date, duration_seconds, coach_report")
-          .eq("user_id", userId)
-          .eq("status", "ready")
-          .not("coach_report", "is", null)
-          .order("stream_date", { ascending: false })
-          .limit(12);
+      try {
+        await step.run(`burnout-${userId.slice(0, 8)}`, async () => {
+          // Fetch last 12 analyzed VODs
+          const { data: vods } = await supabase
+            .from("vods")
+            .select("stream_date, duration_seconds, coach_report")
+            .eq("user_id", userId)
+            .eq("status", "ready")
+            .not("coach_report", "is", null)
+            .order("stream_date", { ascending: false })
+            .limit(12);
 
-        // Fetch last 28 days of follower snapshots
-        const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: followers } = await supabase
-          .from("follower_snapshots")
-          .select("follower_count, snapped_at")
-          .eq("user_id", userId)
-          .eq("platform", "twitch")
-          .gte("snapped_at", cutoff)
-          .order("snapped_at", { ascending: true });
+          // Fetch last 28 days of follower snapshots
+          const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: followers } = await supabase
+            .from("follower_snapshots")
+            .select("follower_count, snapped_at")
+            .eq("user_id", userId)
+            .eq("platform", "twitch")
+            .gte("snapped_at", cutoff)
+            .order("snapped_at", { ascending: true });
 
-        const signals = computeBurnout(vods || [], followers || []);
-        if (!signals) return; // insufficient data
+          const signals = computeBurnout(vods || [], followers || []);
+          if (!signals) return; // insufficient data
 
-        // Generate insight with Claude if score is notable
-        let insight: string | null = null;
-        let recommendation: string | null = null;
+          // Generate insight with Claude if score is notable
+          let insight: string | null = null;
+          let recommendation: string | null = null;
 
-        if (signals.composite > 25) {
-          try {
-            const Anthropic = (await import("@anthropic-ai/sdk")).default;
-            const anthropic = new Anthropic();
+          if (signals.composite > 25) {
+            try {
+              const Anthropic = (await import("@anthropic-ai/sdk")).default;
+              const anthropic = new Anthropic();
 
-            const scores = (vods || [])
-              .slice(0, 6)
-              .map((v: any) => (v.coach_report as any)?.overall_score)
-              .filter(Boolean)
-              .reverse();
+              const scores = (vods || [])
+                .slice(0, 6)
+                .map((v: any) => (v.coach_report as any)?.overall_score)
+                .filter(Boolean)
+                .reverse();
 
-            const energies = (vods || [])
-              .slice(0, 6)
-              .map((v: any) => (v.coach_report as any)?.energy_trend)
-              .filter(Boolean)
-              .reverse();
+              const energies = (vods || [])
+                .slice(0, 6)
+                .map((v: any) => (v.coach_report as any)?.energy_trend)
+                .filter(Boolean)
+                .reverse();
 
-            const msg = await anthropic.messages.create({
-              model: "claude-haiku-4-5-20251001",
-              max_tokens: 200,
-              messages: [{
-                role: "user",
-                content: `A streamer's burnout signals this week:
+              const msg = await anthropic.messages.create({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 200,
+                messages: [{
+                  role: "user",
+                  content: `A streamer's burnout signals this week:
 - Recent coach scores (oldest to newest): ${scores.join(", ")}
 - Recent energy trends: ${energies.join(", ")}
 - Burnout composite score: ${signals.composite}/100 (${burnoutLabel(signals.composite)})
@@ -411,49 +412,52 @@ Generate two things:
 
 Talk like a friend who manages their career, not a metrics dashboard.
 JSON only: { "insight": "...", "recommendation": "..." }`,
-              }],
-            });
+                }],
+              });
 
-            const text = msg.content[0].type === "text" ? msg.content[0].text : "";
-            const parsed = JSON.parse(text);
-            insight = parsed.insight || null;
-            recommendation = parsed.recommendation || null;
-          } catch (err) {
-            console.warn(`[burnout] Claude insight failed for ${userId}:`, err);
+              const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+              const parsed = JSON.parse(text);
+              insight = parsed.insight || null;
+              recommendation = parsed.recommendation || null;
+            } catch (err) {
+              console.warn(`[burnout] Claude insight failed for ${userId}:`, err);
+            }
           }
-        }
 
-        // Save snapshot
-        await supabase.from("burnout_snapshots").insert({
-          user_id: userId,
-          score: signals.composite,
-          score_decline: signals.scoreTrend,
-          energy_decline: signals.energyDecline,
-          session_shortening: signals.sessionShortening,
-          frequency_drop: signals.frequencyDrop,
-          retention_risk: signals.retentionRisk,
-          growth_stall: signals.growthStall,
-          insight,
-          recommendation,
-        });
-
-        // Push notification if warning or above
-        if (signals.composite > 45) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("expo_push_token")
-            .eq("id", userId)
-            .single();
-
-          await sendPush(profile?.expo_push_token, {
-            title: "Streamer Health Check",
-            body: insight || "I noticed some fatigue signals this week. Open LevlCast for details.",
-            data: { type: "burnout" },
+          // Save snapshot
+          await supabase.from("burnout_snapshots").insert({
+            user_id: userId,
+            score: signals.composite,
+            score_decline: signals.scoreTrend,
+            energy_decline: signals.energyDecline,
+            session_shortening: signals.sessionShortening,
+            frequency_drop: signals.frequencyDrop,
+            retention_risk: signals.retentionRisk,
+            growth_stall: signals.growthStall,
+            insight,
+            recommendation,
           });
-        }
 
-        processed++;
-      });
+          // Push notification if warning or above
+          if (signals.composite > 45) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("expo_push_token")
+              .eq("id", userId)
+              .single();
+
+            await sendPush(profile?.expo_push_token, {
+              title: "Streamer Health Check",
+              body: insight || "I noticed some fatigue signals this week. Open LevlCast for details.",
+              data: { type: "burnout" },
+            });
+          }
+
+          processed++;
+        });
+      } catch (err) {
+        console.error(`[burnout] Failed for user ${userId.slice(0, 8)}:`, err);
+      }
     }
 
     return { processed };
@@ -494,49 +498,50 @@ export const computeContentReports = inngest.createFunction(
     let processed = 0;
 
     for (const userId of users) {
-      await step.run(`content-${userId.slice(0, 8)}`, async () => {
-        // Fetch last 20 analyzed VODs with peak data
-        const { data: vods } = await supabase
-          .from("vods")
-          .select("stream_date, duration_seconds, peak_data, coach_report")
-          .eq("user_id", userId)
-          .eq("status", "ready")
-          .not("peak_data", "is", null)
-          .not("coach_report", "is", null)
-          .order("stream_date", { ascending: false })
-          .limit(20);
+      try {
+        await step.run(`content-${userId.slice(0, 8)}`, async () => {
+          // Fetch last 20 analyzed VODs with peak data
+          const { data: vods } = await supabase
+            .from("vods")
+            .select("stream_date, duration_seconds, peak_data, coach_report")
+            .eq("user_id", userId)
+            .eq("status", "ready")
+            .not("peak_data", "is", null)
+            .not("coach_report", "is", null)
+            .order("stream_date", { ascending: false })
+            .limit(20);
 
-        // Fetch last 28 days of follower snapshots
-        const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: followers } = await supabase
-          .from("follower_snapshots")
-          .select("follower_count, snapped_at")
-          .eq("user_id", userId)
-          .eq("platform", "twitch")
-          .gte("snapped_at", cutoff)
-          .order("snapped_at", { ascending: true });
+          // Fetch last 28 days of follower snapshots
+          const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: followers } = await supabase
+            .from("follower_snapshots")
+            .select("follower_count, snapped_at")
+            .eq("user_id", userId)
+            .eq("platform", "twitch")
+            .gte("snapped_at", cutoff)
+            .order("snapped_at", { ascending: true });
 
-        const report = computeContentReport(vods || [], followers || []);
-        if (!report || report.categories.length === 0) return;
+          const report = computeContentReport(vods || [], followers || []);
+          if (!report || report.categories.length === 0) return;
 
-        // Generate insight with Claude
-        let insight: string | null = null;
-        let recommendation: string | null = null;
+          // Generate insight with Claude
+          let insight: string | null = null;
+          let recommendation: string | null = null;
 
-        try {
-          const Anthropic = (await import("@anthropic-ai/sdk")).default;
-          const anthropic = new Anthropic();
+          try {
+            const Anthropic = (await import("@anthropic-ai/sdk")).default;
+            const anthropic = new Anthropic();
 
-          const breakdown = report.categories
-            .map((c) => `${categoryLabel(c.category)}: ${c.vod_count} streams, avg score ${c.avg_score}, ${c.total_peaks} peaks, ~${c.follower_delta >= 0 ? "+" : ""}${c.follower_delta} followers, rated "${c.growth_rating}"`)
-            .join("\n");
+            const breakdown = report.categories
+              .map((c) => `${categoryLabel(c.category)}: ${c.vod_count} streams, avg score ${c.avg_score}, ${c.total_peaks} peaks, ~${c.follower_delta >= 0 ? "+" : ""}${c.follower_delta} followers, rated "${c.growth_rating}"`)
+              .join("\n");
 
-          const msg = await anthropic.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 200,
-            messages: [{
-              role: "user",
-              content: `A streamer's content performance breakdown (last 4 weeks):
+            const msg = await anthropic.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 200,
+              messages: [{
+                role: "user",
+                content: `A streamer's content performance breakdown (last 4 weeks):
 ${breakdown}
 
 Top category: ${report.top_category ? categoryLabel(report.top_category) : "N/A"}
@@ -546,38 +551,41 @@ Generate two things:
 2. "recommendation": One actionable sentence about their content mix this week.
 
 JSON only: { "insight": "...", "recommendation": "..." }`,
-            }],
-          });
+              }],
+            });
 
-          const text = msg.content[0].type === "text" ? msg.content[0].text : "";
-          const parsed = JSON.parse(text);
-          insight = parsed.insight || null;
-          recommendation = parsed.recommendation || null;
-        } catch (err) {
-          console.warn(`[content-report] Claude insight failed for ${userId}:`, err);
-        }
+            const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+            const parsed = JSON.parse(text);
+            insight = parsed.insight || null;
+            recommendation = parsed.recommendation || null;
+          } catch (err) {
+            console.warn(`[content-report] Claude insight failed for ${userId}:`, err);
+          }
 
-        // Save report
-        const now = new Date();
-        const periodEnd = new Date(now);
-        const periodStart = new Date(now);
-        periodStart.setDate(periodStart.getDate() - 7);
+          // Save report
+          const now = new Date();
+          const periodEnd = new Date(now);
+          const periodStart = new Date(now);
+          periodStart.setDate(periodStart.getDate() - 7);
 
-        await supabase.from("content_reports").upsert(
-          {
-            user_id: userId,
-            period_start: periodStart.toISOString().split("T")[0],
-            period_end: periodEnd.toISOString().split("T")[0],
-            category_breakdown: report.categories,
-            top_category: report.top_category,
-            insight,
-            recommendation,
-          },
-          { onConflict: "user_id,period_start" }
-        );
+          await supabase.from("content_reports").upsert(
+            {
+              user_id: userId,
+              period_start: periodStart.toISOString().split("T")[0],
+              period_end: periodEnd.toISOString().split("T")[0],
+              category_breakdown: report.categories,
+              top_category: report.top_category,
+              insight,
+              recommendation,
+            },
+            { onConflict: "user_id,period_start" }
+          );
 
-        processed++;
-      });
+          processed++;
+        });
+      } catch (err) {
+        console.error(`[content-report] Failed for user ${userId.slice(0, 8)}:`, err);
+      }
     }
 
     return { processed };
@@ -676,7 +684,8 @@ export const computeCollabSuggestions = inngest.createFunction(
       const userProfile = profiles[userId];
       if (!userProfile) continue;
 
-      await step.run(`match-${userId.slice(0, 8)}`, async () => {
+      try {
+        await step.run(`match-${userId.slice(0, 8)}`, async () => {
         const preferences = {
           minFollowers: collabUser.min_followers || undefined,
           maxFollowers: collabUser.max_followers || undefined,
@@ -759,6 +768,9 @@ export const computeCollabSuggestions = inngest.createFunction(
 
         processed++;
       });
+      } catch (err) {
+        console.error(`[collab] Failed for user ${userId.slice(0, 8)}:`, err);
+      }
     }
 
     return { processed };
@@ -797,7 +809,8 @@ export const compileWeeklyDigest = inngest.createFunction(
     const weekStartIso = weekStart.toISOString();
 
     for (const userId of users) {
-      await step.run(`digest-${(userId as string).slice(0, 8)}`, async () => {
+      try {
+        await step.run(`digest-${(userId as string).slice(0, 8)}`, async () => {
         const [vodsRes, clipsRes, followerRes, burnoutRes, contentRes, collabRes] = await Promise.all([
           supabase.from("vods")
             .select("duration_seconds, coach_report, peak_data")
@@ -940,6 +953,9 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
 
         processed++;
       });
+      } catch (err) {
+        console.error(`[digest] Failed for user ${(userId as string).slice(0, 8)}:`, err);
+      }
     }
 
     return { processed };
