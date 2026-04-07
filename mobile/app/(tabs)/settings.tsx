@@ -98,7 +98,7 @@ export default function SettingsScreen() {
 
   const isPro = profile?.plan === 'pro';
   const analysesUsed = usage?.analyses_this_month || 0;
-  const analysesLimit = isPro ? 10 : 1;
+  const analysesLimit = isPro ? 20 : 1;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

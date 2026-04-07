@@ -91,6 +91,7 @@ export default function VodDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [generatingPeak, setGeneratingPeak] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -173,6 +174,32 @@ export default function VodDetailScreen() {
     }
   }
 
+  async function generateClip(peakIndex: number) {
+    if (!id || generatingPeak !== null) return;
+    setGeneratingPeak(peakIndex);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/clips/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ vodId: id, peakIndex }),
+      });
+      const json = await res.json();
+      if (json.upgrade) {
+        router.push('/subscribe');
+      } else if (json.error) {
+        Alert.alert('Clip generation', json.message || json.error);
+      } else {
+        await loadData();
+      }
+    } catch {
+      Alert.alert('Clip failed', 'Could not generate clip. Try again.');
+    } finally {
+      setGeneratingPeak(null);
+    }
+  }
+
   async function shareClip(clip: Clip) {
     const parts: string[] = [clip.title];
     if (clip.caption_text) parts.push('\n' + clip.caption_text);
@@ -207,6 +234,14 @@ export default function VodDetailScreen() {
   const report = vod.coach_report;
   const peaks = vod.peak_data || [];
   const isProcessing = vod.status === 'transcribing' || vod.status === 'analyzing';
+  const hasProcessingClip = clips.some(c => c.status === 'processing');
+
+  // Track which peak start times already have a clip (ready or processing)
+  const claimedStarts = new Set(
+    clips
+      .filter(c => c.status === 'ready' || c.status === 'processing')
+      .map(c => c.start_time_seconds)
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -406,19 +441,39 @@ export default function VodDetailScreen() {
       {peaks.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>PEAK MOMENTS ({peaks.length})</Text>
-          {peaks.map((p, i) => (
-            <View key={i} style={styles.peakRow}>
-              <View style={styles.peakHeader}>
-                <Text style={styles.peakTitle}>{p.title}</Text>
-                <Text style={styles.peakCategory}>{p.category}</Text>
+          {peaks.map((p, i) => {
+            const alreadyClaimed = claimedStarts.has(Math.round(p.start));
+            return (
+              <View key={i} style={styles.peakRow}>
+                <View style={styles.peakHeader}>
+                  <Text style={styles.peakTitle}>{p.title}</Text>
+                  <Text style={styles.peakCategory}>{p.category}</Text>
+                </View>
+                <Text style={styles.peakReason}>{p.reason}</Text>
+                <View style={styles.peakMeta}>
+                  <View style={styles.peakMetaLeft}>
+                    <Text style={styles.peakTime}>{formatTime(p.start)} – {formatTime(p.end)}</Text>
+                    <Text style={styles.peakScore}>Score {Math.round(p.score * 100)}</Text>
+                  </View>
+                  {alreadyClaimed ? (
+                    <Text style={styles.clipGenerated}>Clip generated</Text>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.genClipBtn, (hasProcessingClip || generatingPeak !== null) && styles.genClipBtnDisabled]}
+                      onPress={() => generateClip(i)}
+                      disabled={hasProcessingClip || generatingPeak !== null}
+                    >
+                      {generatingPeak === i ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={styles.genClipBtnText}>Generate Clip</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-              <Text style={styles.peakReason}>{p.reason}</Text>
-              <View style={styles.peakMeta}>
-                <Text style={styles.peakTime}>{formatTime(p.start)} – {formatTime(p.end)}</Text>
-                <Text style={styles.peakScore}>Score {Math.round(p.score * 100)}</Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </ScrollView>
@@ -527,9 +582,14 @@ const styles = StyleSheet.create({
   peakTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.text },
   peakCategory: { fontSize: 11, fontWeight: '600', color: colors.accentLight, textTransform: 'capitalize', backgroundColor: 'rgba(124,58,237,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   peakReason: { fontSize: 12, color: colors.muted, lineHeight: 17, marginBottom: 8 },
-  peakMeta: { flexDirection: 'row', justifyContent: 'space-between' },
+  peakMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  peakMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   peakTime: { fontSize: 12, fontWeight: '600', color: colors.muted },
   peakScore: { fontSize: 12, fontWeight: '700', color: colors.accentLight },
+  clipGenerated: { fontSize: 12, fontWeight: '600', color: colors.green },
+  genClipBtn: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  genClipBtnDisabled: { opacity: 0.4 },
+  genClipBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   // Shared
   sectionLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 },
