@@ -1,53 +1,51 @@
 import { createClient } from "@/lib/supabase/server";
-import { StatCard } from "@/components/dashboard/stat-card";
 import { BurnoutCard } from "@/components/dashboard/burnout-card";
 import { MonetizationCard } from "@/components/dashboard/monetization-card";
 import { CollabCard } from "@/components/dashboard/collab-card";
 import { DigestCard } from "@/components/dashboard/digest-card";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
-import { Film, Scissors, BarChart3 } from "lucide-react";
+import { Film, Zap, Scissors, TrendingUp } from "lucide-react";
 
-/**
- * Main dashboard — overview of stats, recent activity, and quick actions.
- */
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [vodsResult, clipsResult, peaksResult, profileResult] = await Promise.all([
-    supabase.from("vods").select("id, peak_data", { count: "exact" }).eq("user_id", user!.id),
-    supabase.from("clips").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
+  const [vodsResult, clipsResult, peaksResult, profileResult, latestVodResult] = await Promise.all([
+    supabase.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
+    supabase.from("clips").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
     supabase.from("vods").select("peak_data").eq("user_id", user!.id).eq("status", "ready").not("peak_data", "is", null),
     supabase.from("profiles").select("twitch_display_name").eq("id", user!.id).single(),
+    supabase.from("vods").select("id, title, coach_report, stream_date").eq("user_id", user!.id).eq("status", "ready").order("stream_date", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const totalVods = vodsResult.count || 0;
   const totalClips = clipsResult.count || 0;
   const totalPeaks = (peaksResult.data || []).reduce((sum, v) => sum + ((v.peak_data as any[])?.length || 0), 0);
   const displayName = profileResult.data?.twitch_display_name || "Streamer";
+  const latestVod = latestVodResult.data;
+  const latestScore = latestVod ? (latestVod.coach_report as any)?.overall_score : null;
+  const unclipped = Math.max(0, totalPeaks - totalClips);
 
-  // Check if user has any content yet
   const isEmpty = totalVods === 0 && totalClips === 0;
 
   return (
     <div>
       {isEmpty && <WelcomeModal name={displayName} />}
 
-      {/* Page header */}
+      {/* Greeting */}
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1">
-          Dashboard
+          Hey, {displayName}
         </h1>
         <p className="text-sm text-muted">
-          Your stream growth at a glance.
+          Here's what's happening with your stream.
         </p>
       </div>
 
       {isEmpty ? (
-        /* Empty state — guide user to sync VODs */
         <div className="bg-surface border border-border rounded-2xl p-12 text-center">
           <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-5">
             <Film size={24} className="text-accent-light" />
@@ -67,13 +65,34 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <>
+          {/* Latest stream score — hero card */}
+          {latestScore !== null && latestVod && (
+            <Link
+              href={`/dashboard/vods/${latestVod.id}`}
+              className="block mb-6 rounded-2xl border border-white/[0.06] bg-gradient-to-r from-white/[0.04] to-transparent p-5 hover:border-white/10 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">Latest Stream</p>
+                  <p className="text-sm text-white/80 truncate">{latestVod.title}</p>
+                </div>
+                <div className="text-right ml-4">
+                  <p className={`text-3xl font-extrabold ${latestScore >= 70 ? "text-green-400" : latestScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                    {latestScore}
+                  </p>
+                  <p className="text-[10px] text-muted uppercase">score</p>
+                </div>
+              </div>
+            </Link>
+          )}
+
           {/* Weekly Digest */}
-          <div className="mb-6">
+          <div className="mb-5">
             <DigestCard />
           </div>
 
           {/* Streamer Health + Content Performance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
             <BurnoutCard />
             <MonetizationCard />
           </div>
@@ -83,72 +102,29 @@ export default async function DashboardPage() {
             <CollabCard />
           </div>
 
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard
-              label="Total VODs"
-              value={totalVods.toString()}
-              detail="Synced from Twitch"
-            />
-            <StatCard
-              label="Clips Generated"
-              value={totalClips.toString()}
-              detail="Ready to post"
-            />
-            <StatCard
-              label="Peaks Detected"
-              value={totalPeaks.toString()}
-              detail="Across analyzed VODs"
-            />
-            <StatCard
-              label="Ready to Clip"
-              value={(totalPeaks - totalClips).toString()}
-              detail="Ungenerated peaks"
-              accent
-            />
-          </div>
-
-          {/* Quick actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              href="/dashboard/vods"
-              className="bg-surface border border-border rounded-2xl p-6 hover:border-white/10 transition-colors group"
-            >
-              <Film
-                size={20}
-                className="text-muted group-hover:text-accent-light transition-colors mb-3"
-              />
-              <h3 className="font-bold mb-1">VODs</h3>
-              <p className="text-xs text-muted">
-                Sync and analyze your Twitch streams.
-              </p>
-            </Link>
-            <Link
-              href="/dashboard/clips"
-              className="bg-surface border border-border rounded-2xl p-6 hover:border-white/10 transition-colors group"
-            >
-              <Scissors
-                size={20}
-                className="text-muted group-hover:text-accent-light transition-colors mb-3"
-              />
-              <h3 className="font-bold mb-1">Clips</h3>
-              <p className="text-xs text-muted">
-                View and manage your generated clips.
-              </p>
-            </Link>
-            <Link
-              href="/dashboard/analytics"
-              className="bg-surface border border-border rounded-2xl p-6 hover:border-white/10 transition-colors group"
-            >
-              <BarChart3
-                size={20}
-                className="text-muted group-hover:text-accent-light transition-colors mb-3"
-              />
-              <h3 className="font-bold mb-1">Analytics</h3>
-              <p className="text-xs text-muted">
-                Track your growth across platforms.
-              </p>
-            </Link>
+          {/* Compact activity row */}
+          <div className="flex items-center gap-6 px-1 text-sm text-muted">
+            <span className="flex items-center gap-1.5">
+              <Film size={13} className="text-white/30" />
+              {totalVods} VOD{totalVods !== 1 ? "s" : ""}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Zap size={13} className="text-white/30" />
+              {totalPeaks} peak{totalPeaks !== 1 ? "s" : ""}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Scissors size={13} className="text-white/30" />
+              {totalClips} clip{totalClips !== 1 ? "s" : ""}
+            </span>
+            {unclipped > 0 && (
+              <Link
+                href="/dashboard/clips"
+                className="flex items-center gap-1.5 text-accent-light hover:underline ml-auto"
+              >
+                <TrendingUp size={13} />
+                {unclipped} peak{unclipped !== 1 ? "s" : ""} ready to clip
+              </Link>
+            )}
           </div>
         </>
       )}
