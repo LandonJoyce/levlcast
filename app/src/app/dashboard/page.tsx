@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { BurnoutCard } from "@/components/dashboard/burnout-card";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
 import { Film, Scissors, BarChart3 } from "lucide-react";
@@ -63,6 +64,11 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <>
+          {/* Streamer Health */}
+          <div className="mb-6">
+            <BurnoutCard />
+          </div>
+
           {/* Stats grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard

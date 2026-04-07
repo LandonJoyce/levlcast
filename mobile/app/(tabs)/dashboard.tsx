@@ -15,6 +15,8 @@ export default function DashboardScreen() {
   const [stats, setStats] = useState({ vods: 0, analyzed: 0, peaks: 0, clips: 0 });
   const [latestVod, setLatestVod] = useState<any>(null);
   const [streak, setStreak] = useState(0);
+  const [burnout, setBurnout] = useState<any>(null);
+  const [burnoutExpanded, setBurnoutExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -55,6 +57,18 @@ export default function DashboardScreen() {
       peaks,
       clips: clipsRes.data?.length || 0,
     });
+
+    // Fetch burnout data (non-blocking)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/burnout`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.ok) setBurnout(await res.json());
+      }
+    } catch {} // non-fatal
+
     } catch (err: any) {
       setError(err?.message || 'Failed to load dashboard');
     } finally {
@@ -126,6 +140,9 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      {/* Streamer Health */}
+      {burnout?.latest && <BurnoutHealthCard data={burnout} expanded={burnoutExpanded} onToggle={() => setBurnoutExpanded(!burnoutExpanded)} />}
+
       {/* Stats grid */}
       <View style={styles.grid}>
         <StatCard label="VODs Synced" value={stats.vods} />
@@ -145,6 +162,58 @@ export default function DashboardScreen() {
         <Text style={styles.actionSub}>See what's driving your follower growth</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function burnoutColor(score: number) {
+  if (score <= 25) return { bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.25)', text: colors.green, label: 'Healthy' };
+  if (score <= 45) return { bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.25)', text: colors.yellow, label: 'Watch' };
+  if (score <= 65) return { bg: 'rgba(251,146,60,0.08)', border: 'rgba(251,146,60,0.25)', text: '#fb923c', label: 'Warning' };
+  return { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)', text: colors.red, label: 'Alert' };
+}
+
+function BurnoutHealthCard({ data, expanded, onToggle }: { data: any; expanded: boolean; onToggle: () => void }) {
+  const latest = data.latest;
+  const history: any[] = data.history || [];
+  const bc = burnoutColor(latest.score);
+  const healthPct = 100 - latest.score;
+
+  return (
+    <TouchableOpacity
+      style={[styles.burnoutCard, { backgroundColor: bc.bg, borderColor: bc.border }]}
+      onPress={onToggle}
+      activeOpacity={0.8}
+    >
+      <View style={styles.burnoutHeader}>
+        <Text style={styles.burnoutLabel}>STREAMER HEALTH</Text>
+        <Text style={[styles.burnoutStatus, { color: bc.text }]}>{bc.label}</Text>
+      </View>
+      <View style={styles.burnoutBarBg}>
+        <View style={[styles.burnoutBarFill, { width: `${healthPct}%`, backgroundColor: bc.text }]} />
+      </View>
+      {latest.insight && <Text style={styles.burnoutInsight}>{latest.insight}</Text>}
+      {expanded && latest.recommendation && (
+        <View style={styles.burnoutExpanded}>
+          <Text style={styles.burnoutRec}>
+            <Text style={styles.burnoutRecBold}>This week: </Text>
+            {latest.recommendation}
+          </Text>
+          {history.length > 1 && (
+            <View style={styles.burnoutSparkline}>
+              {history.map((snap: any, i: number) => (
+                <View
+                  key={snap.computed_at}
+                  style={[
+                    styles.burnoutBar,
+                    { height: Math.max(4, (100 - snap.score) * 0.3), backgroundColor: i === history.length - 1 ? bc.text : 'rgba(255,255,255,0.1)' },
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -192,4 +261,16 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   retryBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
   retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  burnoutCard: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 24 },
+  burnoutHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  burnoutLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1 },
+  burnoutStatus: { fontSize: 13, fontWeight: '700' },
+  burnoutBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 },
+  burnoutBarFill: { height: '100%', borderRadius: 3 },
+  burnoutInsight: { fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 19 },
+  burnoutExpanded: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  burnoutRec: { fontSize: 13, color: colors.muted, lineHeight: 19, marginBottom: 10 },
+  burnoutRecBold: { fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
+  burnoutSparkline: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24 },
+  burnoutBar: { flex: 1, borderRadius: 2, minHeight: 4 },
 });
