@@ -17,6 +17,7 @@ import { cutClip } from "@/lib/ffmpeg";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
+import { computeContentReport, categoryLabel } from "@/lib/monetization";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -449,6 +450,130 @@ JSON only: { "insight": "...", "recommendation": "..." }`,
             data: { type: "burnout" },
           });
         }
+
+        processed++;
+      });
+    }
+
+    return { processed };
+  }
+);
+
+// ─── Content Performance Reports ──────────────────────────────────────────
+// Runs every Monday at 9:15 AM UTC (after burnout scores at 9:00).
+// For each user with ≥4 analyzed VODs, computes which content categories
+// drive the most growth. Claude generates a one-line insight + recommendation.
+
+export const computeContentReports = inngest.createFunction(
+  { id: "compute-content-reports" },
+  { cron: "15 9 * * 1" }, // every Monday 9:15am UTC
+  async ({ step }) => {
+    const supabase = createAdminClient();
+
+    const users = await step.run("find-active-users", async () => {
+      const { data } = await supabase
+        .from("vods")
+        .select("user_id")
+        .eq("status", "ready")
+        .not("peak_data", "is", null);
+
+      if (!data) return [];
+
+      const counts: Record<string, number> = {};
+      for (const row of data) {
+        counts[row.user_id] = (counts[row.user_id] || 0) + 1;
+      }
+      return Object.entries(counts)
+        .filter(([, count]) => count >= 4)
+        .map(([userId]) => userId);
+    });
+
+    if (users.length === 0) return { processed: 0 };
+
+    let processed = 0;
+
+    for (const userId of users) {
+      await step.run(`content-${userId.slice(0, 8)}`, async () => {
+        // Fetch last 20 analyzed VODs with peak data
+        const { data: vods } = await supabase
+          .from("vods")
+          .select("stream_date, duration_seconds, peak_data, coach_report")
+          .eq("user_id", userId)
+          .eq("status", "ready")
+          .not("peak_data", "is", null)
+          .not("coach_report", "is", null)
+          .order("stream_date", { ascending: false })
+          .limit(20);
+
+        // Fetch last 28 days of follower snapshots
+        const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: followers } = await supabase
+          .from("follower_snapshots")
+          .select("follower_count, snapped_at")
+          .eq("user_id", userId)
+          .eq("platform", "twitch")
+          .gte("snapped_at", cutoff)
+          .order("snapped_at", { ascending: true });
+
+        const report = computeContentReport(vods || [], followers || []);
+        if (!report || report.categories.length === 0) return;
+
+        // Generate insight with Claude
+        let insight: string | null = null;
+        let recommendation: string | null = null;
+
+        try {
+          const Anthropic = (await import("@anthropic-ai/sdk")).default;
+          const anthropic = new Anthropic();
+
+          const breakdown = report.categories
+            .map((c) => `${categoryLabel(c.category)}: ${c.vod_count} streams, avg score ${c.avg_score}, ${c.total_peaks} peaks, ~${c.follower_delta >= 0 ? "+" : ""}${c.follower_delta} followers, rated "${c.growth_rating}"`)
+            .join("\n");
+
+          const msg = await anthropic.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 200,
+            messages: [{
+              role: "user",
+              content: `A streamer's content performance breakdown (last 4 weeks):
+${breakdown}
+
+Top category: ${report.top_category ? categoryLabel(report.top_category) : "N/A"}
+
+Generate two things:
+1. "insight": One sentence about which content is working best and why. Be specific with numbers. Tone: encouraging business manager.
+2. "recommendation": One actionable sentence about their content mix this week.
+
+JSON only: { "insight": "...", "recommendation": "..." }`,
+            }],
+          });
+
+          const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+          const parsed = JSON.parse(text);
+          insight = parsed.insight || null;
+          recommendation = parsed.recommendation || null;
+        } catch (err) {
+          console.warn(`[content-report] Claude insight failed for ${userId}:`, err);
+        }
+
+        // Save report
+        const now = new Date();
+        const periodEnd = new Date(now);
+        const periodStart = new Date(now);
+        periodStart.setDate(periodStart.getDate() - 7);
+
+        await supabase.from("content_reports").upsert(
+          {
+            user_id: userId,
+            period_start: periodStart.toISOString().split("T")[0],
+            period_end: periodEnd.toISOString().split("T")[0],
+            category_breakdown: report.categories,
+            top_category: report.top_category,
+            insight,
+            recommendation,
+          },
+          { onConflict: "user_id,period_start" }
+        );
 
         processed++;
       });

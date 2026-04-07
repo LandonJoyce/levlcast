@@ -17,6 +17,8 @@ export default function DashboardScreen() {
   const [streak, setStreak] = useState(0);
   const [burnout, setBurnout] = useState<any>(null);
   const [burnoutExpanded, setBurnoutExpanded] = useState(false);
+  const [contentReport, setContentReport] = useState<any>(null);
+  const [contentExpanded, setContentExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -58,14 +60,17 @@ export default function DashboardScreen() {
       clips: clipsRes.data?.length || 0,
     });
 
-    // Fetch burnout data (non-blocking)
+    // Fetch burnout + content report data (non-blocking)
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/burnout`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (res.ok) setBurnout(await res.json());
+        const headers = { Authorization: `Bearer ${session.access_token}` };
+        const [burnoutRes, contentRes] = await Promise.all([
+          fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/burnout`, { headers }),
+          fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/monetization`, { headers }),
+        ]);
+        if (burnoutRes.ok) setBurnout(await burnoutRes.json());
+        if (contentRes.ok) setContentReport(await contentRes.json());
       }
     } catch {} // non-fatal
 
@@ -142,6 +147,9 @@ export default function DashboardScreen() {
 
       {/* Streamer Health */}
       {burnout?.latest && <BurnoutHealthCard data={burnout} expanded={burnoutExpanded} onToggle={() => setBurnoutExpanded(!burnoutExpanded)} />}
+
+      {/* Content Performance */}
+      {contentReport?.latest && <ContentPerformanceCard data={contentReport.latest} expanded={contentExpanded} onToggle={() => setContentExpanded(!contentExpanded)} />}
 
       {/* Stats grid */}
       <View style={styles.grid}>
@@ -289,6 +297,93 @@ function BurnoutHealthCard({ data, expanded, onToggle }: { data: any; expanded: 
   );
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  hype: 'Hype', funny: 'Comedy', educational: 'Educational', emotional: 'Emotional',
+  clutch_play: 'Clutch Plays', rage: 'Rage', wholesome: 'Wholesome',
+};
+
+function contentFallbackInsight(report: any): string {
+  const cats = report.category_breakdown || [];
+  if (cats.length === 0) return "We're analyzing your content mix. Check back after a few more streams.";
+  const top = cats[0];
+  const label = CATEGORY_LABELS[top.category] || top.category;
+  if (top.growth_rating === 'high') {
+    return `Your ${label.toLowerCase()} content is your strongest performer with an avg score of ${top.avg_score} across ${top.vod_count} streams.`;
+  }
+  return `You've streamed ${cats.length} content styles recently. ${label} content leads with a ${top.avg_score} avg score.`;
+}
+
+function contentFallbackRec(report: any): string {
+  const cats = report.category_breakdown || [];
+  if (cats.length === 0) return 'Keep streaming and we\'ll start tracking which content types work best for your growth.';
+  const top = cats[0];
+  const label = CATEGORY_LABELS[top.category] || top.category;
+  if (cats.length === 1) return `You've been consistent with ${label.toLowerCase()} content. Try mixing in a different style to see how your audience responds.`;
+  return `Double down on ${label.toLowerCase()} content this week — it's driving the most growth for your channel.`;
+}
+
+function ratingColor(rating: string) {
+  if (rating === 'high') return colors.green;
+  if (rating === 'medium') return colors.yellow;
+  return colors.muted;
+}
+
+function ContentPerformanceCard({ data, expanded, onToggle }: { data: any; expanded: boolean; onToggle: () => void }) {
+  const categories: any[] = data.category_breakdown || [];
+  if (categories.length === 0) return null;
+
+  const insight = data.insight || contentFallbackInsight(data);
+  const recommendation = data.recommendation || contentFallbackRec(data);
+  const topLabel = data.top_category ? (CATEGORY_LABELS[data.top_category] || data.top_category) : null;
+
+  return (
+    <TouchableOpacity
+      style={[styles.contentCard]}
+      onPress={onToggle}
+      activeOpacity={0.8}
+    >
+      <View style={styles.contentHeader}>
+        <Text style={styles.contentLabel}>CONTENT PERFORMANCE</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {topLabel && <Text style={styles.contentTopCat}>{topLabel}</Text>}
+          <Text style={{ fontSize: 12, color: colors.muted }}>{expanded ? '▲' : '▼'}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.contentInsight}>{insight}</Text>
+
+      {expanded && (
+        <View style={styles.contentExpanded}>
+          <View style={styles.contentRecCard}>
+            <Text style={styles.contentRecTitle}>THIS WEEK'S STRATEGY</Text>
+            <Text style={styles.contentRecText}>{recommendation}</Text>
+          </View>
+
+          <Text style={styles.contentBreakdownTitle}>CATEGORY BREAKDOWN</Text>
+          {categories.map((cat: any) => {
+            const label = CATEGORY_LABELS[cat.category] || cat.category;
+            const deltaStr = cat.follower_delta >= 0 ? `+${cat.follower_delta}` : `${cat.follower_delta}`;
+            return (
+              <View key={cat.category} style={[styles.catRow, { borderColor: ratingColor(cat.growth_rating) + '33' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.catName}>{label}</Text>
+                  <Text style={styles.catDetail}>
+                    {cat.vod_count} stream{cat.vod_count !== 1 ? 's' : ''} · avg {cat.avg_score} · {cat.total_peaks} peak{cat.total_peaks !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={[styles.catDelta, { color: cat.follower_delta >= 0 ? colors.green : colors.red }]}>{deltaStr}</Text>
+                  <Text style={styles.catDeltaLabel}>followers</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <View style={[styles.statCard, accent && styles.statCardAccent]}>
@@ -352,4 +447,19 @@ const styles = StyleSheet.create({
   signalStatus: { fontSize: 11, fontWeight: '700', width: 52, textAlign: 'right' },
   burnoutSparkline: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24 },
   burnoutBar: { flex: 1, borderRadius: 2, minHeight: 4 },
+  contentCard: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', backgroundColor: 'rgba(124,58,237,0.04)', padding: 16, marginBottom: 24 },
+  contentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  contentLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1 },
+  contentTopCat: { fontSize: 13, fontWeight: '700', color: colors.accentLight },
+  contentInsight: { fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 19 },
+  contentExpanded: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  contentRecCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 14, marginBottom: 14 },
+  contentRecTitle: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 6 },
+  contentRecText: { fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 19 },
+  contentBreakdownTitle: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 10 },
+  catRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.02)' },
+  catName: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 2 },
+  catDetail: { fontSize: 11, color: colors.muted },
+  catDelta: { fontSize: 14, fontWeight: '800' },
+  catDeltaLabel: { fontSize: 9, color: colors.muted },
 });
