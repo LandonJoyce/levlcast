@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
@@ -19,6 +19,8 @@ export default function DashboardScreen() {
   const [burnoutExpanded, setBurnoutExpanded] = useState(false);
   const [contentReport, setContentReport] = useState<any>(null);
   const [contentExpanded, setContentExpanded] = useState(false);
+  const [collab, setCollab] = useState<any>(null);
+  const [collabExpanded, setCollabExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -65,12 +67,14 @@ export default function DashboardScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const headers = { Authorization: `Bearer ${session.access_token}` };
-        const [burnoutRes, contentRes] = await Promise.all([
+        const [burnoutRes, contentRes, collabRes] = await Promise.all([
           fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/burnout`, { headers }),
           fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/monetization`, { headers }),
+          fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/collab`, { headers }),
         ]);
         if (burnoutRes.ok) setBurnout(await burnoutRes.json());
         if (contentRes.ok) setContentReport(await contentRes.json());
+        if (collabRes.ok) setCollab(await collabRes.json());
       }
     } catch {} // non-fatal
 
@@ -150,6 +154,9 @@ export default function DashboardScreen() {
 
       {/* Content Performance */}
       {contentReport?.latest && <ContentPerformanceCard data={contentReport.latest} expanded={contentExpanded} onToggle={() => setContentExpanded(!contentExpanded)} />}
+
+      {/* Collab Finder */}
+      <CollabFinderCard collab={collab} expanded={collabExpanded} onToggle={() => setCollabExpanded(!collabExpanded)} />
 
       {/* Stats grid */}
       <View style={styles.grid}>
@@ -291,6 +298,104 @@ function BurnoutHealthCard({ data, expanded, onToggle }: { data: any; expanded: 
               </View>
             </View>
           )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function CollabFinderCard({ collab, expanded, onToggle }: { collab: any; expanded: boolean; onToggle: () => void }) {
+  const [joining, setJoining] = useState(false);
+  const profile = collab?.profile;
+  const suggestions: any[] = collab?.suggestions || [];
+
+  const handleOptIn = async () => {
+    setJoining(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/collab`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: true }),
+        });
+      }
+    } catch {}
+    setJoining(false);
+  };
+
+  // Not opted in
+  if (!profile?.enabled) {
+    return (
+      <View style={styles.collabCard}>
+        <Text style={styles.collabLabel}>COLLAB FINDER</Text>
+        <Text style={styles.collabInsight}>Find streamers to collab with based on your content style, audience size, and strengths.</Text>
+        <TouchableOpacity style={styles.collabOptInBtn} onPress={handleOptIn} disabled={joining}>
+          <Text style={styles.collabOptInText}>{joining ? 'Joining...' : 'Join Collab Matching'}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Opted in, no suggestions
+  if (suggestions.length === 0) {
+    return (
+      <View style={[styles.collabCard, { borderColor: 'rgba(124,58,237,0.2)', backgroundColor: 'rgba(124,58,237,0.04)' }]}>
+        <Text style={styles.collabLabel}>COLLAB FINDER</Text>
+        <Text style={styles.collabInsight}>You're in the matching pool. We'll find collab partners for you every Monday.</Text>
+      </View>
+    );
+  }
+
+  // Has suggestions
+  return (
+    <TouchableOpacity
+      style={[styles.collabCard, { borderColor: 'rgba(124,58,237,0.2)', backgroundColor: 'rgba(124,58,237,0.04)' }]}
+      onPress={onToggle}
+      activeOpacity={0.8}
+    >
+      <View style={styles.collabHeader}>
+        <Text style={styles.collabLabel}>COLLAB FINDER</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.collabMatchCount}>{suggestions.length} match{suggestions.length !== 1 ? 'es' : ''}</Text>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{expanded ? '▲' : '▼'}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.collabInsight}>
+        Top match: <Text style={{ fontWeight: '700', color: colors.text }}>{suggestions[0].display_name}</Text>
+        {' — '}{suggestions[0].reasons?.[0] || 'Great potential collab partner'}
+      </Text>
+
+      {expanded && (
+        <View style={styles.collabExpanded}>
+          {suggestions.map((s: any) => (
+            <View key={s.id} style={styles.collabMatchRow}>
+              {s.avatar_url ? (
+                <Image source={{ uri: s.avatar_url }} style={styles.collabAvatar} />
+              ) : (
+                <View style={[styles.collabAvatar, { backgroundColor: 'rgba(124,58,237,0.2)', alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ color: colors.accentLight, fontSize: 14, fontWeight: '700' }}>{s.display_name?.[0] || '?'}</Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Text style={styles.collabMatchName}>{s.display_name}</Text>
+                  <Text style={styles.collabMatchScore}>{s.match_score}%</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                  {(s.reasons || []).map((r: string, i: number) => (
+                    <Text key={i} style={styles.collabReason}>{r}</Text>
+                  ))}
+                </View>
+              </View>
+              {s.twitch_login && (
+                <TouchableOpacity onPress={() => Linking.openURL(`https://twitch.tv/${s.twitch_login}`)} style={styles.collabTwitchBtn}>
+                  <Text style={styles.collabTwitchBtnText}>View</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
         </View>
       )}
     </TouchableOpacity>
@@ -462,4 +567,19 @@ const styles = StyleSheet.create({
   catDetail: { fontSize: 11, color: colors.muted },
   catDelta: { fontSize: 14, fontWeight: '800' },
   catDeltaLabel: { fontSize: 9, color: colors.muted },
+  collabCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 16, marginBottom: 24 },
+  collabHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  collabLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 10 },
+  collabInsight: { fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 19 },
+  collabOptInBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10, marginTop: 14, alignSelf: 'flex-start' },
+  collabOptInText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  collabMatchCount: { fontSize: 13, fontWeight: '700', color: colors.accentLight },
+  collabExpanded: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', gap: 10 },
+  collabMatchRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  collabAvatar: { width: 36, height: 36, borderRadius: 18 },
+  collabMatchName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  collabMatchScore: { fontSize: 12, fontWeight: '800', color: colors.accentLight },
+  collabReason: { fontSize: 10, color: colors.muted, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
+  collabTwitchBtn: { backgroundColor: 'rgba(124,58,237,0.15)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  collabTwitchBtnText: { color: colors.accentLight, fontSize: 11, fontWeight: '700' },
 });

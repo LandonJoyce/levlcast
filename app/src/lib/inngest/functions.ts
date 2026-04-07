@@ -18,6 +18,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
+import { buildUserProfile, scoreMatch } from "@/lib/collab";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -574,6 +575,138 @@ JSON only: { "insight": "...", "recommendation": "..." }`,
           },
           { onConflict: "user_id,period_start" }
         );
+
+        processed++;
+      });
+    }
+
+    return { processed };
+  }
+);
+
+// ─── Collab Matching ──────────────────────────────────────────────────────
+// Runs every Monday at 9:30 AM UTC (after burnout + content reports).
+// For each user who has opted in to collab matching, computes the top 5
+// best matches from other opted-in users based on content style, audience
+// size, quality level, and complementary strengths.
+
+export const computeCollabSuggestions = inngest.createFunction(
+  { id: "compute-collab-suggestions" },
+  { cron: "30 9 * * 1" }, // every Monday 9:30am UTC
+  async ({ step }) => {
+    const supabase = createAdminClient();
+
+    const collabUsers = await step.run("find-collab-users", async () => {
+      const { data } = await supabase
+        .from("collab_profiles")
+        .select("user_id, preferred_categories, min_followers, max_followers")
+        .eq("enabled", true);
+
+      return data || [];
+    });
+
+    if (collabUsers.length < 2) return { processed: 0, reason: "need at least 2 opted-in users" };
+
+    const profiles = await step.run("build-profiles", async () => {
+      const userIds = collabUsers.map((u: any) => u.user_id);
+
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("id, twitch_display_name, twitch_avatar_url")
+        .in("id", userIds);
+
+      const { data: vodRows } = await supabase
+        .from("vods")
+        .select("user_id, peak_data, coach_report")
+        .in("user_id", userIds)
+        .eq("status", "ready")
+        .not("peak_data", "is", null)
+        .not("coach_report", "is", null);
+
+      const { data: followerRows } = await supabase
+        .from("follower_snapshots")
+        .select("user_id, follower_count")
+        .in("user_id", userIds)
+        .eq("platform", "twitch")
+        .order("snapped_at", { ascending: false });
+
+      const { data: burnoutRows } = await supabase
+        .from("burnout_snapshots")
+        .select("user_id, score")
+        .in("user_id", userIds)
+        .order("computed_at", { ascending: false });
+
+      const latestFollowers: Record<string, number> = {};
+      for (const row of followerRows || []) {
+        if (!latestFollowers[row.user_id]) latestFollowers[row.user_id] = row.follower_count;
+      }
+
+      const latestBurnout: Record<string, number> = {};
+      for (const row of burnoutRows || []) {
+        if (!latestBurnout[row.user_id]) latestBurnout[row.user_id] = row.score;
+      }
+
+      const vodsByUser: Record<string, any[]> = {};
+      for (const vod of vodRows || []) {
+        if (!vodsByUser[vod.user_id]) vodsByUser[vod.user_id] = [];
+        vodsByUser[vod.user_id].push(vod);
+      }
+
+      const result: Record<string, ReturnType<typeof buildUserProfile>> = {};
+      for (const p of profileRows || []) {
+        const vods = vodsByUser[p.id] || [];
+        if (vods.length < 3) continue;
+        result[p.id] = buildUserProfile(
+          p.id,
+          p.twitch_display_name || "Streamer",
+          p.twitch_avatar_url,
+          latestFollowers[p.id] || 0,
+          vods,
+          latestBurnout[p.id] || 0
+        );
+      }
+
+      return result;
+    });
+
+    let processed = 0;
+
+    for (const collabUser of collabUsers) {
+      const userId = collabUser.user_id;
+      const userProfile = profiles[userId];
+      if (!userProfile) continue;
+
+      await step.run(`match-${userId.slice(0, 8)}`, async () => {
+        const preferences = {
+          minFollowers: collabUser.min_followers || undefined,
+          maxFollowers: collabUser.max_followers || undefined,
+          preferredCategories: collabUser.preferred_categories || undefined,
+        };
+
+        const matches: { matchUserId: string; score: number; reasons: string[] }[] = [];
+
+        for (const [candidateId, candidateProfile] of Object.entries(profiles)) {
+          if (candidateId === userId) continue;
+          const match = scoreMatch(userProfile, candidateProfile, preferences);
+          if (match) matches.push(match);
+        }
+
+        matches.sort((a, b) => b.score - a.score);
+        const top5 = matches.slice(0, 5);
+
+        for (const m of top5) {
+          await supabase.from("collab_suggestions").upsert(
+            {
+              user_id: userId,
+              match_user_id: m.matchUserId,
+              match_score: m.score,
+              reasons: m.reasons,
+              status: "new",
+              computed_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,match_user_id" }
+          );
+        }
 
         processed++;
       });

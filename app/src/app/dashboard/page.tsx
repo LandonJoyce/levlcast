@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BurnoutCard } from "@/components/dashboard/burnout-card";
 import { MonetizationCard } from "@/components/dashboard/monetization-card";
+import { CollabCard } from "@/components/dashboard/collab-card";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
 import { Film, Scissors, BarChart3 } from "lucide-react";
@@ -69,6 +70,11 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
             <BurnoutCard />
             <MonetizationCard />
+          </div>
+
+          {/* Collab Finder */}
+          <div className="mb-6">
+            <CollabCard />
           </div>
 
           {/* Stats grid */}
