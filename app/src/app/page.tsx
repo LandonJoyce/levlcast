@@ -114,7 +114,11 @@ const proFeatures = [
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-bg text-white">
+    <main className="min-h-screen bg-bg text-white noise">
+      {/* Global mesh gradient */}
+      <div className="fixed inset-0 mesh-gradient pointer-events-none z-0" />
+
+      <div className="relative z-[1]">
       <NavBar />
 
       {/* ─── Hero ─── */}
@@ -194,7 +198,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Pain points ─── */}
-      <section className="py-20 border-t border-border">
+      <section className="py-20 border-t border-border relative overflow-hidden">
+        <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-center mb-4">
             You don&apos;t have a team. Now you do.
@@ -236,7 +241,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── How It Works ─── */}
-      <section className="py-24 border-t border-border" id="how-it-works">
+      <section className="py-24 border-t border-border relative overflow-hidden" id="how-it-works">
+        <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
             How It Works
@@ -269,7 +275,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── What Your Manager Does ─── */}
-      <section className="py-24 border-t border-border" id="features">
+      <section className="py-24 border-t border-border relative overflow-hidden" id="features">
+        <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
             Your Manager&apos;s Toolkit
@@ -415,7 +422,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Streamer Type Examples ─── */}
-      <section className="py-24 border-t border-border">
+      <section className="py-24 border-t border-border relative overflow-hidden">
+        <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
             Adapts To You
@@ -558,7 +566,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Pricing ─── */}
-      <section id="pricing" className="py-24 border-t border-border">
+      <section id="pricing" className="py-24 border-t border-border relative overflow-hidden">
+        <div className="absolute inset-0 glow-bottom pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">Pricing</p>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
@@ -700,6 +709,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      </div>
     </main>
   );
 }

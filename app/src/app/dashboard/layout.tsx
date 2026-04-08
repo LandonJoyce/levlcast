@@ -36,9 +36,11 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-bg relative">
+      {/* Subtle ambient glow */}
+      <div className="fixed inset-0 dashboard-glow pointer-events-none z-0" />
       {/* Desktop sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block relative z-[1]">
         <Sidebar user={userData} />
       </div>
 
@@ -63,7 +65,7 @@ export default async function DashboardLayout({
       </header>
 
       {/* Main content */}
-      <main className="lg:pl-[240px] pt-14 lg:pt-0 pb-20 lg:pb-0">
+      <main className="lg:pl-[240px] pt-14 lg:pt-0 pb-20 lg:pb-0 relative z-[1]">
         <div className="max-w-[1100px] mx-auto px-5 lg:px-8 py-8">
           {children}
         </div>

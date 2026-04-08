@@ -28,11 +28,13 @@ export default function SubscribeScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    Promise.all([getProPackage(), getAnnualPackage()]).then(([monthly, annual]) => {
-      setMonthlyPkg(monthly);
-      setAnnualPkg(annual);
-      setLoading(false);
-    });
+    Promise.all([getProPackage(), getAnnualPackage()])
+      .then(([monthly, annual]) => {
+        setMonthlyPkg(monthly);
+        setAnnualPkg(annual);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const activePkg = selected === 'annual' ? annualPkg : monthlyPkg;
