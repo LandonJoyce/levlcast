@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const usage = await getUserUsage(user.id);
+    const usage = await getUserUsage(user.id, supabase);
     if (usage.plan === "free") {
       return NextResponse.json({ locked: true, latest: null, history: [] });
     }
