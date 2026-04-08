@@ -47,6 +47,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "61fc2d39-8a0d-403c-b95a-6aa149e0270b"
+      }
+    },
+    "owner": "orbitxd14"
   }
 }
