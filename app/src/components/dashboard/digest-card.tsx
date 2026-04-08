@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Newspaper, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, TrendingDown } from "lucide-react";
+import { Newspaper, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, TrendingDown, Lock } from "lucide-react";
+import { UpgradeModal } from "./upgrade-modal";
 
 interface WeeklyDigest {
   headline: string;
@@ -23,16 +24,56 @@ export function DigestCard() {
   const [latest, setLatest] = useState<WeeklyDigest | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [locked, setLocked] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/digest")
       .then((r) => r.json())
-      .then((data) => setLatest(data.latest))
+      .then((data) => {
+        if (data.locked) { setLocked(true); return; }
+        setLatest(data.latest);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !latest) return null;
+  if (loading) return null;
+
+  if (locked) {
+    return (
+      <>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Newspaper size={16} className="text-muted" />
+            <span className="text-xs font-semibold text-muted uppercase tracking-wide">Weekly Digest</span>
+          </div>
+          <div className="flex flex-col items-center text-center py-4 gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Lock size={18} className="text-accent-light" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white mb-1">Weekly Digest is Pro</p>
+              <p className="text-xs text-muted leading-relaxed">Every Monday your manager sends a full week recap — streams, clips, follower growth, and your action plan.</p>
+            </div>
+            <button
+              onClick={() => setUpgradeOpen(true)}
+              className="mt-1 px-4 py-2 rounded-lg bg-accent text-white text-xs font-bold hover:opacity-90 transition-opacity"
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+        </div>
+        <UpgradeModal
+          isOpen={upgradeOpen}
+          onClose={() => setUpgradeOpen(false)}
+          reason="Upgrade to Pro to unlock the Weekly Digest — every Monday your manager sends a full recap with your action plan for the week."
+        />
+      </>
+    );
+  }
+
+  if (!latest) return null;
 
   const followerDelta = latest.follower_delta ?? 0;
   const deltaColor = followerDelta >= 0 ? "text-green-400" : "text-red-400";

@@ -100,13 +100,13 @@ const freeFeatures = [
   "1 VOD analysis per month",
   "AI coaching report",
   "5 clips total",
-  "Weekly manager digest",
-  "Burnout monitoring",
 ];
 const proFeatures = [
   "20 VOD analyses per month",
   "Full AI coach report every stream",
   "Unlimited clip generation",
+  "Weekly manager digest",
+  "Burnout monitoring",
   "Content performance analytics",
   "Collab matching",
   "Priority processing",

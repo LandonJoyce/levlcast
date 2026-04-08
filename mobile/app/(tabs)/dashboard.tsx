@@ -154,10 +154,14 @@ export default function DashboardScreen() {
       )}
 
       {/* Weekly Digest */}
-      {digest?.latest && <WeeklyDigestCard data={digest.latest} expanded={digestExpanded} onToggle={() => setDigestExpanded(!digestExpanded)} />}
+      {digest?.locked
+        ? <LockedCard title="Weekly Digest" description="Every Monday your manager sends a full week recap — streams, clips, follower growth, and your action plan." onUpgrade={() => router.push('/subscribe')} />
+        : digest?.latest && <WeeklyDigestCard data={digest.latest} expanded={digestExpanded} onToggle={() => setDigestExpanded(!digestExpanded)} />}
 
       {/* Streamer Health */}
-      {burnout?.latest && <BurnoutHealthCard data={burnout} expanded={burnoutExpanded} onToggle={() => setBurnoutExpanded(!burnoutExpanded)} />}
+      {burnout?.locked
+        ? <LockedCard title="Burnout Monitoring" description="Your manager tracks energy, frequency, and health signals weekly to keep you streaming without burning out." onUpgrade={() => router.push('/subscribe')} />
+        : burnout?.latest && <BurnoutHealthCard data={burnout} expanded={burnoutExpanded} onToggle={() => setBurnoutExpanded(!burnoutExpanded)} />}
 
       {/* Content Performance */}
       {contentReport?.latest && <ContentPerformanceCard data={contentReport.latest} expanded={contentExpanded} onToggle={() => setContentExpanded(!contentExpanded)} />}
@@ -184,6 +188,21 @@ export default function DashboardScreen() {
         <Text style={styles.actionSub}>See what's driving your follower growth</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function LockedCard({ title, description, onUpgrade }: { title: string; description: string; onUpgrade: () => void }) {
+  return (
+    <View style={styles.lockedCard}>
+      <View style={styles.lockedIconWrap}>
+        <Text style={styles.lockedIcon}>🔒</Text>
+      </View>
+      <Text style={styles.lockedTitle}>{title} is Pro</Text>
+      <Text style={styles.lockedDesc}>{description}</Text>
+      <TouchableOpacity style={styles.lockedBtn} onPress={onUpgrade}>
+        <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -637,6 +656,13 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   retryBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
   retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  lockedCard: { backgroundColor: 'rgba(124,58,237,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', padding: 20, marginBottom: 24, alignItems: 'center' },
+  lockedIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(124,58,237,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  lockedIcon: { fontSize: 20 },
+  lockedTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 6, textAlign: 'center' },
+  lockedDesc: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19, marginBottom: 16 },
+  lockedBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 },
+  lockedBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   burnoutCard: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 24 },
   burnoutHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   burnoutLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1 },

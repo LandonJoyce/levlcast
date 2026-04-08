@@ -7,12 +7,18 @@
 
 import { NextResponse } from "next/server";
 import { createClientFromRequest } from "@/lib/supabase/server";
+import { getUserUsage } from "@/lib/limits";
 
 export async function GET(request: Request) {
   try {
     const supabase = await createClientFromRequest(request);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const usage = await getUserUsage(user.id);
+    if (usage.plan === "free") {
+      return NextResponse.json({ locked: true, latest: null, history: [] });
+    }
 
     const { data: snapshots, error } = await supabase
       .from("burnout_snapshots")
