@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "LevlCast — Your Coach. Every Stream.";
+export const alt = "LevlCast — Your Personal Streaming Manager";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -63,8 +63,8 @@ export default function Image() {
             maxWidth: 900,
           }}
         >
-          Your Coach.{" "}
-          <span style={{ color: "#A855F7" }}>Every Stream.</span>
+          Your Personal{" "}
+          <span style={{ color: "#A855F7" }}>Stream Manager.</span>
         </div>
 
         {/* Subheadline */}
@@ -77,8 +77,8 @@ export default function Image() {
             lineHeight: 1.4,
           }}
         >
-          AI-powered tools that analyze your Twitch VODs, generate clips, and
-          tell you exactly what to improve.
+          AI coaching, burnout detection, content strategy, collab matching,
+          and a weekly game plan for your stream.
         </div>
 
         {/* Badge */}

@@ -11,29 +11,28 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.levlcast.com"),
   title: {
-    default: "LevlCast — Twitch VOD Analyzer, Clip Generator & AI Stream Coach",
+    default: "LevlCast — Your Personal Streaming Manager",
     template: "%s | LevlCast",
   },
   description:
-    "LevlCast analyzes your Twitch VODs, finds your best moments, generates clips automatically, and gives you an AI coaching report after every stream. Free to start — no credit card required.",
+    "LevlCast is your personal streaming manager — coaching every stream, detecting burnout, finding collabs, and delivering a weekly game plan. Free to start.",
   keywords: [
+    "twitch stream manager",
+    "personal streaming manager",
     "twitch vod analyzer",
     "twitch clip maker",
-    "twitch highlights generator",
-    "auto clip generator twitch",
     "twitch stream coaching",
     "how to grow on twitch",
     "twitch stream analytics",
-    "twitch content tools",
-    "vod to clips",
-    "twitch peak moments",
+    "twitch burnout detection",
+    "streamer growth tools",
+    "twitch collab finder",
     "AI stream analysis",
-    "twitch growth tools",
-    "streamer tools",
+    "twitch content strategy",
     "stream coaching app",
     "twitch clip generator",
-    "twitch performance analytics",
     "best tools for twitch streamers",
+    "streamer manager app",
   ],
   alternates: {
     canonical: "/",
@@ -41,16 +40,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast — Twitch VOD Analyzer & AI Stream Coach",
+    title: "LevlCast — Your Personal Streaming Manager",
     description:
-      "Automatically analyze your Twitch VODs, generate clips from your best moments, and get an AI coaching report after every stream. Free to start.",
+      "Your personal streaming manager — AI coaching, burnout detection, content strategy, collab matching, and a weekly game plan. Free to start.",
     siteName: "LevlCast",
   },
   twitter: {
     card: "summary_large_image",
-    title: "LevlCast — Twitch VOD Analyzer & AI Stream Coach",
+    title: "LevlCast — Your Personal Streaming Manager",
     description:
-      "Automatically analyze your Twitch VODs, generate clips from your best moments, and get an AI coaching report after every stream. Free to start.",
+      "Your personal streaming manager — AI coaching, burnout detection, content strategy, collab matching, and a weekly game plan. Free to start.",
     site: "@levlcast",
   },
   manifest: "/manifest.json",
@@ -76,7 +75,7 @@ const structuredData = {
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Web, iOS",
   description:
-    "AI-powered tools that turn your Twitch stream into clips, content, and a bigger audience — automatically.",
+    "Your personal streaming manager — AI coaching, burnout detection, content strategy, collab matching, clip generation, and a weekly game plan for Twitch streamers.",
   url: "https://www.levlcast.com",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },

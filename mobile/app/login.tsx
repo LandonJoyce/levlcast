@@ -84,7 +84,7 @@ export default function LoginScreen() {
 
       <View style={styles.content}>
         <Text style={styles.logo}>LevlCast</Text>
-        <Text style={styles.tagline}>Your AI Stream Coach</Text>
+        <Text style={styles.tagline}>Your Personal Stream Manager</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Welcome</Text>

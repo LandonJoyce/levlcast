@@ -11,9 +11,10 @@ import { PurchasesPackage } from 'react-native-purchases';
 
 const FEATURES = [
   '20 VOD analyses per month',
-  'AI coaching report after every stream',
-  '20 clips per month',
-  'Growth attribution tracking',
+  'Full AI coaching every stream',
+  'Unlimited clip generation',
+  'Content performance analytics',
+  'Collab matching',
   'Priority processing',
 ];
 
@@ -88,7 +89,7 @@ export default function SubscribeScreen() {
       </View>
 
       <Text style={styles.title}>Upgrade to Pro</Text>
-      <Text style={styles.sub}>The only tool that tells you why your stream did or did not work.</Text>
+      <Text style={styles.sub}>Full management for your streaming career — coaching, strategy, and growth.</Text>
 
       {/* Plan toggle */}
       <View style={styles.toggle}>

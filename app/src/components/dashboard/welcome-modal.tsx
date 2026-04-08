@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Twitch, Brain, TrendingUp, X } from "lucide-react";
+import { Twitch, Brain, Zap, X } from "lucide-react";
 
 const STORAGE_KEY = "levlcast_welcome_seen";
 
@@ -12,21 +12,21 @@ const steps = [
     color: "text-[#9146FF]",
     bg: "bg-[#9146FF]/10",
     title: "Sync your VODs",
-    desc: "Connect Twitch and pull in your recent streams instantly.",
+    desc: "Connect Twitch and your recent streams import automatically.",
   },
   {
     icon: Brain,
     color: "text-accent-light",
     bg: "bg-accent/10",
-    title: "Get your coach report",
-    desc: "AI analyzes your stream, scores it, and finds your best moments.",
+    title: "Get managed",
+    desc: "Your AI manager coaches every stream, tracks your health, and finds collabs.",
   },
   {
-    icon: TrendingUp,
+    icon: Zap,
     color: "text-neon",
     bg: "bg-neon/10",
-    title: "Clip and grow",
-    desc: "Generate clips from peak moments and post directly to YouTube.",
+    title: "Grow every week",
+    desc: "Weekly game plan, clip generation, and content strategy — all on autopilot.",
   },
 ];
 
@@ -77,7 +77,7 @@ export default function WelcomeModal({ name }: { name: string }) {
             Welcome to LevlCast
           </p>
           <h2 className="text-2xl font-extrabold tracking-tight">
-            Hey {name}, let's level up your stream.
+            Hey {name}, meet your stream manager.
           </h2>
         </div>
 

@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 
 const navLinks = [
   { label: "How It Works", href: "#how-it-works" },
+  { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ];
@@ -36,7 +37,7 @@ export default function NavBar() {
             href="/auth/login"
             className="btn-accent text-sm px-5 py-2.5"
           >
-            Analyze Free
+            Get Started Free
           </Link>
         </div>
 
@@ -69,7 +70,7 @@ export default function NavBar() {
               className="btn-accent text-sm text-center py-3 block"
               onClick={() => setOpen(false)}
             >
-              Analyze Free
+              Get Started Free
             </Link>
           </div>
         </div>

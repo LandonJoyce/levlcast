@@ -39,22 +39,22 @@ export default function LoginPage() {
           LevlCast
         </h1>
         <p className="text-muted text-sm mb-12">
-          LvL up your stream with AI-powered growth tools.
+          Your personal streaming manager.
         </p>
 
         {/* Twitch login card */}
         <div className="bg-surface border border-border rounded-2xl p-8">
           <h2 className="text-lg font-bold mb-2">Welcome to LevlCast</h2>
           <p className="text-sm text-muted mb-6">
-            Connect your Twitch account to analyze your first VOD free.
+            Connect your Twitch account to get your personal manager.
           </p>
 
           {/* Value bullets */}
           <ul className="space-y-2.5 mb-8">
             {[
-              "AI finds your best clip moments automatically",
-              "Full coaching report after every stream",
-              "No credit card required to start",
+              "AI coaching report after every stream",
+              "Burnout detection and content strategy",
+              "Weekly game plan with action items",
             ].map((item) => (
               <li key={item} className="flex items-center gap-2.5 text-sm text-muted">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent-light flex-shrink-0" />

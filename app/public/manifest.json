@@ -1,7 +1,7 @@
 {
   "name": "LevlCast",
   "short_name": "LevlCast",
-  "description": "AI-powered tools that turn your stream into clips, content, and a bigger audience.",
+  "description": "Your personal streaming manager — AI coaching, burnout detection, content strategy, and a weekly game plan.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#080c14",
