@@ -135,7 +135,7 @@ export function CollabCard() {
       {/* Top match preview */}
       <p className="text-sm text-white/80 leading-relaxed">
         Top match: <span className="font-semibold text-white">{suggestions[0].display_name}</span>
-        {" — "}{suggestions[0].reasons[0] || "Great potential collab partner"}
+        {" — "}{suggestions[0].reasons?.[0] || "Great potential collab partner"}
       </p>
 
       {/* Expanded — full match list */}

@@ -220,7 +220,7 @@ export default async function ClipsPage() {
                         </span>
                         <span className="inline-flex items-center gap-1 text-xs text-muted flex-shrink-0">
                           <Clock size={11} />
-                          {clip.duration_seconds}s
+                          {clip.duration_seconds ?? "—"}s
                         </span>
                       </div>
 
