@@ -40,7 +40,7 @@ export default async function DashboardLayout({
       {/* Subtle ambient glow */}
       <div className="fixed inset-0 dashboard-glow pointer-events-none z-0" />
       {/* Desktop sidebar */}
-      <div className="hidden lg:block relative z-[1]">
+      <div className="hidden lg:block relative z-[2]">
         <Sidebar user={userData} />
       </div>
 
