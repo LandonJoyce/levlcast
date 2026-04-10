@@ -31,6 +31,7 @@ const DEEPGRAM_PARAMS = new URLSearchParams({
   punctuate: "true",
   utterances: "true",
   utt_split: "1.5",
+  disfluencies: "true",   // keep "uh", "oh", "wait", "what" — critical emotional markers
 }).toString();
 
 /**
@@ -76,6 +77,7 @@ export async function transcribePassThrough(stream: PassThrough): Promise<Transc
     punctuate: "true",
     utterances: "true",
     utt_split: "1.5",
+    disfluencies: "true",
   });
 
   const res = await fetch(`${DEEPGRAM_API}?${params}`, {
@@ -125,6 +127,7 @@ export async function transcribeFile(
     punctuate: "true",
     utterances: "true",
     utt_split: "1.5",
+    disfluencies: "true",
   });
 
   const res = await withRetry(() => {

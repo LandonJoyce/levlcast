@@ -11,8 +11,8 @@
  *     then do a final re-ranking pass to pick the best 5 overall
  *
  * MODELS USED:
- *   - Peak detection: claude-haiku-4-5 (fast, cheap, good enough for scoring)
- *   - Coaching report: claude-sonnet-4-6 (slower, higher quality — flagship feature)
+ *   - Peak detection: claude-sonnet-4-6 (high quality — this is the MVP feature)
+ *   - Coaching report: claude-sonnet-4-6 (flagship feature)
  *
  * See src/types/index.ts for the Peak and CoachReport type definitions.
  */
@@ -33,83 +33,137 @@ export interface Peak {
 }
 
 /**
+ * Build a transcript string from segments, with explicit pause markers.
+ * Pauses of 8+ seconds are marked so Claude understands the stream's rhythm.
+ */
+function buildTranscript(segments: TranscriptSegment[]): string {
+  const lines: string[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    lines.push(`[${toSeconds(seg.start)}-${toSeconds(seg.end)}] ${seg.text}`);
+    if (i < segments.length - 1) {
+      const gap = segments[i + 1].start - seg.end;
+      if (gap >= 8) {
+        lines.push(`--- ${Math.round(gap)}s pause ---`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Snap a peak's boundaries to the nearest utterance boundaries.
+ * Prevents clips from starting/ending mid-sentence.
+ */
+function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): Peak {
+  if (segments.length === 0) return peak;
+
+  // Snap start: find the utterance that contains or is closest before peak.start
+  let snappedStart = peak.start;
+  for (const seg of segments) {
+    if (seg.start <= peak.start && seg.end >= peak.start) {
+      snappedStart = seg.start;
+      break;
+    }
+  }
+
+  // Snap end: find the utterance that contains or is closest after peak.end
+  let snappedEnd = peak.end;
+  for (const seg of segments) {
+    if (seg.start <= peak.end && seg.end >= peak.end) {
+      snappedEnd = seg.end;
+      break;
+    }
+  }
+
+  // Only apply if it doesn't shrink the clip below 15 seconds
+  if (snappedEnd - snappedStart >= 15) {
+    return { ...peak, start: snappedStart, end: snappedEnd };
+  }
+  return peak;
+}
+
+/**
  * Analyze a transcript with Claude to find peak/viral moments.
  * Returns scored peaks with clip boundaries, captions, and scroll-stopping hooks.
  */
-const PEAK_DETECTION_PROMPT = (vodTitle: string, transcript: string) => `Find the top viral clip moments from this Twitch stream transcript.
+function buildPeakDetectionPrompt(vodTitle: string, transcript: string): string {
+  return `Find the best moments to clip from this Twitch stream transcript for TikTok/short-form content.
 
 Stream title: "${vodTitle}"
 
-Timestamped transcript:
+Timestamped transcript (--- Xs pause --- marks significant silences):
 ${transcript}
 
-CRITICAL RULE — CLARITY FIRST:
-You are working from a speech transcript, not video. Audio transcription is imperfect — gaming terms, names, and in-game callouts are frequently misheard. You must ONLY clip moments where the streamer's emotional reaction is unmistakably clear in their own spoken words. Never infer what happened in the game from unclear transcript text. If you are not certain what the streamer said and why they reacted, skip it. A missed clip is better than a wrong one.
+YOUR JOB: Find 3-6 moments where the streamer has a genuine strong reaction or says something compelling enough to stop a viewer mid-scroll. These need to hook someone in the first 3 seconds.
 
-WHAT MAKES A GREAT TWITCH CLIP:
-- The streamer explicitly expresses a clear emotion in words — laughter, yelling, shock, hype, disbelief
-- Verbal cues that are unambiguous: "let's go", "no way", "are you kidding me", audible laughter, genuine rage
-- A strong opinion or hot take stated clearly in words that would spark debate
-- A funny moment where the streamer's reaction is the clip — not what happened in the game
-- A teaching moment where the streamer explains something clearly and confidently
+VERBAL PATTERNS THAT ALMOST ALWAYS MAKE GREAT CLIPS — actively look for these:
+- Exclamations at the start of an utterance: "WAIT", "NO", "BRO", "OH MY GOD", "WHAT", "ARE YOU SERIOUS", "NO WAY", "YO"
+- Repeated escalating words: "let's go let's go let's go", "no no no no", "wait wait wait", "oh oh oh"
+- Genuine laughter: "haha", "I'm dead", "I can't", "I'm crying", "bro I'm done"
+- Hot takes stated with conviction: "I actually think [strong opinion]", "real talk", "unpopular opinion", "nah [take]"
+- Disbelief or shock: "I can't believe", "how is that even", "there's no way", "that is actually insane"
+- Story setup with a clear payoff — buildup followed by a strong reaction
+- Genuine frustration, rage, or hype clearly expressed out loud
+- Anything where the streamer goes loud, fast, or emotional in their speech rhythm
 
-WHAT TO AVOID — BE STRICT:
-- Any moment where you are guessing what happened based on unclear or potentially misheard words
-- Gameplay callouts that depend on knowing what happened on screen — you cannot see the screen
-- Moments where the emotion is mild or ambiguous — only clip strong, obvious reactions
-- Inside jokes or moments needing too much context
-- Filler content: loading screens, AFK, dead air
-- If the transcript words seem garbled, misheard, or don't make sense in context — skip it
-- BACKGROUND AUDIO: Streamers play music and watch videos (YouTube, clips, etc.) on stream. If the transcript contains lyrics (rhyming, repetitive lines, song-like structure), scripted dialogue, news-anchor speech, or any audio that sounds like it came from a video/media source rather than a natural live conversation — skip it entirely. You are only looking for the streamer's own authentic reactions and commentary. When in doubt about whether words came from the streamer or background media, skip it.
+BACKGROUND AUDIO — critical filter:
+Streamers often have music or videos playing. Skip anything that looks like song lyrics (rhyming, repetitive structure), scripted dialogue, or text that sounds like it came from media rather than a live person talking. Only clip the streamer's own authentic voice and reactions.
 
-SCORING RUBRIC (0.0 - 1.0):
-- 0.9-1.0: Will stop mid-scroll. The streamer's reaction is unmistakably clear and universally relatable. No context needed.
-- 0.75-0.89: Strong clip. Clear emotion or payoff that is obvious from the words alone.
-- 0.65-0.74: Decent clip. Reaction is clear but may need some context.
-- Below 0.65: Do not include. When in doubt, leave it out.
+SCORING (0.0 - 1.0):
+- 0.85-1.0: Stops mid-scroll. Strong hook in first 3 seconds, universal reaction, needs zero context.
+- 0.70-0.84: Strong clip. Clear emotional peak with payoff, works standalone.
+- 0.60-0.69: Decent clip. Relatable with minimal context.
+- Below 0.60: Skip.
 
-CLIP BOUNDARIES:
-- Include 3-5 seconds of buildup before the peak so viewers feel the tension
-- Include 2-3 seconds after the payoff so the reaction lands fully
-- Target 30-75 seconds. Never exceed 90 seconds.
+CLIP BOUNDARIES — be precise:
+- Start: 4-6 seconds BEFORE the peak moment so the setup is there
+- End: 3-5 seconds AFTER the reaction so it fully lands
+- Duration: 30-90 seconds total. Sweet spot is 45-75 seconds.
+- Land on complete sentences — never cut mid-utterance
 
-IMPORTANT: No emojis anywhere. Clean text only.
-
-IMPORTANT: The transcript uses plain integer seconds (e.g. 813s means 813 seconds). Output "start" and "end" as plain integers in seconds — NOT as decimals, NOT as MM:SS format. A clip must be at least 20 seconds long.
+Timestamps are plain seconds (e.g. 813 = 813 seconds into the stream).
+Output "start" and "end" as plain integers. Minimum clip length: 20 seconds.
+No emojis. Clean text only.
 
 Respond with ONLY a JSON array (no markdown, no code fences):
 [
   {
-    "title": "<hook-style title under 60 chars — based only on what the streamer clearly said, not guessed gameplay>",
-    "start": <start time as plain integer seconds, e.g. 813>,
-    "end": <end time as plain integer seconds, e.g. 868>,
+    "title": "<hook-style title under 60 chars — what the streamer said or reacted to>",
+    "start": <start time as plain integer seconds>,
+    "end": <end time as plain integer seconds>,
     "score": <virality score 0.0-1.0>,
     "category": "<hype | funny | emotional | educational>",
-    "reason": "<why this moment will perform — quote the specific words from the transcript that confirm the emotion>",
-    "hook": "<describe the opening 3 seconds of this clip that will stop someone from scrolling>",
-    "caption": "<TikTok caption under 150 chars — conversational, not salesy, with 3-4 relevant hashtags>"
+    "reason": "<why this will perform — quote the exact words from the transcript that signal the peak>",
+    "hook": "<what happens in the opening 3 seconds that stops someone scrolling>",
+    "caption": "<TikTok caption under 150 chars — conversational, not salesy, 3-4 relevant hashtags>"
   }
 ]
 
-Return 3-5 peaks sorted by score descending. Be selective — 3 accurate clips beats 5 guessed ones. If there are no moments scoring above 0.65, return [].`;
+Return 3-6 peaks sorted by score descending. If nothing clears 0.60, return [].`;
+}
 
 async function runPeakDetection(
   anthropic: Anthropic,
   vodTitle: string,
-  transcript: string
+  segments: TranscriptSegment[]
 ): Promise<Peak[]> {
+  const transcript = buildTranscript(segments);
+
   const response = await withRetry(() => anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 2048,
-    system: `You are a viral content strategist who specializes in Twitch-to-TikTok clip selection. You have deep knowledge of what makes gaming and streaming content stop people mid-scroll. You understand pacing, emotional peaks, and the psychology of short-form content. You are ruthlessly selective — you only flag moments that could genuinely perform.`,
-    messages: [{ role: "user", content: PEAK_DETECTION_PROMPT(vodTitle, transcript) }],
+    model: "claude-sonnet-4-6",
+    max_tokens: 3000,
+    system: `You are a viral content strategist who specializes in Twitch-to-TikTok clip selection. You have a sharp eye for the exact moment in a stream that would stop someone scrolling — you understand pacing, emotional escalation, and what makes a stranger care about someone they've never watched. You are decisive and specific: you identify the exact utterances that make a moment work, and you pick clip boundaries that make the clip feel complete.`,
+    messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript) }],
   }), 3, 1000);
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const peaks: Peak[] = JSON.parse(cleaned);
-    return peaks.filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE);
+    return peaks
+      .filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE)
+      .map((p) => snapToUtteranceBoundaries(p, segments));
   } catch {
     console.error("Failed to parse Claude peak response:", text);
     return [];
@@ -121,15 +175,13 @@ async function runPeakDetection(
 const CHUNK_SECONDS = 20 * 60;
 
 // Maximum peaks returned per VOD. Keeping this low forces quality over quantity.
-const MAX_PEAKS = 5;
+const MAX_PEAKS = 6;
 
 // Top candidates to consider during the re-ranking pass on long VODs.
-// We take the best 3 from each chunk (up to 15 total) and re-rank them.
-const RERANK_CANDIDATE_LIMIT = 15;
+const RERANK_CANDIDATE_LIMIT = 18;
 
-// Minimum virality score for a peak to be included. Claude's rubric:
-//   0.65–0.74 = decent clip (clear reaction), 0.75+ = strong clip, 0.9+ = viral
-const MIN_PEAK_SCORE = 0.65;
+// Minimum virality score. 0.60 = decent clip with some context.
+const MIN_PEAK_SCORE = 0.60;
 
 export async function detectPeaks(
   segments: TranscriptSegment[],
@@ -141,11 +193,7 @@ export async function detectPeaks(
 
   // Short VODs (<= 25 min): single pass, no chunking needed
   if (vodDuration <= CHUNK_SECONDS + 5 * 60) {
-    const transcript = segments
-      .map((s) => `[${toSeconds(s.start)}-${toSeconds(s.end)}] ${s.text}`)
-      .join("\n");
-
-    const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
+    const peaks = await runPeakDetection(anthropic, vodTitle, segments);
     return peaks.sort((a, b) => b.score - a.score).slice(0, MAX_PEAKS);
   }
 
@@ -162,14 +210,11 @@ export async function detectPeaks(
   const allPeaks: Peak[] = [];
   for (const chunk of chunks) {
     if (chunk.length === 0) continue;
-    const transcript = chunk
-      .map((s) => `[${toSeconds(s.start)}-${toSeconds(s.end)}] ${s.text}`)
-      .join("\n");
-    const peaks = await runPeakDetection(anthropic, vodTitle, transcript);
+    const peaks = await runPeakDetection(anthropic, vodTitle, chunk);
     allPeaks.push(...peaks);
   }
 
-  // If we have enough candidates, do a final re-ranking pass with the best 3 from each chunk
+  // If we have enough candidates, do a final re-ranking pass
   const topCandidates = allPeaks
     .sort((a, b) => b.score - a.score)
     .slice(0, RERANK_CANDIDATE_LIMIT);
@@ -178,18 +223,18 @@ export async function detectPeaks(
     return topCandidates;
   }
 
-  // Re-rank pass: ask Claude to pick the best 5 from all candidates
+  // Re-rank pass: ask Claude to pick the best from all candidates
   const candidateSummary = topCandidates
     .map((p, i) => `${i + 1}. [${formatTime(p.start)}-${formatTime(p.end)}] "${p.title}" (score: ${p.score.toFixed(2)}) — ${p.reason}`)
     .join("\n");
 
   const rerankResponse = await withRetry(() => anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6",
     max_tokens: 512,
-    system: `You are a viral content strategist selecting the best clips from a Twitch stream.`,
+    system: `You are a viral content strategist selecting the best clips from a Twitch stream for TikTok.`,
     messages: [{
       role: "user",
-      content: `From these ${topCandidates.length} candidate clips from a long stream, pick the ${MAX_PEAKS} best based on viral potential. Return ONLY a JSON array of their numbers (1-based), e.g. [2, 5, 7, 11, 14]. No explanation.\n\nCandidates:\n${candidateSummary}`,
+      content: `From these ${topCandidates.length} candidate clips, pick the ${MAX_PEAKS} with the highest viral potential for TikTok. Prioritize clips that work standalone with no context, have a strong hook in the first 3 seconds, and have clear emotional payoff. Return ONLY a JSON array of their 1-based numbers, e.g. [2, 5, 7, 11, 14, 16]. No explanation.\n\nCandidates:\n${candidateSummary}`,
     }],
   }), 3, 1000);
 
@@ -202,8 +247,8 @@ export async function detectPeaks(
       .map((i) => topCandidates[i - 1])
       .slice(0, MAX_PEAKS);
   } catch {
-    // Fallback: just return top 5 by score
-    return topCandidates.slice(0, 5);
+    // Fallback: just return top by score
+    return topCandidates.slice(0, MAX_PEAKS);
   }
 }
 
@@ -355,7 +400,7 @@ export async function generateCoachReport(
   // Build category coaching context — all categories included so Claude can match
   // after it identifies the streamer type. The relevant section becomes the benchmark.
   const categoryGuideBlock = Object.entries(CATEGORY_COACHING_GUIDE)
-    .map(([key, guide]) => guide)
+    .map(([, guide]) => guide)
     .join("\n\n");
 
   const response = await withRetry(() => anthropic.messages.create({
