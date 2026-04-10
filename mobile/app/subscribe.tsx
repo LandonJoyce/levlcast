@@ -21,7 +21,7 @@ const FEATURES = [
 export default function SubscribeScreen() {
   const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
-  const [selected, setSelected] = useState<'monthly' | 'annual'>('annual');
+  const [selected, setSelected] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -97,15 +97,15 @@ export default function SubscribeScreen() {
       <Text style={styles.title}>Upgrade to Pro</Text>
       <Text style={styles.sub}>Full management for your streaming career — coaching, strategy, and growth.</Text>
 
-      {/* Plan toggle — only show annual option if the package loaded */}
-      <View style={styles.toggle}>
-        <TouchableOpacity
-          style={[styles.toggleOption, selected === 'monthly' && styles.toggleOptionActive]}
-          onPress={() => setSelected('monthly')}
-        >
-          <Text style={[styles.toggleText, selected === 'monthly' && styles.toggleTextActive]}>Monthly</Text>
-        </TouchableOpacity>
-        {(annualPkg || !loading) && (
+      {/* Plan toggle — only show annual if RevenueCat returned a real annual package */}
+      {annualPkg && (
+        <View style={styles.toggle}>
+          <TouchableOpacity
+            style={[styles.toggleOption, selected === 'monthly' && styles.toggleOptionActive]}
+            onPress={() => setSelected('monthly')}
+          >
+            <Text style={[styles.toggleText, selected === 'monthly' && styles.toggleTextActive]}>Monthly</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.toggleOption, selected === 'annual' && styles.toggleOptionActive]}
             onPress={() => setSelected('annual')}
@@ -115,8 +115,8 @@ export default function SubscribeScreen() {
               <Text style={styles.saveBadgeText}>2 months free</Text>
             </View>
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
 
       {/* Price card */}
       <View style={styles.priceCard}>
