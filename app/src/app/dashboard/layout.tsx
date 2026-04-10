@@ -66,7 +66,7 @@ export default async function DashboardLayout({
 
       {/* Main content */}
       <main className="lg:pl-[240px] pt-14 lg:pt-0 pb-20 lg:pb-0 relative z-[1]">
-        <div className="max-w-[1100px] mx-auto px-5 lg:px-8 py-8">
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
           {children}
         </div>
       </main>
