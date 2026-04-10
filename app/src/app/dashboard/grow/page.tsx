@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { ArchetypeCard } from "@/components/dashboard/grow/archetype-card";
 import { ConsistencyGrid } from "@/components/dashboard/grow/consistency-grid";
-import { TrendingUp, Sparkles, ExternalLink } from "lucide-react";
+import { TacticsCarousel } from "@/components/dashboard/grow/tactics-carousel";
+import { TrendingUp, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -129,43 +130,8 @@ export default async function GrowPage() {
               </div>
             )}
 
-            {/* Tactics */}
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-border">
-                <h2 className="text-sm font-bold text-white">How to Get More Viewers</h2>
-                <p className="text-xs text-muted mt-0.5">Proven tactics for small streamers</p>
-              </div>
-              <div className="divide-y divide-border">
-                <TacticRow
-                  tag="Biggest Opportunity"
-                  tagColor="text-green-400"
-                  title="Multistream to TikTok, YouTube, and Kick simultaneously"
-                  body="Twitch won't push you to new viewers. TikTok Live, YouTube Live, and Kick all have discovery built in. Use Restream.io or OBS to go live everywhere at once with zero extra effort."
-                  href="https://restream.io"
-                  cta="Try Restream"
-                />
-                <TacticRow
-                  tag="Already Built In"
-                  tagColor="text-accent-light"
-                  title="Post one clip every single day"
-                  body="Short-form clips are how people find you. Your clips are already made — just post them. One a day is enough to build an audience over time."
-                  internalHref="/dashboard/clips"
-                  cta="Go to Clips"
-                />
-                <TacticRow
-                  tag="Long-Term Growth"
-                  tagColor="text-yellow-400"
-                  title="Match your clip energy on stream"
-                  body="New viewers who find you through clips expect that same version of you live. Identify what your best clips have in common and make that your streaming identity."
-                />
-                <TacticRow
-                  tag="Discoverability"
-                  tagColor="text-blue-400"
-                  title="Stream the same game consistently"
-                  body="Twitch's directory ranks you higher in a game if you stream it often. Spreading across games keeps you buried. Pick one game and own it."
-                />
-              </div>
-            </div>
+            {/* Tactics carousel */}
+            <TacticsCarousel />
           </div>
 
           {/* Consistency grid full width */}
@@ -176,30 +142,3 @@ export default async function GrowPage() {
   );
 }
 
-function TacticRow({ tag, tagColor, title, body, href, internalHref, cta }: {
-  tag: string;
-  tagColor: string;
-  title: string;
-  body: string;
-  href?: string;
-  internalHref?: string;
-  cta?: string;
-}) {
-  return (
-    <div className="px-5 py-4">
-      <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${tagColor}`}>{tag}</p>
-      <p className="text-sm font-semibold text-white mb-1">{title}</p>
-      <p className="text-xs text-muted leading-relaxed mb-2">{body}</p>
-      {href && cta && (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-light hover:underline">
-          {cta} <ExternalLink size={10} />
-        </a>
-      )}
-      {internalHref && cta && (
-        <Link href={internalHref} className="text-xs font-semibold text-accent-light hover:underline">
-          {cta} →
-        </Link>
-      )}
-    </div>
-  );
-}
