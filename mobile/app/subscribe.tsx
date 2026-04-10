@@ -37,10 +37,14 @@ export default function SubscribeScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  const activePkg = selected === 'annual' ? annualPkg : monthlyPkg;
+  // Fall back to monthly if annual package isn't available in RevenueCat
+  const activePkg = selected === 'annual' ? (annualPkg ?? monthlyPkg) : monthlyPkg;
 
   async function handlePurchase() {
-    if (!activePkg) return;
+    if (!activePkg) {
+      Alert.alert('Not Available', 'Subscription packages are not available right now. Please try again later.');
+      return;
+    }
     setPurchasing(true);
     const success = await purchasePro(activePkg);
 
@@ -93,7 +97,7 @@ export default function SubscribeScreen() {
       <Text style={styles.title}>Upgrade to Pro</Text>
       <Text style={styles.sub}>Full management for your streaming career — coaching, strategy, and growth.</Text>
 
-      {/* Plan toggle */}
+      {/* Plan toggle — only show annual option if the package loaded */}
       <View style={styles.toggle}>
         <TouchableOpacity
           style={[styles.toggleOption, selected === 'monthly' && styles.toggleOptionActive]}
@@ -101,15 +105,17 @@ export default function SubscribeScreen() {
         >
           <Text style={[styles.toggleText, selected === 'monthly' && styles.toggleTextActive]}>Monthly</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleOption, selected === 'annual' && styles.toggleOptionActive]}
-          onPress={() => setSelected('annual')}
-        >
-          <Text style={[styles.toggleText, selected === 'annual' && styles.toggleTextActive]}>Annual</Text>
-          <View style={styles.saveBadge}>
-            <Text style={styles.saveBadgeText}>2 months free</Text>
-          </View>
-        </TouchableOpacity>
+        {(annualPkg || !loading) && (
+          <TouchableOpacity
+            style={[styles.toggleOption, selected === 'annual' && styles.toggleOptionActive]}
+            onPress={() => setSelected('annual')}
+          >
+            <Text style={[styles.toggleText, selected === 'annual' && styles.toggleTextActive]}>Annual</Text>
+            <View style={styles.saveBadge}>
+              <Text style={styles.saveBadgeText}>2 months free</Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Price card */}
