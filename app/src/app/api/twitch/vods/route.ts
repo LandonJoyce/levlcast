@@ -1,5 +1,6 @@
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { fetchTwitchVods, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { sendPush } from "@/lib/push";
 
@@ -20,6 +21,11 @@ export async function POST(request: Request) {
 
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 10 sync requests per hour per user
+  if (!rateLimit(`sync:${user.id}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 
   // 2. Get profile to find their Twitch ID

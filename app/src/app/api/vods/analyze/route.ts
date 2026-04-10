@@ -19,6 +19,7 @@
 import { createClientFromRequest } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { inngest } from "@/lib/inngest/client";
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -27,6 +28,11 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 5 analyze requests per hour per user
+  if (!rateLimit(`analyze:${user.id}`, 5, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 
   const usage = await getUserUsage(user.id, supabase);
