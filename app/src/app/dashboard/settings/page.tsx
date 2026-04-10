@@ -63,6 +63,7 @@ export default async function SettingsPage() {
         analysesLimit={limits.analyses_per_month}
         clipsUsed={usage.clips_this_month}
         clipsLimit={limits.clips_per_month}
+        hasPaypalSubscription={!!profile?.paypal_subscription_id}
       />
 
       <DeleteAccountSection />

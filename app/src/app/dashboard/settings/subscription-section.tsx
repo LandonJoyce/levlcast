@@ -10,6 +10,7 @@ interface SubscriptionSectionProps {
   analysesLimit: number;
   clipsUsed: number;
   clipsLimit: number;
+  hasPaypalSubscription: boolean;
 }
 
 function UsageBar({
@@ -52,6 +53,7 @@ export function SubscriptionSection({
   analysesLimit,
   clipsUsed,
   clipsLimit,
+  hasPaypalSubscription,
 }: SubscriptionSectionProps) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -142,17 +144,26 @@ export function SubscriptionSection({
             <p className="text-sm text-muted">
               You are on the Pro plan. Thank you for your support.
             </p>
-            {cancelError && (
-              <p className="text-xs text-red-400">{cancelError}</p>
+            {hasPaypalSubscription ? (
+              <>
+                {cancelError && (
+                  <p className="text-xs text-red-400">{cancelError}</p>
+                )}
+                <button
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                  className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground disabled:opacity-50 transition-colors underline underline-offset-2"
+                >
+                  {cancelling && <Loader2 size={13} className="animate-spin" />}
+                  {cancelling ? "Cancelling..." : "Cancel subscription"}
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-muted">
+                You subscribed via the iOS app. To cancel, go to{" "}
+                <strong className="text-foreground">iOS Settings → Apple ID → Subscriptions → LevlCast</strong>.
+              </p>
             )}
-            <button
-              onClick={handleCancel}
-              disabled={cancelling}
-              className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground disabled:opacity-50 transition-colors underline underline-offset-2"
-            >
-              {cancelling && <Loader2 size={13} className="animate-spin" />}
-              {cancelling ? "Cancelling..." : "Cancel subscription"}
-            </button>
           </div>
         )}
       </div>
