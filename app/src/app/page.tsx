@@ -705,7 +705,12 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-muted">&copy; 2026 LevlCast. All rights reserved.</p>
-            <p className="text-xs text-muted">Your personal streaming manager.</p>
+            <div className="flex items-center gap-4">
+              <p className="text-xs text-muted">Your personal streaming manager.</p>
+              <a href="https://smollaunch.com" target="_blank" rel="noopener">
+                <img src="https://smollaunch.com/badges/featured.svg" alt="Featured on Smol Launch" loading="lazy" width="250" height="60" />
+              </a>
+            </div>
           </div>
         </div>
       </footer>
