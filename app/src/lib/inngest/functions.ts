@@ -14,6 +14,7 @@ import { streamTwitchVodAudio, downloadTwitchVodAudio } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
+import { uploadToR2 } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
@@ -276,29 +277,18 @@ export const generateClip = inngest.createFunction(
           await download.cleanup();
         }
 
-        await supabase.storage.createBucket("clips", {
-          public: true,
-          fileSizeLimit: 104857600,
-        }).catch(() => {});
-
         const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("clips")
-          .upload(fileName, buffer!, { contentType: "video/mp4", upsert: false });
-
-        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
-
-        const { data: urlData } = supabase.storage.from("clips").getPublicUrl(fileName);
+        const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4");
 
         const { error: updateError } = await supabase.from("clips").update({
-          video_url: urlData.publicUrl,
+          video_url: publicUrl,
           status: "ready",
         }).eq("id", clipId);
 
         if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
 
-        console.log(`[clip] Saved: "${peak.title}" → ${urlData.publicUrl}`);
+        console.log(`[clip] Saved: "${peak.title}" → ${publicUrl}`);
       });
 
       return { clipId, title: peak.title };
