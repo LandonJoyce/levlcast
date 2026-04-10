@@ -58,7 +58,6 @@ function buildTranscript(segments: TranscriptSegment[]): string {
 function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): Peak {
   if (segments.length === 0) return peak;
 
-  // Snap start: find the utterance that contains or is closest before peak.start
   let snappedStart = peak.start;
   for (const seg of segments) {
     if (seg.start <= peak.start && seg.end >= peak.start) {
@@ -67,7 +66,6 @@ function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): P
     }
   }
 
-  // Snap end: find the utterance that contains or is closest after peak.end
   let snappedEnd = peak.end;
   for (const seg of segments) {
     if (seg.start <= peak.end && seg.end >= peak.end) {
@@ -76,11 +74,41 @@ function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): P
     }
   }
 
-  // Only apply if it doesn't shrink the clip below 15 seconds
   if (snappedEnd - snappedStart >= 15) {
     return { ...peak, start: snappedStart, end: snappedEnd };
   }
   return peak;
+}
+
+/**
+ * Calculate words per minute for a set of segments.
+ */
+function calcWPM(segs: TranscriptSegment[]): number {
+  if (segs.length < 2) return 0;
+  const totalWords = segs.reduce((sum, s) => sum + s.text.split(" ").length, 0);
+  const durationMin = (segs[segs.length - 1].end - segs[0].start) / 60;
+  return durationMin > 0 ? Math.round(totalWords / durationMin) : 0;
+}
+
+/**
+ * Extract transcript lines around each detected peak.
+ * Gives the coach context about what was actually happening at the best moments.
+ */
+function buildPeakContextWindows(peaks: Peak[], segments: TranscriptSegment[]): string {
+  if (peaks.length === 0) return "";
+
+  const lines: string[] = [];
+  // Show context around the top 4 peaks max to keep prompt size reasonable
+  for (const peak of peaks.slice(0, 4)) {
+    const windowStart = Math.max(0, peak.start - 50);
+    const windowEnd = peak.end + 35;
+    const window = segments.filter((s) => s.start >= windowStart && s.start <= windowEnd);
+    if (window.length === 0) continue;
+    lines.push(`--- Peak context: "${peak.title}" at ${formatTime(peak.start)} (score: ${peak.score.toFixed(2)}) ---`);
+    window.forEach((s) => lines.push(`[${formatTime(s.start)}] ${s.text}`));
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 /**
@@ -171,10 +199,9 @@ async function runPeakDetection(
 }
 
 // How long each transcript chunk is when splitting long VODs.
-// 20 minutes keeps each Claude call fast and within token limits.
 const CHUNK_SECONDS = 20 * 60;
 
-// Maximum peaks returned per VOD. Keeping this low forces quality over quantity.
+// Maximum peaks returned per VOD.
 const MAX_PEAKS = 6;
 
 // Top candidates to consider during the re-ranking pass on long VODs.
@@ -191,13 +218,11 @@ export async function detectPeaks(
 
   const vodDuration = segments.length > 0 ? segments[segments.length - 1].end : 0;
 
-  // Short VODs (<= 25 min): single pass, no chunking needed
   if (vodDuration <= CHUNK_SECONDS + 5 * 60) {
     const peaks = await runPeakDetection(anthropic, vodTitle, segments);
     return peaks.sort((a, b) => b.score - a.score).slice(0, MAX_PEAKS);
   }
 
-  // Long VODs: split into 20-min chunks, run each, then re-rank the top candidates
   const chunks: TranscriptSegment[][] = [];
   let chunkStart = 0;
   while (chunkStart < vodDuration) {
@@ -206,7 +231,6 @@ export async function detectPeaks(
     chunkStart = chunkEnd;
   }
 
-  // Process chunks sequentially to avoid hammering the API
   const allPeaks: Peak[] = [];
   for (const chunk of chunks) {
     if (chunk.length === 0) continue;
@@ -214,7 +238,6 @@ export async function detectPeaks(
     allPeaks.push(...peaks);
   }
 
-  // If we have enough candidates, do a final re-ranking pass
   const topCandidates = allPeaks
     .sort((a, b) => b.score - a.score)
     .slice(0, RERANK_CANDIDATE_LIMIT);
@@ -223,7 +246,6 @@ export async function detectPeaks(
     return topCandidates;
   }
 
-  // Re-rank pass: ask Claude to pick the best from all candidates
   const candidateSummary = topCandidates
     .map((p, i) => `${i + 1}. [${formatTime(p.start)}-${formatTime(p.end)}] "${p.title}" (score: ${p.score.toFixed(2)}) — ${p.reason}`)
     .join("\n");
@@ -247,7 +269,6 @@ export async function detectPeaks(
       .map((i) => topCandidates[i - 1])
       .slice(0, MAX_PEAKS);
   } catch {
-    // Fallback: just return top by score
     return topCandidates.slice(0, MAX_PEAKS);
   }
 }
@@ -267,11 +288,6 @@ export interface CoachReport {
   viewer_retention_risk: "low" | "medium" | "high";
 }
 
-/**
- * Category-specific coaching knowledge derived from studying what separates
- * top performers in each streaming category. Used to give targeted advice
- * that goes beyond generic streaming tips.
- */
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
   gaming: `GAMING STREAMER COACHING STANDARDS:
 What separates top gaming streamers from average ones:
@@ -282,68 +298,47 @@ What separates top gaming streamers from average ones:
 - Strong opinions on the game — patches, meta, other players' decisions, bad design choices. Opinion-driven commentary creates clips and debate, which drives growth.
 - Treating chat like a stadium crowd — big moments are announced with energy. Low moments are narrated with drama. The streamer creates the emotional arc for the viewer, not just the game.
 
-Key coaching focus areas for gaming streamers:
-- Is their commentary track adding value or just narrating the obvious?
-- Are they energizing dead moments between gameplay action?
-- Are they sharing opinions that would make a viewer want to clip and share?
-- Is the energy proportional to what is happening on screen?`,
+Key coaching focus areas: Is commentary adding value or narrating the obvious? Are dead moments being energized? Are they sharing opinions worth clipping? Is energy proportional to what's happening?`,
 
   just_chatting: `JUST CHATTING STREAMER COACHING STANDARDS:
 What separates top just chatting streamers from average ones:
-- Radical authenticity is the product. Audiences watch just chatting streams because they want to feel like they know someone. Performed emotions, forced reactions, or overly polished delivery kills this. The most growth comes from unfiltered, genuine personality.
-- React content done right requires genuine real-time processing — the streamer's first authentic reaction, not a performed one. Top streamers react before they think about how they look. That realness is what gets clipped.
-- Parasocial relationship building is a skill. Remembering regular chatters by name, referencing past streams, sharing personal updates, and treating chat like a room of friends they know — this is what converts casual viewers into loyal regulars.
-- Hot takes create organic clip spread. A strong opinion stated clearly — even a controversial one — generates debate, sharing, and return visits. Streamers who avoid controversy also avoid organic growth.
-- Long-form conversation skills: the ability to hold attention through 2-4 hours with just personality and talk. This requires having genuine interests, stories, and opinions — not just reacting to other people's content.
-- Making chat part of the content: the best just chatting streamers turn chat messages into comedic material, debate partners, or story prompts. Chat is a co-star, not a side element.
+- Radical authenticity is the product. Performed emotions or overly polished delivery kills it. The most growth comes from unfiltered, genuine personality.
+- React content done right requires genuine real-time processing — first authentic reaction, not a performed one. Realness is what gets clipped.
+- Parasocial relationship building: remembering regulars by name, referencing past streams, treating chat like a room of friends. This converts lurkers into loyals.
+- Hot takes create organic clip spread. A strong opinion — even controversial — generates debate, sharing, and return visits. Streamers who avoid controversy avoid organic growth.
+- Long-form conversation skills: holding attention through 2-4 hours with just personality. Requires genuine interests, stories, and opinions.
+- Making chat part of the content: the best just chatting streamers turn chat messages into comedic material or debate partners. Chat is a co-star.
 
-Key coaching focus areas for just chatting streamers:
-- Is the streamer showing genuine unfiltered personality or performing for the camera?
-- Are they building real relationships with chat or talking at them?
-- Are they sharing opinions strong enough to make someone want to clip and argue?
-- Is there a clear point of view that a viewer could describe to someone else?`,
+Key coaching focus areas: Is genuine personality showing or is it a performance? Are they building real relationships with chat? Are they sharing opinions strong enough to clip and argue about?`,
 
   irl: `IRL STREAMER COACHING STANDARDS:
 What separates top IRL streamers from average ones:
-- Environmental storytelling: the location is a co-character. Top IRL streamers narrate their environment, comment on what they see, and treat the real world as content. They do not just carry a camera — they give the viewer a perspective.
-- Engaging strangers authentically. The best IRL moments come from genuine interactions, not forced ones. A natural conversation with a stranger that goes somewhere unexpected beats a scripted interaction every time.
-- Narrating internal thoughts in real time. Top IRL streamers voice what they are thinking as they experience it — this creates intimacy and makes the viewer feel like they are inside the streamer's head. This is the IRL version of personality building.
-- Reacting naturally to unexpected moments is the content. When something unexpected happens, the streamer's genuine unscripted reaction is the clip. Trying to manage or control these moments kills them.
-- Building recurring arcs across streams. Top IRL streamers have ongoing threads — a place they keep returning to, a project they are working toward, a relationship with a recurring person in their life. Viewers follow arcs, not random days.
-- Chat as a companion on the journey. The best IRL streamers loop chat in — reading chat reactions to what is happening, asking chat what to do next, sharing moments with chat like a friend who is there with them.
+- Environmental storytelling: the location is a co-character. Top IRL streamers narrate their environment and give the viewer a perspective, not just carry a camera.
+- Engaging strangers authentically. Natural conversations that go somewhere unexpected beat scripted interactions every time.
+- Narrating internal thoughts in real time creates intimacy and makes the viewer feel inside the streamer's head.
+- Reacting naturally to unexpected moments is the content. Genuine unscripted reactions are the clips — managing these moments kills them.
+- Chat as a companion: the best IRL streamers loop chat in, read reactions, ask chat what to do next.
 
-Key coaching focus areas for IRL streamers:
-- Is the streamer giving the viewer a genuine perspective on the world they are moving through?
-- Are they narrating thoughts and reactions out loud, or going quiet and losing the viewer?
-- Are there natural moments that would feel authentic clipped out of context?
-- Is chat being treated as a companion or ignored?`,
+Key coaching focus areas: Is the viewer getting a genuine perspective? Are thoughts being narrated out loud? Is chat being treated as a companion or ignored?`,
 
   variety: `VARIETY STREAMER COACHING STANDARDS:
 What separates top variety streamers from average ones:
-- The personality, not the game, is what viewers follow. Top variety streamers have a consistent identity that makes them recognizable whether they are playing an FPS, a simulator, or a cozy game. The content changes — the character does not.
-- Smooth transitions between content types require narrative connective tissue. Top variety streamers frame transitions as part of the show: "alright we are done with that, let me tell you what we are getting into next." They bring chat along, they do not just switch.
-- Building loyal audience who follow the person, not the category. This happens through consistent personality, consistent values, and making viewers feel like they know who this person is regardless of what they are playing.
-- Cross-content chemistry: the best variety streamers find ways to connect different games or content types to their personality and to each other. They are not playing games — they are experiencing things and sharing that experience.
-- Energy management across long variety sessions. Switching games can re-energize a stream, but it can also reset momentum. Top variety streamers read when energy is dropping and time switches to capitalize on it, not escape it.
+- The personality, not the game, is what viewers follow. A consistent identity makes them recognizable whether playing an FPS or a cozy game.
+- Smooth transitions need narrative connective tissue. Top variety streamers bring chat along explicitly — they don't just switch.
+- Building loyal audience who follow the person, not the category. This happens through consistent personality and values.
+- Energy management: switching games can re-energize but can also reset momentum. Top variety streamers time switches to capitalize on energy, not escape it.
 
-Key coaching focus areas for variety streamers:
-- Is there a consistent personality that would be recognizable across any game?
-- Are transitions handled smoothly with chat brought along?
-- Would a new viewer understand who this person is regardless of what they are playing?`,
+Key coaching focus areas: Is there a consistent personality recognizable across any game? Are transitions smooth? Would a new viewer understand who this person is regardless of what they're playing?`,
 
   educational: `EDUCATIONAL STREAMER COACHING STANDARDS:
 What separates top educational streamers from average ones:
-- Teaching as entertainment: the best educational streamers use Socratic method, real-time problem solving, and genuine curiosity to make learning feel like discovery. Dry lecture delivery drives viewers away. The best educational content feels like watching someone figure something out in real time.
-- Accessible complexity: top educational streamers find analogies, metaphors, and comparisons that make difficult topics click instantly. If a viewer needs background knowledge to follow along, most viewers leave. The skill is making complex things feel obvious.
-- Acknowledging mistakes and confusion builds trust. Streamers who pretend to know everything feel inauthentic. Saying "I'm not sure, let me think through this" and working through uncertainty live is more valuable than projecting false confidence.
-- Structured segments with clear payoffs keep retention high. Top educational streamers give the viewer a destination: "by the end of this I'm going to show you why X works." Viewers stay when they know where they are going.
-- Chat-driven content: letting chat questions steer the content creates investment. When chat influences where the stream goes, viewers feel ownership and stay to see their contribution play out.
+- Teaching as entertainment: Socratic method, real-time problem solving, genuine curiosity make learning feel like discovery. Dry lecture delivery drives viewers away.
+- Accessible complexity: analogies and metaphors that make difficult topics click instantly. If a viewer needs background knowledge, most leave.
+- Acknowledging mistakes and confusion builds trust. Working through uncertainty live is more valuable than projecting false confidence.
+- Structured segments with clear payoffs keep retention high. Give the viewer a destination upfront.
+- Chat-driven content: letting chat questions steer the content creates investment and ownership.
 
-Key coaching focus areas for educational streamers:
-- Is the teaching style engaging or is it dry lecture delivery?
-- Are complex topics being made genuinely accessible with analogies or examples?
-- Is uncertainty handled authentically rather than with false confidence?
-- Is chat being used to shape the direction of the content?`,
+Key coaching focus areas: Is the teaching style engaging or dry lecture? Are complex topics made genuinely accessible? Is uncertainty handled authentically? Is chat shaping the direction?`,
 };
 
 /**
@@ -362,138 +357,126 @@ export async function generateCoachReport(
   const vodDuration = segments[segments.length - 1].end;
   const totalMinutes = Math.round(vodDuration / 60);
 
-  // Sample 5 evenly-spaced sections across the full stream so Claude sees the whole arc
-  const LINES_PER_SECTION = 100;
+  // ── Transcript samples: 5 evenly-spaced sections + context around each peak ──
+  const LINES_PER_SECTION = 120;
   const sectionLabels = ["Opening", "Early", "Middle", "Late", "Closing"];
   const sectionTranscripts: string[] = [];
 
   for (let i = 0; i < 5; i++) {
-    const centerFraction = i / 4; // 0, 0.25, 0.5, 0.75, 1.0
+    const centerFraction = i / 4;
     const centerIdx = Math.floor(centerFraction * (segments.length - 1));
     const start = Math.max(0, centerIdx - Math.floor(LINES_PER_SECTION / 2));
     const end = Math.min(segments.length, start + LINES_PER_SECTION);
-    const lines = segments.slice(start, end).map((s) => `[${formatTime(s.start)}] ${s.text}`);
-    sectionTranscripts.push(`--- ${sectionLabels[i]} ---\n${lines.join("\n")}`);
+    const secsInSection = segments.slice(start, end);
+    const wpm = calcWPM(secsInSection);
+    const lines = secsInSection.map((s) => `[${formatTime(s.start)}] ${s.text}`);
+    sectionTranscripts.push(`--- ${sectionLabels[i]} (${wpm} wpm) ---\n${lines.join("\n")}`);
   }
 
-  const transcript = sectionTranscripts.join("\n\n");
+  const transcriptSamples = sectionTranscripts.join("\n\n");
 
-  // Detect dead air — gaps of 10+ seconds between transcript segments
-  const deadAirGaps: string[] = [];
+  // ── Peak context windows — transcript around each detected peak ──
+  const peakContextBlock = buildPeakContextWindows(peaks, segments);
+
+  // ── Dead air analysis ──
+  interface DeadAirGap { start: number; end: number; duration: number }
+  const deadAirGaps: DeadAirGap[] = [];
+  let totalDeadAirSeconds = 0;
   for (let i = 1; i < segments.length; i++) {
     const gap = segments[i].start - segments[i - 1].end;
     if (gap >= 10) {
-      deadAirGaps.push(`${formatTime(segments[i - 1].end)}–${formatTime(segments[i].start)} (${Math.round(gap)}s silence)`);
+      deadAirGaps.push({ start: segments[i - 1].end, end: segments[i].start, duration: Math.round(gap) });
+      totalDeadAirSeconds += gap;
     }
   }
+  const deadAirPct = vodDuration > 0 ? Math.round((totalDeadAirSeconds / vodDuration) * 100) : 0;
+  const worstGaps = [...deadAirGaps].sort((a, b) => b.duration - a.duration).slice(0, 5);
+
   const deadAirSummary = deadAirGaps.length > 0
-    ? `Dead air detected at: ${deadAirGaps.slice(0, 8).join(", ")}${deadAirGaps.length > 8 ? ` and ${deadAirGaps.length - 8} more` : ""}`
+    ? `${deadAirGaps.length} silence gaps totaling ${Math.round(totalDeadAirSeconds / 60)}min (${deadAirPct}% of stream). Worst gaps: ${worstGaps.map((g) => `${formatTime(g.start)} (${g.duration}s)`).join(", ")}`
     : "No significant dead air detected.";
 
-  // Stream stats to help Claude calibrate
-  const wordsPerMinute = totalMinutes > 0 ? Math.round(segments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / totalMinutes) : 0;
+  // ── Overall speech stats ──
+  const overallWPM = calcWPM(segments);
 
+  // ── Peaks summary for coaching context ──
   const peaksSummary = peaks.length > 0
-    ? peaks.map((p) => `- "${p.title}" at ${formatTime(p.start)}–${formatTime(p.end)} [${p.category}, score: ${p.score.toFixed(2)}]\n  Reason: ${p.reason}`).join("\n")
-    : "No standout moments were detected — the stream lacked clear viral peaks.";
+    ? peaks.map((p) => `- "${p.title}" at ${formatTime(p.start)}–${formatTime(p.end)} [${p.category}, score: ${p.score.toFixed(2)}]\n  Why it works: ${p.reason}`).join("\n")
+    : "No standout moments detected — the stream lacked clear viral peaks.";
 
-  // Build category coaching context — all categories included so Claude can match
-  // after it identifies the streamer type. The relevant section becomes the benchmark.
-  const categoryGuideBlock = Object.entries(CATEGORY_COACHING_GUIDE)
-    .map(([, guide]) => guide)
-    .join("\n\n");
+  const categoryGuideBlock = Object.values(CATEGORY_COACHING_GUIDE).join("\n\n");
 
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 2500,
-    system: `You are a Twitch growth coach who is also a seasoned streamer yourself. You speak the language — you know what dead air feels like, what it means to go live cold, when chat is sleeping, when someone's in the zone vs grinding silent. Your feedback sounds like a knowledgeable streaming friend giving real talk, not a corporate consultant writing a report.
+    max_tokens: 3000,
+    system: `You are a Twitch growth coach who is also a seasoned streamer yourself. You speak the language — you know what dead air feels like, what it means to go live cold, when chat is sleeping, when someone's in the zone vs grinding silent. Your feedback sounds like a knowledgeable streaming friend giving real talk, not a corporate consultant.
 
-You are direct and honest. Your job is not to make the streamer feel good — it is to make them better next stream. You use natural streaming culture language throughout: dead air, chat sleeping, no hype, clipping moments, energy diff, grinding silent, lurker mode, going off, stream pacing. This language makes feedback feel real and relatable, not like homework.
+You are direct and honest. Your job is not to make the streamer feel good — it is to make them better. You use natural streaming culture language: dead air, chat sleeping, no hype, clipping moments, energy diff, grinding silent, lurker mode, going off, stream pacing.
 
-CORE PRINCIPLE: Every single piece of feedback must be connected to improvement. A strength is only worth mentioning if you also tell the streamer how to do more of it. A problem is only worth mentioning if you also give them one specific thing to try next stream. If you cannot give actionable advice tied to THIS stream, leave it out.
+CORE PRINCIPLE: Every piece of feedback must be tied to THIS specific stream. No generic advice. A strength is only worth mentioning if you tell them how to do more of it. A problem is only worth mentioning if you give one specific thing to try next stream.
 
-WHAT SEPARATES GROWING STREAMERS FROM STUCK ONES:
-- They fill silence with personality, not just gameplay narration
-- They acknowledge chat by name and make viewers feel seen
-- They build on their best moments instead of moving past them quickly
-- They have a consistent energy baseline, not random spikes
-- They know what kind of content they are and lean into it
-
-You never give generic advice that could apply to anyone. You never praise things that aren't genuinely strong. You never list a problem without a fix.`,
+You never give advice that could apply to any streamer. You never praise things that aren't genuinely strong. You never list a problem without a concrete fix tied to what you actually heard in this stream.`,
     messages: [
       {
         role: "user",
-        content: `Review this Twitch stream and produce a coaching report the streamer can act on before their next stream.
+        content: `Review this Twitch stream and produce a coaching report the streamer can act on immediately.
 
 STREAM INFO:
 - Title: "${vodTitle}"
 - Duration: ${totalMinutes} minutes
-- Talking pace: ~${wordsPerMinute} words/minute (normal conversation ~130 wpm; engaging streamers typically 140-170 wpm)
-- ${deadAirSummary}
+- Overall talking pace: ~${overallWPM} wpm (engaging streamers: 140-170 wpm; below 120 wpm = low energy)
+- Dead air: ${deadAirSummary}
 
-AI-DETECTED PEAK MOMENTS:
+AI-DETECTED PEAK MOMENTS (the best clips the AI found):
 ${peaksSummary}
 
-TRANSCRIPT SAMPLE (5 evenly-spaced sections across the full stream):
-${transcript}
+${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this to understand what created the peaks — or why peaks are missing):
+${peakContextBlock}` : ""}
+
+STREAM TRANSCRIPT SAMPLES (5 sections across the full stream, with wpm per section to show energy curve):
+${transcriptSamples}
 
 STEP 1 — IDENTIFY STREAMER TYPE:
-- "gaming": playing a video game, commentary focused on gameplay
+- "gaming": playing a game, commentary on gameplay
 - "just_chatting": talking to chat, no game or game is secondary
-- "irl": real life, outdoors, events, daily life
+- "irl": real life, outdoors, events
 - "variety": switching between games or formats
-- "educational": tutorials, guides, how-to content
+- "educational": tutorials, how-to content
 
-CATEGORY COACHING STANDARDS — use the section matching the streamer type you identify:
+CATEGORY COACHING STANDARDS (use the one matching the streamer type you identify):
 ${categoryGuideBlock}
 
-Adapt ALL feedback to the standards for their category. Every strength and improvement must be evaluated against what actually works for streamers in that specific category, not generic streaming advice.
+EVALUATION — work through each of these before writing feedback:
 
-EVALUATION CHECKLIST — use this to find specific moments:
+1. ENERGY CURVE: Look at the wpm per section. Is energy building, declining, volatile, or flat? Where specifically did it drop?
+2. DEAD AIR QUALITY: Is dead air from gameplay (acceptable) or from losing momentum (bad)? Which gaps are worth flagging?
+3. PERSONALITY: Where did their genuine personality come through clearly? How often? What triggered it?
+4. CHAT ENGAGEMENT: Is chat being treated like a co-star or an afterthought? Are regulars being acknowledged?
+5. PEAK ANALYSIS: What created the detected peaks? If peaks are missing or weak, what was the stream lacking that would have produced them?
+6. MOMENTUM: Did the stream build toward something, or did it plateau? When did it feel alive vs. when did it feel like they were just filling time?
 
-1. ENERGY BASELINE: Did the streamer maintain a consistent energy floor? Note where it dropped and when it peaked.
-2. DEAD AIR: Use the gap data above. For each significant gap, was it gameplay silence (acceptable) or dead air with no content reason (bad)?
-3. PERSONALITY MOMENTS: Did the streamer have moments where their genuine personality came through clearly? How often?
-4. CHAT PRESENCE: Did the streamer address chat by name, react to messages, build on what chat said? Or did they talk past chat?
-5. MOMENTUM: Did the stream build toward something, or did it feel like the same vibe for the entire duration?
-6. PEAK QUALITY: Look at the detected peaks. If there were strong peaks, what created them? If peaks were weak or absent, what was missing?
-
-SCORING GUIDE — be honest, most streams are 50-70:
-- 85-100: Rare. High energy, strong personality, great chat interaction, multiple clip-worthy moments.
-- 70-84: Solid. Real strengths showing. A couple clear things to fix.
+SCORING — be honest, most streams land 50-70:
+- 85-100: Rare. High energy throughout, strong personality, great chat chemistry, multiple clip-worthy moments.
+- 70-84: Solid. Clear strengths. A couple obvious things to fix.
 - 55-69: Average. Watchable but forgettable. Energy or engagement needs work.
-- 40-54: Below average. Dead air, weak engagement, or flat delivery throughout.
-- Below 40: Core delivery issues. Fundamentals need attention.
+- 40-54: Below average. Dead air, flat delivery, or weak engagement throughout.
+- Below 40: Fundamentals need attention.
 
-ENERGY TREND:
-- building: energy increased noticeably as the stream progressed
-- declining: started stronger, faded in the second half
-- consistent: same level throughout
-- volatile: sharp spikes and drops with no clear trend
-
-VIEWER RETENTION RISK:
-- low: a viewer who joins would likely stay
-- medium: some drop-off points but mostly retaining
-- high: multiple moments where a viewer would leave
-
-OUTPUT RULES — follow these exactly:
+OUTPUT RULES:
 - NEVER quote the transcript directly. Describe in your own words.
-- KEEP IT SHORT. Every field has a strict word limit. Do not exceed it.
-- Strengths: **2-3 word bold label** — one sentence on what worked. Max 20 words after the label.
-- Improvements: **2-3 word bold label** — one sentence on the problem. One sentence fix. Max 25 words after the label.
-- Bold labels must use natural streamer language — words the streaming community actually uses. Good examples: "Dead Air", "Chat Sleeping", "No Hype", "Grinding Silent", "Viewers Left Out", "No Hook", "Clipped That", "Energy Diff", "Going Off", "Lurker Mode", "No W For Chat", "Vibing Alone", "Stream Pacing". Bad examples: "No Viewer Arc", "Stream Invisibility", "Content Vacuum", "Audience Disconnect" — these sound like a marketing consultant, not a coach. Write like a fellow streamer giving real talk, not a corporate report.
-- The overall tone of all feedback should feel like a knowledgeable streamer friend giving honest advice — direct, casual, uses streaming culture language naturally. Not academic, not corporate, not overly formal.
-- Recommendation: 1-2 sentences max. The single most impactful change. No explanation, no buildup.
-- Stream summary: 1-2 sentences max. What kind of stream, biggest takeaway. That's it.
-- Best moment description: 2 sentences max.
-- Goals: one sentence each. Concrete and measurable.
-- No emojis. No padding. If it can be said in 10 words, don't use 20.
+- Strengths: **2-3 word streamer-language label** — one sentence on what worked and how to do more of it. Max 20 words after label.
+- Improvements: **2-3 word streamer-language label** — one sentence on the problem, one sentence fix specific to this stream. Max 25 words after label.
+- Labels must sound like a fellow streamer talking, not a consultant. Good: "Dead Air", "Chat Sleeping", "No Hype", "Grinding Silent", "Going Off", "Energy Diff", "Lurker Mode", "Clipped That". Bad: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
+- Recommendation: 1-2 sentences. Single most impactful change. Direct, no buildup.
+- Stream summary: 1-2 sentences. What kind of stream, biggest takeaway.
+- Goals: one sentence each. Concrete — something they can actually measure next stream.
+- No emojis. No padding.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "overall_score": <integer 0-100>,
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
-  "stream_summary": "<1-2 sentences max: what kind of stream, single biggest takeaway>",
+  "stream_summary": "<1-2 sentences: what kind of stream, single biggest takeaway>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
   "strengths": [
@@ -502,18 +485,18 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "**Label** — one sentence, max 20 words."
   ],
   "improvements": [
-    "**Label** — problem in one sentence. Fix: one sentence. Max 25 words total after label.",
-    "**Label** — problem in one sentence. Fix: one sentence. Max 25 words total after label.",
-    "**Label** — problem in one sentence. Fix: one sentence. Max 25 words total after label."
+    "**Label** — problem sentence. Fix sentence. Max 25 words after label.",
+    "**Label** — problem sentence. Fix sentence. Max 25 words after label.",
+    "**Label** — problem sentence. Fix sentence. Max 25 words after label."
   ],
   "best_moment": {
     "time": "<MM:SS>",
-    "description": "<2 sentences max: what happened and why it worked>"
+    "description": "<2 sentences: what happened and why it worked>"
   },
   "content_mix": [
     { "category": "<gameplay | chat interaction | commentary | educational | funny | hype>", "percentage": <integer 0-100> }
   ],
-  "recommendation": "<1-2 sentences max. Most impactful change. No buildup.>",
+  "recommendation": "<1-2 sentences. Most impactful change. No buildup.>",
   "next_stream_goals": [
     "<one sentence, concrete and measurable>",
     "<one sentence, concrete and measurable>",
@@ -524,8 +507,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     ],
   }), 3, 1000);
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
 
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
