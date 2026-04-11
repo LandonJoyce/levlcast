@@ -48,10 +48,43 @@ export default async function VodsPage() {
         <div className="bg-surface border border-border rounded-2xl p-16 text-center">
           <Film size={28} className="text-muted mx-auto mb-4" />
           <h2 className="text-lg font-bold mb-2">No VODs yet</h2>
-          <p className="text-sm text-muted max-w-sm mx-auto">Click Sync VODs to pull your recent Twitch streams.</p>
+          <p className="text-sm text-muted max-w-sm mx-auto">Click Sync VODs above to pull your recent Twitch streams.</p>
         </div>
       ) : (
         <>
+          {/* First-analysis spotlight — shown when no streams have been analyzed yet */}
+          {analyzed === 0 && !hasProcessing && (() => {
+            const spotlight = vodList.find((v) => v.status === "pending" || v.status === "failed");
+            if (!spotlight) return null;
+            return (
+              <div className="rounded-2xl border border-accent/25 bg-accent/[0.04] p-5 mb-5">
+                <p className="text-xs font-bold tracking-widest uppercase text-accent-light mb-1">Start Here</p>
+                <h2 className="text-base font-bold text-white mb-1">Analyze your most recent stream</h2>
+                <p className="text-sm text-muted mb-4">
+                  LevlCast will score your performance, find your peak moments, and give you a full coaching report — takes about 5 minutes.
+                </p>
+                <div className="flex items-center gap-4 bg-white/[0.03] border border-white/8 rounded-xl p-3">
+                  {spotlight.thumbnail_url && (
+                    <img src={spotlight.thumbnail_url} alt="" className="w-20 aspect-video rounded object-cover flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{spotlight.title}</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {formatDuration(spotlight.duration_seconds)} · {new Date(spotlight.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </p>
+                  </div>
+                  <AnalyzeButton
+                    vodId={spotlight.id}
+                    status={spotlight.status}
+                    vodTitle={spotlight.title}
+                    durationSeconds={spotlight.duration_seconds}
+                    hasProcessing={false}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Stats row */}
           <div className="flex items-center gap-6 mb-5 text-sm">
             <span><span className="font-bold text-white">{vodList.length}</span> <span className="text-muted">total</span></span>
