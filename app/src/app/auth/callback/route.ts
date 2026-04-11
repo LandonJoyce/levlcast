@@ -70,6 +70,9 @@ export async function GET(request: NextRequest) {
 
   if (profileError) {
     console.error("Profile upsert error:", profileError.message);
+    // Profile failed — redirect to login with error so user sees a message
+    // instead of landing on a broken dashboard with no profile row
+    return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
   }
 
   return response;
