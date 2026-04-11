@@ -133,8 +133,8 @@ export async function POST(request: Request) {
       if (subscriptionId) {
         const token = await getPayPalToken();
 
-        // Cancel via PayPal API
-        await fetch(
+        // Cancel via PayPal API — stop future billing
+        const cancelRes = await fetch(
           `${PAYPAL_BASE}/v1/billing/subscriptions/${subscriptionId}/cancel`,
           {
             method: "POST",
@@ -145,13 +145,25 @@ export async function POST(request: Request) {
             body: JSON.stringify({ reason: "User requested cancellation" }),
           }
         );
+
+        // PayPal returns 204 on success. 422 means already cancelled — both are fine.
+        // Any other error means we failed to cancel on PayPal's side — don't proceed.
+        if (!cancelRes.ok && cancelRes.status !== 422) {
+          const body = await cancelRes.text().catch(() => "");
+          console.error(`[subscription] PayPal cancel failed ${cancelRes.status}:`, body);
+          return NextResponse.json(
+            { error: "Failed to cancel with PayPal. Please try again or contact support." },
+            { status: 502 }
+          );
+        }
       }
 
-      // Downgrade to free in DB
+      // Clear the subscription ID so renewal webhooks no longer extend access.
+      // Keep plan="pro" and subscription_expires_at as-is — the user keeps access
+      // until the end of their billing period, then getUserUsage() auto-downgrades them.
       await admin
         .from("profiles")
         .update({
-          plan: "free",
           paypal_subscription_id: null,
           updated_at: new Date().toISOString(),
         })
@@ -160,13 +172,12 @@ export async function POST(request: Request) {
       await admin
         .from("subscriptions")
         .update({
-          plan: "free",
           status: "cancelled",
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
 
-      return NextResponse.json({ success: true, plan: "free" });
+      return NextResponse.json({ success: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
       console.error("[subscription] cancel error:", message);

@@ -11,6 +11,8 @@ interface SubscriptionSectionProps {
   clipsUsed: number;
   clipsLimit: number;
   hasPaypalSubscription: boolean;
+  subscriptionExpiresAt: string | null;
+  subscriptionStatus: string | null;
 }
 
 function UsageBar({
@@ -54,7 +56,10 @@ export function SubscriptionSection({
   clipsUsed,
   clipsLimit,
   hasPaypalSubscription,
+  subscriptionExpiresAt,
+  subscriptionStatus,
 }: SubscriptionSectionProps) {
+  const isCancelled = plan === "pro" && !hasPaypalSubscription && subscriptionStatus === "cancelled";
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -141,28 +146,41 @@ export function SubscriptionSection({
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-muted">
-              You are on the Pro plan. Thank you for your support.
-            </p>
-            {hasPaypalSubscription ? (
+            {isCancelled ? (
               <>
-                {cancelError && (
-                  <p className="text-xs text-red-400">{cancelError}</p>
-                )}
-                <button
-                  onClick={handleCancel}
-                  disabled={cancelling}
-                  className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground disabled:opacity-50 transition-colors underline underline-offset-2"
-                >
-                  {cancelling && <Loader2 size={13} className="animate-spin" />}
-                  {cancelling ? "Cancelling..." : "Cancel subscription"}
-                </button>
+                <p className="text-sm text-muted">
+                  Your subscription is cancelled.
+                  {subscriptionExpiresAt && (
+                    <> Pro access continues until <strong className="text-foreground">{new Date(subscriptionExpiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>.</>
+                  )}
+                </p>
               </>
             ) : (
-              <p className="text-sm text-muted">
-                You subscribed via the iOS app. To cancel, go to{" "}
-                <strong className="text-foreground">iOS Settings → Apple ID → Subscriptions → LevlCast</strong>.
-              </p>
+              <>
+                <p className="text-sm text-muted">
+                  You are on the Pro plan. Thank you for your support.
+                </p>
+                {hasPaypalSubscription ? (
+                  <>
+                    {cancelError && (
+                      <p className="text-xs text-red-400">{cancelError}</p>
+                    )}
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelling}
+                      className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground disabled:opacity-50 transition-colors underline underline-offset-2"
+                    >
+                      {cancelling && <Loader2 size={13} className="animate-spin" />}
+                      {cancelling ? "Cancelling..." : "Cancel subscription"}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted">
+                    You subscribed via the iOS app. To cancel, go to{" "}
+                    <strong className="text-foreground">iOS Settings → Apple ID → Subscriptions → LevlCast</strong>.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
