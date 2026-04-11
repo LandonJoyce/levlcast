@@ -35,8 +35,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
-  if (!authHeader || authHeader !== `Bearer ${secret}`) {
-    console.warn("[webhook/rc] Invalid authorization — rejecting");
+  const secretMatches = authHeader === `Bearer ${secret}` || authHeader === secret;
+  if (!authHeader || !secretMatches) {
+    console.warn(`[webhook/rc] Invalid authorization — rejecting (header: ${authHeader?.slice(0, 20)}...)`);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
