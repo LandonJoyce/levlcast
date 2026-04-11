@@ -31,7 +31,7 @@ export default async function GrowPage() {
 
   const { data: vods } = await supabase
     .from("vods")
-    .select("id, title, stream_date, peak_data")
+    .select("id, title, stream_date, peak_data, coach_report")
     .eq("user_id", user!.id)
     .eq("status", "ready")
     .not("peak_data", "is", null)
@@ -46,15 +46,24 @@ export default async function GrowPage() {
     .limit(5);
 
   const categoryCounts: Record<string, number> = { hype: 0, funny: 0, educational: 0, emotional: 0 };
+  const streamerTypeCounts: Record<string, number> = {};
+
   for (const vod of vods || []) {
     const peaks = (vod.peak_data as Peak[]) || [];
     for (const peak of peaks) {
       const cat = peak.category?.toLowerCase();
       if (cat && cat in categoryCounts) categoryCounts[cat]++;
     }
+    const streamerType = (vod.coach_report as any)?.streamer_type;
+    if (streamerType) {
+      streamerTypeCounts[streamerType] = (streamerTypeCounts[streamerType] ?? 0) + 1;
+    }
   }
 
   const totalPeaks = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
+
+  // Most common streamer type across analyzed VODs
+  const dominantStreamerType = Object.entries(streamerTypeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const dominantCategory = totalPeaks > 0
     ? Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0][0]
     : null;
@@ -84,7 +93,7 @@ export default async function GrowPage() {
       ) : (
         <div className="space-y-5">
           {/* Archetype full width */}
-          <ArchetypeCard dominantCategory={dominantCategory} categoryCounts={categoryCounts} totalPeaks={totalPeaks} />
+          <ArchetypeCard dominantCategory={dominantCategory} dominantStreamerType={dominantStreamerType} categoryCounts={categoryCounts} totalPeaks={totalPeaks} />
 
           {/* Two col — clips + tactics */}
           <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
