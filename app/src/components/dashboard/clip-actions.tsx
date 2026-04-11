@@ -8,7 +8,19 @@ export function CopyCaption({ caption }: { caption: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(caption);
+    try {
+      await navigator.clipboard.writeText(caption);
+    } catch {
+      // Fallback for HTTP or permission denied
+      const el = document.createElement("textarea");
+      el.value = caption;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -40,16 +52,25 @@ export function DownloadClip({ url, title }: { url: string; title: string }) {
 export function DeleteClip({ clipId }: { clipId: string }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleDelete() {
     setLoading(true);
+    setError(null);
     try {
-      await fetch(`/api/clips/${clipId}`, { method: "DELETE" });
+      const res = await fetch(`/api/clips/${clipId}`, { method: "DELETE" });
+      if (!res.ok) {
+        setError("Delete failed. Try again.");
+        setConfirming(false);
+        return;
+      }
       router.refresh();
+    } catch {
+      setError("Network error.");
+      setConfirming(false);
     } finally {
       setLoading(false);
-      setConfirming(false);
     }
   }
 
@@ -75,13 +96,16 @@ export function DeleteClip({ clipId }: { clipId: string }) {
   }
 
   return (
-    <button
-      onClick={() => setConfirming(true)}
-      className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-red-400 transition-colors"
-    >
-      <Trash2 size={12} />
-      Delete
-    </button>
+    <div className="inline-flex flex-col">
+      <button
+        onClick={() => { setConfirming(true); setError(null); }}
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-red-400 transition-colors"
+      >
+        <Trash2 size={12} />
+        Delete
+      </button>
+      {error && <span className="text-xs text-red-400 mt-0.5">{error}</span>}
+    </div>
   );
 }
 
