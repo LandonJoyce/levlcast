@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Check } from "lucide-react";
 
 interface UpgradeModalProps {
@@ -18,9 +18,12 @@ const FEATURES = [
 export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
+  const [paypalError, setPaypalError] = useState<string | null>(null);
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
+    setPaypalError(null);
 
     // Remove any previously injected PayPal script
     if (scriptRef.current) {
@@ -56,25 +59,39 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
             return actions.subscription.create({ plan_id: planId });
           },
           onApprove: async (data: any) => {
-            await fetch("/api/subscription/paypal", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "activate",
-                subscriptionId: data.subscriptionID,
-              }),
-            });
-            window.location.reload();
+            setActivating(true);
+            setPaypalError(null);
+            try {
+              const res = await fetch("/api/subscription/paypal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "activate",
+                  subscriptionId: data.subscriptionID,
+                }),
+              });
+              if (!res.ok) {
+                const json = await res.json().catch(() => ({}));
+                setPaypalError(json.error || "Activation failed. Please contact support with your PayPal transaction ID.");
+                return;
+              }
+              window.location.reload();
+            } catch {
+              setPaypalError("Network error activating subscription. Please contact support.");
+            } finally {
+              setActivating(false);
+            }
           },
           onError: (err: any) => {
             console.error("[PayPal] Button error:", err);
+            setPaypalError("PayPal encountered an error. Please try again or use a different payment method.");
           },
         })
         .render(containerRef.current);
     };
 
-    script.onerror = (e) => {
-      console.error("[PayPal] Script load error:", e);
+    script.onerror = () => {
+      setPaypalError("Failed to load PayPal. Check your connection or disable ad blockers and try again.");
     };
 
     document.body.appendChild(script);
@@ -136,7 +153,15 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
           </ul>
 
           {/* PayPal button */}
-          <div ref={containerRef} />
+          {activating ? (
+            <div className="text-center py-4 text-sm text-muted">Activating your subscription...</div>
+          ) : (
+            <div ref={containerRef} />
+          )}
+
+          {paypalError && (
+            <p className="text-xs text-red-400 text-center">{paypalError}</p>
+          )}
         </div>
       </div>
     </div>
