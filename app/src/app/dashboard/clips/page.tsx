@@ -64,8 +64,6 @@ export default async function ClipsPage() {
     .eq("user_id", user!.id);
 
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
-  const isTikTokConnected = connections?.some((c) => c.platform === "tiktok") ?? false;
-
   // Get existing social posts for these clips
   const clipIds = (clips || []).map((c) => c.id);
   const { data: socialPosts } = clipIds.length > 0
@@ -212,7 +210,7 @@ export default async function ClipsPage() {
                         </div>
                       </div>
 
-                      <p className="text-xs text-muted mb-2.5 line-clamp-2">{clip.description}</p>
+                      <p className="text-xs text-muted mb-2.5 line-clamp-2">{clip.caption_text}</p>
 
                       <div className="flex items-center gap-3 mb-2.5">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${categoryStyle(clip.peak_category)}`}>
