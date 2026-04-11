@@ -23,16 +23,16 @@ export async function generateMetadata(
 
   return {
     title: `${name}'s Stream Report — ${score}/100 | LevlCast`,
-    description: report?.stream_summary ?? "AI-powered stream coaching report.",
+    description: report?.recommendation ?? "AI-powered stream coaching report.",
     openGraph: {
       title: `${name} scored ${score}/100 on LevlCast`,
-      description: report?.stream_summary ?? "AI-powered stream coaching report.",
+      description: report?.recommendation ?? "AI-powered stream coaching report.",
       images: [`/share/${token}/opengraph-image`],
     },
     twitter: {
       card: "summary_large_image",
       title: `${name} scored ${score}/100 on LevlCast`,
-      description: report?.stream_summary ?? "AI-powered stream coaching report.",
+      description: report?.recommendation ?? "AI-powered stream coaching report.",
       images: [`/share/${token}/opengraph-image`],
     },
   };
@@ -131,7 +131,7 @@ export default async function SharePage({
           </div>
           <div>
             <p className="text-xs font-bold text-muted uppercase tracking-widest mb-1">Stream Score</p>
-            <p className="text-sm leading-relaxed">{report.stream_summary}</p>
+            {report.recommendation && <p className="text-sm leading-relaxed">{report.recommendation}</p>}
           </div>
         </div>
 

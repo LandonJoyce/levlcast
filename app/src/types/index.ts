@@ -84,8 +84,6 @@ export type RetentionRisk = "low" | "medium" | "high";
 export interface CoachReport {
   /** Stream performance score from 0–100. Most streams land between 50–75. */
   overall_score: number;
-  /** 2–3 sentence honest summary of the stream. */
-  stream_summary: string;
   /** How the streamer's energy changed throughout the stream. */
   energy_trend: EnergyTrend;
   /** Specific strengths with examples from the actual stream. */
@@ -99,11 +97,6 @@ export interface CoachReport {
     /** What happened, why it worked, and what it reveals about the streamer. */
     description: string;
   };
-  /** Breakdown of stream content types (gameplay, chat, commentary, etc.) */
-  content_mix: Array<{
-    category: string;
-    percentage: number;
-  }>;
   /** The single highest-leverage thing to do differently next stream. */
   recommendation: string;
   /** Three specific, measurable goals for the next stream. */

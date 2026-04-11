@@ -400,14 +400,6 @@ export function CoachReportCard({
           {expanded && (
             <div className="space-y-4 pt-2 border-t border-white/8">
 
-              {/* Stream summary (moved here from above-fold) */}
-              {report.stream_summary && (
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-white/25 block mb-1.5">Stream Summary</span>
-                  <p className="text-sm leading-relaxed text-white/55">{report.stream_summary}</p>
-                </div>
-              )}
-
               {/* Best Moment */}
               {report.best_moment && (
                 <div
@@ -427,7 +419,7 @@ export function CoachReportCard({
               )}
 
               {/* What Worked / Fix for Next Stream */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-3">
                 <div className="bg-green-500/5 border border-green-500/15 rounded-xl p-4">
                   <div className="flex items-center gap-1.5 mb-3">
                     <Star size={12} className="text-green-400" />
@@ -457,21 +449,6 @@ export function CoachReportCard({
                   </ul>
                 </div>
               </div>
-
-              {/* Content Mix */}
-              {report.content_mix && report.content_mix.length > 0 && (
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-white/25 block mb-2.5">Content Mix</span>
-                  <div className="flex gap-2 flex-wrap">
-                    {report.content_mix.map((c, i) => (
-                      <div key={i} className="flex items-center gap-1.5 bg-white/5 border border-white/8 rounded-full px-3 py-1">
-                        <span className="text-xs capitalize text-white/55">{c.category}</span>
-                        <span className="text-xs font-bold" style={{ color: glowColor }}>{c.percentage}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Your Missions */}
               {report.next_stream_goals && report.next_stream_goals.length > 0 && (

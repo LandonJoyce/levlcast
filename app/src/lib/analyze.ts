@@ -277,12 +277,10 @@ export async function detectPeaks(
 export interface CoachReport {
   overall_score: number;
   streamer_type: "gaming" | "just_chatting" | "irl" | "variety" | "educational";
-  stream_summary: string;
   energy_trend: "building" | "declining" | "consistent" | "volatile";
   strengths: string[];
   improvements: string[];
   best_moment: { time: string; description: string };
-  content_mix: { category: string; percentage: number }[];
   recommendation: string;
   next_stream_goals: string[];
   viewer_retention_risk: "low" | "medium" | "high";
@@ -413,9 +411,9 @@ export async function generateCoachReport(
 
 You are direct and honest. Your job is not to make the streamer feel good — it is to make them better. You use natural streaming culture language: dead air, chat sleeping, no hype, clipping moments, energy diff, grinding silent, lurker mode, going off, stream pacing.
 
-CORE PRINCIPLE: Every piece of feedback must be tied to THIS specific stream. No generic advice. A strength is only worth mentioning if you tell them how to do more of it. A problem is only worth mentioning if you give one specific thing to try next stream.
+CORE PRINCIPLE: You watched this specific stream. You know what happened. Every piece of feedback references a real moment — a timestamp, a specific topic they talked about, a specific thing they did or didn't do. Generic advice that could apply to any streamer is useless and you never give it.
 
-You never give advice that could apply to any streamer. You never praise things that aren't genuinely strong. You never list a problem without a concrete fix tied to what you actually heard in this stream.`,
+If you write a strength, you name the exact moment that showed it and tell them how to recreate it. If you write an improvement, you name when and where the problem showed up and give a fix that only makes sense for this specific stream.`,
     messages: [
       {
         role: "user",
@@ -430,11 +428,19 @@ STREAM INFO:
 AI-DETECTED PEAK MOMENTS (the best clips the AI found):
 ${peaksSummary}
 
-${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this to understand what created the peaks — or why peaks are missing):
+${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this carefully — this is the raw evidence for what made the best moments work or why moments are missing):
 ${peakContextBlock}` : ""}
 
 STREAM TRANSCRIPT SAMPLES (5 sections across the full stream, with wpm per section to show energy curve):
 ${transcriptSamples}
+
+STEP 0 — FIND THE STREAM'S STORY (do this first, before anything else):
+Read through the transcript and answer these questions internally — do not output the answers, but let them shape everything you write:
+- What was this stream actually about? What was the main thing happening?
+- What were the 2-3 pivotal moments — a big reaction, a turning point, a topic that lit up, a moment that fell flat?
+- What would someone who missed the stream need to know to understand the feedback?
+- What is the story arc — did it build somewhere, did something collapse, did something unexpected happen?
+Every piece of feedback you write must connect back to this story.
 
 STEP 1 — IDENTIFY STREAMER TYPE:
 - "gaming": playing a game, commentary on gameplay
@@ -446,14 +452,14 @@ STEP 1 — IDENTIFY STREAMER TYPE:
 CATEGORY COACHING STANDARDS (use the one matching the streamer type you identify):
 ${categoryGuideBlock}
 
-EVALUATION — work through each of these before writing feedback:
+EVALUATION — work through each before writing feedback:
 
-1. ENERGY CURVE: Look at the wpm per section. Is energy building, declining, volatile, or flat? Where specifically did it drop?
-2. DEAD AIR QUALITY: Is dead air from gameplay (acceptable) or from losing momentum (bad)? Which gaps are worth flagging?
-3. PERSONALITY: Where did their genuine personality come through clearly? How often? What triggered it?
-4. CHAT ENGAGEMENT: Is chat being treated like a co-star or an afterthought? Are regulars being acknowledged?
-5. PEAK ANALYSIS: What created the detected peaks? If peaks are missing or weak, what was the stream lacking that would have produced them?
-6. MOMENTUM: Did the stream build toward something, or did it plateau? When did it feel alive vs. when did it feel like they were just filling time?
+1. ENERGY CURVE: Look at wpm per section. Where did energy spike and where did it crater? Name the specific moments.
+2. DEAD AIR: Which gaps were from the game (acceptable) vs. losing momentum (bad)? Only flag the ones that actually hurt.
+3. PERSONALITY: When did their real personality show? What triggered it? How often did it happen vs. how often were they just filling air?
+4. CHAT: Were they treating chat as a co-star or an afterthought? Did any specific chat interaction go well or get ignored?
+5. PEAKS: What specifically created the detected peaks? If peaks are weak or missing, what was happening in the transcript where a peak should have been?
+6. NARRATIVE: Did the stream have a story? Did it build toward anything? Where did it feel alive vs. dead?
 
 SCORING — be honest, most streams land 50-70:
 - 85-100: Rare. High energy throughout, strong personality, great chat chemistry, multiple clip-worthy moments.
@@ -463,44 +469,40 @@ SCORING — be honest, most streams land 50-70:
 - Below 40: Fundamentals need attention.
 
 OUTPUT RULES:
-- NEVER quote the transcript directly. Describe in your own words.
-- Strengths: **2-3 word streamer-language label** — one sentence on what worked and how to do more of it. Max 20 words after label.
-- Improvements: **2-3 word streamer-language label** — one sentence on the problem, one sentence fix specific to this stream. Max 25 words after label.
-- Labels must sound like a fellow streamer talking, not a consultant. Good: "Dead Air", "Chat Sleeping", "No Hype", "Grinding Silent", "Going Off", "Energy Diff", "Lurker Mode", "Clipped That". Bad: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
-- Recommendation: 1-2 sentences. Single most impactful change. Direct, no buildup.
-- Stream summary: 1-2 sentences. What kind of stream, biggest takeaway.
-- Goals: one sentence each. Concrete — something they can actually measure next stream.
-- No emojis. No padding.
+- NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
+- Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
+- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence with a fix that only works for this stream. Max 25 words after label.
+- Labels must sound like a fellow streamer: "Dead Air", "Chat Sleeping", "Going Off", "Energy Diff", "Grinding Silent", "Clipped That", "No Hype". Never: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
+- Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
+- Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
+- Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
+- No emojis. No padding. No filler.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "overall_score": <integer 0-100>,
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
-  "stream_summary": "<1-2 sentences: what kind of stream, single biggest takeaway>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
   "strengths": [
-    "**Label** — one sentence, max 20 words.",
-    "**Label** — one sentence, max 20 words.",
-    "**Label** — one sentence, max 20 words."
+    "**Label** — specific moment + how to do more of it. Max 20 words.",
+    "**Label** — specific moment + how to do more of it. Max 20 words.",
+    "**Label** — specific moment + how to do more of it. Max 20 words."
   ],
   "improvements": [
-    "**Label** — problem sentence. Fix sentence. Max 25 words after label.",
-    "**Label** — problem sentence. Fix sentence. Max 25 words after label.",
-    "**Label** — problem sentence. Fix sentence. Max 25 words after label."
+    "**Label** — when/where it showed up. Fix specific to this stream. Max 25 words.",
+    "**Label** — when/where it showed up. Fix specific to this stream. Max 25 words.",
+    "**Label** — when/where it showed up. Fix specific to this stream. Max 25 words."
   ],
   "best_moment": {
     "time": "<MM:SS>",
-    "description": "<2 sentences: what happened and why it worked>"
+    "description": "<2 sentences: the actual story of what happened and exactly why it worked>"
   },
-  "content_mix": [
-    { "category": "<gameplay | chat interaction | commentary | educational | funny | hype>", "percentage": <integer 0-100> }
-  ],
-  "recommendation": "<1-2 sentences. Most impactful change. No buildup.>",
+  "recommendation": "<1-2 sentences. Reference this specific stream. Most impactful change. No buildup.>",
   "next_stream_goals": [
-    "<one sentence, concrete and measurable>",
-    "<one sentence, concrete and measurable>",
-    "<one sentence, concrete and measurable>"
+    "<one sentence, concrete, tied to what went wrong today>",
+    "<one sentence, concrete, tied to what went wrong today>",
+    "<one sentence, concrete, tied to what went wrong today>"
   ]
 }`,
       },
