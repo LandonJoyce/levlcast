@@ -33,6 +33,38 @@ export interface Peak {
 }
 
 /**
+ * Filter transcript segments to only the dominant speaker.
+ * Deepgram diarization assigns a speaker ID to each utterance. The speaker
+ * with the most total talking time is the streamer — game NPCs, music, and
+ * other voices will have far less speaking time and are filtered out.
+ * Falls back to the full segment list if no speaker data is present.
+ */
+function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment[] {
+  const hasSpeakerData = segments.some((s) => s.speaker !== undefined);
+  if (!hasSpeakerData) return segments;
+
+  // Sum speaking duration per speaker ID
+  const speakerTime: Record<number, number> = {};
+  for (const seg of segments) {
+    if (seg.speaker === undefined) continue;
+    speakerTime[seg.speaker] = (speakerTime[seg.speaker] ?? 0) + (seg.end - seg.start);
+  }
+
+  const entries = Object.entries(speakerTime).sort(([, a], [, b]) => b - a);
+  if (entries.length === 0) return segments;
+
+  const dominant = Number(entries[0][0]);
+  const filtered = segments.filter((s) => s.speaker === undefined || s.speaker === dominant);
+
+  const removed = segments.length - filtered.length;
+  if (removed > 0) {
+    console.log(`[analyze] Diarization: dominant speaker=${dominant} (${Math.round(speakerTime[dominant])}s), removed ${removed} segments from other speakers`);
+  }
+
+  return filtered;
+}
+
+/**
  * Build a transcript string from segments, with explicit pause markers.
  * Pauses of 8+ seconds are marked so Claude understands the stream's rhythm.
  */
@@ -135,8 +167,8 @@ VERBAL PATTERNS THAT ALMOST ALWAYS MAKE GREAT CLIPS — actively look for these:
 - Genuine frustration, rage, or hype clearly expressed out loud
 - Anything where the streamer goes loud, fast, or emotional in their speech rhythm
 
-BACKGROUND AUDIO — critical filter:
-Streamers often have music or videos playing. Skip anything that looks like song lyrics (rhyming, repetitive structure), scripted dialogue, or text that sounds like it came from media rather than a live person talking. Only clip the streamer's own authentic voice and reactions.
+SOURCE QUALITY:
+This transcript was pre-filtered using speaker diarization to include only the streamer's voice — game audio, music, and NPC dialogue have been removed. Every line is something the streamer actually said. If you still see anything that looks like scripted dialogue or song lyrics, skip it — it slipped through the filter.
 
 SCORING (0.0 - 1.0):
 - 0.85-1.0: Stops mid-scroll. Strong hook in first 3 seconds, universal reaction, needs zero context.
@@ -215,6 +247,10 @@ export async function detectPeaks(
   vodTitle: string
 ): Promise<Peak[]> {
   const anthropic = new Anthropic();
+
+  // Strip non-streamer voices (game NPCs, co-streamers, background audio)
+  // before sending to Claude — only analyze what the streamer actually said
+  segments = filterDominantSpeaker(segments);
 
   const vodDuration = segments.length > 0 ? segments[segments.length - 1].end : 0;
 
@@ -352,6 +388,11 @@ export async function generateCoachReport(
 
   if (segments.length === 0) return null;
 
+  // Strip non-streamer voices before analysis — same filter as peak detection
+  segments = filterDominantSpeaker(segments);
+
+  if (segments.length === 0) return null;
+
   const vodDuration = segments[segments.length - 1].end;
   const totalMinutes = Math.round(vodDuration / 60);
 
@@ -418,6 +459,8 @@ If you write a strength, you name the exact moment that showed it and tell them 
       {
         role: "user",
         content: `Review this Twitch stream and produce a coaching report the streamer can act on immediately.
+
+IMPORTANT: This transcript has been pre-filtered using speaker diarization to include ONLY the streamer's voice. Game audio, NPC dialogue, music, and other speakers have already been removed. Every line you read is something the streamer actually said. Dead air gaps in the transcript reflect real silence from the streamer — not background audio.
 
 STREAM INFO:
 - Title: "${vodTitle}"

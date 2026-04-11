@@ -32,6 +32,7 @@ const DEEPGRAM_PARAMS = new URLSearchParams({
   utterances: "true",
   utt_split: "1.5",
   disfluencies: "true",   // keep "uh", "oh", "wait", "what" — critical emotional markers
+  diarize: "true",         // tag each utterance with speaker ID so we can filter to the streamer's voice
 }).toString();
 
 /**
@@ -55,13 +56,14 @@ export async function transcribeFromUrl(url: string): Promise<TranscriptSegment[
   }
 
   const json = await res.json();
-  const utterances: { transcript: string; start: number; end: number }[] =
+  const utterances: { transcript: string; start: number; end: number; speaker?: number }[] =
     json.results?.utterances || [];
 
   return utterances.map((u) => ({
     text: u.transcript,
     start: u.start,
     end: u.end,
+    speaker: u.speaker,
   }));
 }
 
@@ -78,6 +80,7 @@ export async function transcribePassThrough(stream: PassThrough): Promise<Transc
     utterances: "true",
     utt_split: "1.5",
     disfluencies: "true",
+    diarize: "true",
   });
 
   const res = await fetch(`${DEEPGRAM_API}?${params}`, {
@@ -98,13 +101,14 @@ export async function transcribePassThrough(stream: PassThrough): Promise<Transc
   }
 
   const json = await res.json();
-  const utterances: { transcript: string; start: number; end: number }[] =
+  const utterances: { transcript: string; start: number; end: number; speaker?: number }[] =
     json.results?.utterances || [];
 
   return utterances.map((u) => ({
     text: u.transcript,
     start: u.start,
     end: u.end,
+    speaker: u.speaker,
   }));
 }
 
@@ -112,6 +116,8 @@ export interface TranscriptSegment {
   text: string;
   start: number;
   end: number;
+  /** Speaker ID assigned by Deepgram diarization. 0 = first detected speaker, etc. */
+  speaker?: number;
 }
 
 /**
@@ -128,6 +134,7 @@ export async function transcribeFile(
     utterances: "true",
     utt_split: "1.5",
     disfluencies: "true",
+    diarize: "true",
   });
 
   const res = await withRetry(() => {
@@ -151,12 +158,13 @@ export async function transcribeFile(
   }
 
   const json = await res.json();
-  const utterances: { transcript: string; start: number; end: number }[] =
+  const utterances: { transcript: string; start: number; end: number; speaker?: number }[] =
     json.results?.utterances || [];
 
   return utterances.map((u) => ({
     text: u.transcript,
     start: u.start,
     end: u.end,
+    speaker: u.speaker,
   }));
 }
