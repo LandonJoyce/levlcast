@@ -13,6 +13,7 @@ import {
   LogOut,
   ArrowLeft,
   TrendingUp,
+  CalendarDays,
 } from "lucide-react";
 
 const navItems = [
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/dashboard/clips", label: "Clips", icon: Scissors },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/grow", label: "Growth", icon: TrendingUp },
+  { href: "/dashboard/planner", label: "Planner", icon: CalendarDays },
   { href: "/dashboard/connections", label: "Connections", icon: Link2 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
