@@ -44,40 +44,39 @@ export async function POST(req: NextRequest) {
     )
     .join("\n");
 
-  const prompt = `You are a Twitch growth strategist building a personalized stream plan for a real streamer.
+  const prompt = `You are a Twitch growth strategist building a stream plan for a real streamer.
 
 STREAMER PROFILE:
 - Type: ${streamerIdentity.streamerType || "variety"}
 - Dominant peak category: ${streamerIdentity.dominantCategory || "hype"}
 - Total analyzed streams: ${streamerIdentity.totalStreams}
 
-HISTORICAL PERFORMANCE BY DAY:
-${dayLines || "Not enough data — base recommendations on typical Twitch peak times"}
+HISTORICAL PERFORMANCE BY DAY (avg coaching score out of 100, higher = better stream quality):
+${dayLines || "No data yet"}
 
-CONTENT THEY PLAN TO STREAM THIS WEEK:
+CONTENT THEY PLAN TO STREAM:
 ${(selectedContent as string[]).join(", ")}
 
 TASK:
-Generate a practical weekly stream plan tailored to this streamer.
 
-1. SCHEDULE (2-3 recommended days):
-- Pick their best-performing days from the data above
-- Suggest a specific start time based on typical Twitch peak hours for their content type
-- One-line reason grounded in THEIR data, not generic advice
-- If no day data exists, recommend Tuesday/Thursday/Saturday 7-9 PM ET
+1. SCHEDULE — recommend 2-3 days to stream:
+- If day data exists: rank by avg score (highest score = best day). Pick the top 2-3.
+- If scores are similar or all low: pick by stream count (consistency matters). Be honest about the scores — don't spin a low score as a good sign.
+- Suggest a start time (7-9 PM ET is peak for most streamers unless data says otherwise)
+- Reason: max 12 words, state the actual numbers plainly. Example: "Avg 62 on Thursdays — your best scoring day by far." Not: "Thursday provides a strong foundation..."
+- If scores are universally low (below 50), say so plainly: "Scores are low across all days — focus on quality over schedule."
 
-2. TITLE SUGGESTIONS (for each content item):
-- Give exactly 3 title options per content item
-- Match the personality style: a hype streamer needs energy-first titles, an educational streamer needs insight-first titles, a funny streamer needs personality-driven titles
-- Titles: 40-70 characters, no hashtags, no "Let's Play", no quotes around game names, no filler
-- Make them feel like something THIS specific streamer would say — not generic YouTube titles
+2. TITLE SUGGESTIONS — 3 titles per content item:
+- Match personality: hype streamer = energy-first, educational = insight-first, funny = personality-driven
+- 40-70 characters, no hashtags, no "Let's Play", no quotes around game names
+- Sound like something a real streamer would actually say, not a YouTube thumbnail
 
-No emojis. No padding. Be direct.
+No emojis. No filler. State numbers plainly.
 
 Respond with ONLY valid JSON (no markdown, no code fences):
 {
   "schedule": [
-    { "day": "<day name>", "time": "<H:MM AM/PM ET>", "reason": "<one sentence, specific to their data>" }
+    { "day": "<day>", "time": "<H:MM AM/PM ET>", "reason": "<max 12 words, plain numbers>" }
   ],
   "titles": [
     {
