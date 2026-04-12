@@ -40,6 +40,7 @@ export default async function VodsPage() {
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight mb-1">VODs</h1>
           <p className="text-sm text-muted">Sync your Twitch streams and find the best moments.</p>
+          <p className="text-xs text-muted/50 mt-1">After a stream ends, wait a few minutes for Twitch to process the VOD before syncing.</p>
         </div>
         <SyncButton />
       </div>
