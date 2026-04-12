@@ -143,7 +143,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* RIGHT sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-5">
 
             {/* Monday digest callout */}
             <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.05] p-5">

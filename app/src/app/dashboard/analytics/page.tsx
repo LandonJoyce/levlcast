@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { FollowerTrend } from "@/components/dashboard/follower-trend";
 import { formatDuration } from "@/lib/utils";
-import { Sparkles, TrendingUp, TrendingDown, Trophy, Zap, Clock, Flame } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Trophy, Zap, Clock, Flame, BarChart2 } from "lucide-react";
 import Link from "next/link";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -153,8 +153,10 @@ export default async function AnalyticsPage() {
       </div>
 
       {isEmpty ? (
-        <div className="text-center py-16">
-          <p className="text-muted text-sm">Sync and analyze some VODs to see your analytics here.</p>
+        <div className="bg-surface border border-border rounded-2xl p-16 text-center">
+          <BarChart2 size={28} className="text-muted mx-auto mb-3" />
+          <p className="text-sm font-semibold text-white mb-1">No analytics yet</p>
+          <p className="text-xs text-muted">Analyze a stream to see your score, insights, and trends.</p>
         </div>
       ) : (
         <>
