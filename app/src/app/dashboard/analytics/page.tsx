@@ -96,26 +96,23 @@ export default async function AnalyticsPage() {
     }
   }
 
-  // When do peaks happen — early / mid / late thirds
-  const peakTiming = { early: 0, mid: 0, late: 0 };
+  // Content type score comparison — group by first word of title, compare avg scores
+  const contentScores: Record<string, { scores: number[]; label: string }> = {};
   for (const vod of analyzedVods) {
-    const dur = vod.duration_seconds || 1;
-    const peaks = (vod.peak_data as Array<{ start: number }>) || [];
-    for (const peak of peaks) {
-      const pos = peak.start / dur;
-      if (pos < 0.33) peakTiming.early++;
-      else if (pos < 0.66) peakTiming.mid++;
-      else peakTiming.late++;
-    }
+    const score = (vod.coach_report as any)?.overall_score as number | undefined;
+    if (!score || !vod.title) continue;
+    const firstWord = vod.title.trim().split(/\s+/)[0];
+    const key = firstWord.toLowerCase();
+    const label = firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+    if (!contentScores[key]) contentScores[key] = { scores: [], label };
+    contentScores[key].scores.push(score);
   }
-
-  const peakTimingTotal = peakTiming.early + peakTiming.mid + peakTiming.late;
-  const peakTimingLabel = peakTimingTotal > 0
-    ? peakTiming.early >= peakTiming.mid && peakTiming.early >= peakTiming.late
-      ? { zone: "first third", pct: Math.round((peakTiming.early / peakTimingTotal) * 100) }
-      : peakTiming.mid >= peakTiming.late
-      ? { zone: "middle", pct: Math.round((peakTiming.mid / peakTimingTotal) * 100) }
-      : { zone: "final third", pct: Math.round((peakTiming.late / peakTimingTotal) * 100) }
+  const contentAvgs = Object.values(contentScores)
+    .filter((c) => c.scores.length >= 2)
+    .map((c) => ({ label: c.label, avg: Math.round(c.scores.reduce((a, b) => a + b, 0) / c.scores.length), count: c.scores.length }))
+    .sort((a, b) => b.avg - a.avg);
+  const contentInsight = contentAvgs.length >= 2
+    ? { best: contentAvgs[0], worst: contentAvgs[contentAvgs.length - 1] }
     : null;
 
   // Stream length sweet spot — under 1hr vs over 1hr
@@ -199,18 +196,20 @@ export default async function AnalyticsPage() {
                   </Link>
                 )}
 
-                {/* Peak timing */}
-                {peakTimingLabel && (
+                {/* Content score comparison */}
+                {contentInsight && (
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Zap size={15} className="text-purple-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted mb-0.5">When You Peak</p>
+                      <p className="text-xs text-muted mb-0.5">What Works Best</p>
                       <p className="text-sm font-semibold text-white">
-                        {peakTimingLabel.pct}% hit in the {peakTimingLabel.zone}
+                        {contentInsight.best.label} scores higher
                       </p>
-                      <p className="text-xs text-muted">of your stream</p>
+                      <p className="text-xs text-muted">
+                        avg {contentInsight.best.avg} vs {contentInsight.worst.avg} for {contentInsight.worst.label}
+                      </p>
                     </div>
                   </div>
                 )}
