@@ -8,7 +8,7 @@ import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
-import { ArrowLeft, Calendar, Clock, Film, Loader2, Scissors, Sparkles } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Film, Loader2, Scissors, Sparkles, VolumeX } from "lucide-react";
 
 function scoreColor(score: number) {
   if (score >= 0.7) return "text-green-400";
@@ -151,6 +151,25 @@ export default async function VodDetailPage({
           ) : (
             <div className="bg-surface border border-border rounded-2xl p-6 text-sm text-muted">
               Coach report not available for this VOD. Re-analyze to generate one.
+            </div>
+          )}
+
+          {/* Dead Zones */}
+          {coachReport?.dead_zones && coachReport.dead_zones.length > 0 && (
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <VolumeX size={14} className="text-red-400" />
+                <h2 className="text-sm font-bold text-white">Silence Gaps</h2>
+                <span className="text-xs text-muted ml-1">— moments where energy dropped off</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(coachReport.dead_zones as Array<{ time: string; duration: number }>).map((zone, i) => (
+                  <div key={i} className="flex items-center gap-1.5 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-1.5">
+                    <span className="text-xs font-semibold text-red-400">{zone.time}</span>
+                    <span className="text-xs text-muted">{zone.duration}s gap</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

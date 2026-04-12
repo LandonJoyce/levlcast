@@ -321,6 +321,7 @@ export interface CoachReport {
   next_stream_goals: string[];
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
+  dead_zones?: Array<{ time: string; duration: number }>;
 }
 
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
@@ -562,7 +563,12 @@ Respond with ONLY a JSON object (no markdown, no code fences):
 
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    return JSON.parse(cleaned) as CoachReport;
+    const report = JSON.parse(cleaned) as CoachReport;
+    // Attach worst dead air gaps directly from computed data (no need to re-derive from AI)
+    if (worstGaps.length > 0) {
+      report.dead_zones = worstGaps.map((g) => ({ time: formatTime(g.start), duration: g.duration }));
+    }
+    return report;
   } catch {
     console.error("Failed to parse coach report:", text);
     return null;

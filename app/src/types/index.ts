@@ -105,6 +105,8 @@ export interface CoachReport {
   viewer_retention_risk: RetentionRisk;
   /** How strong the stream's opening was (first 5 minutes). */
   cold_open?: { score: "strong" | "average" | "weak"; note: string };
+  /** Longest silence/low-energy gaps detected in the stream. */
+  dead_zones?: Array<{ time: string; duration: number }>;
 }
 
 // ─── CLIPS ───────────────────────────────────────────────────────────────────
