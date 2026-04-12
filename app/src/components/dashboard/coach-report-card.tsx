@@ -333,6 +333,21 @@ export function CoachReportCard({
             </div>
           </div>
 
+          {/* Cold Open */}
+          {report.cold_open && (() => {
+            const s = report.cold_open.score;
+            const color = s === "strong" ? "text-green-400 bg-green-400/10 border-green-400/20"
+              : s === "average" ? "text-yellow-400 bg-yellow-400/10 border-yellow-400/20"
+              : "text-red-400 bg-red-400/10 border-red-400/20";
+            const label = s === "strong" ? "Strong Open" : s === "average" ? "Slow Start" : "Cold Open";
+            return (
+              <div className={`rounded-xl px-4 py-3 border flex items-start gap-3 ${color}`}>
+                <span className="text-xs font-extrabold uppercase tracking-widest flex-shrink-0 mt-0.5">{label}</span>
+                <p className="text-xs leading-relaxed opacity-80">{report.cold_open.note}</p>
+              </div>
+            );
+          })()}
+
           {/* #1 Priority */}
           <div
             className="rounded-xl p-4 border border-white/8"

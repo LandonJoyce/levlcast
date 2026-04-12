@@ -103,6 +103,8 @@ export interface CoachReport {
   next_stream_goals: string[];
   /** How likely the stream was to lose viewers mid-way. */
   viewer_retention_risk: RetentionRisk;
+  /** How strong the stream's opening was (first 5 minutes). */
+  cold_open?: { score: "strong" | "average" | "weak"; note: string };
 }
 
 // ─── CLIPS ───────────────────────────────────────────────────────────────────

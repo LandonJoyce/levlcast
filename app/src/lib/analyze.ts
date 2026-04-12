@@ -320,6 +320,7 @@ export interface CoachReport {
   recommendation: string;
   next_stream_goals: string[];
   viewer_retention_risk: "low" | "medium" | "high";
+  cold_open: { score: "strong" | "weak" | "average"; note: string };
 }
 
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
@@ -519,6 +520,7 @@ OUTPUT RULES:
 - Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
 - Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
+- Cold open: score the first 5 minutes only. "strong" = hooked immediately, energy and presence from first words. "average" = took a few minutes to find footing. "weak" = opened cold, silent, or directionless. Note: 1 sentence, specific to what actually happened in those first minutes.
 - No emojis. No padding. No filler.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
@@ -527,6 +529,10 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
+  "cold_open": {
+    "score": "<strong | average | weak>",
+    "note": "<1 sentence about exactly what happened in the first 5 minutes>"
+  },
   "strengths": [
     "**Label** — specific moment + how to do more of it. Max 20 words.",
     "**Label** — specific moment + how to do more of it. Max 20 words.",

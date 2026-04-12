@@ -218,7 +218,7 @@ export default async function VodDetailPage({
           {peaks.length > 0 && (
             <div>
               <h2 className="text-base font-bold mb-3">
-                Peak Moments ({peaks.length})
+                Clip Moments ({peaks.length})
               </h2>
               <div className="space-y-3">
                 {peaks.map((peak: any, i: number) => {
@@ -231,7 +231,12 @@ export default async function VodDetailPage({
                           {peak.category}
                         </span>
                       </div>
-                      <p className="text-xs text-muted mb-3">{peak.reason}</p>
+                      <p className="text-xs text-muted mb-2">{peak.reason}</p>
+                      {peak.hook && (
+                        <p className="text-xs text-accent-light/80 bg-accent/5 border border-accent/15 rounded-lg px-3 py-1.5 mb-3">
+                          Hook: {peak.hook}
+                        </p>
+                      )}
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 text-xs text-muted">
                           <span>{formatDuration(peak.start)} – {formatDuration(peak.end)}</span>

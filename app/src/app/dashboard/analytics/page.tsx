@@ -75,6 +75,17 @@ export default async function AnalyticsPage() {
   const avgScore = coachScores.length > 0 ? Math.round(coachScores.reduce((s, c) => s + c.score, 0) / coachScores.length) : null;
   const scoreTrend = coachScores.length >= 2 ? coachScores[coachScores.length - 1].score - coachScores[coachScores.length - 2].score : null;
 
+  // Progress arc — plain language summary of score movement
+  let progressArc: string | null = null;
+  if (coachScores.length >= 3) {
+    const first = coachScores[0].score;
+    const last = coachScores[coachScores.length - 1].score;
+    const diff = last - first;
+    if (diff >= 10) progressArc = `Up ${diff} points across your last ${coachScores.length} streams.`;
+    else if (diff <= -10) progressArc = `Down ${Math.abs(diff)} points across your last ${coachScores.length} streams. Focus on consistency.`;
+    else progressArc = `Holding steady around ${avgScore} across your last ${coachScores.length} streams.`;
+  }
+
   // ── Derived insights ──
   // Best stream
   let bestStream: { id: string; title: string; score: number; date: string } | null = null;
@@ -169,6 +180,9 @@ export default async function AnalyticsPage() {
                 avg across {coachScores.length} stream{coachScores.length !== 1 ? "s" : ""}
                 {latestScore !== null && coachScores.length > 1 && ` · latest: ${latestScore}`}
               </p>
+              {progressArc && (
+                <p className="text-xs text-white/40 mt-2 leading-relaxed">{progressArc}</p>
+              )}
             </div>
 
             {/* Insights */}

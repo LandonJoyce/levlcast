@@ -9,8 +9,13 @@ interface StreamerIdentity {
   totalStreams: number;
 }
 
+interface TitleSuggestion {
+  title: string;
+  why: string;
+}
+
 interface TitleResult {
-  titles: Array<{ content: string; suggestions: string[] }>;
+  titles: Array<{ content: string; suggestions: TitleSuggestion[] }>;
 }
 
 interface Props {
@@ -149,28 +154,32 @@ export function PlannerForm({ contentOptions, streamerIdentity }: Props) {
                 <p className="text-xs font-bold text-muted uppercase tracking-wide mb-3">
                   {item.content}
                 </p>
-                <div className="space-y-2">
-                  {item.suggestions.map((title, j) => (
-                    <div
-                      key={j}
-                      className="flex items-center justify-between gap-3 group"
-                    >
-                      <p className="text-sm text-white leading-snug flex-1">
-                        {title}
-                      </p>
-                      <button
-                        onClick={() => copyTitle(title)}
-                        className="flex-shrink-0 text-muted hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
-                        title="Copy title"
-                      >
-                        {copied === title ? (
-                          <Check size={13} className="text-green-400" />
-                        ) : (
-                          <Copy size={13} />
-                        )}
-                      </button>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  {item.suggestions.map((s, j) => {
+                    const titleStr = typeof s === "string" ? s : s.title;
+                    const whyStr = typeof s === "string" ? null : s.why;
+                    return (
+                      <div key={j} className="flex items-start justify-between gap-3 group">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white leading-snug">{titleStr}</p>
+                          {whyStr && (
+                            <p className="text-[11px] text-muted mt-0.5">{whyStr}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => copyTitle(titleStr)}
+                          className="flex-shrink-0 text-muted hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 mt-0.5"
+                          title="Copy title"
+                        >
+                          {copied === titleStr ? (
+                            <Check size={13} className="text-green-400" />
+                          ) : (
+                            <Copy size={13} />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}

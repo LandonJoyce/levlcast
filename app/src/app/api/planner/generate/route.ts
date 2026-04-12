@@ -57,6 +57,8 @@ TITLE RULES:
 - Sound like something a real streamer would actually type as their stream title — not a YouTube thumbnail or clickbait
 - Each title should have a different angle: one confident, one playful, one specific to the content
 
+For each title add a "why" — max 5 words explaining what makes it work. Examples: "curiosity gap", "personality-first hook", "specific stakes", "community energy".
+
 No emojis. No filler.
 
 Respond with ONLY valid JSON (no markdown, no code fences):
@@ -64,7 +66,11 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   "titles": [
     {
       "content": "<exact content item from input>",
-      "suggestions": ["<title 1>", "<title 2>", "<title 3>"]
+      "suggestions": [
+        { "title": "<title>", "why": "<max 5 words>" },
+        { "title": "<title>", "why": "<max 5 words>" },
+        { "title": "<title>", "why": "<max 5 words>" }
+      ]
     }
   ]
 }`;
