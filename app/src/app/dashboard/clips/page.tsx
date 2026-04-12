@@ -3,7 +3,7 @@ import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip } from "@/components/dashboard/clip-actions";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { Scissors, Sparkles, Clock, Film, Loader2 } from "lucide-react";
+import { Scissors, Sparkles, Clock, Film, Loader2, Link2 } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -119,6 +119,22 @@ export default async function ClipsPage() {
           AI-detected peak moments from your analyzed VODs.
         </p>
       </div>
+
+      {/* Nudge to connect social if no connections and there are clips */}
+      {hasContent && !isYouTubeConnected && (connections?.length ?? 0) === 0 && (
+        <div className="flex items-center justify-between gap-4 bg-accent/[0.06] border border-accent/20 rounded-xl px-4 py-3 mb-6">
+          <div className="flex items-center gap-2.5">
+            <Link2 size={14} className="text-accent-light flex-shrink-0" />
+            <p className="text-sm text-white/80">Connect YouTube or TikTok to post your clips directly.</p>
+          </div>
+          <Link
+            href="/dashboard/connections"
+            className="text-xs font-semibold text-accent-light hover:opacity-80 transition-opacity flex-shrink-0"
+          >
+            Connect →
+          </Link>
+        </div>
+      )}
 
       {!hasContent ? (
         <div className="bg-surface border border-border rounded-2xl p-12 text-center">

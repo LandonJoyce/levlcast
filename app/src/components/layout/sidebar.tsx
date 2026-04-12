@@ -16,15 +16,33 @@ import {
   PenLine,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/vods", label: "VODs", icon: Film },
-  { href: "/dashboard/clips", label: "Clips", icon: Scissors },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/grow", label: "Growth", icon: TrendingUp },
-  { href: "/dashboard/planner", label: "Titles", icon: PenLine },
-  { href: "/dashboard/connections", label: "Connections", icon: Link2 },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+const navGroups = [
+  {
+    label: null,
+    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    label: "Create",
+    items: [
+      { href: "/dashboard/vods", label: "VODs", icon: Film },
+      { href: "/dashboard/clips", label: "Clips", icon: Scissors },
+      { href: "/dashboard/planner", label: "Titles", icon: PenLine },
+    ],
+  },
+  {
+    label: "Grow",
+    items: [
+      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/dashboard/grow", label: "Growth", icon: TrendingUp },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { href: "/dashboard/connections", label: "Connections", icon: Link2 },
+      { href: "/dashboard/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -48,32 +66,43 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 py-4 px-3 space-y-1">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+      <nav className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+        {navGroups.map((group, gi) => (
+          <div key={gi}>
+            {group.label && (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted/50 px-3 mb-1">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                isActive
-                  ? "bg-accent/15 text-white"
-                  : "text-muted hover:text-white hover:bg-white/[0.04]"
-              )}
-            >
-              <item.icon
-                size={18}
-                className={cn(isActive ? "text-accent-light" : "text-muted")}
-              />
-              {item.label}
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-accent/15 text-white"
+                        : "text-muted hover:text-white hover:bg-white/[0.04]"
+                    )}
+                  >
+                    <item.icon
+                      size={18}
+                      className={cn(isActive ? "text-accent-light" : "text-muted")}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* User section */}
