@@ -51,6 +51,12 @@ export async function uploadToTikTok({
   videoUrl: string;
   title: string;
 }) {
+  // Validate videoUrl is from our R2 bucket before passing to TikTok
+  const r2Base = process.env.R2_PUBLIC_URL;
+  if (!r2Base || !videoUrl.startsWith(r2Base)) {
+    throw new Error("Invalid video URL — must be an R2 asset");
+  }
+
   const res = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
     method: "POST",
     headers: {

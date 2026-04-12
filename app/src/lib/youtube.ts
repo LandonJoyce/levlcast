@@ -59,6 +59,12 @@ export async function uploadToYouTube({
   title: string;
   description: string;
 }) {
+  // Validate videoUrl is from our R2 bucket before fetching (prevent SSRF)
+  const r2Base = process.env.R2_PUBLIC_URL;
+  if (!r2Base || !videoUrl.startsWith(r2Base)) {
+    throw new Error("Invalid video URL — must be an R2 asset");
+  }
+
   // Fetch the video file
   const videoRes = await fetch(videoUrl);
   if (!videoRes.ok) throw new Error("Failed to fetch video file");

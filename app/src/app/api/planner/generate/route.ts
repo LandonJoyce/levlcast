@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(req: NextRequest) {
@@ -25,6 +26,11 @@ export async function POST(req: NextRequest) {
   const isPro = profile?.plan === "pro" && !isExpired;
   if (!isPro) {
     return NextResponse.json({ error: "pro_required" }, { status: 403 });
+  }
+
+  // Rate limit: 10 generations per hour per user
+  if (!rateLimit(`planner:${user.id}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   const { selectedContent, streamerIdentity } = await req.json();
