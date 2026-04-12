@@ -7,26 +7,11 @@ Just write a task on its own line starting with `- [ ]`. Add a line below it sta
 
 ## Pending
 
-- [ ] Research streamer feature requests
-      Context: Go through Twitch subreddits, streamer forums, product feedback. Find features streamers wish they had that LevlCast could realistically build. Filter to coaching, clips, growth — not overlays, alerts, chat bots. Output a ranked list with reasoning before building anything.
-
 - [ ] Evaluate and implement qualifying features from research
-      Context: Take the ranked list from above. For each: does it fit LevlCast, do we have the data, is it Pro or Free? Only build the ones that pass. Skip anything out of scope or unsupported by current data.
+      Context: Top opportunities from Reddit research: (1) viewer drop-off language in coaching — make retention coaching more specific, (2) burnout score more visible in dashboard, (3) clip-to-social UX flow — make the path from clip generation to posting obvious. Do NOT build chat analysis or scheduling optimization (we lack the data). Only build if it fits current data model.
 
-- [ ] Fix any errors introduced by new features
-      Context: After each new feature, check existing pages still work. Run TypeScript check. Verify imports, props, and API routes haven't broken.
-
-- [ ] Audit new features for security issues
-      Context: Check for unprotected API routes, exposed service role keys, unvalidated inputs, missing RLS, open redirects.
-
-- [ ] UI/UX spacing and visual pass
-      Context: Go through every dashboard page. Fix anything cramped, misaligned, or inconsistent. Check mobile too. Polish only — no new features.
-
-- [ ] Read through reddit/r/newstreamers and /r/twitch and check out what people are upset about. See if its relevant to LevlCast in a way we could help.
-
-- [ ] Save any info to remind me for later of your findings
-
-- [ ] We don't want to over clutter the website with too many options but make them fit and work together UX style flow. We want the streamers/users to know what they want to do with the tools. 
+- [ ] We don't want to over clutter the website with too many options but make them fit and work together UX style flow. We want the streamers/users to know what they want to do with the tools.
+      Context: Review the dashboard nav and page flow. Is it obvious what order to use the tools? VODs → analyze → clips → post. Does the UI guide users through that funnel? Make it feel like a connected workflow, not a bunch of separate pages.
 
 - [ ] 
 
@@ -35,4 +20,9 @@ Just write a task on its own line starting with `- [ ]`. Add a line below it sta
 
 ## Completed
 
-<!-- Move finished tasks here with [x] when done -->
+- [x] Research streamer feature requests (r/newstreamers, r/Twitch — April 2026)
+- [x] Fix any errors introduced by new features (TypeScript clean)
+- [x] Audit new features for security issues (rate limiting, SSRF guard, OAuth nonce audit)
+- [x] UI/UX spacing and visual pass (caption duplication, sidebar spacing, empty state icon)
+- [x] Read through reddit/r/newstreamers and /r/twitch for pain points
+- [x] Save findings to memory

@@ -20,6 +20,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.6",
+    date: "2026-04-11",
+    title: "The Planner + Flow Patch",
+    items: [
+      { type: "new",      text: "Title Generator — select what you're streaming and get 3 title ideas per content type, each with a short explanation of why it works" },
+      { type: "new",      text: "Silence Gap detector — your coach report now highlights the longest quiet stretches in your stream so you know where energy dropped off" },
+      { type: "new",      text: "Cold Open score — each report now rates how strong your first 5 minutes were: Strong, Slow Start, or Cold Open" },
+      { type: "improved", text: "Analytics top section redesigned — stream score, best stream, hottest moment, best content type, and sweet spot length are now front and center" },
+      { type: "improved", text: "Navigation is now grouped into Create, Grow, and Account — easier to know where you are and what to do next" },
+      { type: "improved", text: "Clips page now nudges you to connect YouTube or TikTok if you haven't yet, so you can actually post what you've generated" },
+      { type: "fix",      text: "Clip cards were showing the same caption text twice — now shown once" },
+    ],
+  },
+  {
     version: "v0.5",
     date: "2026-04-10",
     title: "The Coaching Patch",
