@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { FollowerTrend } from "@/components/dashboard/follower-trend";
 import { formatDuration } from "@/lib/utils";
-import { Sparkles, TrendingUp, TrendingDown } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Trophy, Zap, Clock, Flame } from "lucide-react";
 import Link from "next/link";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -75,6 +75,66 @@ export default async function AnalyticsPage() {
   const avgScore = coachScores.length > 0 ? Math.round(coachScores.reduce((s, c) => s + c.score, 0) / coachScores.length) : null;
   const scoreTrend = coachScores.length >= 2 ? coachScores[coachScores.length - 1].score - coachScores[coachScores.length - 2].score : null;
 
+  // ── Derived insights ──
+  // Best stream
+  let bestStream: { id: string; title: string; score: number; date: string } | null = null;
+  for (const vod of analyzedVods) {
+    const score = (vod.coach_report as any)?.overall_score as number | undefined;
+    if (score && (!bestStream || score > bestStream.score)) {
+      bestStream = { id: vod.id, title: vod.title || "Stream", score, date: vod.stream_date };
+    }
+  }
+
+  // Best single peak moment
+  let bestPeak: { title: string; score: number; vodTitle: string; vodId: string } | null = null;
+  for (const vod of analyzedVods) {
+    const peaks = (vod.peak_data as Array<{ title: string; score: number }>) || [];
+    for (const peak of peaks) {
+      if (!bestPeak || peak.score > bestPeak.score) {
+        bestPeak = { title: peak.title, score: peak.score, vodTitle: vod.title || "Stream", vodId: vod.id };
+      }
+    }
+  }
+
+  // When do peaks happen — early / mid / late thirds
+  const peakTiming = { early: 0, mid: 0, late: 0 };
+  for (const vod of analyzedVods) {
+    const dur = vod.duration_seconds || 1;
+    const peaks = (vod.peak_data as Array<{ start: number }>) || [];
+    for (const peak of peaks) {
+      const pos = peak.start / dur;
+      if (pos < 0.33) peakTiming.early++;
+      else if (pos < 0.66) peakTiming.mid++;
+      else peakTiming.late++;
+    }
+  }
+
+  const peakTimingTotal = peakTiming.early + peakTiming.mid + peakTiming.late;
+  const peakTimingLabel = peakTimingTotal > 0
+    ? peakTiming.early >= peakTiming.mid && peakTiming.early >= peakTiming.late
+      ? { zone: "first third", pct: Math.round((peakTiming.early / peakTimingTotal) * 100) }
+      : peakTiming.mid >= peakTiming.late
+      ? { zone: "middle", pct: Math.round((peakTiming.mid / peakTimingTotal) * 100) }
+      : { zone: "final third", pct: Math.round((peakTiming.late / peakTimingTotal) * 100) }
+    : null;
+
+  // Stream length sweet spot — under 1hr vs over 1hr
+  const shortStreams = analyzedVods.filter((v) => v.duration_seconds && v.duration_seconds < 3600);
+  const longStreams = analyzedVods.filter((v) => v.duration_seconds && v.duration_seconds >= 3600);
+  const avgOf = (arr: typeof analyzedVods) => {
+    const scores = arr.map((v) => (v.coach_report as any)?.overall_score).filter(Boolean) as number[];
+    return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  };
+  const shortAvg = avgOf(shortStreams);
+  const longAvg = avgOf(longStreams);
+  const sweetSpot = shortAvg !== null && longAvg !== null && shortStreams.length >= 2 && longStreams.length >= 2
+    ? shortAvg > longAvg
+      ? { label: "Under 1 hour", avg: shortAvg, comparison: `avg ${shortAvg} vs ${longAvg} for longer streams` }
+      : longAvg > shortAvg
+      ? { label: "Over 1 hour", avg: longAvg, comparison: `avg ${longAvg} vs ${shortAvg} for shorter streams` }
+      : null
+    : null;
+
   const isEmpty = vods.length === 0;
 
   return (
@@ -90,19 +150,19 @@ export default async function AnalyticsPage() {
         </div>
       ) : (
         <>
-          {/* Hero score + supporting stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] gap-4 mb-6">
+          {/* Score + Insights */}
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 mb-6">
             {/* Score hero */}
-            <div className="bg-surface border border-border rounded-2xl px-6 py-5">
+            <div className="bg-surface border border-border rounded-2xl px-6 py-6 flex flex-col justify-center">
               <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
                 Stream Score
               </p>
-              <div className="flex items-end gap-3 mb-1">
-                <p className={`text-5xl font-extrabold leading-none ${avgScore === null ? "" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+              <div className="flex items-end gap-3 mb-1.5">
+                <p className={`text-6xl font-extrabold leading-none ${avgScore === null ? "" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>
                   {avgScore !== null ? avgScore : "—"}
                 </p>
                 {scoreTrend !== null && scoreTrend !== 0 && (
-                  <span className={`text-sm font-bold flex items-center gap-0.5 mb-1 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
+                  <span className={`text-sm font-bold flex items-center gap-0.5 mb-1.5 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
                     {scoreTrend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                     {scoreTrend > 0 ? "+" : ""}{scoreTrend}
                   </span>
@@ -114,31 +174,93 @@ export default async function AnalyticsPage() {
               </p>
             </div>
 
-            {/* Peaks */}
+            {/* Insights */}
             <div className="bg-surface border border-border rounded-2xl px-6 py-5">
-              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
-                Peak Moments Found
+              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-4">
+                Stream Insights
               </p>
-              <p className="text-5xl font-extrabold leading-none text-white mb-1">
-                {totalPeaks}
-              </p>
-              <p className="text-xs text-muted">
-                across {analyzedVods.length} analyzed stream{analyzedVods.length !== 1 ? "s" : ""}
-                {totalPeaks > 0 && analyzedVods.length > 0 && ` · ${(totalPeaks / analyzedVods.length).toFixed(1)} per stream`}
-              </p>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Best stream */}
+                {bestStream && (
+                  <Link href={`/dashboard/vods/${bestStream.id}`} className="flex items-start gap-3 group">
+                    <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Trophy size={15} className="text-yellow-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted mb-0.5">Best Stream</p>
+                      <p className="text-sm font-semibold text-white truncate group-hover:text-accent-light transition-colors">
+                        {bestStream.title}
+                      </p>
+                      <p className="text-xs text-muted">
+                        Score: <span className={`font-bold ${bestStream.score >= 70 ? "text-green-400" : bestStream.score >= 50 ? "text-yellow-400" : "text-red-400"}`}>{bestStream.score}</span>
+                        {" · "}{new Date(bestStream.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                  </Link>
+                )}
 
-            {/* Clips */}
-            <div className="bg-surface border border-border rounded-2xl px-6 py-5">
-              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
-                Clips Generated
-              </p>
-              <p className="text-5xl font-extrabold leading-none text-white mb-1">
-                {totalClips}
-              </p>
-              <p className="text-xs text-muted">
-                {totalPeaks > 0 ? `${Math.round((totalClips / totalPeaks) * 100)}% of peaks clipped` : "analyze VODs to find clips"}
-              </p>
+                {/* Peak timing */}
+                {peakTimingLabel && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Zap size={15} className="text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted mb-0.5">When You Peak</p>
+                      <p className="text-sm font-semibold text-white">
+                        {peakTimingLabel.pct}% hit in the {peakTimingLabel.zone}
+                      </p>
+                      <p className="text-xs text-muted">of your stream</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Best moment */}
+                {bestPeak && (
+                  <Link href={`/dashboard/vods/${bestPeak.vodId}`} className="flex items-start gap-3 group">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Flame size={15} className="text-red-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted mb-0.5">Hottest Moment</p>
+                      <p className="text-sm font-semibold text-white truncate group-hover:text-accent-light transition-colors">
+                        {bestPeak.title}
+                      </p>
+                      <p className="text-xs text-muted">
+                        Score: <span className="font-bold text-white">{Math.round(bestPeak.score * 100)}</span>
+                        {" · "}{bestPeak.vodTitle}
+                      </p>
+                    </div>
+                  </Link>
+                )}
+
+                {/* Sweet spot or fallback stat */}
+                {sweetSpot ? (
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Clock size={15} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted mb-0.5">Sweet Spot Length</p>
+                      <p className="text-sm font-semibold text-white">{sweetSpot.label}</p>
+                      <p className="text-xs text-muted">{sweetSpot.comparison}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Sparkles size={15} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted mb-0.5">Peaks Per Stream</p>
+                      <p className="text-sm font-semibold text-white">
+                        {analyzedVods.length > 0 ? (totalPeaks / analyzedVods.length).toFixed(1) : "0"}
+                      </p>
+                      <p className="text-xs text-muted">{totalPeaks} total across {analyzedVods.length} streams</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
