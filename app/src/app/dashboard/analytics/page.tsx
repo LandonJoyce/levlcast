@@ -251,11 +251,12 @@ export default async function AnalyticsPage() {
                       <Sparkles size={15} className="text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted mb-0.5">Peaks Per Stream</p>
+                      <p className="text-xs text-muted mb-0.5">Clip Moments Per Stream</p>
                       <p className="text-sm font-semibold text-white">
                         {analyzedVods.length > 0 ? (totalPeaks / analyzedVods.length).toFixed(1) : "0"}
                       </p>
                       <p className="text-xs text-muted">{totalPeaks} total across {analyzedVods.length} streams</p>
+
                     </div>
                   </div>
                 )}
@@ -306,7 +307,7 @@ export default async function AnalyticsPage() {
             {/* Category breakdown */}
             {sortedCategories.length > 0 && (
               <div className="bg-surface border border-border rounded-2xl p-6">
-                <h2 className="text-sm font-bold text-white mb-6">What Peaks Your Stream</h2>
+                <h2 className="text-sm font-bold text-white mb-6">What Gets You Clipped</h2>
                 <div className="space-y-3">
                   {sortedCategories.slice(0, 6).map(([cat, count]) => {
                     const label = CATEGORY_LABELS[cat] || cat;
@@ -316,7 +317,7 @@ export default async function AnalyticsPage() {
                       <div key={cat}>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-medium text-white/80">{label}</span>
-                          <span className="text-xs text-muted">{count} peaks · {pct}%</span>
+                          <span className="text-xs text-muted">{count} moments · {pct}%</span>
                         </div>
                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                           <div
@@ -360,7 +361,7 @@ export default async function AnalyticsPage() {
                         <p className="text-xs text-muted mt-0.5">
                           {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           {" · "}{formatDuration(vod.duration_seconds)}
-                          {" · "}{peaks.length} peak{peaks.length !== 1 ? "s" : ""}
+                          {" · "}{peaks.length} clip moment{peaks.length !== 1 ? "s" : ""}
                           {topCat && ` · ${CATEGORY_LABELS[topCat] || topCat}`}
                         </p>
                       </div>
