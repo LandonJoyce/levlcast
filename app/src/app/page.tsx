@@ -331,89 +331,118 @@ export default function LandingPage() {
             </div>
 
             <div className="bg-surface border-x border-b border-border rounded-b-2xl overflow-hidden shadow-glow-lg">
-              <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
-                <div>
-                  <h3 className="font-bold text-sm">Stream Coach Report</h3>
-                  <p className="text-xs text-muted mt-0.5">Saturday night stream · 3h 12m</p>
+              {/* Header */}
+              <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/8" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.12) 0%, transparent 60%)" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)", boxShadow: "0 0 12px rgba(139,92,246,0.4)" }}>
+                    <Zap size={14} style={{ color: "#a855f7" }} />
+                  </div>
+                  <span className="font-extrabold text-sm tracking-tight text-white">Stream Debrief</span>
                 </div>
-                <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-3 py-1 rounded-full font-semibold">
-                  Volatile energy
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-400/30">
+                    <Gamepad2 size={11} /> Gaming
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-white/35">
+                    <TrendingUp size={12} className="text-green-400" /> Building
+                  </span>
+                </div>
               </div>
 
-              <div className="p-6 space-y-5">
-                <div className="flex gap-5 items-start">
-                  <div className="flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 border-yellow-400/50 bg-yellow-400/5 flex-shrink-0 shadow-[0_0_20px_rgba(250,204,21,0.15)]">
-                    <span className="text-2xl font-extrabold text-yellow-400">68</span>
-                    <span className="text-[10px] text-muted font-medium">/100</span>
+              <div className="p-5 space-y-4">
+                {/* Score hero */}
+                <div className="flex gap-5 items-center">
+                  {/* Score ring */}
+                  <div className="relative flex-shrink-0 w-28 h-28 flex items-center justify-center">
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 96 96">
+                      <circle cx="48" cy="48" r="36" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+                      <circle cx="48" cy="48" r="36" fill="none" stroke="#facc15" strokeWidth="4"
+                        strokeDasharray="163 226" strokeLinecap="round"
+                        style={{ filter: "drop-shadow(0 0 8px #facc15)" }} />
+                    </svg>
+                    <div className="flex flex-col items-center">
+                      <span className="text-4xl font-extrabold leading-none text-yellow-400">68</span>
+                      <span className="text-[9px] text-white/30 font-medium">/100</span>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted leading-relaxed">
-                      Solid mid-stream energy with strong funny moments but the opening 20 minutes were slow and would have lost a large portion of new viewers before they saw the best content.
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <span className="text-[11px] bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2.5 py-1 rounded-full font-semibold">Medium retention risk</span>
-                      <span className="text-[11px] bg-accent/10 text-accent-light border border-accent/20 px-2.5 py-1 rounded-full font-semibold">5 peak moments</span>
+                  <div className="flex flex-col gap-2 min-w-0">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/50">
+                      Volatile energy
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-400">
+                        Medium retention risk
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-neon/5 border border-neon/20 rounded-xl p-4">
-                    <p className="text-[11px] font-bold text-neon uppercase tracking-widest mb-3">What Worked</p>
-                    <ul className="space-y-2">
-                      {[
-                        "Natural humor that doesn't feel forced",
-                        "Strong reactions to in-game moments",
-                        "Good recovery after losing streaks",
-                      ].map((s) => (
-                        <li key={s} className="text-xs text-muted flex gap-2 items-start">
-                          <span className="w-1.5 h-1.5 rounded-full bg-neon/70 flex-shrink-0 mt-1" />
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
+                {/* #1 Priority */}
+                <div className="rounded-xl p-4 border border-white/8" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(255,255,255,0.02) 100%)" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap size={13} style={{ color: "#a855f7" }} />
+                    <span className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "#a855f7" }}>#1 Priority</span>
                   </div>
-                  <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-4">
-                    <p className="text-[11px] font-bold text-yellow-400 uppercase tracking-widest mb-3">Improve</p>
-                    <ul className="space-y-2">
-                      {[
-                        "Cold open too slow — hook viewers in 60 seconds",
-                        "Dead air around 45-minute mark lost momentum",
-                        "Chat interaction dropped in the second hour",
-                      ].map((s) => (
-                        <li key={s} className="text-xs text-muted flex gap-2 items-start">
-                          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="bg-surface-2 border border-border rounded-xl p-4">
-                  <p className="text-[11px] font-bold text-accent-light uppercase tracking-widest mb-2">Coach&apos;s Take</p>
-                  <p className="text-sm leading-relaxed">
-                    Start your next stream with your best energy in the first 5 minutes. Your funniest moments come when you&apos;re reacting — not narrating. Lead with reaction, follow with commentary.
+                  <p className="text-sm leading-relaxed text-white/85 font-medium">
+                    Your opening 20 minutes lost momentum — start your next stream mid-story, not mid-setup. Hook in the first 60 seconds or new viewers won&apos;t stay for the good part.
                   </p>
                 </div>
 
-                <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
-                  <p className="text-[11px] font-bold text-accent-light uppercase tracking-widest mb-3">Next Stream Goals</p>
-                  <div className="space-y-2.5">
+                {/* What Worked */}
+                <div className="bg-green-500/5 border border-green-500/15 rounded-xl p-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="text-xs font-bold uppercase tracking-widest text-green-400">What Worked</span>
+                  </div>
+                  <ul className="space-y-2.5">
                     {[
-                      "Open with a hot take or strong opinion in the first 2 minutes",
-                      "Set a chat interaction goal — respond to every new follower by name",
-                      "End the stream with a clip-worthy moment, not a fade-out",
+                      { label: "Going Off", detail: "Reactions at 1:12 were genuine and unfiltered — that energy is what clips are made of." },
+                      { label: "Chat Engagement", detail: "Strong callouts to regulars in the second hour kept momentum when the game slowed down." },
+                    ].map((s) => (
+                      <li key={s.label} className="text-sm text-white/65 flex gap-2">
+                        <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400/70" />
+                        <span><span className="font-bold text-white/90">{s.label}</span><span className="text-white/40"> — </span>{s.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Fix for Next Stream */}
+                <div className="bg-yellow-500/5 border border-yellow-500/15 rounded-xl p-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="text-xs font-bold uppercase tracking-widest text-yellow-400">Fix for Next Stream</span>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      { label: "Cold Open", detail: "The first 20 minutes were too slow. Start with a story or take, not setup — new viewers decide in 60 seconds." },
+                      { label: "Dead Air", detail: "22s silence at 47:15 broke the energy you built. Fill slow gameplay with hot takes or questions to chat." },
+                    ].map((s) => (
+                      <li key={s.label} className="text-sm text-white/65 flex gap-2">
+                        <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-yellow-400/70" />
+                        <span><span className="font-bold text-white/90">{s.label}</span><span className="text-white/40"> — </span>{s.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Your Missions */}
+                <div className="rounded-xl p-4 border" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(255,255,255,0.02) 100%)", borderColor: "rgba(139,92,246,0.2)" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#a855f7" }}>Your Missions</span>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      "Open next stream mid-story — have your first sentence ready before going live",
+                      "Respond to every new follower by name in the first hour",
+                      "End with a clip-worthy moment, not a slow fade-out",
                     ].map((g, i) => (
-                      <div key={g} className="flex gap-3 text-sm items-start">
-                        <span className="w-5 h-5 rounded-full border border-accent/40 flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold text-accent-light">
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 border text-[10px] font-extrabold" style={{ borderColor: "rgba(139,92,246,0.5)", color: "#a855f7", background: "rgba(139,92,246,0.15)" }}>
                           {i + 1}
                         </span>
-                        <span className="text-muted leading-relaxed">{g}</span>
-                      </div>
+                        <span className="text-white/65 leading-relaxed">{g}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -472,7 +501,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[11px] font-bold text-accent-light mb-1">Coach&apos;s Take</p>
+                  <p className="text-[11px] font-bold text-accent-light mb-1">#1 Priority</p>
                   <p className="text-xs text-muted leading-relaxed">Your peak moments are genuinely clip-worthy. The gap is consistency — the slow stretches between kills lose the energy you built.</p>
                 </div>
               </div>
@@ -514,7 +543,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[11px] font-bold text-accent-light mb-1">Coach&apos;s Take</p>
+                  <p className="text-[11px] font-bold text-accent-light mb-1">#1 Priority</p>
                   <p className="text-xs text-muted leading-relaxed">You have the personality. The problem is consistency — chat interaction has to be constant, not occasional, for a just chatting stream to retain viewers.</p>
                 </div>
               </div>
@@ -556,7 +585,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[11px] font-bold text-accent-light mb-1">Coach&apos;s Take</p>
+                  <p className="text-[11px] font-bold text-accent-light mb-1">#1 Priority</p>
                   <p className="text-xs text-muted leading-relaxed">Variety works when your personality is the constant. You have that — now make transitions feel intentional, not accidental.</p>
                 </div>
               </div>
