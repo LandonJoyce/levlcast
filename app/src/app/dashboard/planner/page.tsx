@@ -1,18 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PlannerForm } from "@/components/dashboard/planner/planner-form";
-import { CalendarDays, Lock } from "lucide-react";
+import { Lock, Type } from "lucide-react";
 import Link from "next/link";
 import Anthropic from "@anthropic-ai/sdk";
-
-const DAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
 
 async function deriveContentOptions(titles: string[]): Promise<string[]> {
   if (titles.length === 0) return [];
@@ -43,7 +33,10 @@ Respond with ONLY a JSON array of strings, no markdown:
 
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
-    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const cleaned = text
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*/g, "")
+      .trim();
     const options = JSON.parse(cleaned);
     if (Array.isArray(options) && options.every((o) => typeof o === "string")) {
       return options.slice(0, 6);
@@ -88,7 +81,7 @@ export default async function PlannerPage() {
   // Fetch analyzed VODs
   const { data: vods } = await supabase
     .from("vods")
-    .select("title, stream_date, coach_report, peak_data")
+    .select("title, coach_report, peak_data")
     .eq("user_id", user!.id)
     .eq("status", "ready")
     .not("coach_report", "is", null)
@@ -98,9 +91,7 @@ export default async function PlannerPage() {
   const analyzedVods = vods || [];
   const hasVodData = analyzedVods.length > 0;
 
-  // Only derive content options and build identity if Pro + has data
   let contentOptions: string[] = [];
-  let dayPerformance: Record<string, { avgScore: number; count: number }> = {};
   let streamerIdentity = {
     streamerType: null as string | null,
     dominantCategory: null as string | null,
@@ -108,26 +99,8 @@ export default async function PlannerPage() {
   };
 
   if (isPro && hasVodData) {
-    // Derive content options via Claude Haiku (understands context, not just string splits)
     const titles = [...new Set(analyzedVods.map((v) => v.title))];
     contentOptions = await deriveContentOptions(titles);
-
-    // Build day performance map (avg score by day of week)
-    const dayScores: Record<string, number[]> = {};
-    for (const vod of analyzedVods) {
-      const score = (vod.coach_report as any)?.overall_score as
-        | number
-        | undefined;
-      if (!score || !vod.stream_date) continue;
-      const day = DAYS[new Date(vod.stream_date).getDay()];
-      if (!dayScores[day]) dayScores[day] = [];
-      dayScores[day].push(score);
-    }
-
-    for (const [day, scores] of Object.entries(dayScores)) {
-      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-      dayPerformance[day] = { avgScore: avg, count: scores.length };
-    }
 
     // Streamer identity
     const typeCounts: Record<string, number> = {};
@@ -170,11 +143,10 @@ export default async function PlannerPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1">
-          Stream Planner
+          Title Generator
         </h1>
         <p className="text-sm text-muted">
-          Pick what you're streaming this week and get a schedule + title
-          recommendations tailored to your data.
+          Pick what you're streaming and get title ideas matched to your style.
         </p>
       </div>
 
@@ -185,8 +157,8 @@ export default async function PlannerPage() {
           </div>
           <h2 className="text-lg font-bold mb-2">Pro Feature</h2>
           <p className="text-sm text-muted max-w-sm mx-auto mb-6">
-            The Stream Planner uses your stream history to recommend optimal
-            days, times, and title ideas personalized to you.
+            The Title Generator creates stream titles personalized to your
+            content and streaming style.
           </p>
           <Link
             href="/dashboard/settings"
@@ -197,11 +169,11 @@ export default async function PlannerPage() {
         </div>
       ) : !hasVodData ? (
         <div className="bg-surface border border-border rounded-2xl p-12 text-center">
-          <CalendarDays size={28} className="text-muted mx-auto mb-4" />
+          <Type size={28} className="text-muted mx-auto mb-4" />
           <h2 className="text-lg font-bold mb-2">No stream data yet</h2>
           <p className="text-sm text-muted max-w-sm mx-auto mb-6">
-            Analyze at least one VOD to unlock personalized scheduling and title
-            recommendations.
+            Analyze at least one VOD so we can learn your style and generate
+            titles that match.
           </p>
           <Link
             href="/dashboard/vods"
@@ -214,7 +186,6 @@ export default async function PlannerPage() {
         <div className="bg-surface border border-border rounded-2xl p-6">
           <PlannerForm
             contentOptions={contentOptions}
-            dayPerformance={dayPerformance}
             streamerIdentity={streamerIdentity}
           />
         </div>
