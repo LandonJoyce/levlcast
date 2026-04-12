@@ -45,7 +45,6 @@ export default async function AnalyticsPage() {
   const totalClips = clipsResult.count || 0;
   const snapshots = snapshotsResult.data || [];
   const analyzedVods = vods.filter((v) => v.status === "ready");
-  const totalStreamMinutes = Math.round(vods.reduce((sum, v) => sum + (v.duration_seconds || 0), 0) / 60);
 
   let totalPeaks = 0;
   const categoryCount: Record<string, number> = {};
@@ -75,8 +74,6 @@ export default async function AnalyticsPage() {
   const latestScore = coachScores.length > 0 ? coachScores[coachScores.length - 1].score : null;
   const avgScore = coachScores.length > 0 ? Math.round(coachScores.reduce((s, c) => s + c.score, 0) / coachScores.length) : null;
   const scoreTrend = coachScores.length >= 2 ? coachScores[coachScores.length - 1].score - coachScores[coachScores.length - 2].score : null;
-  const latestFollowers = snapshots.length > 0 ? snapshots[snapshots.length - 1].follower_count : null;
-  const followerGain = snapshots.length >= 2 ? snapshots[snapshots.length - 1].follower_count - snapshots[0].follower_count : null;
 
   const isEmpty = vods.length === 0;
 
@@ -93,31 +90,56 @@ export default async function AnalyticsPage() {
         </div>
       ) : (
         <>
-          {/* Big stat numbers */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatBlock
-              label="Avg Stream Score"
-              value={avgScore !== null ? String(avgScore) : "—"}
-              sub={scoreTrend !== null && scoreTrend !== 0 ? `${scoreTrend > 0 ? "+" : ""}${scoreTrend} last stream` : `${coachScores.length} streams scored`}
-              valueColor={avgScore === null ? "" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400"}
-              trend={scoreTrend}
-            />
-            <StatBlock
-              label="Followers"
-              value={latestFollowers !== null ? latestFollowers.toLocaleString() : "—"}
-              sub={followerGain !== null && followerGain !== 0 ? `${followerGain > 0 ? "+" : ""}${followerGain} this period` : "Connect Twitch to track"}
-              trend={followerGain}
-            />
-            <StatBlock
-              label="Peak Moments"
-              value={String(totalPeaks)}
-              sub={`across ${analyzedVods.length} analyzed streams`}
-            />
-            <StatBlock
-              label="Total Stream Time"
-              value={totalStreamMinutes >= 60 ? `${Math.floor(totalStreamMinutes / 60)}h ${totalStreamMinutes % 60}m` : `${totalStreamMinutes}m`}
-              sub={`${totalClips} clips generated`}
-            />
+          {/* Hero score + supporting stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] gap-4 mb-6">
+            {/* Score hero */}
+            <div className="bg-surface border border-border rounded-2xl px-6 py-5">
+              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
+                Stream Score
+              </p>
+              <div className="flex items-end gap-3 mb-1">
+                <p className={`text-5xl font-extrabold leading-none ${avgScore === null ? "" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                  {avgScore !== null ? avgScore : "—"}
+                </p>
+                {scoreTrend !== null && scoreTrend !== 0 && (
+                  <span className={`text-sm font-bold flex items-center gap-0.5 mb-1 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
+                    {scoreTrend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                    {scoreTrend > 0 ? "+" : ""}{scoreTrend}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted">
+                avg across {coachScores.length} stream{coachScores.length !== 1 ? "s" : ""}
+                {latestScore !== null && coachScores.length > 1 && ` · latest: ${latestScore}`}
+              </p>
+            </div>
+
+            {/* Peaks */}
+            <div className="bg-surface border border-border rounded-2xl px-6 py-5">
+              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
+                Peak Moments Found
+              </p>
+              <p className="text-5xl font-extrabold leading-none text-white mb-1">
+                {totalPeaks}
+              </p>
+              <p className="text-xs text-muted">
+                across {analyzedVods.length} analyzed stream{analyzedVods.length !== 1 ? "s" : ""}
+                {totalPeaks > 0 && analyzedVods.length > 0 && ` · ${(totalPeaks / analyzedVods.length).toFixed(1)} per stream`}
+              </p>
+            </div>
+
+            {/* Clips */}
+            <div className="bg-surface border border-border rounded-2xl px-6 py-5">
+              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
+                Clips Generated
+              </p>
+              <p className="text-5xl font-extrabold leading-none text-white mb-1">
+                {totalClips}
+              </p>
+              <p className="text-xs text-muted">
+                {totalPeaks > 0 ? `${Math.round((totalClips / totalPeaks) * 100)}% of peaks clipped` : "analyze VODs to find clips"}
+              </p>
+            </div>
           </div>
 
           {/* Charts row — score trend + category breakdown side by side */}
@@ -239,18 +261,3 @@ export default async function AnalyticsPage() {
   );
 }
 
-function StatBlock({ label, value, sub, valueColor, trend }: {
-  label: string;
-  value: string;
-  sub: string;
-  valueColor?: string;
-  trend?: number | null;
-}) {
-  return (
-    <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-      <p className="text-xs text-muted font-medium uppercase tracking-wide mb-2">{label}</p>
-      <p className={`text-3xl font-extrabold mb-1 ${valueColor || "text-white"}`}>{value}</p>
-      <p className="text-xs text-muted">{sub}</p>
-    </div>
-  );
-}
