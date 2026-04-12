@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PlannerForm } from "@/components/dashboard/planner/planner-form";
 import { CalendarDays, Lock } from "lucide-react";
 import Link from "next/link";
+import Anthropic from "@anthropic-ai/sdk";
 
 const DAYS = [
   "Sunday",
@@ -13,41 +14,55 @@ const DAYS = [
   "Saturday",
 ];
 
-function getContentLabel(title: string): string {
-  const raw = title.replace(/\s*[-|:!]\s*.*/g, "").trim();
-  const words = raw.split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "";
+async function deriveContentOptions(titles: string[]): Promise<string[]> {
+  if (titles.length === 0) return [];
 
-  // Keep "Just Chatting" intact
-  if (
-    words[0]?.toLowerCase() === "just" &&
-    words[1]?.toLowerCase() === "chatting"
-  ) {
-    return "Just Chatting";
+  const anthropic = new Anthropic();
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 256,
+      system:
+        "You categorize Twitch stream titles into content types. Be specific and use real names (game titles, content formats). Never return generic labels.",
+      messages: [
+        {
+          role: "user",
+          content: `These are recent stream titles from a Twitch streamer:
+${titles.map((t, i) => `${i + 1}. ${t}`).join("\n")}
+
+Group these into 3-6 distinct content categories that make sense to this streamer.
+Use specific names — if they stream a specific game, name the game. Distinguish modes if they do multiple (e.g. "TERA PVP" vs "TERA PVE"). If they do variety content, use recognizable format names.
+Do not use generic labels like "Gaming" or "Stream 1".
+
+Respond with ONLY a JSON array of strings, no markdown:
+["Category 1", "Category 2", ...]`,
+        },
+      ],
+    });
+
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
+    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const options = JSON.parse(cleaned);
+    if (Array.isArray(options) && options.every((o) => typeof o === "string")) {
+      return options.slice(0, 6);
+    }
+  } catch (err) {
+    console.error("[planner] Failed to derive content options:", err);
   }
 
-  return words
-    .slice(0, 2)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-function deriveContentOptions(vods: Array<{ title: string }>): string[] {
-  const seen = new Map<string, string>(); // key → display label
-  const counts = new Map<string, number>();
-
-  for (const vod of vods) {
-    const label = getContentLabel(vod.title);
-    if (!label || label.length < 2) continue;
-    const key = label.toLowerCase().split(" ")[0]; // first word as dedup key
-    if (!seen.has(key)) seen.set(key, label);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+  // Fallback: dedupe first word of each title
+  const seen = new Set<string>();
+  const fallback: string[] = [];
+  for (const title of titles) {
+    const word = title.split(/\s+/)[0];
+    if (word && !seen.has(word.toLowerCase())) {
+      seen.add(word.toLowerCase());
+      fallback.push(word);
+    }
   }
-
-  return Array.from(counts.entries())
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6)
-    .map(([key]) => seen.get(key)!);
+  return fallback.slice(0, 6);
 }
 
 export default async function PlannerPage() {
@@ -81,66 +96,75 @@ export default async function PlannerPage() {
     .limit(20);
 
   const analyzedVods = vods || [];
-
-  // Derive content options from VOD titles
-  const contentOptions = deriveContentOptions(analyzedVods);
-
-  // Build day performance map (avg score by day of week)
-  const dayScores: Record<string, number[]> = {};
-  for (const vod of analyzedVods) {
-    const score = (vod.coach_report as any)?.overall_score as
-      | number
-      | undefined;
-    if (!score || !vod.stream_date) continue;
-    const day = DAYS[new Date(vod.stream_date).getDay()];
-    if (!dayScores[day]) dayScores[day] = [];
-    dayScores[day].push(score);
-  }
-
-  const dayPerformance: Record<string, { avgScore: number; count: number }> =
-    {};
-  for (const [day, scores] of Object.entries(dayScores)) {
-    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-    dayPerformance[day] = { avgScore: avg, count: scores.length };
-  }
-
-  // Streamer identity
-  const typeCounts: Record<string, number> = {};
-  const catCounts: Record<string, number> = {
-    hype: 0,
-    funny: 0,
-    educational: 0,
-    emotional: 0,
-  };
-
-  for (const vod of analyzedVods) {
-    const report = vod.coach_report as any;
-    if (report?.streamer_type) {
-      typeCounts[report.streamer_type] =
-        (typeCounts[report.streamer_type] ?? 0) + 1;
-    }
-    const peaks = (vod.peak_data as any[]) || [];
-    for (const peak of peaks) {
-      const cat = peak?.category?.toLowerCase();
-      if (cat && cat in catCounts) catCounts[cat]++;
-    }
-  }
-
-  const dominantStreamerType =
-    Object.entries(typeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
-  const totalCats = Object.values(catCounts).reduce((a, b) => a + b, 0);
-  const dominantCategory =
-    totalCats > 0
-      ? Object.entries(catCounts).sort(([, a], [, b]) => b - a)[0][0]
-      : null;
-
-  const streamerIdentity = {
-    streamerType: dominantStreamerType,
-    dominantCategory,
-    totalStreams: analyzedVods.length,
-  };
-
   const hasVodData = analyzedVods.length > 0;
+
+  // Only derive content options and build identity if Pro + has data
+  let contentOptions: string[] = [];
+  let dayPerformance: Record<string, { avgScore: number; count: number }> = {};
+  let streamerIdentity = {
+    streamerType: null as string | null,
+    dominantCategory: null as string | null,
+    totalStreams: 0,
+  };
+
+  if (isPro && hasVodData) {
+    // Derive content options via Claude Haiku (understands context, not just string splits)
+    const titles = [...new Set(analyzedVods.map((v) => v.title))];
+    contentOptions = await deriveContentOptions(titles);
+
+    // Build day performance map (avg score by day of week)
+    const dayScores: Record<string, number[]> = {};
+    for (const vod of analyzedVods) {
+      const score = (vod.coach_report as any)?.overall_score as
+        | number
+        | undefined;
+      if (!score || !vod.stream_date) continue;
+      const day = DAYS[new Date(vod.stream_date).getDay()];
+      if (!dayScores[day]) dayScores[day] = [];
+      dayScores[day].push(score);
+    }
+
+    for (const [day, scores] of Object.entries(dayScores)) {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      dayPerformance[day] = { avgScore: avg, count: scores.length };
+    }
+
+    // Streamer identity
+    const typeCounts: Record<string, number> = {};
+    const catCounts: Record<string, number> = {
+      hype: 0,
+      funny: 0,
+      educational: 0,
+      emotional: 0,
+    };
+
+    for (const vod of analyzedVods) {
+      const report = vod.coach_report as any;
+      if (report?.streamer_type) {
+        typeCounts[report.streamer_type] =
+          (typeCounts[report.streamer_type] ?? 0) + 1;
+      }
+      const peaks = (vod.peak_data as any[]) || [];
+      for (const peak of peaks) {
+        const cat = peak?.category?.toLowerCase();
+        if (cat && cat in catCounts) catCounts[cat]++;
+      }
+    }
+
+    const dominantStreamerType =
+      Object.entries(typeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+    const totalCats = Object.values(catCounts).reduce((a, b) => a + b, 0);
+    const dominantCategory =
+      totalCats > 0
+        ? Object.entries(catCounts).sort(([, a], [, b]) => b - a)[0][0]
+        : null;
+
+    streamerIdentity = {
+      streamerType: dominantStreamerType,
+      dominantCategory,
+      totalStreams: analyzedVods.length,
+    };
+  }
 
   return (
     <div>
