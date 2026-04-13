@@ -347,20 +347,21 @@ export default async function AnalyticsPage() {
                     {/* Trend line */}
                     <path d={linePath} fill="none" stroke="rgba(99,102,241,0.55)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
-                    {/* Score labels above each dot */}
+                    {/* Clickable dot + label per stream */}
                     {pts.map((p) => (
-                      <text key={`label-${p.id}`} x={p.x} y={p.y - 9} textAnchor="middle" fontSize="10" fontWeight="600"
-                        fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.5}>
-                        {p.score}
-                      </text>
-                    ))}
-
-                    {/* Dots */}
-                    {pts.map((p) => (
-                      <circle key={`dot-${p.id}`} cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
-                        fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.65}
-                        stroke="rgba(0,0,0,0.4)" strokeWidth="1.5"
-                      />
+                      <a key={`pt-${p.id}`} href={`/dashboard/vods/${p.id}`} style={{ cursor: "pointer" }}>
+                        <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize="10" fontWeight="600"
+                          fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.5}>
+                          {p.score}
+                        </text>
+                        <circle cx={p.x} cy={p.y} r={p.isLatest ? 6 : 5}
+                          fill="transparent" stroke="none"
+                        />
+                        <circle cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
+                          fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.65}
+                          stroke="rgba(0,0,0,0.4)" strokeWidth="1.5"
+                        />
+                      </a>
                     ))}
 
                     {/* Date labels */}
