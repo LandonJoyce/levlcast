@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArchetypeCard } from "@/components/dashboard/grow/archetype-card";
 import { ConsistencyGrid } from "@/components/dashboard/grow/consistency-grid";
 import { TacticsCarousel } from "@/components/dashboard/grow/tactics-carousel";
-import { TrendingUp, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -17,6 +17,13 @@ const CATEGORY_STYLE: Record<string, string> = {
   funny: "bg-yellow-500/10 text-yellow-400",
   educational: "bg-blue-500/10 text-blue-400",
   emotional: "bg-red-500/10 text-red-400",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  hype: "Hype",
+  funny: "Funny",
+  educational: "Educational",
+  emotional: "Emotional",
 };
 
 function scoreColor(score: number) {
@@ -47,6 +54,7 @@ export default async function GrowPage() {
 
   const categoryCounts: Record<string, number> = { hype: 0, funny: 0, educational: 0, emotional: 0 };
   const streamerTypeCounts: Record<string, number> = {};
+  const coachScores: number[] = [];
 
   for (const vod of vods || []) {
     const peaks = (vod.peak_data as Peak[]) || [];
@@ -54,15 +62,17 @@ export default async function GrowPage() {
       const cat = peak.category?.toLowerCase();
       if (cat && cat in categoryCounts) categoryCounts[cat]++;
     }
-    const streamerType = (vod.coach_report as any)?.streamer_type;
+    const report = vod.coach_report as any;
+    const streamerType = report?.streamer_type;
     if (streamerType) {
       streamerTypeCounts[streamerType] = (streamerTypeCounts[streamerType] ?? 0) + 1;
+    }
+    if (typeof report?.overall_score === "number") {
+      coachScores.push(report.overall_score);
     }
   }
 
   const totalPeaks = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
-
-  // Most common streamer type across analyzed VODs
   const dominantStreamerType = Object.entries(streamerTypeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const dominantCategory = totalPeaks > 0
     ? Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0][0]
@@ -72,13 +82,33 @@ export default async function GrowPage() {
     (vods || []).map((v) => v.stream_date?.slice(0, 10)).filter(Boolean)
   );
 
+  // Score trend: compare oldest 3 vs newest 3 (scores are in desc order by stream_date)
+  const reversed = [...coachScores].reverse(); // oldest first
+  let scoreTrend: "up" | "down" | "flat" | null = null;
+  let avgScore: number | null = null;
+  if (reversed.length >= 1) {
+    avgScore = Math.round(reversed.reduce((a, b) => a + b, 0) / reversed.length);
+  }
+  if (reversed.length >= 4) {
+    const early = reversed.slice(0, 3);
+    const recent = reversed.slice(-3);
+    const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const delta = recentAvg - earlyAvg;
+    scoreTrend = delta >= 3 ? "up" : delta <= -3 ? "down" : "flat";
+  }
+
+  // Streams in last 30 days
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recentStreamCount = [...streamDates].filter((d) => d >= thirtyDaysAgo).length;
+
   const hasData = totalPeaks > 0;
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1">Growth Playbook</h1>
-        <p className="text-sm text-muted">Personalized tactics based on your actual stream data.</p>
+        <p className="text-sm text-muted">How to keep growing — every week, every stream.</p>
       </div>
 
       {!hasData ? (
@@ -92,10 +122,77 @@ export default async function GrowPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          {/* Archetype full width */}
-          <ArchetypeCard dominantCategory={dominantCategory} dominantStreamerType={dominantStreamerType} categoryCounts={categoryCounts} totalPeaks={totalPeaks} />
 
-          {/* Two col — clips + tactics */}
+          {/* Momentum strip */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Score trend */}
+            <div className="bg-surface border border-border rounded-2xl px-5 py-4">
+              <p className="text-xs text-muted uppercase tracking-wide font-medium mb-2">Score Trend</p>
+              {scoreTrend === "up" && (
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={18} className="text-green-400" />
+                  <span className="text-base font-extrabold text-green-400">Trending Up</span>
+                </div>
+              )}
+              {scoreTrend === "down" && (
+                <div className="flex items-center gap-2">
+                  <TrendingDown size={18} className="text-red-400" />
+                  <span className="text-base font-extrabold text-red-400">Slipping</span>
+                </div>
+              )}
+              {scoreTrend === "flat" && (
+                <div className="flex items-center gap-2">
+                  <Minus size={18} className="text-yellow-400" />
+                  <span className="text-base font-extrabold text-yellow-400">Holding Steady</span>
+                </div>
+              )}
+              {scoreTrend === null && avgScore !== null && (
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-extrabold text-white">{avgScore}</span>
+                  <span className="text-xs text-muted">avg score</span>
+                </div>
+              )}
+              {avgScore !== null && scoreTrend !== null && (
+                <p className="text-xs text-muted mt-1">Avg score: {avgScore}</p>
+              )}
+            </div>
+
+            {/* Top content */}
+            <div className="bg-surface border border-border rounded-2xl px-5 py-4">
+              <p className="text-xs text-muted uppercase tracking-wide font-medium mb-2">Best Content</p>
+              {dominantCategory ? (
+                <>
+                  <span className={`inline-flex items-center text-base font-extrabold capitalize px-2 py-0.5 rounded-lg ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
+                    {CATEGORY_LABELS[dominantCategory] ?? dominantCategory}
+                  </span>
+                  <p className="text-xs text-muted mt-1">
+                    {Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)}% of your clip moments
+                  </p>
+                </>
+              ) : (
+                <span className="text-base font-extrabold text-muted">—</span>
+              )}
+            </div>
+
+            {/* Streams this month */}
+            <div className="bg-surface border border-border rounded-2xl px-5 py-4">
+              <p className="text-xs text-muted uppercase tracking-wide font-medium mb-2">This Month</p>
+              <div className="flex items-end gap-1.5">
+                <span className={`text-2xl font-extrabold ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
+                  {recentStreamCount}
+                </span>
+                <span className="text-xs text-muted pb-0.5">streams in 30 days</span>
+              </div>
+              <p className="text-xs text-muted mt-1">
+                {recentStreamCount >= 20 ? "Excellent pace" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs improvement" : "Stream more"}
+              </p>
+            </div>
+          </div>
+
+          {/* Tactics — hero position */}
+          <TacticsCarousel />
+
+          {/* Two col: Clips + Consistency */}
           <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
 
             {/* Top clips */}
@@ -139,15 +236,20 @@ export default async function GrowPage() {
               </div>
             )}
 
-            {/* Tactics carousel */}
-            <TacticsCarousel />
+            {/* Consistency */}
+            <ConsistencyGrid streamDates={streamDates} />
           </div>
 
-          {/* Consistency grid full width */}
-          <ConsistencyGrid streamDates={streamDates} />
+          {/* Archetype — compact, bottom */}
+          <ArchetypeCard
+            dominantCategory={dominantCategory}
+            dominantStreamerType={dominantStreamerType}
+            categoryCounts={categoryCounts}
+            totalPeaks={totalPeaks}
+            compact
+          />
         </div>
       )}
     </div>
   );
 }
-

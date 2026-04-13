@@ -181,9 +181,10 @@ interface Props {
   dominantStreamerType: string | null;
   categoryCounts: Record<string, number>;
   totalPeaks: number;
+  compact?: boolean;
 }
 
-export function ArchetypeCard({ dominantCategory, dominantStreamerType, categoryCounts, totalPeaks }: Props) {
+export function ArchetypeCard({ dominantCategory, dominantStreamerType, categoryCounts, totalPeaks, compact }: Props) {
   const key = dominantStreamerType && dominantCategory
     ? `${dominantStreamerType}_${dominantCategory}`
     : null;
@@ -193,6 +194,54 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
     : dominantCategory && PEAK_FALLBACKS[dominantCategory]
     ? { ...PEAK_FALLBACKS[dominantCategory], border: "border-white/10" }
     : null;
+
+  if (compact) {
+    return (
+      <div className={`bg-surface border rounded-2xl px-5 py-4 ${archetype?.border || "border-border"}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+              archetype?.color === "text-purple-400" ? "bg-purple-400"
+              : archetype?.color === "text-yellow-400" ? "bg-yellow-400"
+              : archetype?.color === "text-blue-400" ? "bg-blue-400"
+              : archetype?.color === "text-red-400" ? "bg-red-400"
+              : "bg-white/30"
+            }`} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted uppercase tracking-wide font-semibold flex-shrink-0">Your Archetype</p>
+                {dominantStreamerType && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/40 flex-shrink-0">
+                    {STREAMER_TYPE_LABELS[dominantStreamerType] ?? dominantStreamerType}
+                  </span>
+                )}
+              </div>
+              <p className={`text-sm font-extrabold mt-0.5 ${archetype?.color || "text-white"}`}>
+                {archetype?.label || "Analyzing..."} <span className="text-white/40 font-normal">· {archetype?.tagline}</span>
+              </p>
+            </div>
+          </div>
+          {/* Compact breakdown bar */}
+          <div className="flex-shrink-0 w-28">
+            <div className="flex rounded overflow-hidden h-2 w-full gap-px">
+              {Object.entries(categoryCounts)
+                .filter(([, count]) => count > 0)
+                .sort((a, b) => b[1] - a[1])
+                .map(([cat, count]) => (
+                  <div
+                    key={cat}
+                    className={CATEGORY_COLORS[cat]}
+                    style={{ width: `${(count / totalPeaks) * 100}%` }}
+                    title={`${CATEGORY_LABELS[cat]}: ${count}`}
+                  />
+                ))}
+            </div>
+            <p className="text-[10px] text-muted mt-1 text-right">{totalPeaks} clip moments</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-surface border rounded-2xl p-6 ${archetype?.border || "border-border"}`}>
