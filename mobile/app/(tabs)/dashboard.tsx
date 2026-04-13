@@ -111,9 +111,16 @@ export default function DashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.name}>{profile?.twitch_display_name || '...'}</Text>
+        {profile?.twitch_avatar_url ? (
+          <Image source={{ uri: profile.twitch_avatar_url }} style={styles.headerAvatar} />
+        ) : (
+          <View style={[styles.headerAvatar, styles.headerAvatarFallback]}>
+            <Text style={styles.headerAvatarText}>{(profile?.twitch_display_name || 'S')[0]}</Text>
+          </View>
+        )}
+        <View style={styles.headerText}>
+          <Text style={styles.greeting}>Hey, {profile?.twitch_display_name || '...'}</Text>
+          <Text style={styles.greetingSub}>Here's what's happening</Text>
         </View>
         {profile?.plan === 'pro' ? (
           <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
@@ -125,8 +132,12 @@ export default function DashboardScreen() {
       </View>
 
       {/* Latest stream score */}
-      {latestVod && (latestVod.coach_report as any)?.overall_score !== undefined && (
-        <TouchableOpacity style={styles.scoreCard} onPress={() => router.push(`/vod/${latestVod.id}`)}>
+      {latestVod && (latestVod.coach_report as any)?.overall_score !== undefined && (() => {
+        const s = (latestVod.coach_report as any).overall_score;
+        const cardBorder = s >= 70 ? 'rgba(74,222,128,0.3)' : s >= 50 ? 'rgba(251,191,36,0.3)' : 'rgba(248,113,113,0.3)';
+        const cardBg = s >= 70 ? 'rgba(74,222,128,0.04)' : s >= 50 ? 'rgba(251,191,36,0.04)' : 'rgba(248,113,113,0.04)';
+        return (
+        <TouchableOpacity style={[styles.scoreCard, { borderColor: cardBorder, backgroundColor: cardBg }]} onPress={() => router.push(`/vod/${latestVod.id}`)}>
           <Text style={styles.scoreCardLabel}>LAST STREAM</Text>
           <View style={styles.scoreCardRow}>
             <Text style={[styles.scoreCardNumber, { color: scoreColor((latestVod.coach_report as any).overall_score) }]}>
@@ -138,7 +149,8 @@ export default function DashboardScreen() {
             </View>
           </View>
         </TouchableOpacity>
-      )}
+        );
+      })()}
 
       {/* Streak */}
       {streak >= 2 ? (
@@ -404,7 +416,7 @@ function WeeklyDigestCard({ data, expanded, onToggle }: { data: any; expanded: b
               <Text style={styles.digestActionsTitle}>THIS WEEK'S ACTIONS</Text>
               {actions.map((item: string, i: number) => (
                 <View key={i} style={styles.digestActionRow}>
-                  <Text style={styles.digestActionDot}>*</Text>
+                  <Text style={styles.digestActionDot}>→</Text>
                   <Text style={styles.digestActionText}>{item}</Text>
                 </View>
               ))}
@@ -624,8 +636,13 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 20, paddingBottom: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  greeting: { fontSize: 13, color: colors.muted, marginBottom: 2 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  headerAvatar: { width: 42, height: 42, borderRadius: 21, marginRight: 12, flexShrink: 0 },
+  headerAvatarFallback: { backgroundColor: 'rgba(124,58,237,0.2)', alignItems: 'center', justifyContent: 'center' },
+  headerAvatarText: { color: colors.accentLight, fontSize: 16, fontWeight: '800' },
+  headerText: { flex: 1, marginRight: 8 },
+  greeting: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginBottom: 1 },
+  greetingSub: { fontSize: 12, color: colors.muted },
   name: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
   proBadge: { backgroundColor: 'rgba(124,58,237,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.accentLight },
   proBadgeText: { color: colors.accentLight, fontSize: 12, fontWeight: '700' },
@@ -732,6 +749,6 @@ const styles = StyleSheet.create({
   digestSummaryText: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18, flex: 1 },
   digestActionsTitle: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1, marginBottom: 8 },
   digestActionRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
-  digestActionDot: { fontSize: 13, color: colors.accentLight, fontWeight: '700' },
+  digestActionDot: { fontSize: 11, color: colors.accentLight, fontWeight: '700', marginTop: 2 },
   digestActionText: { fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 18, flex: 1 },
 });

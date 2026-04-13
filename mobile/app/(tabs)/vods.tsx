@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
@@ -143,6 +143,9 @@ export default function VodsScreen() {
             onPress={() => item.status === 'ready' && router.push(`/vod/${item.id}`)}
             activeOpacity={item.status === 'ready' ? 0.7 : 1}
           >
+            {item.thumbnail_url ? (
+              <Image source={{ uri: item.thumbnail_url }} style={styles.thumbnail} resizeMode="cover" />
+            ) : null}
             <View style={styles.vodInfo}>
               <Text style={styles.vodTitle} numberOfLines={2}>{item.title}</Text>
               <Text style={styles.vodMeta}>
@@ -186,8 +189,9 @@ const styles = StyleSheet.create({
   syncBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   empty: { padding: 40, alignItems: 'center' },
   emptyText: { color: colors.muted, textAlign: 'center', lineHeight: 22 },
-  vodCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 12 },
-  vodInfo: { flex: 1 },
+  vodCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12, overflow: 'hidden' },
+  thumbnail: { width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.surface2 },
+  vodInfo: { flex: 1, padding: 14 },
   vodTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 6, lineHeight: 20 },
   vodMeta: { fontSize: 12, color: colors.muted, marginBottom: 10 },
   vodFooter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
