@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   // Next Monday date
   const now = new Date();
   const dayOfWeek = now.getDay();
-  const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+  const daysUntilMonday = dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
   const nextMonday = new Date(now);
   nextMonday.setDate(now.getDate() + daysUntilMonday);
   const nextMondayStr = nextMonday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
