@@ -433,6 +433,23 @@ export function CoachReportCard({
                 </div>
               )}
 
+              {/* Retention Alert — shown when medium/high risk */}
+              {report.viewer_retention_risk && report.viewer_retention_risk !== "low" && (() => {
+                const isHigh = report.viewer_retention_risk === "high";
+                const color = isHigh
+                  ? "border-red-500/25 bg-red-500/5 text-red-400"
+                  : "border-yellow-500/25 bg-yellow-500/5 text-yellow-400";
+                const msg = isHigh
+                  ? "High viewer drop-off risk. Check the fixes below — they likely caused viewers to leave."
+                  : "Medium viewer drop-off risk. Review the fixes below to keep viewers watching longer.";
+                return (
+                  <div className={`rounded-xl px-4 py-3 border flex items-start gap-3 ${color}`}>
+                    <ShieldAlert size={13} className="flex-shrink-0 mt-0.5" />
+                    <p className="text-xs leading-relaxed opacity-90">{msg}</p>
+                  </div>
+                );
+              })()}
+
               {/* What Worked / Fix for Next Stream */}
               <div className="flex flex-col gap-3">
                 <div className="bg-green-500/5 border border-green-500/15 rounded-xl p-4">

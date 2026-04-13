@@ -233,6 +233,19 @@ export default async function VodDetailPage({
             </div>
           )}
 
+          {/* Post nudge — shown when clips are ready */}
+          {readyClips.length > 0 && (
+            <div className="flex items-center justify-between gap-4 bg-accent/[0.06] border border-accent/20 rounded-xl px-4 py-3">
+              <p className="text-sm text-white/80">
+                <span className="font-semibold text-white">{readyClips.length} clip{readyClips.length !== 1 ? "s" : ""} ready.</span>
+                {" "}Head to Clips to post them to YouTube or TikTok.
+              </p>
+              <Link href="/dashboard/clips" className="text-xs font-semibold text-accent-light hover:opacity-80 transition-opacity flex-shrink-0">
+                Go to Clips →
+              </Link>
+            </div>
+          )}
+
           {/* Peak Moments */}
           {peaks.length > 0 && (
             <div>

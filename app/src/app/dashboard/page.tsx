@@ -135,11 +135,8 @@ export default async function DashboardPage() {
               </div>
             )}
 
-            {/* Burnout + Monetization */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <BurnoutCard />
-              <MonetizationCard />
-            </div>
+            {/* Monetization */}
+            <MonetizationCard />
           </div>
 
           {/* RIGHT sidebar */}
@@ -157,6 +154,9 @@ export default async function DashboardPage() {
               </p>
               <p className="text-xs text-white/40">Next report: {nextMondayStr}</p>
             </div>
+
+            {/* Burnout */}
+            <BurnoutCard />
 
             {/* Quick stats */}
             <div className="bg-surface border border-border rounded-2xl p-5">
