@@ -4,8 +4,9 @@ import { MonetizationCard } from "@/components/dashboard/monetization-card";
 import { CollabCard } from "@/components/dashboard/collab-card";
 import { DigestCard } from "@/components/dashboard/digest-card";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
+import { WeeklyReportModal } from "@/components/dashboard/weekly-report-modal";
 import Link from "next/link";
-import { Film, CheckCircle2, Circle, ArrowRight, Sparkles, Mail } from "lucide-react";
+import { Film, CheckCircle2, Circle, ArrowRight, Sparkles } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -33,13 +34,6 @@ export default async function DashboardPage() {
   const isEmpty = totalVods === 0 && totalClips === 0;
   const needsOnboarding = !isEmpty && (totalAnalyzed === 0 || totalClips === 0);
 
-  // Next Monday date
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const daysUntilMonday = dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
-  const nextMonday = new Date(now);
-  nextMonday.setDate(now.getDate() + daysUntilMonday);
-  const nextMondayStr = nextMonday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <div>
@@ -142,18 +136,11 @@ export default async function DashboardPage() {
           {/* RIGHT sidebar */}
           <div className="space-y-5">
 
-            {/* Monday digest callout */}
-            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.05] p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Mail size={15} className="text-blue-400" />
-                <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">Every Monday Morning</span>
-              </div>
-              <p className="text-sm font-semibold text-white mb-1">Your weekly report lands in your dashboard</p>
-              <p className="text-xs text-muted leading-relaxed mb-3">
-                Every Monday we send every streamer a full recap — streams, score changes, follower growth, and a personalized action plan for the week.
-              </p>
-              <p className="text-xs text-white/40">Next report: {nextMondayStr}</p>
-            </div>
+            {/* Weekly report modal — pops up when a new digest is available */}
+            <WeeklyReportModal />
+
+            {/* Digest card */}
+            <DigestCard />
 
             {/* Burnout */}
             <BurnoutCard />
@@ -174,9 +161,6 @@ export default async function DashboardPage() {
                 </Link>
               )}
             </div>
-
-            {/* Digest card */}
-            <DigestCard />
 
             {/* Collab finder */}
             <CollabCard />
