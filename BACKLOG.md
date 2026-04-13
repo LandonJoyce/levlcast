@@ -7,18 +7,20 @@ Just write a task on its own line starting with `- [ ]`. Add a line below it sta
 
 ## Pending
 
-- [ ] Evaluate and implement qualifying features from research
-      Context: Top opportunities from Reddit research: (1) viewer drop-off language in coaching — make retention coaching more specific, (2) burnout score more visible in dashboard, (3) clip-to-social UX flow — make the path from clip generation to posting obvious. Do NOT build chat analysis or scheduling optimization (we lack the data). Only build if it fits current data model.
 
-- [ ] We don't want to over clutter the website with too many options but make them fit and work together UX style flow. We want the streamers/users to know what they want to do with the tools.
-      Context: Review the dashboard nav and page flow. Is it obvious what order to use the tools? VODs → analyze → clips → post. Does the UI guide users through that funnel? Make it feel like a connected workflow, not a bunch of separate pages.
+- [ ] lets do some research for the growth playbook page It has the slides of the 10 things to do based on stats but the rest of the page should focus on growth not just why streamer archetype you fall under.The direction of the page should be on how to be always growing at a good rate of speed.
 
-- [ ] 
+- [ ] the stream quality over time chart on the analytics page could use a visual improvement
 
+- [ ] look for tasks a manager or personal assistant would do for someone and streamers and see if anything fits good for our functions.
 
+- [ ] the website is good overall, lets also make mobile look and feel incredible to use UX/UI for users make it match the vibes of the website but give it that special mobile feel also. 
 ---
 
 ## Completed
+
+- [x] Evaluate and implement qualifying features from research (burnout visibility, retention alert, clip-to-post nudge)
+- [x] VOD→analyze→clips→post funnel flow and nav clarity
 
 - [x] Research streamer feature requests (r/newstreamers, r/Twitch — April 2026)
 - [x] Fix any errors introduced by new features (TypeScript clean)

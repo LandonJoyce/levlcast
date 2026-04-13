@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.7",
+    date: "2026-04-12",
+    title: "The Visibility Patch",
+    items: [
+      { type: "improved", text: "Streamer Health (burnout score) now lives in the sidebar — always visible alongside your stats, not buried at the bottom" },
+      { type: "improved", text: "Coach report now shows a prominent retention alert when drop-off risk is medium or high — easy to see before digging into the breakdown" },
+      { type: "improved", text: "VOD detail page now shows a 'clips ready' nudge after generating clips, pointing you straight to the Clips page to post them" },
+    ],
+  },
+  {
     version: "v0.6",
     date: "2026-04-11",
     title: "The Planner + Flow Patch",
