@@ -49,7 +49,16 @@ export default function SubscribeScreen() {
     const success = await purchasePro(activePkg);
 
     if (success) {
-      // Sync the verified purchase to our backend so Supabase plan is updated
+      // Immediately update the local Supabase profile so the UI reflects Pro right away
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
+        }
+      } catch {
+        // Non-fatal — backend sync below will cover it
+      }
+      // Sync the verified purchase to our backend
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -66,7 +75,7 @@ export default function SubscribeScreen() {
     setPurchasing(false);
     if (success) {
       Alert.alert('Welcome to Pro!', 'Your subscription is now active.', [
-        { text: 'Lets go', onPress: () => router.back() },
+        { text: "Let's go", onPress: () => router.back() },
       ]);
     }
   }

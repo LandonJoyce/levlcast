@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { restorePurchases } from '@/lib/revenuecat';
 import { colors } from '@/lib/colors';
@@ -13,7 +15,7 @@ export default function SettingsScreen() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => { loadData(); }, []);
+  useFocusEffect(useCallback(() => { loadData(); }, []));
 
   async function loadData() {
     try {
