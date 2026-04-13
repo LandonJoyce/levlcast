@@ -73,7 +73,20 @@ export function DigestCard() {
     );
   }
 
-  if (!latest) return null;
+  if (!latest) {
+    return (
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <Newspaper size={16} className="text-blue-400" />
+          <span className="text-xs font-semibold text-muted uppercase tracking-wide">Weekly Digest</span>
+        </div>
+        <p className="text-sm font-semibold text-white mb-1">Your first report is on the way</p>
+        <p className="text-xs text-muted leading-relaxed">
+          Every Monday we send a full recap — streams, score changes, follower growth, and your action plan for the week.
+        </p>
+      </div>
+    );
+  }
 
   const followerDelta = latest.follower_delta ?? 0;
   const deltaColor = followerDelta >= 0 ? "text-green-400" : "text-red-400";
