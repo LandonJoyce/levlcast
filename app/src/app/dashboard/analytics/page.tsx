@@ -282,43 +282,97 @@ export default async function AnalyticsPage() {
 
           {/* Charts row — score trend + category breakdown side by side */}
           <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 mb-6">
-            {/* Score bar chart */}
-            {coachScores.length > 0 && (
-              <div className="bg-surface border border-border rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-sm font-bold text-white">Stream Quality Over Time</h2>
-                  {scoreTrend !== null && scoreTrend !== 0 && (
-                    <span className={`text-xs font-semibold flex items-center gap-1 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
-                      {scoreTrend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                      {scoreTrend > 0 ? "+" : ""}{scoreTrend} from last stream
-                    </span>
-                  )}
+            {/* Score area chart */}
+            {coachScores.length > 0 && (() => {
+              const W = 560;
+              const H = 90;
+              const TOP = 22;
+              const PAD = 14;
+              const n = coachScores.length;
+              const slotW = (W - PAD * 2) / n;
+              const dotColor = (s: number) => s >= 70 ? "#4ade80" : s >= 50 ? "#facc15" : "#f87171";
+
+              const pts = coachScores.map((c, i) => ({
+                x: PAD + (i + 0.5) * slotW,
+                y: TOP + H - Math.max(4, (c.score / 100) * H),
+                score: c.score,
+                id: c.id,
+                date: c.date,
+                isLatest: i === n - 1,
+              }));
+
+              const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+              const areaPath = `${linePath} L${pts[n - 1].x.toFixed(1)},${(TOP + H).toFixed(1)} L${pts[0].x.toFixed(1)},${(TOP + H).toFixed(1)} Z`;
+              const avgY = avgScore !== null ? TOP + H - (avgScore / 100) * H : null;
+
+              return (
+                <div className="bg-surface border border-border rounded-2xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-bold text-white">Stream Quality Over Time</h2>
+                    {scoreTrend !== null && scoreTrend !== 0 && (
+                      <span className={`text-xs font-semibold flex items-center gap-1 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
+                        {scoreTrend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {scoreTrend > 0 ? "+" : ""}{scoreTrend} from last stream
+                      </span>
+                    )}
+                  </div>
+
+                  <svg viewBox={`0 0 ${W} ${TOP + H + 20}`} width="100%" className="overflow-visible">
+                    <defs>
+                      <linearGradient id="score-area-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgba(99,102,241,0.25)" />
+                        <stop offset="100%" stopColor="rgba(99,102,241,0)" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Grid lines at 25 / 50 / 75 */}
+                    {[25, 50, 75].map((tick) => {
+                      const gy = TOP + H - (tick / 100) * H;
+                      return (
+                        <g key={tick}>
+                          <line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                          <text x={PAD - 4} y={gy + 3.5} textAnchor="end" fontSize="9" fill="rgba(255,255,255,0.2)">{tick}</text>
+                        </g>
+                      );
+                    })}
+
+                    {/* Avg dashed line */}
+                    {avgY !== null && (
+                      <line x1={PAD} y1={avgY} x2={W - PAD} y2={avgY} stroke="rgba(255,255,255,0.14)" strokeWidth="1" strokeDasharray="4 3" />
+                    )}
+
+                    {/* Area fill */}
+                    <path d={areaPath} fill="url(#score-area-fill)" />
+
+                    {/* Trend line */}
+                    <path d={linePath} fill="none" stroke="rgba(99,102,241,0.55)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+                    {/* Score labels above each dot */}
+                    {pts.map((p) => (
+                      <text key={`label-${p.id}`} x={p.x} y={p.y - 9} textAnchor="middle" fontSize="10" fontWeight="600"
+                        fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.5}>
+                        {p.score}
+                      </text>
+                    ))}
+
+                    {/* Dots */}
+                    {pts.map((p) => (
+                      <circle key={`dot-${p.id}`} cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
+                        fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.65}
+                        stroke="rgba(0,0,0,0.4)" strokeWidth="1.5"
+                      />
+                    ))}
+
+                    {/* Date labels */}
+                    {pts.map((p) => (
+                      <text key={`date-${p.id}`} x={p.x} y={TOP + H + 16} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.3)">
+                        {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </text>
+                    ))}
+                  </svg>
                 </div>
-                <div className="flex items-end gap-3 h-32">
-                  {coachScores.map((c, i) => {
-                    const isLatest = i === coachScores.length - 1;
-                    const barColor = c.score >= 70 ? "bg-green-400" : c.score >= 50 ? "bg-yellow-400" : "bg-red-400";
-                    const height = Math.max(8, (c.score / 100) * 100);
-                    return (
-                      <Link key={c.id} href={`/dashboard/vods/${c.id}`} className="flex-1 group flex flex-col items-center gap-2">
-                        <span className={`text-xs font-bold transition-opacity ${isLatest ? "opacity-100" : "opacity-0 group-hover:opacity-100"} ${c.score >= 70 ? "text-green-400" : c.score >= 50 ? "text-yellow-400" : "text-red-400"}`}>
-                          {c.score}
-                        </span>
-                        <div className="w-full flex items-end h-24">
-                          <div
-                            className={`w-full rounded-md ${barColor} ${isLatest ? "opacity-100" : "opacity-30 group-hover:opacity-60"} transition-opacity`}
-                            style={{ height: `${height}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-muted truncate w-full text-center">
-                          {new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Category breakdown */}
             {sortedCategories.length > 0 && (
