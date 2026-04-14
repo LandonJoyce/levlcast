@@ -39,7 +39,7 @@ export default async function VodsPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Your streams</span>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-1">VODs</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">VODs</h1>
           <p className="text-sm text-muted">Sync your Twitch streams and find the best moments.</p>
           <p className="text-xs text-muted/50 mt-1">After a stream ends, wait a few minutes before syncing.</p>
         </div>
@@ -94,71 +94,29 @@ export default async function VodsPage() {
             {pending > 0 && <span><span className="font-bold text-yellow-400">{pending}</span> <span className="text-muted">pending</span></span>}
           </div>
 
-          {/* Table */}
-          <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-            {/* Header */}
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface border border-border rounded-2xl overflow-hidden">
             <div className="grid grid-cols-[48px_2fr_120px_80px_80px_160px] gap-4 px-4 py-2.5 border-b border-border text-[11px] font-medium text-muted">
-              <div />
-              <div>Stream</div>
-              <div>Date</div>
-              <div>Duration</div>
-              <div>Score</div>
-              <div />
+              <div /><div>Stream</div><div>Date</div><div>Duration</div><div>Score</div><div />
             </div>
-
-            {/* Rows */}
             <div className="divide-y divide-border">
               {vodList.map((vod) => {
                 const score = (vod.coach_report as any)?.overall_score as number | undefined;
                 const scoreColor = score === undefined ? "" : score >= 75 ? "text-green-400" : score >= 50 ? "text-yellow-400" : "text-red-400";
-
                 return (
-                  <div
-                    key={vod.id}
-                    className="grid grid-cols-[48px_2fr_120px_80px_80px_160px] gap-4 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors"
-                  >
-                    {/* Thumbnail */}
+                  <div key={vod.id} className="grid grid-cols-[48px_2fr_120px_80px_80px_160px] gap-4 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors">
                     <div className="w-12 aspect-video rounded overflow-hidden bg-bg flex-shrink-0">
-                      {vod.thumbnail_url ? (
-                        <img src={vod.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film size={12} className="text-muted" />
-                        </div>
-                      )}
+                      {vod.thumbnail_url ? <img src={vod.thumbnail_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Film size={12} className="text-muted" /></div>}
                     </div>
-
-                    {/* Title */}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{vod.title}</p>
-                    </div>
-
-                    {/* Date */}
-                    <div className="text-xs text-muted">
-                      {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </div>
-
-                    {/* Duration */}
+                    <div className="min-w-0"><p className="text-sm font-medium text-white truncate">{vod.title}</p></div>
+                    <div className="text-xs text-muted">{new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
                     <div className="text-xs text-muted">{formatDuration(vod.duration_seconds)}</div>
-
-                    {/* Score */}
-                    <div>
-                      {score !== undefined ? (
-                        <span className={`text-sm font-bold ${scoreColor}`}>{score}</span>
-                      ) : (
-                        <span className="text-xs text-muted/40">—</span>
-                      )}
-                    </div>
-
-                    {/* Action */}
+                    <div>{score !== undefined ? <span className={`text-sm font-bold ${scoreColor}`}>{score}</span> : <span className="text-xs text-muted/40">—</span>}</div>
                     <div className="flex items-center justify-end">
                       {vod.status === "transcribing" || vod.status === "analyzing" ? (
                         <VodProgress status={vod.status} durationSeconds={vod.duration_seconds} compact />
                       ) : vod.status === "ready" ? (
-                        <Link
-                          href={`/dashboard/vods/${vod.id}`}
-                          className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all duration-300 hover:-translate-y-px"
-                        >
+                        <Link href={`/dashboard/vods/${vod.id}`} className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all duration-300 hover:-translate-y-px">
                           Coach Report <ChevronRight size={11} />
                         </Link>
                       ) : (
@@ -169,6 +127,39 @@ export default async function VodsPage() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden bg-surface border border-border rounded-2xl divide-y divide-border overflow-hidden">
+            {vodList.map((vod) => {
+              const score = (vod.coach_report as any)?.overall_score as number | undefined;
+              const scoreColor = score === undefined ? "text-muted" : score >= 75 ? "text-green-400" : score >= 50 ? "text-yellow-400" : "text-red-400";
+              return (
+                <div key={vod.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-14 aspect-video rounded overflow-hidden bg-bg flex-shrink-0">
+                    {vod.thumbnail_url ? <img src={vod.thumbnail_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Film size={11} className="text-muted" /></div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{vod.title}</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {formatDuration(vod.duration_seconds)}
+                      {score !== undefined && <span className={` · font-bold ${scoreColor}`}> {score}</span>}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {vod.status === "transcribing" || vod.status === "analyzing" ? (
+                      <VodProgress status={vod.status} durationSeconds={vod.duration_seconds} compact />
+                    ) : vod.status === "ready" ? (
+                      <Link href={`/dashboard/vods/${vod.id}`} className="inline-flex items-center gap-1 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity">
+                        Report <ChevronRight size={10} />
+                      </Link>
+                    ) : (
+                      <AnalyzeButton vodId={vod.id} status={vod.status} vodTitle={vod.title} durationSeconds={vod.duration_seconds} hasProcessing={hasProcessing} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </>
       )}

@@ -108,7 +108,7 @@ export default async function GrowPage() {
     <div>
       <div className="mb-8">
         <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Growth strategy</span>
-        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Growth Playbook</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Growth Playbook</h1>
         <p className="text-sm text-muted">How to keep growing — every week, every stream.</p>
       </div>
 
@@ -125,7 +125,7 @@ export default async function GrowPage() {
         <div className="space-y-5">
 
           {/* Momentum strip */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Score trend */}
             <div className="bg-surface border border-border rounded-2xl px-5 py-5">
               <p className="text-[11px] text-muted/70 font-medium mb-3">Score Trend</p>

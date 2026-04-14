@@ -40,7 +40,7 @@ export default async function DashboardPage() {
 
       {/* Greeting */}
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Hey, {displayName}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Hey, {displayName}</h1>
         <p className="text-sm text-muted">
           {isEmpty ? "Let's get your stream set up." : needsOnboarding ? "You're getting started — here's what to do next." : "Here's what's happening with your stream."}
         </p>

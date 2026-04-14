@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Newspaper, RefreshCw, CheckCircle2, TrendingUp, TrendingDown, Sparkles, Clock, Scissors } from "lucide-react";
 
 interface WeeklyDigest {
@@ -103,7 +104,7 @@ export function WeeklyDigestSection() {
           <p className="text-sm font-semibold text-white leading-snug">{digest.headline}</p>
 
           {/* Stats row */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatTile
               icon={<Sparkles size={13} className={scoreColor} />}
               value={digest.avg_score != null ? String(digest.avg_score) : "—"}
@@ -158,7 +159,7 @@ export function WeeklyDigestSection() {
 }
 
 function StatTile({ icon, value, label, valueClass }: {
-  icon: React.ReactNode; value: string; label: string; valueClass?: string;
+  icon: ReactNode; value: string; label: string; valueClass?: string;
 }) {
   return (
     <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center">

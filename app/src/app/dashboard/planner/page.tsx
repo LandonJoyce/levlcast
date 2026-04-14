@@ -143,7 +143,7 @@ export default async function PlannerPage() {
     <div>
       <div className="mb-8">
         <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Pro feature</span>
-        <h1 className="text-3xl font-extrabold tracking-tight mb-1">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">
           Title Generator
         </h1>
         <p className="text-sm text-muted">
