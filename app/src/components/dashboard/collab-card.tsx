@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, ChevronDown, ChevronUp, ExternalLink, X, MessageCircle } from "lucide-react";
+import { Users, ChevronDown, ChevronUp, ExternalLink, X, MessageCircle, RefreshCw } from "lucide-react";
 
 interface CollabSuggestion {
   id: string;
@@ -28,6 +28,7 @@ export function CollabCard() {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [optingIn, setOptingIn] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetch("/api/collab")
@@ -40,6 +41,17 @@ export function CollabCard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetch("/api/collab/refresh", { method: "POST" });
+      // Reload suggestions
+      const data = await fetch("/api/collab").then((r) => r.json());
+      setSuggestions(data.suggestions || []);
+    } catch {}
+    setRefreshing(false);
+  };
+
   const handleOptIn = async () => {
     setOptingIn(true);
     try {
@@ -49,6 +61,8 @@ export function CollabCard() {
         body: JSON.stringify({ enabled: true }),
       });
       setProfile({ enabled: true, tagline: null, preferred_categories: [] });
+      // Run matching immediately on opt-in
+      await handleRefresh();
     } catch {}
     setOptingIn(false);
   };
@@ -96,13 +110,19 @@ export function CollabCard() {
       <div className="rounded-2xl border border-accent/20 bg-accent/[0.04] p-5">
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-accent-light" />
-          <span className="text-xs font-medium text-muted">
-            Collab Finder
-          </span>
+          <span className="text-xs font-medium text-muted">Collab Finder</span>
         </div>
-        <p className="text-sm text-white/80 leading-relaxed">
-          You're in the matching pool. We'll find collab partners for you every Monday based on your content and audience.
+        <p className="text-sm text-white/80 leading-relaxed mb-4">
+          You're in the matching pool. Find collab partners based on your content and audience.
         </p>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 bg-accent hover:opacity-85 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all duration-300 hover:-translate-y-px"
+        >
+          <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+          {refreshing ? "Finding matches..." : "Find Matches"}
+        </button>
       </div>
     );
   }
@@ -122,6 +142,14 @@ export function CollabCard() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
+            disabled={refreshing}
+            className="p-1 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-40"
+            title="Refresh matches"
+          >
+            <RefreshCw size={12} className={`text-muted ${refreshing ? "animate-spin" : ""}`} />
+          </button>
           <span className="text-sm font-bold text-accent-light">
             {suggestions.length} match{suggestions.length !== 1 ? "es" : ""}
           </span>
