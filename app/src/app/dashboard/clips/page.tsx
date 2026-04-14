@@ -206,7 +206,7 @@ export default async function ClipsPage() {
                 {clips.map((clip) => (
                   <div
                     key={clip.id}
-                    className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/10 transition-colors"
+                    className="bg-surface border border-border rounded-2xl overflow-hidden surface-hover"
                   >
                     {/* Video player */}
                     <video
@@ -271,7 +271,7 @@ export default async function ClipsPage() {
                 {ungeneratedPeaks.map((peak, i) => (
                   <div
                     key={`${peak.vodId}-${peak.start}-${i}`}
-                    className="bg-surface border border-border rounded-2xl p-5 hover:border-white/10 transition-colors"
+                    className="bg-surface border border-border rounded-2xl p-5 surface-hover"
                   >
                     <div className="flex items-start gap-4">
                       <div className="relative flex-shrink-0 w-32 aspect-video rounded-lg overflow-hidden bg-bg">

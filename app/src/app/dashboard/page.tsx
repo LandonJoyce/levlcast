@@ -173,7 +173,7 @@ export default async function DashboardPage() {
 
 function StatBox({ label, value, href }: { label: string; value: number; href: string }) {
   return (
-    <Link href={href} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 hover:bg-white/[0.05] transition-colors block">
+    <Link href={href} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 surface-hover block">
       <p className="text-xl font-extrabold text-white">{value}</p>
       <p className="text-[11px] text-muted mt-0.5">{label}</p>
     </Link>
