@@ -72,10 +72,17 @@ export async function cutClip(
   try {
     const duration = safeEnd - safeStart;
 
+    // Two-pass seeking: fast seek to 3s before clip start, then accurate seek
+    // within decoded frames. This ensures the output starts on a keyframe so
+    // video and audio are in sync from the first frame.
+    const preSeek = Math.max(0, safeStart - 3);
+    const fineSeek = safeStart - preSeek;
+
     const cmd = [
       `"${ffmpegPath}"`,
-      `-ss ${safeStart}`,
+      `-ss ${preSeek}`,
       `-i "${inputFilePath}"`,
+      `-ss ${fineSeek}`,
       `-t ${duration}`,
       `-c:v libx264`,
       `-profile:v main`,
