@@ -129,7 +129,8 @@ export default function LandingPage() {
 
         <div className="relative max-w-[1080px] mx-auto px-6 text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/10 text-white/50 text-[13px] font-medium px-3.5 py-1.5 rounded-md mb-8">
+          <div className="inline-flex items-center gap-2 bg-accent/[0.08] border border-accent/[0.2] text-accent-light/80 text-[11px] font-semibold px-4 py-1.5 rounded-full tracking-[0.08em] mb-10">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-light/70 animate-pulse" />
             Founding member pricing — limited spots
           </div>
 
@@ -149,16 +150,19 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-5">
             <Link
               href="/auth/login"
-              className="btn-accent w-full sm:w-auto text-base px-8 py-4 text-center"
+              className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-7 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:scale-[0.97] w-full sm:w-auto justify-center"
             >
               Get Your Manager Free
+              <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
             </Link>
             <button
               disabled
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 border border-border text-white/30 font-semibold px-8 py-4 rounded-xl text-base cursor-not-allowed opacity-50"
+              className="w-full sm:w-auto flex items-center justify-center gap-2.5 border border-white/[0.08] text-white/25 font-medium px-8 py-4 rounded-full text-base cursor-not-allowed"
             >
               <Play className="w-4 h-4 fill-current" />
-              Demo Coming Soon
+              Demo coming soon
             </button>
           </div>
           <p className="text-xs text-muted">Free to start. No credit card required.</p>
@@ -243,9 +247,9 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden" id="how-it-works">
         <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-[13px] font-medium text-muted mb-4">
-            How It Works
-          </p>
+          <div className="flex justify-center mb-5">
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">How it works</span>
+          </div>
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-[-1.5px] text-center mb-16 leading-tight">
             Connect once.
             <br />
@@ -277,9 +281,9 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden" id="features">
         <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-[13px] font-medium text-muted mb-4">
-            Your Manager&apos;s Toolkit
-          </p>
+          <div className="flex justify-center mb-5">
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Your manager&apos;s toolkit</span>
+          </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
             Everything a real manager would do.
           </h2>
@@ -287,16 +291,39 @@ export default function LandingPage() {
             LevlCast doesn&apos;t just analyze clips. It watches over your entire streaming career and tells you what to do about it.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {managerFeatures.map((feat) => {
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {managerFeatures.map((feat, i) => {
               const Icon = feat.icon;
+              const isWide = i === 0;
+              const isFull = i === 5;
               return (
-                <div key={feat.title} className="card p-6 hover:border-accent/25 transition-colors group">
-                  <div className={`w-10 h-10 ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center mb-5 group-hover:opacity-90 transition-opacity`}>
-                    <Icon className={`w-5 h-5 ${feat.color}`} />
-                  </div>
-                  <h3 className="font-bold mb-2">{feat.title}</h3>
-                  <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
+                <div
+                  key={feat.title}
+                  className={[
+                    "card p-6 group hover:border-white/[0.14] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-px",
+                    isWide ? "md:col-span-2" : "",
+                    isFull ? "md:col-span-3" : "",
+                  ].join(" ")}
+                >
+                  {isFull ? (
+                    <div className="flex items-center gap-5">
+                      <div className={`w-10 h-10 ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300`}>
+                        <Icon className={`w-5 h-5 ${feat.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold mb-1">{feat.title}</h3>
+                        <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`w-10 h-10 ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300`}>
+                        <Icon className={`w-5 h-5 ${feat.color}`} />
+                      </div>
+                      <h3 className={`font-bold mb-2 ${isWide ? "text-lg" : ""}`}>{feat.title}</h3>
+                      <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -307,9 +334,9 @@ export default function LandingPage() {
       {/* ─── Coaching Report Mockup ─── */}
       <section className="py-24 border-t border-border bg-surface/30">
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-[13px] font-medium text-muted mb-4">
-            The Coaching Report
-          </p>
+          <div className="flex justify-center mb-5">
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">The coaching report</span>
+          </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
             Real feedback after every stream.
           </h2>
@@ -453,9 +480,9 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden">
         <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-[13px] font-medium text-muted mb-4">
-            Adapts To You
-          </p>
+          <div className="flex justify-center mb-5">
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Adapts to you</span>
+          </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
             Your manager knows your stream type.
           </h2>
@@ -597,7 +624,9 @@ export default function LandingPage() {
       <section id="pricing" className="py-24 border-t border-border relative overflow-hidden">
         <div className="absolute inset-0 glow-bottom pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-[13px] font-medium text-muted mb-4">Pricing</p>
+          <div className="flex justify-center mb-5">
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Pricing</span>
+          </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
             Simple, honest pricing.
           </h2>
@@ -621,17 +650,18 @@ export default function LandingPage() {
               </ul>
               <Link
                 href="/auth/login"
-                className="block text-center border border-border hover:border-accent/40 text-white font-semibold py-3 rounded-xl transition-all text-sm hover:text-white"
+                className="block text-center border border-white/[0.1] hover:border-accent/40 text-white/70 hover:text-white font-semibold py-3 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] text-sm"
               >
-                Get Started Free
+                Get started free
               </Link>
             </div>
 
             {/* Pro */}
-            <div className="relative bg-surface border border-accent/40 rounded-2xl p-8 flex flex-col shadow-glow">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-glow">
+            <div className="relative p-px rounded-[22px] bg-gradient-to-b from-accent/50 to-accent/10 shadow-[0_0_80px_rgba(124,58,237,0.28)]">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-white text-[11px] font-bold px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(124,58,237,0.5)] whitespace-nowrap z-10">
                 Founding Member Price
               </div>
+              <div className="bg-surface rounded-[21px] p-8 flex flex-col h-full">
               <h3 className="font-extrabold text-lg mb-1">Pro</h3>
               <p className="text-muted text-sm mb-6">Full management, every stream.</p>
               <div className="flex items-end gap-2 mb-1">
@@ -653,6 +683,7 @@ export default function LandingPage() {
               >
                 Get Pro — $9.99/mo
               </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -686,9 +717,12 @@ export default function LandingPage() {
           </p>
           <Link
             href="/auth/login"
-            className="btn-accent inline-block px-10 py-4 text-base mb-4"
+            className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-8 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_50px_rgba(124,58,237,0.5)] hover:-translate-y-0.5 active:scale-[0.97] mb-4"
           >
             Get Your Manager Free
+            <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </span>
           </Link>
           <p className="text-xs text-muted">Founding member price locks in at $9.99/mo forever.</p>
         </div>

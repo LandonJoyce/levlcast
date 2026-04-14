@@ -156,12 +156,16 @@
 
   /* Accent button hover glow */
   .btn-accent {
-    @apply bg-accent text-white font-bold rounded-xl transition-all duration-200;
+    @apply bg-accent text-white font-bold rounded-full transition-all duration-500;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
     box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
   }
   .btn-accent:hover {
-    @apply opacity-90;
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.45);
+  }
+  .btn-accent:active {
+    transform: scale(0.97);
   }
 
   /* PWA safe areas */
