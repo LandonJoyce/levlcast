@@ -167,7 +167,6 @@ export async function POST(request: Request) {
           const gameName = data.data?.[0]?.game_name;
           if (gameName && !GENERIC_CATEGORIES.has(gameName.toLowerCase())) {
             gameNames = [gameName];
-            console.log("[collab/refresh] Game from Twitch channel:", gameName);
           }
         }
       } catch (err) {
@@ -179,15 +178,12 @@ export async function POST(request: Request) {
     const titles = vods.map((v: any) => v.title).filter(Boolean);
     if (gameNames.length === 0) {
       gameNames = await extractGameNames(titles);
-      console.log("[collab/refresh] VOD titles:", titles.slice(0, 5));
-      console.log("[collab/refresh] Extracted game names from titles:", gameNames);
     }
 
     let externalCount = 0;
     try {
       const excludeIds: string[] = [];
       const externalMatches = await findExternalStreamers(userProfile, gameNames, excludeIds, 6);
-      console.log("[collab/refresh] External matches found:", externalMatches.length);
       for (const em of externalMatches) {
         await admin.from("collab_suggestions").delete().eq("user_id", user.id).eq("twitch_id", em.streamer.twitchId);
         await admin.from("collab_suggestions").insert({
@@ -210,7 +206,7 @@ export async function POST(request: Request) {
       console.warn("[collab/refresh] External matching failed:", err);
     }
 
-    return NextResponse.json({ ok: true, debug: { titles: titles.slice(0, 5), gameNames, externalCount } });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[collab/refresh] Error:", err);
     return NextResponse.json({ error: "Failed to find matches" }, { status: 500 });
