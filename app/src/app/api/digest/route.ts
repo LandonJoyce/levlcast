@@ -94,8 +94,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No analyzed VODs yet" }, { status: 400 });
     }
 
-    const streamsCount = vodsForDigest.length;
-    const totalDurationMin = Math.round(vodsForDigest.reduce((s: number, v: any) => s + (v.duration_seconds || 0), 0) / 60);
+    const usingFallback = vods.length === 0;
+    // Stats shown to user reflect THIS week only — fallback VODs only inform the AI advice
+    const streamsCount = usingFallback ? 0 : vods.length;
+    const totalDurationMin = usingFallback ? 0 : Math.round(vods.reduce((s: number, v: any) => s + (v.duration_seconds || 0), 0) / 60);
     const scores = vodsForDigest.map((v: any) => (v.coach_report as any)?.overall_score).filter(Boolean) as number[];
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : null;
     const bestScore = scores.length > 0 ? Math.max(...scores) : null;
@@ -127,16 +129,16 @@ export async function POST(request: Request) {
           content: `You are a streamer's personal manager writing their weekly digest.
 
 Data:
-- Streams analyzed: ${streamsCount}, total ${totalDurationMin} minutes
-- Avg coach score: ${avgScore || "N/A"}, best: ${bestScore || "N/A"}
-- Peaks found: ${peaksFound}, clips generated: ${clipsGenerated}
+- Streams this week: ${streamsCount}${usingFallback ? " (none this week — context from recent past streams below)" : `, total ${totalDurationMin} minutes`}
+${usingFallback ? `- Recent stream context: avg score ${avgScore || "N/A"}, ${peaksFound} peaks found across last ${vodsForDigest.length} streams` : `- Avg coach score: ${avgScore || "N/A"}, best: ${bestScore || "N/A"}\n- Peaks found: ${peaksFound}`}
+- Clips generated this week: ${clipsGenerated}
 - Follower change: ${followerDelta >= 0 ? "+" : ""}${followerDelta}
 - Health: ${healthSummary || "No data"}
 - Content: ${contentSummary || "No data"}
 - Collab matches: ${collabCount}
 
 Generate:
-1. "headline": One punchy sentence summarizing the week. Honest, not fluffy.
+1. "headline": One punchy sentence summarizing the week. Honest, not fluffy. If they didn't stream, acknowledge it directly.
 2. "actions": 2-3 short specific action items based on the data.
 
 JSON only: { "headline": "...", "actions": ["...", "..."] }`,
