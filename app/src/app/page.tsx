@@ -129,9 +129,8 @@ export default function LandingPage() {
 
         <div className="relative max-w-[1080px] mx-auto px-6 text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/30 text-accent-light text-xs font-bold px-4 py-2 rounded-full mb-8 uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-            Founding Member Pricing — Limited Spots
+          <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/10 text-white/50 text-[13px] font-medium px-3.5 py-1.5 rounded-md mb-8">
+            Founding member pricing — limited spots
           </div>
 
           {/* Headline */}
@@ -244,7 +243,7 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden" id="how-it-works">
         <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
+          <p className="text-center text-[13px] font-medium text-muted mb-4">
             How It Works
           </p>
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-[-1.5px] text-center mb-16 leading-tight">
@@ -264,7 +263,7 @@ export default function LandingPage() {
                   <div className={`w-12 h-12 ${step.bg} border ${step.border} rounded-xl flex items-center justify-center mb-5`}>
                     <Icon className={`w-5 h-5 ${step.color}`} />
                   </div>
-                  <div className="text-xs font-bold tracking-widest text-muted mb-2">{step.num}</div>
+                  <div className="text-xs font-medium text-muted/60 mb-2">{step.num}</div>
                   <h3 className="font-bold text-base mb-2">{step.label}</h3>
                   <p className="text-[13px] text-muted leading-relaxed">{step.desc}</p>
                 </div>
@@ -278,7 +277,7 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden" id="features">
         <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
+          <p className="text-center text-[13px] font-medium text-muted mb-4">
             Your Manager&apos;s Toolkit
           </p>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
@@ -308,7 +307,7 @@ export default function LandingPage() {
       {/* ─── Coaching Report Mockup ─── */}
       <section className="py-24 border-t border-border bg-surface/30">
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
+          <p className="text-center text-[13px] font-medium text-muted mb-4">
             The Coaching Report
           </p>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
@@ -454,7 +453,7 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden">
         <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">
+          <p className="text-center text-[13px] font-medium text-muted mb-4">
             Adapts To You
           </p>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
@@ -598,7 +597,7 @@ export default function LandingPage() {
       <section id="pricing" className="py-24 border-t border-border relative overflow-hidden">
         <div className="absolute inset-0 glow-bottom pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <p className="text-center text-xs font-bold tracking-[2px] uppercase text-accent-light mb-4">Pricing</p>
+          <p className="text-center text-[13px] font-medium text-muted mb-4">Pricing</p>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
             Simple, honest pricing.
           </h2>
@@ -706,7 +705,7 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase text-muted mb-4">Product</p>
+              <p className="text-xs font-medium text-muted mb-4">Product</p>
               <ul className="space-y-3 text-sm">
                 <li><a href="#how-it-works" className="text-muted hover:text-white transition-colors">How It Works</a></li>
                 <li><a href="#features" className="text-muted hover:text-white transition-colors">Features</a></li>
@@ -715,14 +714,14 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase text-muted mb-4">Legal</p>
+              <p className="text-xs font-medium text-muted mb-4">Legal</p>
               <ul className="space-y-3 text-sm">
                 <li><Link href="/terms" className="text-muted hover:text-white transition-colors">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="text-muted hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
             <div>
-              <p className="text-xs font-bold tracking-widest uppercase text-muted mb-4">Contact</p>
+              <p className="text-xs font-medium text-muted mb-4">Contact</p>
               <ul className="space-y-3 text-sm">
                 <li>
                   <a href="mailto:support@levlcast.com" className="text-muted hover:text-white transition-colors">
