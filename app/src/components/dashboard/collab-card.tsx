@@ -165,7 +165,7 @@ function MatchRow({ suggestion, onDismiss }: { suggestion: CollabSuggestion; onD
   const whisperUrl = suggestion.twitch_login ? `https://twitch.tv/message/compose?to=${suggestion.twitch_login}` : null;
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.02] transition-colors group">
+    <div className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-white/[0.02] transition-colors group">
       {/* Avatar */}
       {suggestion.avatar_url ? (
         <img src={suggestion.avatar_url} alt={suggestion.display_name} className="w-10 h-10 rounded-full flex-shrink-0" />
@@ -187,12 +187,12 @@ function MatchRow({ suggestion, onDismiss }: { suggestion: CollabSuggestion; onD
         <p className="text-xs text-muted mt-0.5 truncate">{suggestion.reasons?.[0] || ""}</p>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Actions — always visible on mobile, hover-reveal on desktop */}
+      <div className="flex items-center gap-1.5 flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         {whisperUrl && (
           <a href={whisperUrl} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-accent/10 hover:bg-accent/20 rounded-full transition-colors text-xs font-semibold text-accent-light">
-            <MessageCircle size={11} /> Message
+            <MessageCircle size={11} /><span className="hidden sm:inline">Message</span>
           </a>
         )}
         {twitchUrl && (
