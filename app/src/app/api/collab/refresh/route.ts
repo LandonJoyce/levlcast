@@ -9,6 +9,13 @@ import { createClientFromRequest, createAdminClient } from "@/lib/supabase/serve
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
 import Anthropic from "@anthropic-ai/sdk";
 
+// Generic Twitch categories that aren't real games — excluded from matching
+const GENERIC_CATEGORIES = new Set([
+  "just chatting", "pools, hot tubs & beaches", "talk shows & podcasts",
+  "music", "art", "irl", "special events", "travel & outdoors",
+  "sports", "asmr", "gambling",
+]);
+
 /** Use Claude Haiku to extract real game names from VOD titles. */
 async function extractGameNames(titles: string[]): Promise<string[]> {
   if (titles.length === 0) return [];
@@ -19,7 +26,7 @@ async function extractGameNames(titles: string[]): Promise<string[]> {
       max_tokens: 150,
       messages: [{
         role: "user",
-        content: `Extract the game names being played from these Twitch stream titles. Return ONLY actual game titles (e.g. "Minecraft", "Valorant", "Just Chatting"). Return at most 5 unique game names as a JSON array. If a title doesn't mention a specific game, skip it.
+        content: `Extract the specific VIDEO GAME titles being played from these Twitch stream titles. Return ONLY real game names like "Minecraft", "Valorant", "Elden Ring". Do NOT include "Just Chatting", "IRL", "Music", or other non-game categories. Return at most 4 unique game names as a JSON array. If no specific games are mentioned, return [].
 
 Titles:
 ${titles.slice(0, 15).join("\n")}
@@ -31,7 +38,10 @@ JSON only: ["Game1", "Game2"]`,
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed) && parsed.every((g) => typeof g === "string")) {
-      return parsed.slice(0, 5);
+      // Filter out any generic categories that slipped through
+      return parsed
+        .filter((g: string) => !GENERIC_CATEGORIES.has(g.toLowerCase()))
+        .slice(0, 4);
     }
   } catch (err) {
     console.warn("[collab/refresh] Game extraction failed:", err);
@@ -133,6 +143,12 @@ export async function POST(request: Request) {
     }
 
     // --- External matches: live Twitch streamers in same games ---
+    // Clear ALL old external suggestions first so stale results don't persist
+    await admin.from("collab_suggestions")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("is_external", true);
+
     const titles = vods.map((v: any) => v.title).filter(Boolean);
     const gameNames = await extractGameNames(titles);
 
