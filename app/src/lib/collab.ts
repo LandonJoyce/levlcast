@@ -221,11 +221,10 @@ export async function findExternalStreamers(
 
   if (gameIds.length === 0) return [];
 
-  // Step 2: Viewer count range based on user's follower count
-  // Rough heuristic: live viewer count is ~1-5% of followers for small streamers
+  // Step 2: Loose viewer count ceiling — only filter out massive streamers
+  // Small/mid streamers (< 50k followers) should see anyone with < 5k viewers
   const followers = userProfile.followerCount || 0;
-  const minViewers = followers > 0 ? Math.max(2, Math.floor(followers * 0.005)) : 2;
-  const maxViewers = followers > 0 ? Math.max(200, Math.floor(followers * 3)) : 500;
+  const maxViewers = followers > 50000 ? Math.floor(followers * 0.2) : 5000;
 
   // Step 3: Fetch live streams for each game
   const seenIds = new Set(excludeTwitchIds);
@@ -233,7 +232,7 @@ export async function findExternalStreamers(
 
   for (const game of gameIds) {
     try {
-      const params = new URLSearchParams({ game_id: game.id, first: "50" });
+      const params = new URLSearchParams({ game_id: game.id, first: "100" });
       const res = await fetch(`https://api.twitch.tv/helix/streams?${params}`, { headers });
       if (!res.ok) continue;
 
@@ -241,8 +240,9 @@ export async function findExternalStreamers(
       for (const stream of data.data || []) {
         if (seenIds.has(stream.user_id)) continue;
 
-        // Filter: must have real viewers
-        if (stream.viewer_count < minViewers || stream.viewer_count > maxViewers) continue;
+        // Only filter out huge streamers and zero-viewer bots
+        if (stream.viewer_count > maxViewers) continue;
+        if (stream.viewer_count === 0) continue;
 
         // Filter: skip obvious bot/spam channels
         if (isSuspiciousLogin(stream.user_login)) continue;
@@ -254,13 +254,42 @@ export async function findExternalStreamers(
           displayName: stream.user_name,
           avatarUrl: stream.thumbnail_url?.replace("{width}", "40").replace("{height}", "40") || "",
           viewerCount: stream.viewer_count,
-          followerCount: 0, // not available via app token
+          followerCount: 0,
           gameName: stream.game_name || game.name,
           isLive: true,
         });
       }
     } catch {
       // non-fatal
+    }
+  }
+
+  // Step 3b: If no live streams found, fall back to channel search for the game
+  if (candidates.length === 0) {
+    for (const game of gameIds.slice(0, 2)) {
+      try {
+        const params = new URLSearchParams({ query: game.name, first: "30" });
+        const res = await fetch(`https://api.twitch.tv/helix/search/channels?${params}`, { headers });
+        if (!res.ok) continue;
+        const data = await res.json();
+        for (const ch of data.data || []) {
+          if (seenIds.has(ch.id)) continue;
+          if (isSuspiciousLogin(ch.broadcaster_login)) continue;
+          seenIds.add(ch.id);
+          candidates.push({
+            twitchId: ch.id,
+            login: ch.broadcaster_login,
+            displayName: ch.display_name,
+            avatarUrl: ch.thumbnail_url || "",
+            viewerCount: 0,
+            followerCount: 0,
+            gameName: ch.game_name || game.name,
+            isLive: ch.is_live,
+          });
+        }
+      } catch {
+        // non-fatal
+      }
     }
   }
 
@@ -288,29 +317,25 @@ export async function findExternalStreamers(
 
   for (const streamer of candidates) {
     const reasons: string[] = [];
-    let score = 0;
+    let score = 60; // base score for matching the game
 
-    // Game match (primary signal — 50%)
-    const gameMatch = gameIds.find((g) => g.name.toLowerCase() === streamer.gameName.toLowerCase());
-    if (gameMatch) {
-      score += 50;
-      reasons.push(`Streams ${streamer.gameName}`);
-    } else {
+    reasons.push(`Streams ${streamer.gameName}`);
+
+    // Live bonus
+    if (streamer.isLive) {
       score += 20;
-      reasons.push(`Streams ${streamer.gameName}`);
+      reasons.push("Currently live");
     }
 
-    // Viewer count similarity (30%) — closer to user's range = better match
-    const viewerRatio = streamer.viewerCount / Math.max(followers * 0.02, 5);
-    const viewerScore = viewerRatio >= 0.5 && viewerRatio <= 2 ? 30 : viewerRatio >= 0.2 && viewerRatio <= 5 ? 15 : 5;
-    score += viewerScore;
-    if (viewerScore >= 30) reasons.push("Similar size audience");
-
-    // Live bonus (20%)
-    score += 20;
-    reasons.push("Currently live");
-
-    if (score < 40) continue;
+    // Viewer count similarity bonus (small streamers prefer similar-sized partners)
+    if (streamer.viewerCount > 0 && followers > 0) {
+      const expectedViewers = Math.max(followers * 0.02, 3);
+      const ratio = streamer.viewerCount / expectedViewers;
+      if (ratio >= 0.3 && ratio <= 5) {
+        score += 20;
+        reasons.push("Similar audience size");
+      }
+    }
 
     matches.push({
       streamer,
