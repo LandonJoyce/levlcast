@@ -2,9 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { BurnoutCard } from "@/components/dashboard/burnout-card";
 import { MonetizationCard } from "@/components/dashboard/monetization-card";
 import { CollabCard } from "@/components/dashboard/collab-card";
-import { DigestCard } from "@/components/dashboard/digest-card";
+import { WeeklyDigestSection } from "@/components/dashboard/weekly-digest-section";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
-import { WeeklyReportModal } from "@/components/dashboard/weekly-report-modal";
 import Link from "next/link";
 import { Film, CheckCircle2, Circle, ArrowRight, Sparkles } from "lucide-react";
 
@@ -129,18 +128,15 @@ export default async function DashboardPage() {
               </div>
             )}
 
+            {/* Weekly Digest */}
+            <WeeklyDigestSection />
+
             {/* Monetization */}
             <MonetizationCard />
           </div>
 
           {/* RIGHT sidebar */}
           <div className="space-y-5">
-
-            {/* Weekly report modal — pops up when a new digest is available */}
-            <WeeklyReportModal />
-
-            {/* Digest card */}
-            <DigestCard />
 
             {/* Burnout */}
             <BurnoutCard />

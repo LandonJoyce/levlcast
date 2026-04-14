@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Newspaper, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, TrendingDown, Lock } from "lucide-react";
+import { Newspaper, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, TrendingDown, Lock, RefreshCw } from "lucide-react";
 import { UpgradeModal } from "./upgrade-modal";
 
 interface WeeklyDigest {
@@ -26,8 +26,10 @@ export function DigestCard() {
   const [loading, setLoading] = useState(true);
   const [locked, setLocked] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
+  function loadDigest() {
+    setLoading(true);
     fetch("/api/digest")
       .then((r) => r.json())
       .then((data) => {
@@ -36,7 +38,20 @@ export function DigestCard() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadDigest(); }, []);
+
+  async function handleGenerate() {
+    setGenerating(true);
+    try {
+      await fetch("/api/digest", { method: "POST" });
+      await loadDigest();
+    } catch {
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   if (loading) return null;
 
@@ -80,10 +95,18 @@ export function DigestCard() {
           <Newspaper size={16} className="text-blue-400" />
           <span className="text-xs font-medium text-muted">Weekly Digest</span>
         </div>
-        <p className="text-sm font-semibold text-white mb-1">Your first report is on the way</p>
-        <p className="text-xs text-muted leading-relaxed">
-          Every Monday we send a full recap — streams, score changes, follower growth, and your action plan for the week.
+        <p className="text-sm font-semibold text-white mb-1">No digest yet</p>
+        <p className="text-xs text-muted leading-relaxed mb-3">
+          Generates every Monday. Hit the button to build one now from your recent streams.
         </p>
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-light hover:opacity-80 transition-opacity disabled:opacity-50"
+        >
+          <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
+          {generating ? "Generating..." : "Generate now"}
+        </button>
       </div>
     );
   }
