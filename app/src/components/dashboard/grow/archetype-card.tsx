@@ -209,7 +209,7 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
             }`} />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-xs text-muted uppercase tracking-wide font-semibold flex-shrink-0">Your Archetype</p>
+                <p className="text-xs text-muted font-medium flex-shrink-0">Your Archetype</p>
                 {dominantStreamerType && (
                   <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/40 flex-shrink-0">
                     {STREAMER_TYPE_LABELS[dominantStreamerType] ?? dominantStreamerType}
@@ -249,7 +249,7 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
         {/* Left — archetype identity */}
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
-            <p className="text-xs text-muted uppercase tracking-wide font-semibold">Your Streamer Archetype</p>
+            <p className="text-xs text-muted font-medium">Your Streamer Archetype</p>
             {dominantStreamerType && (
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/40">
                 {STREAMER_TYPE_LABELS[dominantStreamerType] ?? dominantStreamerType}

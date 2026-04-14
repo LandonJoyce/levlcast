@@ -47,7 +47,7 @@ export function ConsistencyGrid({ streamDates }: { streamDates: Set<string> }) {
     <div className="bg-surface border border-border rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-0.5">Stream Consistency</h2>
+          <h2 className="text-sm font-semibold text-muted mb-0.5">Stream Consistency</h2>
           <p className="text-xs text-muted">Last 28 days</p>
         </div>
         <div className="text-right">

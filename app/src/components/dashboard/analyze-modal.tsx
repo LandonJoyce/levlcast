@@ -169,7 +169,7 @@ export function AnalyzeModal({
 
           {/* Presets */}
           <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+            <p className="text-xs font-medium text-muted mb-2">
               What to analyze
             </p>
             <div className="grid grid-cols-2 gap-2">

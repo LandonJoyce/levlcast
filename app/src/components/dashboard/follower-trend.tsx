@@ -27,7 +27,7 @@ export function FollowerTrend({ snapshots, needsReconnect }: Props) {
     const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
     return (
       <div className="bg-surface border border-border rounded-2xl p-6">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+        <h2 className="text-sm font-semibold text-muted mb-4">
           Follower Growth
         </h2>
         {needsReconnect ? (
@@ -74,7 +74,7 @@ export function FollowerTrend({ snapshots, needsReconnect }: Props) {
   return (
     <div className="bg-surface border border-border rounded-2xl p-6">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted">
+        <h2 className="text-sm font-semibold text-muted">
           Follower Growth
         </h2>
         {gained > 0 && (

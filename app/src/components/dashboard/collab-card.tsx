@@ -72,7 +72,7 @@ export function CollabCard() {
       <div className="rounded-2xl border border-white/[0.06] bg-surface p-5">
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-accent-light" />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted">
             Collab Finder
           </span>
         </div>
@@ -96,7 +96,7 @@ export function CollabCard() {
       <div className="rounded-2xl border border-accent/20 bg-accent/[0.04] p-5">
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-accent-light" />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted">
             Collab Finder
           </span>
         </div>
@@ -117,7 +117,7 @@ export function CollabCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-accent-light" />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted">
             Collab Finder
           </span>
         </div>

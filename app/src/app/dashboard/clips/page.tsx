@@ -158,7 +158,7 @@ export default async function ClipsPage() {
           {/* Processing clips */}
           {hasProcessing && (
             <div className="mb-8">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+              <h2 className="text-sm font-semibold text-muted mb-4">
                 Generating ({processingClips.length})
               </h2>
               <div className="space-y-3">
@@ -178,7 +178,7 @@ export default async function ClipsPage() {
           {/* Failed clips */}
           {failedClips.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+              <h2 className="text-sm font-semibold text-muted mb-4">
                 Failed ({failedClips.length})
               </h2>
               <div className="space-y-3">
@@ -198,7 +198,7 @@ export default async function ClipsPage() {
           {/* Generated clips */}
           {clips && clips.length > 0 && (
             <div className="mb-10">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+              <h2 className="text-sm font-semibold text-muted mb-4">
                 Generated Clips ({clips.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -263,7 +263,7 @@ export default async function ClipsPage() {
           {/* Ungenerated peaks */}
           {ungeneratedPeaks.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-4">
+              <h2 className="text-sm font-semibold text-muted mb-4">
                 Detected Peaks ({ungeneratedPeaks.length})
               </h2>
               <div className="space-y-3">

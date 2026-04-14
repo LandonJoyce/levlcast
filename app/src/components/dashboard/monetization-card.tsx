@@ -90,7 +90,7 @@ export function MonetizationCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <TrendingUp size={16} className="text-accent-light" />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted">
             Content Performance
           </span>
         </div>
@@ -113,13 +113,13 @@ export function MonetizationCard() {
         <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
           {/* Recommendation */}
           <div className="bg-white/[0.03] rounded-xl p-4">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">This Week's Strategy</p>
+            <p className="text-xs font-medium text-muted mb-2">This Week's Strategy</p>
             <p className="text-sm text-white/90 leading-relaxed">{recommendation}</p>
           </div>
 
           {/* Category breakdown */}
           <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Category Breakdown</p>
+            <p className="text-xs font-medium text-muted mb-3">Category Breakdown</p>
             <div className="space-y-2">
               {categories.map((cat) => (
                 <CategoryRow key={cat.category} data={cat} />

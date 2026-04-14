@@ -100,7 +100,7 @@ export function BurnoutCard() {
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
           <div className="flex items-center gap-2 mb-3">
             <HeartPulse size={16} className="text-muted" />
-            <span className="text-xs font-semibold text-muted uppercase tracking-wide">Streamer Health</span>
+            <span className="text-xs font-medium text-muted">Streamer Health</span>
           </div>
           <div className="flex flex-col items-center text-center py-4 gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -144,7 +144,7 @@ export function BurnoutCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <HeartPulse size={16} className={colors.text} />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted">
             Streamer Health
           </span>
         </div>
@@ -173,13 +173,13 @@ export function BurnoutCard() {
         <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
           {/* Recommendation */}
           <div className="bg-white/[0.03] rounded-xl p-4">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">This Week's Focus</p>
+            <p className="text-xs font-medium text-muted mb-2">This Week's Focus</p>
             <p className="text-sm text-white/90 leading-relaxed">{recommendation}</p>
           </div>
 
           {/* Signal breakdown — human readable */}
           <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">What We're Watching</p>
+            <p className="text-xs font-medium text-muted mb-3">What We're Watching</p>
             <div className="space-y-2">
               <SignalRow label="Stream Scores" value={latest.score_decline} />
               <SignalRow label="Energy Level" value={latest.energy_decline} />
@@ -193,7 +193,7 @@ export function BurnoutCard() {
           {/* Mini sparkline of last 8 weeks */}
           {history.length > 1 && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Health Trend</p>
+              <p className="text-xs font-medium text-muted mb-2">Health Trend</p>
               <div className="flex items-end gap-1 h-10">
                 {history.map((snap, i) => {
                   const height = Math.max(6, (100 - snap.score) * 0.38);

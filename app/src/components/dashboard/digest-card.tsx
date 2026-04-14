@@ -46,7 +46,7 @@ export function DigestCard() {
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
           <div className="flex items-center gap-2 mb-3">
             <Newspaper size={16} className="text-muted" />
-            <span className="text-xs font-semibold text-muted uppercase tracking-wide">Weekly Digest</span>
+            <span className="text-xs font-medium text-muted">Weekly Digest</span>
           </div>
           <div className="flex flex-col items-center text-center py-4 gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -78,7 +78,7 @@ export function DigestCard() {
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
         <div className="flex items-center gap-2 mb-2">
           <Newspaper size={16} className="text-blue-400" />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">Weekly Digest</span>
+          <span className="text-xs font-medium text-muted">Weekly Digest</span>
         </div>
         <p className="text-sm font-semibold text-white mb-1">Your first report is on the way</p>
         <p className="text-xs text-muted leading-relaxed">
@@ -101,7 +101,7 @@ export function DigestCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Newspaper size={16} className="text-blue-400" />
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted">
             Weekly Digest
           </span>
         </div>
@@ -155,7 +155,7 @@ export function DigestCard() {
           {/* Action items */}
           {(latest.action_items || []).length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">This Week's Actions</p>
+              <p className="text-xs font-medium text-muted mb-2">This Week's Actions</p>
               <div className="space-y-2">
                 {(latest.action_items || []).map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -176,7 +176,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-white/[0.03] rounded-lg p-3 text-center">
       <div className="text-lg font-bold text-white">{value}</div>
-      <div className="text-[10px] text-muted uppercase tracking-wide">{label}</div>
+      <div className="text-[10px] text-muted">{label}</div>
     </div>
   );
 }

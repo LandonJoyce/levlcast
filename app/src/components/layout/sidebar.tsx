@@ -57,9 +57,9 @@ export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-surface border-r border-border flex flex-col z-40">
+    <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#090d15] border-r border-white/[0.06] flex flex-col z-40">
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-border">
+      <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
         <Link href="/dashboard" className="text-xl font-extrabold text-gradient">
           LevlCast
         </Link>
@@ -70,7 +70,7 @@ export function Sidebar({ user }: SidebarProps) {
         {navGroups.map((group, gi) => (
           <div key={gi}>
             {group.label && (
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted/50 px-3 mb-1">
+              <p className="text-[10px] font-medium text-muted/40 px-3 mb-1">
                 {group.label}
               </p>
             )}
@@ -86,15 +86,15 @@ export function Sidebar({ user }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                       isActive
-                        ? "bg-accent/15 text-white"
+                        ? "bg-white/[0.07] text-white"
                         : "text-muted hover:text-white hover:bg-white/[0.04]"
                     )}
                   >
                     <item.icon
-                      size={18}
-                      className={cn(isActive ? "text-accent-light" : "text-muted")}
+                      size={16}
+                      className={cn(isActive ? "text-accent-light" : "text-muted/60")}
                     />
                     {item.label}
                   </Link>
@@ -106,7 +106,7 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-white/[0.06]">
         <div className="flex items-center gap-3 px-3 py-2.5 mb-1">
           {user.avatar_url ? (
             <img

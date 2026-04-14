@@ -164,7 +164,7 @@ export default async function AnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 mb-6">
             {/* Score hero */}
             <div className="bg-surface border border-border rounded-2xl px-6 py-6 flex flex-col justify-center">
-              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">
+              <p className="text-xs text-muted font-medium mb-3">
                 Stream Score
               </p>
               <div className="flex items-end gap-3 mb-1.5">
@@ -189,7 +189,7 @@ export default async function AnalyticsPage() {
 
             {/* Insights */}
             <div className="bg-surface border border-border rounded-2xl px-6 py-5">
-              <p className="text-xs text-muted font-medium uppercase tracking-wide mb-4">
+              <p className="text-xs text-muted font-medium mb-4">
                 Stream Insights
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -127,7 +127,7 @@ export default async function GrowPage() {
           <div className="grid grid-cols-3 gap-3">
             {/* Score trend */}
             <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-              <p className="text-xs text-muted uppercase tracking-wide font-medium mb-2">Score Trend</p>
+              <p className="text-xs text-muted font-medium mb-2">Score Trend</p>
               {scoreTrend === "up" && (
                 <div className="flex items-center gap-2">
                   <TrendingUp size={18} className="text-green-400" />
@@ -159,7 +159,7 @@ export default async function GrowPage() {
 
             {/* Top content */}
             <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-              <p className="text-xs text-muted uppercase tracking-wide font-medium mb-2">Best Content</p>
+              <p className="text-xs text-muted font-medium mb-2">Best Content</p>
               {dominantCategory ? (
                 <>
                   <span className={`inline-flex items-center text-base font-extrabold capitalize px-2 py-0.5 rounded-lg ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
@@ -176,7 +176,7 @@ export default async function GrowPage() {
 
             {/* Streams this month */}
             <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-              <p className="text-xs text-muted uppercase tracking-wide font-medium mb-2">This Month</p>
+              <p className="text-xs text-muted font-medium mb-2">This Month</p>
               <div className="flex items-end gap-1.5">
                 <span className={`text-2xl font-extrabold ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
                   {recentStreamCount}

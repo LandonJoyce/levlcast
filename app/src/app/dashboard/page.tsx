@@ -54,7 +54,7 @@ export default async function DashboardPage() {
           <p className="text-sm text-muted max-w-md mx-auto mb-8">
             Sync your Twitch VODs to get started. LevlCast will analyze your streams and find the best moments automatically.
           </p>
-          <Link href="/dashboard/vods" className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-6 py-3 rounded-xl transition-opacity">
+          <Link href="/dashboard/vods" className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] active:scale-[0.97]">
             <Film size={16} /> Sync VODs
           </Link>
         </div>
@@ -84,13 +84,13 @@ export default async function DashboardPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">Latest Stream</p>
+                    <p className="text-xs text-muted font-medium mb-1">Latest stream</p>
                     <p className="text-base font-bold text-white truncate">{latestVod.title}</p>
                     <p className="text-xs text-muted mt-1">{new Date(latestVod.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}</p>
                   </div>
                   <div className="text-right ml-6 flex-shrink-0">
                     <p className={`text-5xl font-extrabold ${latestScore >= 70 ? "text-green-400" : latestScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>{latestScore}</p>
-                    <p className="text-[10px] text-muted uppercase tracking-wide mt-1">stream score</p>
+                    <p className="text-[10px] text-muted mt-1">stream score</p>
                   </div>
                 </div>
               </Link>
@@ -147,7 +147,7 @@ export default async function DashboardPage() {
 
             {/* Quick stats */}
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <h2 className="text-xs font-bold uppercase tracking-wide text-muted mb-4">Your Numbers</h2>
+              <h2 className="text-xs font-medium text-muted mb-4">Your numbers</h2>
               <div className="grid grid-cols-2 gap-3">
                 <StatBox label="VODs" value={totalVods} href="/dashboard/vods" />
                 <StatBox label="Analyzed" value={totalAnalyzed} href="/dashboard/vods" />
