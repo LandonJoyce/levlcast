@@ -128,6 +128,9 @@ export default async function DashboardPage() {
               </div>
             )}
 
+            {/* Collab Finder */}
+            <CollabCard />
+
             {/* Weekly Digest */}
             <WeeklyDigestSection />
 
@@ -158,8 +161,6 @@ export default async function DashboardPage() {
               )}
             </div>
 
-            {/* Collab finder */}
-            <CollabCard />
           </div>
         </div>
       )}
