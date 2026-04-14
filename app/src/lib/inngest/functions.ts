@@ -10,7 +10,7 @@
  */
 
 import { inngest } from "./client";
-import { streamTwitchVodAudio, downloadTwitchVodAudio } from "@/lib/twitch";
+import { streamTwitchVodAudio, downloadTwitchVodVideo } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
@@ -264,7 +264,7 @@ export const generateClip = inngest.createFunction(
       // causes silent failures where the clip appears "completed" but stays processing.
       await step.run("generate-and-upload", async () => {
         console.log(`[clip] Downloading segments for "${peak.title}" (${peak.start}s - ${peak.end}s)`);
-        const download = await downloadTwitchVodAudio(twitchVodId, peak.start, peak.end);
+        const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end);
 
         let buffer: Buffer;
         try {

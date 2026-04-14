@@ -366,6 +366,154 @@ export async function downloadTwitchVodAudio(
 }
 
 /**
+ * Download Twitch VOD VIDEO segments for clip generation.
+ * Selects the lowest available video quality (360p or 480p) to keep file sizes
+ * small while still capturing actual video frames.
+ */
+export async function downloadTwitchVodVideo(
+  vodId: string,
+  startSeconds: number,
+  endSeconds: number
+): Promise<VodDownloadResult> {
+  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
+  // Step 1: Get playback access token
+  const gqlRes = await fetch("https://gql.twitch.tv/gql", {
+    method: "POST",
+    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      operationName: "PlaybackAccessToken",
+      query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
+        videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) {
+          value
+          signature
+        }
+      }`,
+      variables: { vodID: vodId, playerType: "site" },
+    }),
+  });
+
+  if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  const gqlData = await gqlRes.json();
+  const token = gqlData.data?.videoPlaybackAccessToken;
+  if (!token) throw new Error("Could not get video playback token from Twitch GQL");
+
+  // Step 2: Get M3U8 master playlist
+  const usherParams = new URLSearchParams({
+    allow_source: "true",
+    allow_audio_only: "true",
+    allow_spectre: "true",
+    player: "twitchweb",
+    playlist_include_framerate: "true",
+    sig: token.signature,
+    token: token.value,
+  });
+
+  const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
+  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+  const masterText = await masterRes.text();
+  const masterLines = masterText.split("\n");
+
+  // Step 3: Pick best video quality — prefer 480p or 360p, avoid audio_only and source
+  // Parse all VIDEO= entries and their URLs
+  const qualities: { label: string; resolution: string; url: string }[] = [];
+  for (let i = 0; i < masterLines.length; i++) {
+    const line = masterLines[i];
+    if (line.startsWith("#EXT-X-STREAM-INF")) {
+      const videoMatch = line.match(/VIDEO="([^"]+)"/);
+      const resMatch = line.match(/RESOLUTION=(\d+x\d+)/);
+      const url = masterLines[i + 1]?.trim();
+      if (videoMatch && url && !url.startsWith("#")) {
+        qualities.push({ label: videoMatch[1], resolution: resMatch?.[1] || "", url });
+      }
+    }
+  }
+
+  // Priority: 480p60 > 480p > 360p60 > 360p > 720p > source (avoid huge source files)
+  // Never pick audio_only
+  const videoQualities = qualities.filter((q) => !q.label.includes("audio"));
+  const preferred = ["480p60", "480p", "360p60", "360p", "720p60", "720p"];
+  let streamUrl = "";
+  for (const pref of preferred) {
+    const match = videoQualities.find((q) => q.label === pref);
+    if (match) { streamUrl = match.url; break; }
+  }
+  // Fallback: first non-audio quality
+  if (!streamUrl && videoQualities.length > 0) {
+    streamUrl = videoQualities[videoQualities.length - 1].url; // last = lowest quality
+  }
+  if (!streamUrl) throw new Error("No video stream found in master playlist");
+
+  console.log(`[twitch] Using video quality for clip: ${qualities.find((q) => q.url === streamUrl)?.label}`);
+
+  // Step 4: Parse sub-playlist
+  const subRes = await fetch(streamUrl);
+  if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
+  const subText = await subRes.text();
+  const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
+
+  const allSegmentUrls = subText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"))
+    .map((l) => (l.startsWith("http") ? l : baseUrl + l));
+
+  if (allSegmentUrls.length === 0) throw new Error("No segments found in playlist");
+
+  // Step 5: Download needed segments
+  const SEG_DURATION = 10;
+  const startIdx = Math.max(0, Math.floor(startSeconds / SEG_DURATION) - 2);
+  const endIdx = Math.min(allSegmentUrls.length - 1, Math.ceil(endSeconds / SEG_DURATION) + 2);
+  const needed = allSegmentUrls.slice(startIdx, endIdx + 1);
+  const segmentStartSeconds = startIdx * SEG_DURATION;
+
+  console.log(`[twitch] Downloading video segments ${startIdx}-${endIdx} of ${allSegmentUrls.length}`);
+
+  const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
+  const filePath = join(tempDir, "video.ts");
+  const writeStream = createWriteStream(filePath);
+
+  const cleanup = async () => {
+    try { await unlink(filePath); } catch {}
+    try { await rmdir(tempDir); } catch {}
+  };
+
+  try {
+    for (const segUrl of needed) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      try {
+        const segRes = await fetch(segUrl, { signal: controller.signal });
+        if (!segRes.ok) continue;
+        const buf = Buffer.from(await segRes.arrayBuffer());
+        await new Promise<void>((resolve, reject) => {
+          writeStream.write(buf, (err) => (err ? reject(err) : resolve()));
+        });
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          console.warn(`[twitch] Video segment timeout, skipping: ${segUrl}`);
+          continue;
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      writeStream.end((err: any) => (err ? reject(err) : resolve()));
+    });
+
+    console.log(`[twitch] Video segments written to disk: ${filePath}`);
+    return { filePath, segmentStartSeconds, cleanup };
+  } catch (err) {
+    writeStream.destroy();
+    await cleanup();
+    throw err;
+  }
+}
+
+/**
  * Stream Twitch VOD audio segments directly into a PassThrough — no disk writes.
  * The returned PassThrough is written to in the background; pass it straight to
  * transcribePassThrough() so Deepgram receives data as it downloads.
