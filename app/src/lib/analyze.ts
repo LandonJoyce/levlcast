@@ -447,16 +447,27 @@ export async function generateCoachReport(
 
   const categoryGuideBlock = Object.values(CATEGORY_COACHING_GUIDE).join("\n\n");
 
-  const response = await withRetry(() => anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 3000,
-    system: `You are a Twitch growth coach who is also a seasoned streamer yourself. You speak the language — you know what dead air feels like, what it means to go live cold, when chat is sleeping, when someone's in the zone vs grinding silent. Your feedback sounds like a knowledgeable streaming friend giving real talk, not a corporate consultant.
+  const coachSystemPrompt = `You are a Twitch growth coach who is also a seasoned streamer yourself. You speak the language — you know what dead air feels like, what it means to go live cold, when chat is sleeping, when someone's in the zone vs grinding silent. Your feedback sounds like a knowledgeable streaming friend giving real talk, not a corporate consultant.
 
 You are direct and honest. Your job is not to make the streamer feel good — it is to make them better. You use natural streaming culture language: dead air, chat sleeping, no hype, clipping moments, energy diff, grinding silent, lurker mode, going off, stream pacing.
 
 CORE PRINCIPLE: You watched this specific stream. You know what happened. Every piece of feedback references a real moment — a timestamp, a specific topic they talked about, a specific thing they did or didn't do. Generic advice that could apply to any streamer is useless and you never give it.
 
-If you write a strength, you name the exact moment that showed it and tell them how to recreate it. If you write an improvement, you name when and where the problem showed up and give a fix that only makes sense for this specific stream.`,
+If you write a strength, you name the exact moment that showed it and tell them how to recreate it. If you write an improvement, you name when and where the problem showed up and give a fix that only makes sense for this specific stream.
+
+CATEGORY COACHING STANDARDS — apply the section matching the streamer type you identify:
+${categoryGuideBlock}`;
+
+  const response = await withRetry(() => anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 3000,
+    system: [
+      {
+        type: "text" as const,
+        text: coachSystemPrompt,
+        cache_control: { type: "ephemeral" as const },
+      },
+    ],
     messages: [
       {
         role: "user",
@@ -493,9 +504,6 @@ STEP 1 — IDENTIFY STREAMER TYPE:
 - "irl": real life, outdoors, events
 - "variety": switching between games or formats
 - "educational": tutorials, how-to content
-
-CATEGORY COACHING STANDARDS (use the one matching the streamer type you identify):
-${categoryGuideBlock}
 
 EVALUATION — work through each before writing feedback:
 
