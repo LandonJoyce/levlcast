@@ -176,8 +176,8 @@ export async function POST(request: Request) {
     }
 
     // Fallback: extract from VOD titles if channel game not found
+    const titles = vods.map((v: any) => v.title).filter(Boolean);
     if (gameNames.length === 0) {
-      const titles = vods.map((v: any) => v.title).filter(Boolean);
       gameNames = await extractGameNames(titles);
       console.log("[collab/refresh] VOD titles:", titles.slice(0, 5));
       console.log("[collab/refresh] Extracted game names from titles:", gameNames);
