@@ -16,7 +16,7 @@ const GENERIC_CATEGORIES = new Set([
   "sports", "asmr", "gambling",
 ]);
 
-/** Use Claude Haiku to extract real game names from VOD titles. */
+/** Use Sonnet to extract real game names from VOD titles (fallback when channel info unavailable). */
 async function extractGameNames(titles: string[]): Promise<string[]> {
   if (titles.length === 0) return [];
   try {
@@ -149,10 +149,39 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .eq("is_external", true);
 
-    const titles = vods.map((v: any) => v.title).filter(Boolean);
-    const gameNames = await extractGameNames(titles);
-    console.log("[collab/refresh] VOD titles:", titles.slice(0, 5));
-    console.log("[collab/refresh] Extracted game names:", gameNames);
+    // First try: get game from user's live Twitch channel info (most accurate)
+    let gameNames: string[] = [];
+    const { data: twitchProfile } = await admin.from("profiles")
+      .select("twitch_id").eq("id", user.id).single();
+
+    if (twitchProfile?.twitch_id) {
+      try {
+        const { getAppAccessToken } = await import("@/lib/twitch");
+        const token = await getAppAccessToken();
+        const res = await fetch(
+          `https://api.twitch.tv/helix/channels?broadcaster_id=${twitchProfile.twitch_id}`,
+          { headers: { "Client-ID": process.env.TWITCH_CLIENT_ID!, "Authorization": `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const gameName = data.data?.[0]?.game_name;
+          if (gameName && !GENERIC_CATEGORIES.has(gameName.toLowerCase())) {
+            gameNames = [gameName];
+            console.log("[collab/refresh] Game from Twitch channel:", gameName);
+          }
+        }
+      } catch (err) {
+        console.warn("[collab/refresh] Could not fetch Twitch channel info:", err);
+      }
+    }
+
+    // Fallback: extract from VOD titles if channel game not found
+    if (gameNames.length === 0) {
+      const titles = vods.map((v: any) => v.title).filter(Boolean);
+      gameNames = await extractGameNames(titles);
+      console.log("[collab/refresh] VOD titles:", titles.slice(0, 5));
+      console.log("[collab/refresh] Extracted game names from titles:", gameNames);
+    }
 
     let externalCount = 0;
     try {
