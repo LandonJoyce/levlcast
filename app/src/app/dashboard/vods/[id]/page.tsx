@@ -108,7 +108,7 @@ export default async function VodDetailPage({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-extrabold tracking-tight mb-2 leading-snug">{vod.title}</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight mb-2 leading-snug">{vod.title}</h1>
             <div className="flex items-center gap-4 text-xs text-muted">
               <span className="inline-flex items-center gap-1">
                 <Calendar size={12} />

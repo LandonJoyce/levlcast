@@ -132,7 +132,7 @@ export function TacticsCarousel() {
       </div>
 
       <div className="p-5">
-        <p className={`text-[10px] font-bold uppercase tracking-wide mb-2 ${tactic.tagColor}`}>{tactic.tag}</p>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.07] text-[10px] font-semibold mb-3 ${tactic.tagColor}`}>{tactic.tag}</span>
         <h3 className="text-base font-bold text-white mb-2 leading-snug">{tactic.title}</h3>
         <p className="text-sm text-muted leading-relaxed mb-4">{tactic.body}</p>
 

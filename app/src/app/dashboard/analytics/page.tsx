@@ -147,8 +147,9 @@ export default async function AnalyticsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1">Analytics</h1>
+      <div className="mb-8">
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Performance data</span>
+        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Analytics</h1>
         <p className="text-sm text-muted">Your streaming story, by the numbers.</p>
       </div>
 
@@ -163,8 +164,9 @@ export default async function AnalyticsPage() {
           {/* Score + Insights */}
           <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 mb-6">
             {/* Score hero */}
-            <div className="bg-surface border border-border rounded-2xl px-6 py-6 flex flex-col justify-center">
-              <p className="text-xs text-muted font-medium mb-3">
+            <div className="p-px rounded-[22px] bg-gradient-to-b from-accent/30 to-accent/[0.06]">
+            <div className="bg-surface rounded-[21px] px-6 py-7 flex flex-col justify-center h-full">
+              <p className="text-xs text-muted/80 font-medium mb-3">
                 Stream Score
               </p>
               <div className="flex items-end gap-3 mb-1.5">
@@ -185,6 +187,7 @@ export default async function AnalyticsPage() {
               {progressArc && (
                 <p className="text-xs text-white/40 mt-2 leading-relaxed">{progressArc}</p>
               )}
+            </div>
             </div>
 
             {/* Insights */}

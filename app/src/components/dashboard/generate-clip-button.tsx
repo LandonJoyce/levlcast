@@ -79,7 +79,7 @@ export function GenerateClipButton({
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity"
+          className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 disabled:opacity-50 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all duration-300 hover:-translate-y-px"
         >
           {generating ? (
             <Loader2 size={13} className="animate-spin" />

@@ -40,7 +40,7 @@ export function SyncButton() {
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="inline-flex items-center gap-2 bg-accent hover:opacity-85 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl transition-opacity text-sm"
+        className="inline-flex items-center gap-2 bg-accent hover:opacity-85 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-px text-sm"
       >
         <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
         {syncing ? "Syncing..." : "Sync VODs"}

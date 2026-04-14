@@ -141,8 +141,9 @@ export default async function PlannerPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1">
+      <div className="mb-8">
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Pro feature</span>
+        <h1 className="text-3xl font-extrabold tracking-tight mb-1">
           Title Generator
         </h1>
         <p className="text-sm text-muted">
@@ -162,7 +163,7 @@ export default async function PlannerPage() {
           </p>
           <Link
             href="/dashboard/settings"
-            className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-xl transition-opacity text-sm"
+            className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-px text-sm"
           >
             Upgrade to Pro
           </Link>
@@ -177,7 +178,7 @@ export default async function PlannerPage() {
           </p>
           <Link
             href="/dashboard/vods"
-            className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-xl transition-opacity text-sm"
+            className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-px text-sm"
           >
             Go to VODs
           </Link>

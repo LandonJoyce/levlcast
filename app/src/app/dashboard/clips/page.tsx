@@ -114,9 +114,10 @@ export default async function ClipsPage() {
       <VodStatusPoller hasProcessing={hasProcessing} />
 
       <div className="mb-8">
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1">Clips</h1>
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Clip moments</span>
+        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Clips</h1>
         <p className="text-sm text-muted">
-          AI-detected peak moments from your analyzed VODs.
+          Your best moments, ready to post.
         </p>
       </div>
 
@@ -158,7 +159,7 @@ export default async function ClipsPage() {
           {/* Processing clips */}
           {hasProcessing && (
             <div className="mb-8">
-              <h2 className="text-sm font-semibold text-muted mb-4">
+              <h2 className="text-sm font-bold text-white/60 mb-4">
                 Generating ({processingClips.length})
               </h2>
               <div className="space-y-3">
@@ -178,7 +179,7 @@ export default async function ClipsPage() {
           {/* Failed clips */}
           {failedClips.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-sm font-semibold text-muted mb-4">
+              <h2 className="text-sm font-bold text-white/60 mb-4">
                 Failed ({failedClips.length})
               </h2>
               <div className="space-y-3">
@@ -198,8 +199,8 @@ export default async function ClipsPage() {
           {/* Generated clips */}
           {clips && clips.length > 0 && (
             <div className="mb-10">
-              <h2 className="text-sm font-semibold text-muted mb-4">
-                Generated Clips ({clips.length})
+              <h2 className="text-base font-bold text-white mb-4">
+                Generated Clips <span className="text-sm font-medium text-muted">({clips.length})</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {clips.map((clip) => (
@@ -263,8 +264,8 @@ export default async function ClipsPage() {
           {/* Ungenerated peaks */}
           {ungeneratedPeaks.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-muted mb-4">
-                Detected Peaks ({ungeneratedPeaks.length})
+              <h2 className="text-base font-bold text-white mb-4">
+                Detected Peaks <span className="text-sm font-medium text-muted">({ungeneratedPeaks.length})</span>
               </h2>
               <div className="space-y-3">
                 {ungeneratedPeaks.map((peak, i) => (

@@ -36,11 +36,12 @@ export default async function VodsPage() {
     <div>
       <VodStatusPoller hasProcessing={hasProcessing} />
 
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight mb-1">VODs</h1>
+          <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Your streams</span>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-1">VODs</h1>
           <p className="text-sm text-muted">Sync your Twitch streams and find the best moments.</p>
-          <p className="text-xs text-muted/50 mt-1">After a stream ends, wait a few minutes for Twitch to process the VOD before syncing.</p>
+          <p className="text-xs text-muted/50 mt-1">After a stream ends, wait a few minutes before syncing.</p>
         </div>
         <SyncButton />
       </div>
@@ -59,7 +60,7 @@ export default async function VodsPage() {
             if (!spotlight) return null;
             return (
               <div className="rounded-2xl border border-accent/25 bg-accent/[0.04] p-5 mb-5">
-                <p className="text-xs font-bold tracking-widest uppercase text-accent-light mb-1">Start Here</p>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-[10px] font-semibold text-accent-light mb-1.5">Start Here</span>
                 <h2 className="text-base font-bold text-white mb-1">Analyze your most recent stream</h2>
                 <p className="text-sm text-muted mb-4">
                   LevlCast will score your performance, find your peak moments, and give you a full coaching report — takes about 5 minutes.
@@ -156,7 +157,7 @@ export default async function VodsPage() {
                       ) : vod.status === "ready" ? (
                         <Link
                           href={`/dashboard/vods/${vod.id}`}
-                          className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity"
+                          className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all duration-300 hover:-translate-y-px"
                         >
                           Coach Report <ChevronRight size={11} />
                         </Link>

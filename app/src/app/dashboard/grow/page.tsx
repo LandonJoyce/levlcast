@@ -106,8 +106,9 @@ export default async function GrowPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1">Growth Playbook</h1>
+      <div className="mb-8">
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Growth strategy</span>
+        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Growth Playbook</h1>
         <p className="text-sm text-muted">How to keep growing — every week, every stream.</p>
       </div>
 
@@ -116,7 +117,7 @@ export default async function GrowPage() {
           <TrendingUp size={28} className="text-muted mx-auto mb-4" />
           <h2 className="text-lg font-bold mb-2">Analyze a VOD first</h2>
           <p className="text-sm text-muted max-w-sm mx-auto mb-6">Your Growth Playbook is built from real stream data.</p>
-          <Link href="/dashboard/vods" className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-xl transition-opacity text-sm">
+          <Link href="/dashboard/vods" className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-px text-sm">
             Go to VODs
           </Link>
         </div>
@@ -126,64 +127,64 @@ export default async function GrowPage() {
           {/* Momentum strip */}
           <div className="grid grid-cols-3 gap-3">
             {/* Score trend */}
-            <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-              <p className="text-xs text-muted font-medium mb-2">Score Trend</p>
+            <div className="bg-surface border border-border rounded-2xl px-5 py-5">
+              <p className="text-[11px] text-muted/70 font-medium mb-3">Score Trend</p>
               {scoreTrend === "up" && (
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={18} className="text-green-400" />
-                  <span className="text-base font-extrabold text-green-400">Trending Up</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp size={20} className="text-green-400" />
+                  <span className="text-xl font-extrabold text-green-400">Trending Up</span>
                 </div>
               )}
               {scoreTrend === "down" && (
-                <div className="flex items-center gap-2">
-                  <TrendingDown size={18} className="text-red-400" />
-                  <span className="text-base font-extrabold text-red-400">Slipping</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingDown size={20} className="text-red-400" />
+                  <span className="text-xl font-extrabold text-red-400">Slipping</span>
                 </div>
               )}
               {scoreTrend === "flat" && (
-                <div className="flex items-center gap-2">
-                  <Minus size={18} className="text-yellow-400" />
-                  <span className="text-base font-extrabold text-yellow-400">Holding Steady</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <Minus size={20} className="text-yellow-400" />
+                  <span className="text-xl font-extrabold text-yellow-400">Steady</span>
                 </div>
               )}
               {scoreTrend === null && avgScore !== null && (
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-extrabold text-white">{avgScore}</span>
-                  <span className="text-xs text-muted">avg score</span>
+                <div className="flex items-end gap-1.5 mb-1">
+                  <span className="text-4xl font-extrabold text-white leading-none">{avgScore}</span>
+                  <span className="text-xs text-muted pb-1">avg score</span>
                 </div>
               )}
               {avgScore !== null && scoreTrend !== null && (
-                <p className="text-xs text-muted mt-1">Avg score: {avgScore}</p>
+                <p className="text-xs text-muted">Avg: {avgScore}</p>
               )}
             </div>
 
             {/* Top content */}
-            <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-              <p className="text-xs text-muted font-medium mb-2">Best Content</p>
+            <div className="bg-surface border border-border rounded-2xl px-5 py-5">
+              <p className="text-[11px] text-muted/70 font-medium mb-3">Best Content</p>
               {dominantCategory ? (
                 <>
-                  <span className={`inline-flex items-center text-base font-extrabold capitalize px-2 py-0.5 rounded-lg ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
+                  <span className={`inline-flex items-center text-xl font-extrabold capitalize px-2.5 py-0.5 rounded-full mb-1 ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
                     {CATEGORY_LABELS[dominantCategory] ?? dominantCategory}
                   </span>
                   <p className="text-xs text-muted mt-1">
-                    {Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)}% of your clip moments
+                    {Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)}% of clip moments
                   </p>
                 </>
               ) : (
-                <span className="text-base font-extrabold text-muted">—</span>
+                <span className="text-xl font-extrabold text-muted">—</span>
               )}
             </div>
 
             {/* Streams this month */}
-            <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-              <p className="text-xs text-muted font-medium mb-2">This Month</p>
-              <div className="flex items-end gap-1.5">
-                <span className={`text-2xl font-extrabold ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
+            <div className="bg-surface border border-border rounded-2xl px-5 py-5">
+              <p className="text-[11px] text-muted/70 font-medium mb-3">This Month</p>
+              <div className="flex items-end gap-1.5 mb-1">
+                <span className={`text-4xl font-extrabold leading-none ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
                   {recentStreamCount}
                 </span>
-                <span className="text-xs text-muted pb-0.5">streams in 30 days</span>
+                <span className="text-xs text-muted pb-1">streams</span>
               </div>
-              <p className="text-xs text-muted mt-1">
+              <p className="text-xs text-muted">
                 {recentStreamCount >= 20 ? "Excellent pace" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs improvement" : "Stream more"}
               </p>
             </div>
