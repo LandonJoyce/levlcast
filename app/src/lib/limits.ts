@@ -97,13 +97,14 @@ export async function getUserUsage(
 
   const completedThisMonth = usageLog?.analyses_count ?? 0;
 
-  // Count only successfully generated clips this month.
-  // Failed and stuck clips do not count — users only pay for what they actually received.
+  // Count clips generated this month — includes deleted ones so users can't
+  // bypass the limit by deleting clips and regenerating them.
+  // Failed and processing clips do not count.
   const { count: clipsThisMonth } = await supabase
     .from("clips")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .eq("status", "ready")
+    .in("status", ["ready", "deleted"])
     .gte("created_at", monthStart)
     .lt("created_at", monthEnd);
 

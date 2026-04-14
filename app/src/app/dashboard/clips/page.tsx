@@ -49,7 +49,7 @@ export default async function ClipsPage() {
     .from("clips")
     .select("*")
     .eq("user_id", user!.id)
-    .in("status", ["ready", "processing", "failed"])
+    .in("status", ["ready", "processing", "failed", "deleted"])
     .order("created_at", { ascending: false });
 
   const clips = (allClips || []).filter((c) => c.status === "ready");
