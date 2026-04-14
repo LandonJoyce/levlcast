@@ -728,7 +728,9 @@ export const computeCollabSuggestions = inngest.createFunction(
         if (userRow?.twitch_id) excludeIds.push(userRow.twitch_id);
 
         try {
-          const externalMatches = await findExternalStreamers(userProfile, excludeIds, 5);
+          // Game names are not derived in the cron (requires per-user Claude call).
+          // External matching via the on-demand /api/collab/refresh route handles this.
+          const externalMatches = await findExternalStreamers(userProfile, [], excludeIds, 5);
 
           for (const em of externalMatches) {
             // Delete old suggestion for this external streamer if exists, then insert fresh
