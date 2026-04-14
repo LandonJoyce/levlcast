@@ -1,12 +1,43 @@
 /**
  * POST /api/collab/refresh
  * Runs collab matching on-demand for the current user.
- * Finds both internal (other LevlCast users) and external (Twitch API) matches.
+ * Finds both internal (other LevlCast users) and external (live Twitch streamers in same games).
  */
 
 import { NextResponse } from "next/server";
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
+import Anthropic from "@anthropic-ai/sdk";
+
+/** Use Claude Haiku to extract real game names from VOD titles. */
+async function extractGameNames(titles: string[]): Promise<string[]> {
+  if (titles.length === 0) return [];
+  try {
+    const anthropic = new Anthropic();
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 150,
+      messages: [{
+        role: "user",
+        content: `Extract the game names being played from these Twitch stream titles. Return ONLY actual game titles (e.g. "Minecraft", "Valorant", "Just Chatting"). Return at most 5 unique game names as a JSON array. If a title doesn't mention a specific game, skip it.
+
+Titles:
+${titles.slice(0, 15).join("\n")}
+
+JSON only: ["Game1", "Game2"]`,
+      }],
+    });
+    const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed) && parsed.every((g) => typeof g === "string")) {
+      return parsed.slice(0, 5);
+    }
+  } catch (err) {
+    console.warn("[collab/refresh] Game extraction failed:", err);
+  }
+  return [];
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +50,7 @@ export async function POST(request: Request) {
     // Build current user's profile
     const [profileRes, vodsRes, followerRes, burnoutRes] = await Promise.all([
       admin.from("profiles").select("twitch_display_name, twitch_avatar_url").eq("id", user.id).single(),
-      admin.from("vods").select("peak_data, coach_report").eq("user_id", user.id).eq("status", "ready")
+      admin.from("vods").select("title, peak_data, coach_report").eq("user_id", user.id).eq("status", "ready")
         .not("peak_data", "is", null).not("coach_report", "is", null).order("stream_date", { ascending: false }).limit(20),
       admin.from("follower_snapshots").select("follower_count").eq("user_id", user.id).eq("platform", "twitch")
         .order("snapped_at", { ascending: false }).limit(1).maybeSingle(),
@@ -86,33 +117,28 @@ export async function POST(request: Request) {
         const candidateVods = vodsByUser[p.id] || [];
         if (candidateVods.length === 0) continue;
         const candidateProfile = buildUserProfile(
-          p.id,
-          p.twitch_display_name || "Streamer",
-          p.twitch_avatar_url,
-          latestFollowers[p.id] || 0,
-          candidateVods,
-          latestBurnout[p.id] || 0,
+          p.id, p.twitch_display_name || "Streamer", p.twitch_avatar_url,
+          latestFollowers[p.id] || 0, candidateVods, latestBurnout[p.id] || 0,
         );
         const match = scoreMatch(userProfile, candidateProfile, preferences);
         if (!match) continue;
 
         await admin.from("collab_suggestions").delete().eq("user_id", user.id).eq("match_user_id", p.id);
         await admin.from("collab_suggestions").insert({
-          user_id: user.id,
-          match_user_id: p.id,
-          match_score: match.score,
-          reasons: match.reasons,
-          is_external: false,
-          status: "new",
+          user_id: user.id, match_user_id: p.id, match_score: match.score,
+          reasons: match.reasons, is_external: false, status: "new",
           computed_at: new Date().toISOString(),
         });
       }
     }
 
-    // --- External matches: Twitch API streamers ---
-    const excludeIds: string[] = [];
+    // --- External matches: live Twitch streamers in same games ---
+    const titles = vods.map((v: any) => v.title).filter(Boolean);
+    const gameNames = await extractGameNames(titles);
+
     try {
-      const externalMatches = await findExternalStreamers(userProfile, excludeIds, 6);
+      const excludeIds: string[] = [];
+      const externalMatches = await findExternalStreamers(userProfile, gameNames, excludeIds, 6);
       for (const em of externalMatches) {
         await admin.from("collab_suggestions").delete().eq("user_id", user.id).eq("twitch_id", em.streamer.twitchId);
         await admin.from("collab_suggestions").insert({
@@ -122,7 +148,7 @@ export async function POST(request: Request) {
           twitch_login: em.streamer.login,
           twitch_display_name: em.streamer.displayName,
           twitch_avatar_url: em.streamer.avatarUrl,
-          follower_count: em.streamer.followerCount || null,
+          follower_count: em.streamer.viewerCount || null, // viewer count is best proxy we have
           match_score: em.score,
           reasons: em.reasons,
           is_external: true,
@@ -132,7 +158,6 @@ export async function POST(request: Request) {
       }
     } catch (err) {
       console.warn("[collab/refresh] External matching failed:", err);
-      // non-fatal — internal matches still saved
     }
 
     return NextResponse.json({ ok: true });

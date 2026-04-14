@@ -187,73 +187,55 @@ function MatchRow({ suggestion, onDismiss }: { suggestion: CollabSuggestion; onD
     : null;
 
   return (
-    <div className="flex items-start gap-3 bg-white/[0.03] rounded-xl p-3 border border-white/5">
-      {/* Avatar */}
-      {suggestion.avatar_url ? (
-        <img
-          src={suggestion.avatar_url}
-          alt={suggestion.display_name}
-          className="w-10 h-10 rounded-full flex-shrink-0"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-          <Users size={16} className="text-accent-light" />
-        </div>
-      )}
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-semibold text-white">{suggestion.display_name}</span>
-          <span className="text-xs font-bold text-accent-light">{suggestion.match_score}%</span>
-          {suggestion.is_external && (
-            <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full font-semibold">Twitch</span>
-          )}
-          {suggestion.follower_count != null && suggestion.follower_count > 0 && (
-            <span className="text-[10px] text-muted">{suggestion.follower_count.toLocaleString()} followers</span>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {suggestion.reasons.map((r, i) => (
-            <span key={i} className="text-[11px] text-muted bg-white/5 px-2 py-0.5 rounded-full">
-              {r}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        {whisperUrl && (
-          <a
-            href={whisperUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-accent/10 hover:bg-accent/20 rounded-lg transition-colors text-xs font-semibold text-accent-light"
-            title="Send message on Twitch"
-          >
-            <MessageCircle size={12} />
-            Message
-          </a>
+    <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
+        {suggestion.avatar_url ? (
+          <img src={suggestion.avatar_url} alt={suggestion.display_name} className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5" />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Users size={14} className="text-accent-light" />
+          </div>
         )}
-        {twitchUrl && (
-          <a
-            href={twitchUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
-            title="View channel on Twitch"
-          >
-            <ExternalLink size={14} className="text-muted" />
-          </a>
-        )}
-        <button
-          onClick={() => onDismiss(suggestion.id)}
-          className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
-          title="Dismiss"
-        >
-          <X size={14} className="text-muted" />
-        </button>
+
+        {/* Name + score + dismiss */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold text-white truncate">{suggestion.display_name}</span>
+              <span className="text-xs font-bold text-accent-light flex-shrink-0">{suggestion.match_score}%</span>
+              {suggestion.is_external && (
+                <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">Live</span>
+              )}
+            </div>
+            <button onClick={() => onDismiss(suggestion.id)} className="p-1 hover:bg-white/5 rounded-lg transition-colors flex-shrink-0" title="Dismiss">
+              <X size={13} className="text-muted/50" />
+            </button>
+          </div>
+
+          {/* Reasons */}
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {suggestion.reasons.map((r, i) => (
+              <span key={i} className="text-[11px] text-muted bg-white/5 px-2 py-0.5 rounded-full">{r}</span>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 mt-2.5">
+            {whisperUrl && (
+              <a href={whisperUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 hover:bg-accent/20 rounded-full transition-colors text-xs font-semibold text-accent-light">
+                <MessageCircle size={11} /> Message
+              </a>
+            )}
+            {twitchUrl && (
+              <a href={twitchUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/8 rounded-full transition-colors text-xs font-medium text-muted hover:text-white">
+                <ExternalLink size={11} /> View
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

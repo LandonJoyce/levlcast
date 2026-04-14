@@ -3,9 +3,9 @@
  *
  * Two modes:
  *   1. Internal — match LevlCast users with each other (full data)
- *   2. External — find Twitch streamers via Helix API (audience size + category)
+ *   2. External — find live Twitch streamers in the same games with similar audience size
  *
- * Scoring weights:
+ * Scoring weights (internal):
  *   Content overlap (30%), Audience similarity (30%),
  *   Quality match (20%), Complementary strengths (20%)
  */
@@ -65,9 +65,8 @@ export function scoreMatch(
   // --- 2. Audience Similarity (30%) ---
   const bigger = Math.max(user.followerCount, candidate.followerCount);
   const smaller = Math.min(user.followerCount, candidate.followerCount);
-  // Perfect match = same size. Up to 5x difference is acceptable, beyond that drops fast
   const sizeRatio = bigger > 0 ? smaller / bigger : 1;
-  const audienceScore = Math.min(sizeRatio * 1.5, 1) * 100; // 67%+ ratio = full score
+  const audienceScore = Math.min(sizeRatio * 1.5, 1) * 100;
   totalScore += audienceScore * 0.3;
 
   if (sizeRatio >= 0.5) {
@@ -78,7 +77,7 @@ export function scoreMatch(
 
   // --- 3. Quality Match (20%) ---
   const scoreDiff = Math.abs(user.avgScore - candidate.avgScore);
-  const qualityScore = Math.max(0, 100 - scoreDiff * 5); // 20pt diff = 0
+  const qualityScore = Math.max(0, 100 - scoreDiff * 5);
   totalScore += qualityScore * 0.2;
 
   if (scoreDiff <= 10) {
@@ -86,7 +85,6 @@ export function scoreMatch(
   }
 
   // --- 4. Complementary Strengths (20%) ---
-  // Having DIFFERENT top categories means a collab could bring fresh content
   const uniqueToCandidate = candidate.topCategories.filter(
     (c) => !user.topCategories.includes(c)
   );
@@ -110,12 +108,12 @@ export function scoreMatch(
   }
 
   const finalScore = Math.round(Math.min(totalScore, 100));
-  if (finalScore < 30) return null; // too low to suggest
+  if (finalScore < 30) return null;
 
   return {
     matchUserId: candidate.userId,
     score: finalScore,
-    reasons: reasons.slice(0, 3), // max 3 reasons
+    reasons: reasons.slice(0, 3),
   };
 }
 
@@ -130,7 +128,6 @@ export function buildUserProfile(
   vods: { peak_data: any[]; coach_report: { overall_score: number } | null }[],
   burnoutScore: number
 ): UserProfile {
-  // Get top categories from peak data
   const catCounts: Record<string, number> = {};
   for (const vod of vods) {
     for (const peak of vod.peak_data || []) {
@@ -144,7 +141,6 @@ export function buildUserProfile(
     .slice(0, 3)
     .map(([cat]) => cat);
 
-  // Average coach score
   const scores = vods
     .map((v) => v.coach_report?.overall_score)
     .filter((s): s is number => s !== undefined && s !== null);
@@ -152,15 +148,7 @@ export function buildUserProfile(
     ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
     : 0;
 
-  return {
-    userId,
-    displayName,
-    avatarUrl,
-    followerCount,
-    avgScore,
-    topCategories,
-    burnoutScore,
-  };
+  return { userId, displayName, avatarUrl, followerCount, avgScore, topCategories, burnoutScore };
 }
 
 function categoryLabel(cat: string): string {
@@ -183,6 +171,7 @@ export interface ExternalStreamer {
   login: string;
   displayName: string;
   avatarUrl: string;
+  viewerCount: number;
   followerCount: number;
   gameName: string;
   isLive: boolean;
@@ -195,32 +184,19 @@ export interface ExternalMatch {
 }
 
 /**
- * Map peak categories to Twitch game/category search terms.
- * Twitch doesn't categorize by "hype" — but we can search for popular
- * game categories that tend to produce that content style.
- */
-const CATEGORY_SEARCH_TERMS: Record<string, string[]> = {
-  hype: ["Just Chatting", "Fortnite", "Valorant", "Call of Duty"],
-  funny: ["Just Chatting", "Gartic Phone", "Among Us", "Gang Beasts"],
-  educational: ["Just Chatting", "Software and Game Development", "Science & Technology"],
-  emotional: ["Just Chatting", "Art", "Music"],
-  clutch_play: ["Valorant", "League of Legends", "Apex Legends", "Counter-Strike"],
-  rage: ["Dark Souls", "Elden Ring", "Getting Over It", "Jump King"],
-  wholesome: ["Stardew Valley", "Animal Crossing", "Art", "Music"],
-};
-
-/**
- * Find external Twitch streamers who could be good collab partners.
- * Uses Twitch Helix API search/channels (app access token — no user scopes needed).
- *
- * Note: Follower counts are NOT available via app tokens (requires moderator:read:followers).
- * We score based on category match and live status instead.
+ * Find live Twitch streamers who play the same games as the user.
+ * Accepts actual game names derived from the user's VOD titles.
+ * Filters by viewer count range based on user's follower count.
+ * Only returns live, active streamers with real audiences.
  */
 export async function findExternalStreamers(
   userProfile: UserProfile,
+  gameNames: string[], // actual game names extracted from user's VOD titles
   excludeTwitchIds: string[],
-  limit = 10
+  limit = 8
 ): Promise<ExternalMatch[]> {
+  if (gameNames.length === 0) return [];
+
   const token = await getAppAccessToken();
   const clientId = process.env.TWITCH_CLIENT_ID!;
   const headers = {
@@ -228,100 +204,111 @@ export async function findExternalStreamers(
     Authorization: `Bearer ${token}`,
   };
 
-  // Build search terms from user's top categories
-  const searchTerms = new Set<string>();
-  for (const cat of userProfile.topCategories) {
-    const terms = CATEGORY_SEARCH_TERMS[cat] || ["Just Chatting"];
-    for (const t of terms) searchTerms.add(t);
-  }
-
-  // Search for channels in each relevant category
-  const allStreamers: ExternalStreamer[] = [];
-  const seenIds = new Set(excludeTwitchIds);
-
-  for (const term of [...searchTerms].slice(0, 4)) {
+  // Step 1: Resolve game names → game IDs
+  const gameIds: { id: string; name: string }[] = [];
+  for (const name of gameNames.slice(0, 4)) {
     try {
-      const params = new URLSearchParams({ query: term, first: "20", live_only: "false" });
-      const res = await fetch(`https://api.twitch.tv/helix/search/channels?${params}`, { headers });
+      const params = new URLSearchParams({ name });
+      const res = await fetch(`https://api.twitch.tv/helix/games?${params}`, { headers });
       if (!res.ok) continue;
-
       const data = await res.json();
-      for (const ch of data.data || []) {
-        if (seenIds.has(ch.id)) continue;
-        seenIds.add(ch.id);
-
-        allStreamers.push({
-          twitchId: ch.id,
-          login: ch.broadcaster_login,
-          displayName: ch.display_name,
-          avatarUrl: ch.thumbnail_url,
-          followerCount: 0, // not available via app token
-          gameName: ch.game_name || term,
-          isLive: ch.is_live,
-        });
-      }
+      const game = data.data?.[0];
+      if (game) gameIds.push({ id: game.id, name: game.name });
     } catch {
-      // non-fatal, skip this category
+      // skip
     }
   }
 
-  if (allStreamers.length === 0) return [];
+  if (gameIds.length === 0) return [];
 
-  // Fetch profile images from /helix/users (works with app token)
+  // Step 2: Viewer count range based on user's follower count
+  // Rough heuristic: live viewer count is ~1-5% of followers for small streamers
+  const followers = userProfile.followerCount || 0;
+  const minViewers = followers > 0 ? Math.max(2, Math.floor(followers * 0.005)) : 2;
+  const maxViewers = followers > 0 ? Math.max(200, Math.floor(followers * 3)) : 500;
+
+  // Step 3: Fetch live streams for each game
+  const seenIds = new Set(excludeTwitchIds);
+  const candidates: ExternalStreamer[] = [];
+
+  for (const game of gameIds) {
+    try {
+      const params = new URLSearchParams({ game_id: game.id, first: "50" });
+      const res = await fetch(`https://api.twitch.tv/helix/streams?${params}`, { headers });
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      for (const stream of data.data || []) {
+        if (seenIds.has(stream.user_id)) continue;
+
+        // Filter: must have real viewers
+        if (stream.viewer_count < minViewers || stream.viewer_count > maxViewers) continue;
+
+        // Filter: skip obvious bot/spam channels
+        if (isSuspiciousLogin(stream.user_login)) continue;
+
+        seenIds.add(stream.user_id);
+        candidates.push({
+          twitchId: stream.user_id,
+          login: stream.user_login,
+          displayName: stream.user_name,
+          avatarUrl: stream.thumbnail_url?.replace("{width}", "40").replace("{height}", "40") || "",
+          viewerCount: stream.viewer_count,
+          followerCount: 0, // not available via app token
+          gameName: stream.game_name || game.name,
+          isLive: true,
+        });
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  if (candidates.length === 0) return [];
+
+  // Step 4: Fetch profile images
   try {
-    const ids = allStreamers.slice(0, 100).map((s) => s.twitchId);
+    const ids = candidates.slice(0, 100).map((s) => s.twitchId);
     const params = new URLSearchParams();
     for (const id of ids) params.append("id", id);
     const res = await fetch(`https://api.twitch.tv/helix/users?${params}`, { headers });
     if (res.ok) {
       const data = await res.json();
       for (const u of data.data || []) {
-        const streamer = allStreamers.find((s) => s.twitchId === u.id);
-        if (streamer) {
-          streamer.avatarUrl = u.profile_image_url || streamer.avatarUrl;
-        }
+        const c = candidates.find((s) => s.twitchId === u.id);
+        if (c) c.avatarUrl = u.profile_image_url || c.avatarUrl;
       }
     }
   } catch {
-    // non-fatal — keep the thumbnail_url from search
+    // non-fatal
   }
 
-  // Score each candidate based on category relevance and live status
+  // Step 5: Score candidates
   const matches: ExternalMatch[] = [];
 
-  for (const streamer of allStreamers) {
+  for (const streamer of candidates) {
     const reasons: string[] = [];
     let score = 0;
 
-    // Category relevance (60% weight — primary matching signal for external)
-    const gameLower = streamer.gameName.toLowerCase();
-    let categoryMatch = false;
-    for (const cat of userProfile.topCategories) {
-      const terms = CATEGORY_SEARCH_TERMS[cat] || [];
-      if (terms.some((t) => t.toLowerCase() === gameLower)) {
-        categoryMatch = true;
-        break;
-      }
-    }
-
-    if (categoryMatch) {
-      score += 60;
+    // Game match (primary signal — 50%)
+    const gameMatch = gameIds.find((g) => g.name.toLowerCase() === streamer.gameName.toLowerCase());
+    if (gameMatch) {
+      score += 50;
       reasons.push(`Streams ${streamer.gameName}`);
     } else {
       score += 20;
-      if (streamer.gameName) reasons.push(`Streams ${streamer.gameName}`);
+      reasons.push(`Streams ${streamer.gameName}`);
     }
 
-    // Live bonus (25% — live streamers are active and reachable)
-    if (streamer.isLive) {
-      score += 25;
-      reasons.push("Currently live");
-    } else {
-      score += 10;
-    }
+    // Viewer count similarity (30%) — closer to user's range = better match
+    const viewerRatio = streamer.viewerCount / Math.max(followers * 0.02, 5);
+    const viewerScore = viewerRatio >= 0.5 && viewerRatio <= 2 ? 30 : viewerRatio >= 0.2 && viewerRatio <= 5 ? 15 : 5;
+    score += viewerScore;
+    if (viewerScore >= 30) reasons.push("Similar size audience");
 
-    // Base score for being a real candidate (15%)
-    score += 15;
+    // Live bonus (20%)
+    score += 20;
+    reasons.push("Currently live");
 
     if (score < 40) continue;
 
@@ -334,4 +321,23 @@ export async function findExternalStreamers(
 
   matches.sort((a, b) => b.score - a.score);
   return matches.slice(0, limit);
+}
+
+/**
+ * Filter out suspicious / bot-like Twitch logins.
+ * Real streamers have recognizable names, not just keywords + numbers.
+ */
+function isSuspiciousLogin(login: string): boolean {
+  // All lowercase letters + numbers pattern with common spam words
+  const spamPrefixes = [
+    "just_chatting", "justchatting", "just_chat",
+    "twitch_tv", "stream_", "live_", "watch_",
+  ];
+  const lower = login.toLowerCase();
+  if (spamPrefixes.some((p) => lower.startsWith(p) && /\d/.test(lower))) return true;
+
+  // Ends with 2+ digits after a common word
+  if (/^[a-z_]+\d{2,}$/.test(lower) && lower.length < 15) return true;
+
+  return false;
 }
