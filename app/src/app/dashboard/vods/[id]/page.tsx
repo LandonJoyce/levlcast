@@ -206,7 +206,7 @@ export default async function VodDetailPage({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {readyClips.map((clip) => (
                   <div key={clip.id} className="bg-surface border border-border rounded-2xl overflow-hidden">
-                    <video src={clip.video_url} controls preload="metadata" className="w-full aspect-video bg-black" />
+                    <video controls preload="metadata" playsInline className="w-full aspect-video bg-black"><source src={clip.video_url} type="video/mp4" /></video>
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <h3 className="font-bold text-sm line-clamp-2">{clip.title}</h3>

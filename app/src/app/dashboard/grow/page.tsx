@@ -212,7 +212,7 @@ export default async function GrowPage() {
                       <span className={`text-xs font-bold w-5 text-center flex-shrink-0 ${i === 0 ? "text-yellow-400" : "text-muted/40"}`}>
                         {i + 1}
                       </span>
-                      <video src={clip.video_url} preload="metadata" muted className="w-16 aspect-video rounded bg-black flex-shrink-0 object-cover" />
+                      <video preload="metadata" muted playsInline className="w-16 aspect-video rounded bg-black flex-shrink-0 object-cover"><source src={clip.video_url} type="video/mp4" /></video>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{clip.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">

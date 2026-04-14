@@ -210,11 +210,13 @@ export default async function ClipsPage() {
                   >
                     {/* Video player */}
                     <video
-                      src={clip.video_url}
                       controls
                       preload="metadata"
+                      playsInline
                       className="w-full aspect-video bg-black"
-                    />
+                    >
+                      <source src={clip.video_url} type="video/mp4" />
+                    </video>
 
                     <div className="p-4 flex flex-col">
                       <div className="flex items-start justify-between gap-2 mb-1.5">
