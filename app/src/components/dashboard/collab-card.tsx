@@ -44,7 +44,9 @@ export function CollabCard() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetch("/api/collab/refresh", { method: "POST" });
+      const res = await fetch("/api/collab/refresh", { method: "POST" });
+      const debug = await res.json();
+      console.log("[collab] refresh result:", debug);
       // Reload suggestions
       const data = await fetch("/api/collab").then((r) => r.json());
       setSuggestions(data.suggestions || []);

@@ -151,10 +151,14 @@ export async function POST(request: Request) {
 
     const titles = vods.map((v: any) => v.title).filter(Boolean);
     const gameNames = await extractGameNames(titles);
+    console.log("[collab/refresh] VOD titles:", titles.slice(0, 5));
+    console.log("[collab/refresh] Extracted game names:", gameNames);
 
+    let externalCount = 0;
     try {
       const excludeIds: string[] = [];
       const externalMatches = await findExternalStreamers(userProfile, gameNames, excludeIds, 6);
+      console.log("[collab/refresh] External matches found:", externalMatches.length);
       for (const em of externalMatches) {
         await admin.from("collab_suggestions").delete().eq("user_id", user.id).eq("twitch_id", em.streamer.twitchId);
         await admin.from("collab_suggestions").insert({
@@ -164,19 +168,20 @@ export async function POST(request: Request) {
           twitch_login: em.streamer.login,
           twitch_display_name: em.streamer.displayName,
           twitch_avatar_url: em.streamer.avatarUrl,
-          follower_count: em.streamer.viewerCount || null, // viewer count is best proxy we have
+          follower_count: em.streamer.viewerCount || null,
           match_score: em.score,
           reasons: em.reasons,
           is_external: true,
           status: "new",
           computed_at: new Date().toISOString(),
         });
+        externalCount++;
       }
     } catch (err) {
       console.warn("[collab/refresh] External matching failed:", err);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, debug: { titles: titles.slice(0, 5), gameNames, externalCount } });
   } catch (err) {
     console.error("[collab/refresh] Error:", err);
     return NextResponse.json({ error: "Failed to find matches" }, { status: 500 });
