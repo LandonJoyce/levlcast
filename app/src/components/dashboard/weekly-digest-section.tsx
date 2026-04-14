@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Newspaper, RefreshCw, CheckCircle2, TrendingUp, TrendingDown, Sparkles, Clock, Scissors } from "lucide-react";
+import { RefreshCw, TrendingUp, TrendingDown, Sparkles, Clock, Scissors, Zap, ArrowUpRight } from "lucide-react";
 
 interface WeeklyDigest {
   headline: string;
@@ -58,80 +58,88 @@ export function WeeklyDigestSection() {
     : null;
 
   const followerDelta = digest?.follower_delta ?? 0;
-  const scoreColor = digest?.avg_score == null ? "text-white" : digest.avg_score >= 70 ? "text-green-400" : digest.avg_score >= 50 ? "text-yellow-400" : "text-red-400";
+  const avgScore = digest?.avg_score ?? null;
+  const scoreColor = avgScore == null ? "text-white" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400";
+  const scoreBg = avgScore == null ? "from-white/5 to-white/[0.02]" : avgScore >= 70 ? "from-green-500/10 to-green-500/[0.03]" : avgScore >= 50 ? "from-yellow-500/10 to-yellow-500/[0.03]" : "from-red-500/10 to-red-500/[0.03]";
 
   return (
-    <div className="bg-surface border border-white/[0.07] rounded-2xl overflow-hidden">
+    <div className="rounded-2xl border border-white/[0.07] bg-surface overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div className="flex items-center justify-between px-5 pt-5 pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
-            <Newspaper size={14} className="text-blue-400" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-white">Weekly Digest</h2>
-            {weekLabel && <p className="text-xs text-muted">Week of {weekLabel}</p>}
-          </div>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-semibold text-blue-400">
+            Weekly Digest
+          </span>
+          {weekLabel && <span className="text-xs text-muted">Week of {weekLabel}</span>}
         </div>
         <button
           onClick={generate}
           disabled={generating}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-white transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-white transition-colors duration-300 disabled:opacity-40"
         >
-          <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
-          {generating ? "Generating..." : digest ? "Refresh" : "Generate now"}
+          <RefreshCw size={11} className={generating ? "animate-spin" : ""} />
+          {generating ? "Generating..." : digest ? "Refresh" : "Generate"}
         </button>
       </div>
 
       {!digest ? (
-        <div className="px-5 py-8 text-center">
+        <div className="px-5 pb-8 text-center">
           <p className="text-sm font-semibold text-white mb-1">No digest yet</p>
-          <p className="text-xs text-muted max-w-xs mx-auto mb-4">
-            Generates every Monday from your recent streams. Hit Generate now to build one immediately.
+          <p className="text-xs text-muted max-w-xs mx-auto mb-5">
+            Generates every Monday from your recent streams. Build one now to see how your week looked.
           </p>
           <button
             onClick={generate}
             disabled={generating}
             className="inline-flex items-center gap-2 bg-accent hover:opacity-85 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all duration-300 hover:-translate-y-px"
           >
-            <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
+            <Zap size={12} />
             {generating ? "Generating..." : "Generate now"}
           </button>
         </div>
       ) : (
-        <div className="px-5 py-4 space-y-4">
-          {/* Headline */}
-          <p className="text-sm font-semibold text-white leading-snug">{digest.headline}</p>
+        <div className="px-5 pb-5 space-y-4">
+          {/* Headline — accent left bar */}
+          <div className="flex gap-3">
+            <div className="w-0.5 rounded-full bg-gradient-to-b from-accent to-accent/20 flex-shrink-0" />
+            <p className="text-sm font-semibold text-white/90 leading-relaxed">{digest.headline}</p>
+          </div>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <StatTile
-              icon={<Sparkles size={13} className={scoreColor} />}
-              value={digest.avg_score != null ? String(digest.avg_score) : "—"}
+              icon={<Sparkles size={12} className={scoreColor} />}
+              value={avgScore != null ? String(avgScore) : "—"}
               label="Avg Score"
               valueClass={scoreColor}
+              bgClass={`bg-gradient-to-b ${scoreBg}`}
             />
             <StatTile
-              icon={<Clock size={13} className="text-muted" />}
+              icon={<Clock size={12} className="text-blue-400" />}
               value={`${digest.total_duration_min}m`}
               label="Streamed"
+              bgClass="bg-gradient-to-b from-blue-500/8 to-blue-500/[0.02]"
             />
             <StatTile
-              icon={<Scissors size={13} className="text-muted" />}
+              icon={<Scissors size={12} className="text-purple-400" />}
               value={String(digest.clips_generated)}
               label="Clips"
+              bgClass="bg-gradient-to-b from-purple-500/8 to-purple-500/[0.02]"
             />
             <StatTile
-              icon={followerDelta >= 0 ? <TrendingUp size={13} className="text-green-400" /> : <TrendingDown size={13} className="text-red-400" />}
+              icon={followerDelta >= 0
+                ? <TrendingUp size={12} className="text-emerald-400" />
+                : <TrendingDown size={12} className="text-red-400" />}
               value={`${followerDelta >= 0 ? "+" : ""}${followerDelta}`}
               label="Followers"
-              valueClass={followerDelta >= 0 ? "text-green-400" : "text-red-400"}
+              valueClass={followerDelta >= 0 ? "text-emerald-400" : "text-red-400"}
+              bgClass={followerDelta >= 0 ? "bg-gradient-to-b from-emerald-500/8 to-emerald-500/[0.02]" : "bg-gradient-to-b from-red-500/8 to-red-500/[0.02]"}
             />
           </div>
 
           {/* Summaries */}
           {(digest.health_summary || digest.content_summary || digest.collab_summary) && (
-            <div className="bg-white/[0.02] rounded-xl p-3.5 space-y-2">
+            <div className="rounded-xl border border-white/[0.05] divide-y divide-white/[0.04] overflow-hidden">
               {digest.health_summary && <SummaryRow label="Health" text={digest.health_summary} />}
               {digest.content_summary && <SummaryRow label="Content" text={digest.content_summary} />}
               {digest.collab_summary && <SummaryRow label="Collabs" text={digest.collab_summary} />}
@@ -141,12 +149,15 @@ export function WeeklyDigestSection() {
           {/* Action items */}
           {(digest.action_items || []).length > 0 && (
             <div>
-              <p className="text-xs font-medium text-muted mb-2.5">This week's focus</p>
-              <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-muted/50 uppercase tracking-widest mb-3">This week's focus</p>
+              <div className="space-y-2.5">
                 {digest.action_items.map((item, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <CheckCircle2 size={14} className="text-accent-light mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-white/85 leading-snug">{item}</span>
+                  <div key={i} className="flex items-start gap-3 group">
+                    <div className="w-5 h-5 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-accent-light">{i + 1}</span>
+                    </div>
+                    <span className="text-sm text-white/80 leading-snug flex-1">{item}</span>
+                    <ArrowUpRight size={13} className="text-white/10 group-hover:text-white/30 transition-colors flex-shrink-0 mt-0.5" />
                   </div>
                 ))}
               </div>
@@ -158,12 +169,12 @@ export function WeeklyDigestSection() {
   );
 }
 
-function StatTile({ icon, value, label, valueClass }: {
-  icon: ReactNode; value: string; label: string; valueClass?: string;
+function StatTile({ icon, value, label, valueClass, bgClass }: {
+  icon: ReactNode; value: string; label: string; valueClass?: string; bgClass?: string;
 }) {
   return (
-    <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center">
-      <div className={`flex items-center justify-center gap-1 text-lg font-extrabold mb-0.5 ${valueClass || "text-white"}`}>
+    <div className={`rounded-xl border border-white/[0.05] px-3 py-3 ${bgClass || "bg-white/[0.02]"}`}>
+      <div className={`flex items-center gap-1.5 text-lg font-extrabold leading-none mb-1 ${valueClass || "text-white"}`}>
         {icon}{value}
       </div>
       <p className="text-[10px] text-muted">{label}</p>
@@ -173,9 +184,9 @@ function StatTile({ icon, value, label, valueClass }: {
 
 function SummaryRow({ label, text }: { label: string; text: string }) {
   return (
-    <div className="flex items-start gap-2.5">
-      <span className="text-[10px] font-semibold text-muted/60 w-14 flex-shrink-0 pt-0.5">{label}</span>
-      <span className="text-xs text-white/70 leading-relaxed">{text}</span>
+    <div className="flex items-start gap-3 px-3.5 py-2.5">
+      <span className="text-[9px] font-bold text-muted/40 uppercase tracking-widest w-12 flex-shrink-0 pt-0.5">{label}</span>
+      <span className="text-xs text-white/65 leading-relaxed">{text}</span>
     </div>
   );
 }
