@@ -83,6 +83,20 @@ export async function POST(request: Request) {
         );
       }
 
+      // Verify the PayPal subscription was created for THIS user.
+      // upgrade-modal.tsx sets custom_id to the user's Supabase ID at
+      // subscription creation. If another user tries to activate someone
+      // else's subscription (e.g. from a leaked ID), custom_id won't match.
+      // Older subscriptions created before custom_id was added won't have it
+      // — we allow those through to avoid breaking existing Pro users.
+      const customId = sub.custom_id ?? sub.custom ?? null;
+      if (customId && customId !== user.id) {
+        console.warn(
+          `[subscription] custom_id mismatch — user ${user.id} tried to activate subscription owned by ${customId}`
+        );
+        return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
+      }
+
       // Set expiry 35 days from now (5-day buffer over 30-day billing cycle)
       // If PayPal fails to deliver a renewal webhook, access lapses automatically
       const expiresAt = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString();

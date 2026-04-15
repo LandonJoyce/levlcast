@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
+import { rateLimit } from "@/lib/rate-limit";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function GET(request: Request) {
@@ -48,6 +49,11 @@ export async function POST(request: Request) {
     const supabase = await createClientFromRequest(request);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // 5 digest generations per hour per user — prevents Anthropic cost abuse
+    if (!rateLimit(`digest:${user.id}`, 5, 60 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
 
     const usage = await getUserUsage(user.id, supabase);
     if (usage.plan === "free") {

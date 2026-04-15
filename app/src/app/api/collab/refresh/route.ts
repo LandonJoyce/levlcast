@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
+import { rateLimit } from "@/lib/rate-limit";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Generic Twitch categories that aren't real games — excluded from matching
@@ -54,6 +55,11 @@ export async function POST(request: Request) {
     const supabase = await createClientFromRequest(request);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // 5 refreshes per hour per user — prevents Anthropic/Twitch cost abuse
+    if (!rateLimit(`collab-refresh:${user.id}`, 5, 60 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
 
     const admin = createAdminClient();
 
