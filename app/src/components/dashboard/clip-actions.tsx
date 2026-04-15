@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Download, Copy, Check, Youtube, Music, ExternalLink, Trash2, RotateCcw } from "lucide-react";
+import { Download, Copy, Check, Youtube, Music, ExternalLink, Trash2, RotateCcw, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function CopyCaption({ caption }: { caption: string }) {
