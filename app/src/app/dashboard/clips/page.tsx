@@ -3,7 +3,7 @@ import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { ReadyClipsList, FailedClipsList } from "@/components/dashboard/clips-list";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { Scissors, Sparkles, Film, Loader2, Link2 } from "lucide-react";
+import { Scissors, Sparkles, Clock, Film, Loader2, Link2 } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -16,6 +16,16 @@ interface Peak {
   caption: string;
 }
 
+
+function categoryStyle(category: string) {
+  switch (category) {
+    case "hype":      return "bg-purple-500/10 text-purple-400";
+    case "funny":     return "bg-yellow-500/10 text-yellow-400";
+    case "emotional": return "bg-red-500/10 text-red-400";
+    case "educational": return "bg-blue-500/10 text-blue-400";
+    default:          return "bg-white/5 text-muted";
+  }
+}
 
 function scoreColor(score: number) {
   if (score >= 0.7) return "text-green-400";
