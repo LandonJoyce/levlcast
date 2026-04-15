@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, publishId: result.publishId });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error("[tiktok/upload] Upload failed:", e?.message ?? e);
+    return NextResponse.json(
+      { error: "Failed to upload to TikTok. Please try again." },
+      { status: 500 }
+    );
   }
 }

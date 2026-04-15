@@ -19,6 +19,7 @@ export async function GET() {
   const response = NextResponse.redirect(authUrl);
   response.cookies.set("yt_oauth_nonce", nonce, {
     httpOnly: true,
+    secure: true,
     sameSite: "lax",
     maxAge: 600, // 10 minutes — enough time to complete OAuth
     path: "/",

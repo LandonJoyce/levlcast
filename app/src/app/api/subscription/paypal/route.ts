@@ -115,7 +115,10 @@ export async function POST(request: Request) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
       console.error("[subscription] activate error:", message);
-      return NextResponse.json({ error: message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to activate subscription. Please try again or contact support." },
+        { status: 500 }
+      );
     }
   }
 
@@ -181,7 +184,10 @@ export async function POST(request: Request) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
       console.error("[subscription] cancel error:", message);
-      return NextResponse.json({ error: message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to cancel subscription. Please try again or contact support." },
+        { status: 500 }
+      );
     }
   }
 
