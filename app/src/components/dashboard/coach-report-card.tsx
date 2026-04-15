@@ -362,6 +362,35 @@ export function CoachReportCard({
             <p className="text-sm leading-relaxed text-white/85 font-medium">{report.recommendation}</p>
           </div>
 
+          {/* Your Missions — always visible */}
+          {report.next_stream_goals && report.next_stream_goals.length > 0 && (
+            <div
+              className="rounded-xl p-4 border"
+              style={{
+                background: `linear-gradient(135deg, ${glowColor}10 0%, rgba(255,255,255,0.02) 100%)`,
+                borderColor: `${glowColor}25`,
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Target size={13} style={{ color: glowColor }} />
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: glowColor }}>Your Missions</span>
+              </div>
+              <ul className="space-y-2.5">
+                {report.next_stream_goals.map((goal, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm">
+                    <span
+                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 border text-[10px] font-extrabold"
+                      style={{ borderColor: `${glowColor}50`, color: glowColor, background: `${glowColor}15` }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-white/65 leading-relaxed">{goal}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Bottom bar: Quick Listen + Expand */}
           <div className="flex items-center gap-2">
             {/* Quick Listen controls */}
@@ -481,35 +510,6 @@ export function CoachReportCard({
                   </ul>
                 </div>
               </div>
-
-              {/* Your Missions */}
-              {report.next_stream_goals && report.next_stream_goals.length > 0 && (
-                <div
-                  className="rounded-xl p-4 border"
-                  style={{
-                    background: `linear-gradient(135deg, ${glowColor}10 0%, rgba(255,255,255,0.02) 100%)`,
-                    borderColor: `${glowColor}25`,
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target size={13} style={{ color: glowColor }} />
-                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: glowColor }}>Your Missions</span>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {report.next_stream_goals.map((goal, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm">
-                        <span
-                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 border text-[10px] font-extrabold"
-                          style={{ borderColor: `${glowColor}50`, color: glowColor, background: `${glowColor}15` }}
-                        >
-                          {i + 1}
-                        </span>
-                        <span className="text-white/65 leading-relaxed">{goal}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
             </div>
           )}
