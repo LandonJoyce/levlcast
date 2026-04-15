@@ -1,0 +1,22 @@
+Contact: mailto:md@levlcast.com
+Expires: 2027-04-15T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://www.levlcast.com/.well-known/security.txt
+
+# LevlCast Vulnerability Disclosure
+#
+# Report security issues to md@levlcast.com with:
+#   - Vulnerability class (auth, injection, data exposure, etc.)
+#   - Affected endpoint or component
+#   - Proof of concept or reproduction steps
+#   - Assessed severity (Critical / High / Medium / Low / Informational)
+#
+# We do not pay bounties for:
+#   - Missing security headers
+#   - Email spoofing due to SPF/DMARC configuration
+#   - Missing rate limits on non-financial endpoints
+#   - Self-XSS or other no-impact findings
+#   - Theoretical issues without a working proof of concept
+#
+# Rewards are paid via PayPal only, proportional to severity, at our discretion.
+# We do not accept or pay in cryptocurrency.
