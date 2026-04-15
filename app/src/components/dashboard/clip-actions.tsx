@@ -119,6 +119,64 @@ export function ClipCardWrapper({ clipId, children }: { clipId: string; children
   return <>{children(() => setDeleted(true))}</>;
 }
 
+/**
+ * One-tap regenerate: soft-deletes the current clip then immediately queues
+ * a new generation for the same peak. Used on clips that are audio-only or broken.
+ */
+export function RegenerateClip({ clipId, vodId, startSeconds }: { clipId: string; vodId: string; startSeconds: number }) {
+  const [state, setState] = useState<"idle" | "loading" | "queued" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleRegenerate() {
+    setState("loading");
+    setError(null);
+    try {
+      // Step 1: soft-delete the old clip
+      const delRes = await fetch(`/api/clips/${clipId}`, { method: "DELETE" });
+      if (!delRes.ok) throw new Error("Delete failed");
+
+      // Step 2: queue new generation for the same peak
+      const genRes = await fetch("/api/clips/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vodId, startSeconds }),
+      });
+      const json = await genRes.json();
+      if (!genRes.ok) throw new Error(json.error || "Generate failed");
+
+      setState("queued");
+      router.refresh();
+    } catch (e: any) {
+      setError(e.message || "Something went wrong");
+      setState("error");
+    }
+  }
+
+  if (state === "queued") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-accent-light font-medium">
+        <Loader2 size={12} className="animate-spin" />
+        Regenerating...
+      </span>
+    );
+  }
+
+  return (
+    <div className="inline-flex flex-col gap-0.5">
+      <button
+        onClick={handleRegenerate}
+        disabled={state === "loading"}
+        className="inline-flex items-center gap-1.5 text-xs text-yellow-400 hover:text-yellow-300 transition-colors disabled:opacity-50"
+      >
+        <RotateCcw size={12} className={state === "loading" ? "animate-spin" : ""} />
+        {state === "loading" ? "Regenerating..." : "Regenerate"}
+      </button>
+      {error && <span className="text-xs text-red-400">{error}</span>}
+    </div>
+  );
+}
+
 export function PostToYouTube({
   clipId,
   isConnected,

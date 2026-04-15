@@ -43,15 +43,11 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { vodId, peakIndex } = body;
+  // Accept either peakIndex (normal flow) or startSeconds (regenerate from clip card)
+  const { vodId, peakIndex, startSeconds } = body;
 
-  if (!vodId || typeof vodId !== "string" || peakIndex === undefined) {
-    return NextResponse.json({ error: "Missing or invalid vodId or peakIndex" }, { status: 400 });
-  }
-
-  const idx = Number(peakIndex);
-  if (!Number.isInteger(idx) || idx < 0) {
-    return NextResponse.json({ error: "Invalid peakIndex" }, { status: 400 });
+  if (!vodId || typeof vodId !== "string" || (peakIndex === undefined && startSeconds === undefined)) {
+    return NextResponse.json({ error: "Missing vodId or peakIndex/startSeconds" }, { status: 400 });
   }
 
   // Get VOD + verify ownership via RLS
@@ -71,8 +67,23 @@ export async function POST(request: Request) {
     score: number; category: string; reason: string; caption: string;
   }>;
 
-  const peak = peaks[idx];
-  if (!peak) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
+  let idx: number;
+  let peak: typeof peaks[0] | undefined;
+
+  if (startSeconds !== undefined) {
+    // Regenerate path: match peak by start time (±3s tolerance)
+    const target = Number(startSeconds);
+    idx = peaks.findIndex((p) => Math.abs(p.start - target) <= 3);
+    peak = idx >= 0 ? peaks[idx] : undefined;
+  } else {
+    idx = Number(peakIndex);
+    if (!Number.isInteger(idx) || idx < 0) {
+      return NextResponse.json({ error: "Invalid peakIndex" }, { status: 400 });
+    }
+    peak = peaks[idx];
+  }
+
+  if (!peak || idx < 0) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
 
   // Validate peak timestamps — bad AI output could produce negatives or inverted times
   if (typeof peak.start !== "number" || typeof peak.end !== "number" ||

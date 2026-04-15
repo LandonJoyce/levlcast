@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip, ClipCardWrapper } from "@/components/dashboard/clip-actions";
+import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip, ClipCardWrapper, RegenerateClip } from "@/components/dashboard/clip-actions";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { Scissors, Sparkles, Clock, Film, Loader2, Link2 } from "lucide-react";
 import Link from "next/link";
@@ -82,9 +82,12 @@ export default async function ClipsPage() {
     .not("peak_data", "is", null)
     .order("stream_date", { ascending: false });
 
-  // Flatten ungenerated peaks
+  // Only "ready" and "processing" clips block a peak from being re-generated.
+  // "deleted" and "failed" should free the peak up so users can regenerate.
   const generatedKeys = new Set(
-    (allClips || []).map((c) => `${c.vod_id}-${c.start_time_seconds}`)
+    (allClips || [])
+      .filter((c) => c.status === "ready" || c.status === "processing")
+      .map((c) => `${c.vod_id}-${c.start_time_seconds}`)
   );
 
   const ungeneratedPeaks: (Peak & { vodTitle: string; vodId: string; vodThumbnail: string; peakIndex: number })[] = [];
@@ -257,6 +260,7 @@ export default async function ClipsPage() {
                               existingUrl={ytPostMap.get(clip.id)}
                             />
                             <PostToTikTok />
+                            <RegenerateClip clipId={clip.id} vodId={clip.vod_id} startSeconds={clip.start_time_seconds} />
                             <DeleteClip clipId={clip.id} onDeleted={onDeleted} />
                           </div>
                         </div>
