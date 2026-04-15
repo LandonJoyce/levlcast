@@ -123,7 +123,7 @@ export function ClipCardWrapper({ clipId, children }: { clipId: string; children
  * One-tap regenerate: soft-deletes the current clip then immediately queues
  * a new generation for the same peak. Used on clips that are audio-only or broken.
  */
-export function RegenerateClip({ clipId, vodId, startSeconds }: { clipId: string; vodId: string; startSeconds: number }) {
+export function RegenerateClip({ clipId, vodId, startSeconds, onRegenerated }: { clipId: string; vodId: string; startSeconds: number; onRegenerated?: () => void }) {
   const [state, setState] = useState<"idle" | "loading" | "queued" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -146,6 +146,7 @@ export function RegenerateClip({ clipId, vodId, startSeconds }: { clipId: string
       if (!genRes.ok) throw new Error(json.error || "Generate failed");
 
       setState("queued");
+      onRegenerated?.();
       router.refresh();
     } catch (e: any) {
       setError(e.message || "Something went wrong");
