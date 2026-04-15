@@ -618,11 +618,19 @@ Read through the transcript and answer these questions internally — do not out
 Every piece of feedback you write must connect back to this story.
 
 STEP 1 — IDENTIFY STREAMER TYPE:
-- "gaming": playing a game, commentary on gameplay
-- "just_chatting": talking to chat, no game or game is secondary
-- "irl": real life, outdoors, events
-- "variety": switching between games or formats
-- "educational": tutorials, how-to content
+CRITICAL: The transcript above is voice-only — game audio, music, and NPC dialogue were stripped by speaker diarization before you saw it. A gaming stream WILL read like a monologue in the transcript because game sound is gone. Do NOT use transcript-only signals to decide if a game is being played.
+
+Use the STREAM TITLE as the authoritative signal for gameplay:
+- If the title names a specific video game (e.g. "Elder Scrolls Online", "FFXIV", "Genshin", "Minecraft", "WoW", "Fortnite", "Final Fantasy", "Dead by Daylight", etc.), the streamer_type is "gaming" — even if the transcript sounds conversational. Streamers talk over gameplay constantly; that's normal.
+- If the title mentions multiple games or phrases like "variety", "game swap", "playing [X] then [Y]", use "variety".
+- Only use "just_chatting" when the title itself indicates chat content (e.g. "Chill Chat", "Q&A", "Reacts", "Podcast", "Yapping") AND no specific game is named.
+- "irl": title indicates outdoor/real-life content (e.g. "IRL walk", "Going out").
+- "educational": title indicates tutorial/how-to content (e.g. "How to", "Guide", "Tutorial").
+
+Classification rules:
+- Title names a game → gaming (or variety if multiple) — this overrides any "sounds chatty" transcript vibe.
+- Title is ambiguous/generic → fall back on transcript content.
+- When in doubt between gaming and just_chatting, prefer gaming — variety streamers almost never stream pure chat.
 
 EVALUATION — work through each before writing feedback:
 
