@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip } from "@/components/dashboard/clip-actions";
+import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip, ClipCardWrapper } from "@/components/dashboard/clip-actions";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { Scissors, Sparkles, Clock, Film, Loader2, Link2 } from "lucide-react";
 import Link from "next/link";
@@ -184,13 +184,17 @@ export default async function ClipsPage() {
               </h2>
               <div className="space-y-3">
                 {failedClips.map((clip) => (
-                  <div key={clip.id} className="bg-surface border border-red-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-sm">{clip.title}</p>
-                      <p className="text-xs text-red-400 mt-0.5">Generation failed — delete and try again from the peak below.</p>
-                    </div>
-                    <DeleteClip clipId={clip.id} />
-                  </div>
+                  <ClipCardWrapper key={clip.id} clipId={clip.id}>
+                    {(onDeleted) => (
+                      <div className="bg-surface border border-red-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-sm">{clip.title}</p>
+                          <p className="text-xs text-red-400 mt-0.5">Generation failed — delete and try again from the peak below.</p>
+                        </div>
+                        <DeleteClip clipId={clip.id} onDeleted={onDeleted} />
+                      </div>
+                    )}
+                  </ClipCardWrapper>
                 ))}
               </div>
             </div>
@@ -204,60 +208,61 @@ export default async function ClipsPage() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {clips.map((clip) => (
-                  <div
-                    key={clip.id}
-                    className="bg-surface border border-border rounded-2xl overflow-hidden surface-hover"
-                  >
-                    {/* Video player */}
-                    <video
-                      controls
-                      preload="metadata"
-                      playsInline
-                      className="w-full aspect-video bg-black"
-                    >
-                      <source src={clip.video_url} type="video/mp4" />
-                    </video>
+                  <ClipCardWrapper key={clip.id} clipId={clip.id}>
+                    {(onDeleted) => (
+                      <div className="bg-surface border border-border rounded-2xl overflow-hidden surface-hover">
+                        {/* Video player */}
+                        <video
+                          controls
+                          preload="metadata"
+                          playsInline
+                          className="w-full aspect-video bg-black"
+                        >
+                          <source src={clip.video_url} type="video/mp4" />
+                        </video>
 
-                    <div className="p-4 flex flex-col">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <h3 className="font-bold text-sm line-clamp-2 leading-snug">{clip.title}</h3>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <Sparkles size={12} className={scoreColor(clip.peak_score)} />
-                          <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>
-                            {Math.round(clip.peak_score * 100)}
-                          </span>
+                        <div className="p-4 flex flex-col">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <h3 className="font-bold text-sm line-clamp-2 leading-snug">{clip.title}</h3>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Sparkles size={12} className={scoreColor(clip.peak_score)} />
+                              <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>
+                                {Math.round(clip.peak_score * 100)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 mb-2.5">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${categoryStyle(clip.peak_category)}`}>
+                              {clip.peak_category}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-xs text-muted flex-shrink-0">
+                              <Clock size={11} />
+                              {clip.duration_seconds ?? "—"}s
+                            </span>
+                          </div>
+
+                          {/* Caption */}
+                          <div className="bg-bg/50 rounded-lg px-3 py-2 mb-3">
+                            <p className="text-xs text-muted leading-relaxed line-clamp-3">{clip.caption_text}</p>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-auto">
+                            <DownloadClip url={clip.video_url} title={clip.title} />
+                            <CopyCaption caption={clip.caption_text} />
+                            <PostToYouTube
+                              clipId={clip.id}
+                              isConnected={isYouTubeConnected}
+                              existingUrl={ytPostMap.get(clip.id)}
+                            />
+                            <PostToTikTok />
+                            <DeleteClip clipId={clip.id} onDeleted={onDeleted} />
+                          </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-3 mb-2.5">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${categoryStyle(clip.peak_category)}`}>
-                          {clip.peak_category}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-xs text-muted flex-shrink-0">
-                          <Clock size={11} />
-                          {clip.duration_seconds ?? "—"}s
-                        </span>
-                      </div>
-
-                      {/* Caption */}
-                      <div className="bg-bg/50 rounded-lg px-3 py-2 mb-3">
-                        <p className="text-xs text-muted leading-relaxed line-clamp-3">{clip.caption_text}</p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-auto">
-                        <DownloadClip url={clip.video_url} title={clip.title} />
-                        <CopyCaption caption={clip.caption_text} />
-                        <PostToYouTube
-                          clipId={clip.id}
-                          isConnected={isYouTubeConnected}
-                          existingUrl={ytPostMap.get(clip.id)}
-                        />
-                        <PostToTikTok />
-                        <DeleteClip clipId={clip.id} />
-                      </div>
-                    </div>
-                  </div>
+                    )}
+                  </ClipCardWrapper>
                 ))}
               </div>
             </div>

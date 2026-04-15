@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Download, Copy, Check, Youtube, Music, ExternalLink, Trash2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -49,7 +49,7 @@ export function DownloadClip({ url, title }: { url: string; title: string }) {
   );
 }
 
-export function DeleteClip({ clipId }: { clipId: string }) {
+export function DeleteClip({ clipId, onDeleted }: { clipId: string; onDeleted?: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +65,9 @@ export function DeleteClip({ clipId }: { clipId: string }) {
         setConfirming(false);
         return;
       }
+      // Optimistically hide the card immediately before router.refresh() resolves
+      onDeleted?.();
+      setConfirming(false);
       router.refresh();
     } catch {
       setError("Network error.");
@@ -107,6 +110,13 @@ export function DeleteClip({ clipId }: { clipId: string }) {
       {error && <span className="text-xs text-red-400 mt-0.5">{error}</span>}
     </div>
   );
+}
+
+/** Wraps a clip card so the whole card can be hidden optimistically on delete. */
+export function ClipCardWrapper({ clipId, children }: { clipId: string; children: (onDeleted: () => void) => React.ReactNode }) {
+  const [deleted, setDeleted] = useState(false);
+  if (deleted) return null;
+  return <>{children(() => setDeleted(true))}</>;
 }
 
 export function PostToYouTube({

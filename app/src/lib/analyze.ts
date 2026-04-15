@@ -322,6 +322,27 @@ export interface CoachReport {
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
   dead_zones?: Array<{ time: string; duration: number }>;
+  // Longitudinal coaching — populated when prior stream history is available
+  trend_vs_history?: {
+    direction: "improving" | "declining" | "consistent" | "first_stream";
+    note: string; // 1-2 sentences referencing specific prior streams
+  };
+  // The single worst energy crash in the stream — what happened and when
+  momentum_crash?: {
+    time: string;
+    duration_min: number;
+    note: string;
+  };
+  // Computed metric: average wpm during active speech windows only (excludes gaps)
+  commentary_density?: number;
+}
+
+/** Summary of a prior stream used for longitudinal coaching context. */
+export interface PriorCoachSummary {
+  date: string;          // ISO date string
+  score: number;
+  recommendation: string;
+  top_improvement: string;
 }
 
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
@@ -377,6 +398,70 @@ What separates top educational streamers from average ones:
 Key coaching focus areas: Is the teaching style engaging or dry lecture? Are complex topics made genuinely accessible? Is uncertainty handled authentically? Is chat shaping the direction?`,
 };
 
+/** Compute per-minute WPM across the full stream. */
+function buildEnergyMap(segments: TranscriptSegment[], vodDuration: number): { minute: number; wpm: number }[] {
+  const totalMinutes = Math.ceil(vodDuration / 60);
+  const result: { minute: number; wpm: number }[] = [];
+  for (let m = 0; m < totalMinutes; m++) {
+    const segs = segments.filter((s) => s.start >= m * 60 && s.start < (m + 1) * 60);
+    result.push({ minute: m, wpm: calcWPM(segs) });
+  }
+  return result;
+}
+
+/**
+ * Find the single worst energy crash: the longest contiguous run of low-wpm minutes.
+ * Returns start/end minute, plus a short transcript excerpt from that window.
+ */
+function findMomentumCrash(
+  energyMap: { minute: number; wpm: number }[],
+  segments: TranscriptSegment[],
+  lowThreshold = 60
+): { startMin: number; endMin: number; excerpt: string } | null {
+  if (energyMap.length < 3) return null;
+
+  let bestStart = -1, bestLen = 0, curStart = -1, curLen = 0;
+  for (const { minute, wpm } of energyMap) {
+    if (wpm < lowThreshold) {
+      if (curStart === -1) curStart = minute;
+      curLen++;
+      if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+    } else {
+      curStart = -1; curLen = 0;
+    }
+  }
+
+  if (bestStart === -1 || bestLen < 2) return null;
+
+  const winStart = bestStart * 60;
+  const winEnd = (bestStart + bestLen) * 60;
+  const winSegs = segments.filter((s) => s.start >= winStart && s.start < winEnd).slice(0, 8);
+  const excerpt = winSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n");
+
+  return { startMin: bestStart, endMin: bestStart + bestLen, excerpt };
+}
+
+/** Render energy map as a compact ASCII sparkline for the prompt. */
+function renderEnergySparkline(energyMap: { minute: number; wpm: number }[]): string {
+  const blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+  const maxWpm = Math.max(...energyMap.map((e) => e.wpm), 1);
+  const line = energyMap.map(({ wpm }) => {
+    const idx = Math.min(7, Math.floor((wpm / maxWpm) * 8));
+    return blocks[idx];
+  }).join("");
+  return line;
+}
+
+/** Average WPM during active speech windows (excludes silent gaps). */
+function calcCommentaryDensity(segments: TranscriptSegment[]): number {
+  if (segments.length === 0) return 0;
+  const totalWords = segments.reduce((sum, s) => sum + s.text.split(" ").length, 0);
+  // Only count time the streamer was actually talking (sum of utterance durations)
+  const speechSeconds = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
+  const speechMin = speechSeconds / 60;
+  return speechMin > 0 ? Math.round(totalWords / speechMin) : 0;
+}
+
 /**
  * Generate an AI stream coaching report from a transcript and detected peaks.
  * Uses Sonnet for higher quality coaching feedback — this is the flagship feature.
@@ -384,7 +469,8 @@ Key coaching focus areas: Is the teaching style engaging or dry lecture? Are com
 export async function generateCoachReport(
   segments: TranscriptSegment[],
   vodTitle: string,
-  peaks: Peak[]
+  peaks: Peak[],
+  priorReports?: PriorCoachSummary[]
 ): Promise<CoachReport | null> {
   const anthropic = new Anthropic();
 
@@ -439,6 +525,34 @@ export async function generateCoachReport(
 
   // ── Overall speech stats ──
   const overallWPM = calcWPM(segments);
+  const commentaryDensity = calcCommentaryDensity(segments);
+
+  // ── Full energy map (minute-by-minute WPM sparkline) ──
+  const energyMap = buildEnergyMap(segments, vodDuration);
+  const sparkline = renderEnergySparkline(energyMap);
+  // Label every 5th minute for orientation
+  const sparklineLabel = energyMap
+    .filter((e) => e.minute % 5 === 0)
+    .map((e) => `${e.minute}m`)
+    .join("   ");
+
+  // ── Momentum crash — worst energy valley ──
+  const crash = findMomentumCrash(energyMap, segments);
+  const crashBlock = crash
+    ? `MOMENTUM CRASH — worst dead zone (${crash.startMin}:00–${crash.endMin}:00, ${crash.endMin - crash.startMin} min at near-zero energy):
+${crash.excerpt}`
+    : "";
+
+  // ── Prior stream history for longitudinal coaching ──
+  const historyBlock = (priorReports && priorReports.length > 0)
+    ? `PREVIOUS STREAM HISTORY (this streamer has been coached before — use this to identify patterns, improvements, or recurring problems):
+${priorReports.map((r, i) => `Stream ${i + 1} ago (${r.date}, score ${r.score}):
+  Priority: ${r.recommendation}
+  Top fix: ${r.top_improvement}`).join("\n")}
+
+If the same problem has appeared in multiple past reports, name it directly — they've been told before and it's still happening.
+If this stream shows improvement on a past problem, call it out — earned recognition is more motivating than generic praise.`
+    : "";
 
   // ── Peaks summary for coaching context ──
   const peaksSummary = peaks.length > 0
@@ -460,7 +574,7 @@ ${categoryGuideBlock}`;
 
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 3000,
+    max_tokens: 3500,
     system: [
       {
         type: "text" as const,
@@ -478,10 +592,15 @@ IMPORTANT: This transcript has been pre-filtered using speaker diarization to in
 STREAM INFO:
 - Title: "${vodTitle}"
 - Duration: ${totalMinutes} minutes
-- Overall talking pace: ~${overallWPM} wpm (engaging streamers: 140-170 wpm; below 120 wpm = low energy)
+- Commentary density: ${commentaryDensity} wpm (when actively speaking — target 140-170 wpm for engaging delivery; below 110 wpm = flat)
+- Overall stream pace (incl. gaps): ~${overallWPM} wpm
 - Dead air: ${deadAirSummary}
 
-AI-DETECTED PEAK MOMENTS (the best clips the AI found):
+ENERGY CURVE (minute-by-minute — each bar = 1 min, height = speaking energy):
+${sparkline}
+${sparklineLabel}
+
+${crashBlock ? crashBlock + "\n" : ""}${historyBlock ? historyBlock + "\n" : ""}AI-DETECTED PEAK MOMENTS (the best clips the AI found):
 ${peaksSummary}
 
 ${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this carefully — this is the raw evidence for what made the best moments work or why moments are missing):
@@ -507,12 +626,13 @@ STEP 1 — IDENTIFY STREAMER TYPE:
 
 EVALUATION — work through each before writing feedback:
 
-1. ENERGY CURVE: Look at wpm per section. Where did energy spike and where did it crater? Name the specific moments.
+1. ENERGY CURVE: Use the sparkline and minute-by-minute data. Where exactly did energy die? What was happening in the transcript at those moments?
 2. DEAD AIR: Which gaps were from the game (acceptable) vs. losing momentum (bad)? Only flag the ones that actually hurt.
 3. PERSONALITY: When did their real personality show? What triggered it? How often did it happen vs. how often were they just filling air?
 4. CHAT: Were they treating chat as a co-star or an afterthought? Did any specific chat interaction go well or get ignored?
 5. PEAKS: What specifically created the detected peaks? If peaks are weak or missing, what was happening in the transcript where a peak should have been?
 6. NARRATIVE: Did the stream have a story? Did it build toward anything? Where did it feel alive vs. dead?
+7. HISTORY: If prior reports exist — has this streamer improved on past problems? Or are the same issues recurring? Name it directly.
 
 SCORING — be honest, most streams land 50-70:
 - 85-100: Rare. High energy throughout, strong personality, great chat chemistry, multiple clip-worthy moments.
@@ -530,6 +650,8 @@ OUTPUT RULES:
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
 - Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
 - Cold open: score the first 5 minutes only. "strong" = hooked immediately, energy and presence from first words. "average" = took a few minutes to find footing. "weak" = opened cold, silent, or directionless. Note: 1 sentence, specific to what actually happened in those first minutes.
+- momentum_crash: use the crash data provided. Describe the exact stretch where the stream flatlined and what the streamer should have done differently at that moment.
+- trend_vs_history: only populate if prior stream history is provided. Be direct — "improving", "declining", or "consistent". Name specific streams or scores if relevant.
 - No emojis. No padding. No filler.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
@@ -561,7 +683,16 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "<one sentence, concrete, tied to what went wrong today>",
     "<one sentence, concrete, tied to what went wrong today>",
     "<one sentence, concrete, tied to what went wrong today>"
-  ]
+  ],
+  "momentum_crash": {
+    "time": "<MM:SS of where the crash started>",
+    "duration_min": <integer minutes the dead zone lasted>,
+    "note": "<1-2 sentences: what was happening, why it died, what should have happened instead>"
+  },
+  "trend_vs_history": {
+    "direction": "<improving | declining | consistent | first_stream>",
+    "note": "<1-2 sentences referencing specific prior scores or problems if history exists, or 'First analyzed stream — no comparison available' if not>"
+  }
 }`,
       },
     ],
@@ -572,7 +703,8 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const report = JSON.parse(cleaned) as CoachReport;
-    // Attach worst dead air gaps directly from computed data (no need to re-derive from AI)
+    // Attach computed metrics directly — no need to re-derive from AI text
+    report.commentary_density = commentaryDensity;
     if (worstGaps.length > 0) {
       report.dead_zones = worstGaps.map((g) => ({ time: formatTime(g.start), duration: g.duration }));
     }

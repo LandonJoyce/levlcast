@@ -12,7 +12,7 @@
 import { inngest } from "./client";
 import { streamTwitchVodAudio, downloadTwitchVodVideo } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
-import { detectPeaks, generateCoachReport } from "@/lib/analyze";
+import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
 import { uploadToR2 } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -77,8 +77,33 @@ export const analyzeVod = inngest.createFunction(
           throw new Error("No speech found in the selected time range — try a wider range");
         }
 
+        // Fetch the last 3 ready coach reports for this user (excluding this VOD)
+        // so the AI can give longitudinal coaching, not just single-session feedback
+        const { data: priorVods } = await supabase
+          .from("vods")
+          .select("coach_report, analyzed_at")
+          .eq("user_id", userId)
+          .eq("status", "ready")
+          .neq("id", vodId)
+          .not("coach_report", "is", null)
+          .order("analyzed_at", { ascending: false })
+          .limit(3);
+
+        type VodRow = { coach_report: unknown; analyzed_at: string };
+        const priorReports: PriorCoachSummary[] = (priorVods ?? [] as VodRow[])
+          .filter((v: VodRow) => v.coach_report && v.analyzed_at)
+          .map((v: VodRow) => {
+            const r = v.coach_report as { overall_score?: number; recommendation?: string; improvements?: string[] };
+            return {
+              date: v.analyzed_at.slice(0, 10),
+              score: r.overall_score ?? 0,
+              recommendation: r.recommendation ?? "",
+              top_improvement: (r.improvements?.[0] ?? "").replace(/\*\*[^*]+\*\*\s*[—–-]\s*/, ""),
+            };
+          });
+
         const peaks = await detectPeaks(filtered, title);
-        const coachReport = await generateCoachReport(filtered, title, peaks);
+        const coachReport = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined);
         if (!coachReport) {
           throw new Error("Failed to generate coaching report — AI returned invalid response");
         }
