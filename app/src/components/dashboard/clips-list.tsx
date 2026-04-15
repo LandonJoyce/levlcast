@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Sparkles, Clock } from "lucide-react";
-import { CopyCaption, DownloadClip, PostToYouTube, PostToTikTok, DeleteClip, RegenerateClip } from "./clip-actions";
+import { CopyCaption, DownloadClip, PostToYouTube, DeleteClip, RegenerateClip } from "./clip-actions";
 
 function categoryStyle(category: string) {
   switch (category) {
@@ -87,7 +87,6 @@ export function ReadyClipsList({
                   isConnected={isYouTubeConnected}
                   existingUrl={ytPostMap[clip.id] ?? null}
                 />
-                <PostToTikTok />
                 <RegenerateClip
                   clipId={clip.id}
                   vodId={clip.vod_id}
