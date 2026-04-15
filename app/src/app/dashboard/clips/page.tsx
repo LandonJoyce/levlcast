@@ -3,7 +3,7 @@ import { formatDuration } from "@/lib/utils";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { ReadyClipsList, FailedClipsList } from "@/components/dashboard/clips-list";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { Scissors, Film, Loader2, Link2 } from "lucide-react";
+import { Scissors, Sparkles, Film, Loader2, Link2 } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -16,6 +16,12 @@ interface Peak {
   caption: string;
 }
 
+
+function scoreColor(score: number) {
+  if (score >= 0.7) return "text-green-400";
+  if (score >= 0.4) return "text-yellow-400";
+  return "text-muted";
+}
 
 export default async function ClipsPage() {
   const supabase = await createClient();
