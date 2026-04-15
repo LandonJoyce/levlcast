@@ -128,6 +128,53 @@ export async function POST(request: Request) {
     userId = profile?.id ?? null;
   }
 
+  // Orphaned payment recovery: if the browser disconnected before onApprove
+  // fired, the subscription record was never written. Recover via custom_id
+  // (set when we created the subscription in upgrade-modal.tsx) and backfill.
+  if (!userId) {
+    const customId: string | null =
+      body?.resource?.custom_id ?? body?.resource?.custom ?? null;
+
+    if (customId) {
+      // Confirm the user actually exists before trusting the custom_id
+      const { data: recoveredProfile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("id", customId)
+        .single();
+
+      if (recoveredProfile?.id) {
+        userId = recoveredProfile.id;
+        console.warn(
+          `[webhook/paypal] Recovered orphaned subscription ${subscriptionId} for user ${userId} via custom_id`
+        );
+
+        // Backfill profile link so future webhook lookups succeed normally
+        await admin
+          .from("profiles")
+          .update({
+            paypal_subscription_id: subscriptionId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", userId);
+
+        // Upsert a subscriptions row so it's tracked properly
+        await admin
+          .from("subscriptions")
+          .upsert(
+            {
+              user_id: userId,
+              paypal_subscription_id: subscriptionId,
+              plan: "pro",
+              status: "active",
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+      }
+    }
+  }
+
   if (!userId) {
     console.warn(`[webhook/paypal] No user found for subscription ${subscriptionId}`);
     return NextResponse.json({ received: true }, { status: 200 });

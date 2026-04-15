@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -10,8 +11,8 @@ interface UpgradeModalProps {
 }
 
 const FEATURES = [
-  "Unlimited VOD analyses",
-  "Unlimited clip generation",
+  "20 VOD analyses per month",
+  "20 clip generations per month",
   "Priority processing",
 ];
 
@@ -20,9 +21,23 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
   const scriptRef = useRef<HTMLScriptElement | null>(null);
   const [paypalError, setPaypalError] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Fetch the current user ID when the modal opens — needed so PayPal can
+  // attach it as custom_id on the subscription. If the browser disconnects
+  // mid-flow, the webhook uses custom_id to recover the orphaned payment.
+  useEffect(() => {
+    if (!isOpen) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
+    // Wait until we have the user ID before mounting the PayPal button
+    if (!userId) return;
     setPaypalError(null);
 
     // Remove any previously injected PayPal script
@@ -40,7 +55,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
     const planId = process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID;
 
     const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&intent=subscription&vault=true&currency=USD&disable-funding=card`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&intent=subscription&vault=true&currency=USD`;
     script.setAttribute("data-sdk-integration-source", "developer-studio");
     scriptRef.current = script;
 
@@ -56,7 +71,12 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
             label: "subscribe",
           },
           createSubscription: (_data: any, actions: any) => {
-            return actions.subscription.create({ plan_id: planId });
+            // Pass LevlCast user ID as custom_id so the webhook can recover
+            // orphaned payments if the browser disconnects before onApprove fires.
+            return actions.subscription.create({
+              plan_id: planId,
+              custom_id: userId,
+            });
           },
           onApprove: async (data: any) => {
             setActivating(true);
@@ -102,7 +122,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
         scriptRef.current = null;
       }
     };
-  }, [isOpen]);
+  }, [isOpen, userId]);
 
   if (!isOpen) return null;
 

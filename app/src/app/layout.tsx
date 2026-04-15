@@ -116,7 +116,7 @@ const faqStructuredData = {
       name: "Is LevlCast free to use?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes — no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips total. Upgrade to Pro for unlimited analyses and clips.",
+        text: "Yes — no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips total. Upgrade to Pro for 20 VOD analyses and 20 clips per month.",
       },
     },
     {

@@ -95,7 +95,7 @@ export const changelog: ChangelogEntry[] = [
       { type: "new", text: "VOD analysis — AI watches your stream, finds your peak moments, and scores your performance out of 100" },
       { type: "new", text: "Clip generation — your best moments cut into short-form video, ready to post" },
       { type: "new", text: "YouTube posting directly from your clip library" },
-      { type: "new", text: "Pro subscription — unlimited analyses and clips" },
+      { type: "new", text: "Pro subscription — 20 analyses and 20 clips per month" },
     ],
   },
 ];

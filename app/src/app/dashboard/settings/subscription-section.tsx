@@ -134,7 +134,7 @@ export function SubscriptionSection({
         {plan === "free" ? (
           <div className="space-y-3">
             <p className="text-sm text-muted">
-              Upgrade to Pro for unlimited analyses, unlimited clips, and
+              Upgrade to Pro for 20 VOD analyses, 20 clips per month, and
               priority processing.
             </p>
             <button
@@ -189,7 +189,7 @@ export function SubscriptionSection({
       <UpgradeModal
         isOpen={upgradeOpen}
         onClose={() => setUpgradeOpen(false)}
-        reason="Upgrade to Pro for unlimited VOD analyses and clip generation."
+        reason="Upgrade to Pro for 20 VOD analyses and 20 clip generations per month."
       />
     </>
   );
