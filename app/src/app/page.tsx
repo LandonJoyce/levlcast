@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Play, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare, Gamepad2, MessageCircle, Shuffle, HeartPulse, Users, Newspaper, Zap } from "lucide-react";
+import { Check, Play, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare, HeartPulse, Users, Newspaper, Zap } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import FaqSection from "@/components/FaqSection";
 
@@ -204,41 +204,38 @@ export default function LandingPage() {
       <section className="py-20 border-t border-border relative overflow-hidden">
         <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-center mb-4">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 md:text-left">
             You don&apos;t have a team. Now you do.
           </h2>
-          <p className="text-center text-muted max-w-[520px] mx-auto mb-14 text-sm leading-relaxed">
+          <p className="text-muted max-w-[520px] mb-14 text-sm leading-relaxed md:text-left">
             Big streamers have managers, coaches, and editors. You&apos;re doing everything yourself. LevlCast gives you the same support system — powered by AI.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                icon: BarChart2,
-                title: "No one managing your growth",
-                desc: "You stream, you end, you guess. No one is tracking which content works, when you're burning out, or who you should collab with.",
-              },
-              {
-                icon: Scissors,
-                title: "Your best moments go unclipped",
-                desc: "You had 5 great moments last stream. But you didn't clip them, so they disappeared when the VOD expired.",
-              },
-              {
-                icon: MessageSquare,
-                title: "You don't know why it's not growing",
-                desc: "The habits holding you back — dead air, weak openings, ignored chat — are invisible to you in the moment. No one watches back your VODs and tells you the truth.",
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} className="card p-6 hover:border-accent/25 transition-colors group">
-                  <div className="w-10 h-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-5 group-hover:bg-accent/15 transition-colors">
-                    <Icon className="w-5 h-5 text-accent-light" />
-                  </div>
-                  <h3 className="font-bold mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted leading-relaxed">{item.desc}</p>
+          {/* Asymmetric: two cards left, one featured card right */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="md:col-span-2 space-y-4">
+              <div className="card p-6 hover:border-accent/25 transition-colors group">
+                <div className="w-10 h-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-5 group-hover:bg-accent/15 transition-colors">
+                  <BarChart2 className="w-5 h-5 text-accent-light" />
                 </div>
-              );
-            })}
+                <h3 className="font-bold mb-2">No one managing your growth</h3>
+                <p className="text-sm text-muted leading-relaxed">You stream, you end, you guess. No one is tracking which content works, when you&apos;re burning out, or who you should collab with.</p>
+              </div>
+              <div className="card p-6 hover:border-accent/25 transition-colors group">
+                <div className="w-10 h-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-5 group-hover:bg-accent/15 transition-colors">
+                  <Scissors className="w-5 h-5 text-accent-light" />
+                </div>
+                <h3 className="font-bold mb-2">Your best moments go unclipped</h3>
+                <p className="text-sm text-muted leading-relaxed">You had 5 great moments last stream. But you didn&apos;t clip them, so they disappeared when the VOD expired.</p>
+              </div>
+            </div>
+            {/* Featured pain point — bigger, more padding */}
+            <div className="md:col-span-3 card p-8 md:p-10 hover:border-accent/25 transition-colors group flex flex-col justify-center">
+              <div className="w-12 h-12 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-6 group-hover:bg-accent/15 transition-colors">
+                <MessageSquare className="w-6 h-6 text-accent-light" />
+              </div>
+              <h3 className="font-bold text-xl mb-3">You don&apos;t know why it&apos;s not growing</h3>
+              <p className="text-[15px] text-muted leading-relaxed">The habits holding you back — dead air, weak openings, ignored chat — are invisible to you in the moment. No one watches back your VODs and tells you the truth.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -256,15 +253,14 @@ export default function LandingPage() {
             Get managed forever.
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* 2x2 staggered grid instead of 4 equal columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto">
             {steps.map((step, i) => {
               const Icon = step.icon;
+              const isEven = i % 2 === 0;
               return (
-                <div key={step.num} className="relative card p-6 hover:border-accent/25 transition-colors group">
-                  {i < steps.length - 1 && (
-                    <div className="hidden lg:block absolute top-10 -right-2.5 w-5 h-px bg-border z-10" />
-                  )}
-                  <div className={`w-12 h-12 ${step.bg} border ${step.border} rounded-xl flex items-center justify-center mb-5`}>
+                <div key={step.num} className={`relative card hover:border-accent/25 transition-colors group ${isEven ? "p-6 sm:p-7" : "p-6"} ${i >= 2 ? "sm:translate-y-3" : ""}`}>
+                  <div className={`${isEven ? "w-12 h-12" : "w-10 h-10"} ${step.bg} border ${step.border} rounded-xl flex items-center justify-center mb-4`}>
                     <Icon className={`w-5 h-5 ${step.color}`} />
                   </div>
                   <div className="text-xs font-medium text-muted/60 mb-2">{step.num}</div>
@@ -281,29 +277,36 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden" id="features">
         <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <div className="flex justify-center mb-5">
+          <div className="mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Your manager&apos;s toolkit</span>
           </div>
-          <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
+          <h2 className="text-4xl font-extrabold tracking-tight mb-4 md:text-left">
             Everything a real manager would do.
           </h2>
-          <p className="text-center text-muted text-sm max-w-[480px] mx-auto mb-14 leading-relaxed">
+          <p className="text-muted text-sm max-w-[480px] mb-14 leading-relaxed md:text-left">
             LevlCast doesn&apos;t just analyze clips. It watches over your entire streaming career and tells you what to do about it.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Bento layout: intentionally asymmetric spans */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {managerFeatures.map((feat, i) => {
               const Icon = feat.icon;
-              const isWide = i === 0;
+              // Varied column spans for organic layout: 7-5, 4-4-4, 12
+              const spanClass = [
+                "md:col-span-7", // Stream Coaching — hero feature, wider
+                "md:col-span-5", // Burnout Detection
+                "md:col-span-4", // Content Strategy
+                "md:col-span-4", // Collab Matching
+                "md:col-span-4", // Weekly Digest
+                "md:col-span-12", // Clip Generation — full-width bar
+              ][i];
+              const isHero = i === 0;
               const isFull = i === 5;
+
               return (
                 <div
                   key={feat.title}
-                  className={[
-                    "card p-6 group hover:border-white/[0.14] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-px",
-                    isWide ? "md:col-span-2" : "",
-                    isFull ? "md:col-span-3" : "",
-                  ].join(" ")}
+                  className={`card group hover:border-white/[0.14] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-px ${spanClass} ${isHero ? "p-8" : "p-6"}`}
                 >
                   {isFull ? (
                     <div className="flex items-center gap-5">
@@ -317,10 +320,10 @@ export default function LandingPage() {
                     </div>
                   ) : (
                     <>
-                      <div className={`w-10 h-10 ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300`}>
+                      <div className={`${isHero ? "w-12 h-12" : "w-10 h-10"} ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300`}>
                         <Icon className={`w-5 h-5 ${feat.color}`} />
                       </div>
-                      <h3 className={`font-bold mb-2 ${isWide ? "text-lg" : ""}`}>{feat.title}</h3>
+                      <h3 className={`font-bold mb-2 ${isHero ? "text-lg" : ""}`}>{feat.title}</h3>
                       <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
                     </>
                   )}
@@ -331,290 +334,82 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Coaching Report Mockup ─── */}
+      {/* ─── Coaching Report — Real Screenshots ─── */}
       <section className="py-24 border-t border-border bg-surface/30">
         <div className="max-w-[1080px] mx-auto px-6">
-          <div className="flex justify-center mb-5">
+          <div className="mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">The coaching report</span>
           </div>
-          <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
+          <h2 className="text-4xl font-extrabold tracking-tight mb-4 md:text-left">
             Real feedback after every stream.
           </h2>
-          <p className="text-center text-muted text-sm max-w-[460px] mx-auto mb-14 leading-relaxed">
+          <p className="text-muted text-sm max-w-[460px] mb-14 leading-relaxed md:text-left">
             Your manager reviews every VOD — scored, honest, and specific to what actually happened. Not &ldquo;be more engaging.&rdquo; Actual notes.
           </p>
 
-          <div className="max-w-[700px] mx-auto">
-            <div className="bg-surface-2 border border-border rounded-t-2xl px-5 py-3 flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500/60" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-              <div className="w-3 h-3 rounded-full bg-neon/60" />
-              <div className="flex-1 mx-4">
-                <div className="bg-surface rounded-md px-3 py-1.5 text-xs text-muted text-center font-mono">
-                  levlcast.com/dashboard/vods/...
-                </div>
-              </div>
+          {/* Overlapping screenshot pair — report on left, feedback offset right */}
+          <div className="relative max-w-[960px] mx-auto">
+            <div className="md:w-[75%] rounded-2xl overflow-hidden border border-border shadow-glow-lg">
+              <img
+                src="/screenshots/coach-report.png"
+                alt="Stream coach report showing a score of 44 with specific priorities and missions for the next stream"
+                className="w-full h-auto"
+              />
             </div>
-
-            <div className="bg-surface border-x border-b border-border rounded-b-2xl overflow-hidden shadow-glow-lg">
-              {/* Header */}
-              <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/8" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.12) 0%, transparent 60%)" }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)", boxShadow: "0 0 12px rgba(139,92,246,0.4)" }}>
-                    <Zap size={14} style={{ color: "#a855f7" }} />
-                  </div>
-                  <span className="font-extrabold text-sm tracking-tight text-white">Stream Debrief</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-400/30">
-                    <Gamepad2 size={11} /> Gaming
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-white/35">
-                    <TrendingUp size={12} className="text-green-400" /> Building
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-5 space-y-4">
-                {/* Score hero */}
-                <div className="flex gap-5 items-center">
-                  {/* Score ring */}
-                  <div className="relative flex-shrink-0 w-28 h-28 flex items-center justify-center">
-                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 96 96">
-                      <circle cx="48" cy="48" r="36" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
-                      <circle cx="48" cy="48" r="36" fill="none" stroke="#facc15" strokeWidth="4"
-                        strokeDasharray="163 226" strokeLinecap="round"
-                        style={{ filter: "drop-shadow(0 0 8px #facc15)" }} />
-                    </svg>
-                    <div className="flex flex-col items-center">
-                      <span className="text-4xl font-extrabold leading-none text-yellow-400">68</span>
-                      <span className="text-[9px] text-white/30 font-medium">/100</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 min-w-0">
-                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/50">
-                      Volatile energy
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-400">
-                        Medium retention risk
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* #1 Priority */}
-                <div className="rounded-xl p-4 border border-white/8" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(255,255,255,0.02) 100%)" }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap size={13} style={{ color: "#a855f7" }} />
-                    <span className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "#a855f7" }}>#1 Priority</span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-white/85 font-medium">
-                    Your opening 20 minutes lost momentum — start your next stream mid-story, not mid-setup. Hook in the first 60 seconds or new viewers won&apos;t stay for the good part.
-                  </p>
-                </div>
-
-                {/* What Worked */}
-                <div className="bg-green-500/5 border border-green-500/15 rounded-xl p-4">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <span className="text-xs font-bold uppercase tracking-widest text-green-400">What Worked</span>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {[
-                      { label: "Going Off", detail: "Reactions at 1:12 were genuine and unfiltered — that energy is what clips are made of." },
-                      { label: "Chat Engagement", detail: "Strong callouts to regulars in the second hour kept momentum when the game slowed down." },
-                    ].map((s) => (
-                      <li key={s.label} className="text-sm text-white/65 flex gap-2">
-                        <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400/70" />
-                        <span><span className="font-bold text-white/90">{s.label}</span><span className="text-white/40"> — </span>{s.detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Fix for Next Stream */}
-                <div className="bg-yellow-500/5 border border-yellow-500/15 rounded-xl p-4">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <span className="text-xs font-bold uppercase tracking-widest text-yellow-400">Fix for Next Stream</span>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {[
-                      { label: "Cold Open", detail: "The first 20 minutes were too slow. Start with a story or take, not setup — new viewers decide in 60 seconds." },
-                      { label: "Dead Air", detail: "22s silence at 47:15 broke the energy you built. Fill slow gameplay with hot takes or questions to chat." },
-                    ].map((s) => (
-                      <li key={s.label} className="text-sm text-white/65 flex gap-2">
-                        <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-yellow-400/70" />
-                        <span><span className="font-bold text-white/90">{s.label}</span><span className="text-white/40"> — </span>{s.detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Your Missions */}
-                <div className="rounded-xl p-4 border" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(255,255,255,0.02) 100%)", borderColor: "rgba(139,92,246,0.2)" }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#a855f7" }}>Your Missions</span>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {[
-                      "Open next stream mid-story — have your first sentence ready before going live",
-                      "Respond to every new follower by name in the first hour",
-                      "End with a clip-worthy moment, not a slow fade-out",
-                    ].map((g, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 border text-[10px] font-extrabold" style={{ borderColor: "rgba(139,92,246,0.5)", color: "#a855f7", background: "rgba(139,92,246,0.15)" }}>
-                          {i + 1}
-                        </span>
-                        <span className="text-white/65 leading-relaxed">{g}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+            <div className="mt-5 md:mt-0 md:absolute md:right-0 md:bottom-[-40px] md:w-[60%] rounded-2xl overflow-hidden border border-border shadow-glow-lg bg-bg">
+              <img
+                src="/screenshots/coach-feedback.png"
+                alt="Detailed coaching feedback showing what worked and specific fixes for the next stream"
+                className="w-full h-auto"
+              />
             </div>
+            {/* Spacer for the overlapping element on desktop */}
+            <div className="hidden md:block h-16" />
           </div>
         </div>
       </section>
 
-      {/* ─── Streamer Type Examples ─── */}
+      {/* ─── Product Screenshots ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden">
         <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="flex justify-center mb-5">
-            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Adapts to you</span>
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">The full picture</span>
           </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
-            Your manager knows your stream type.
+            Track everything. Improve every stream.
           </h2>
           <p className="text-center text-muted text-sm max-w-[480px] mx-auto mb-14 leading-relaxed">
-            Gaming, just chatting, variety — LevlCast detects your style and tailors every piece of feedback, strategy, and recommendation to you.
+            VOD scores, content analytics, streamer health, and collab matches — all in one dashboard, updated after every stream.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Gaming */}
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-                <span className="text-xs font-bold text-white/60">Stream Coach Report</span>
-                <span className="text-xs text-purple-400 font-semibold">Building energy</span>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="flex items-center gap-2.5 bg-purple-500/10 border border-purple-500/20 rounded-xl px-3.5 py-2.5">
-                  <Gamepad2 size={14} className="text-purple-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-purple-400">Gaming Streamer</p>
-                    <p className="text-[11px] text-muted">Coaching for gameplay commentary and hype moments.</p>
-                  </div>
-                </div>
-                <div className="flex gap-3 items-center">
-                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-green-400/50 bg-green-400/5 flex-shrink-0">
-                    <span className="text-lg font-extrabold text-green-400">81</span>
-                    <span className="text-[9px] text-muted">/100</span>
-                  </div>
-                  <p className="text-xs text-muted leading-relaxed">Strong hype moments and sharp callouts — your reactions at 1:12:04 are exactly what clips are made of.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
-                    Genuine hype reactions — you don&apos;t fake excitement
-                  </div>
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
-                    Clear game narration keeps new viewers oriented
-                  </div>
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
-                    22s dead air at 47:15 — fill slow moments with commentary
-                  </div>
-                </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[11px] font-bold text-accent-light mb-1">#1 Priority</p>
-                  <p className="text-xs text-muted leading-relaxed">Your peak moments are genuinely clip-worthy. The gap is consistency — the slow stretches between kills lose the energy you built.</p>
-                </div>
-              </div>
+          {/* Staggered screenshot layout */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+            {/* Dashboard — slightly larger */}
+            <div className="md:col-span-7 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+              <img
+                src="/screenshots/dashboard.jpg"
+                alt="Dashboard showing recent stream scores, streamer health warning, VOD stats, and collab matches"
+                className="w-full h-auto"
+              />
             </div>
 
-            {/* Just Chatting */}
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-                <span className="text-xs font-bold text-white/60">Stream Coach Report</span>
-                <span className="text-xs text-yellow-400 font-semibold">Volatile energy</span>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl px-3.5 py-2.5">
-                  <MessageCircle size={14} className="text-blue-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-blue-400">Just Chatting</p>
-                    <p className="text-[11px] text-muted">Coaching for conversational energy and viewer connection.</p>
-                  </div>
-                </div>
-                <div className="flex gap-3 items-center">
-                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-yellow-400/50 bg-yellow-400/5 flex-shrink-0">
-                    <span className="text-lg font-extrabold text-yellow-400">63</span>
-                    <span className="text-[9px] text-muted">/100</span>
-                  </div>
-                  <p className="text-xs text-muted leading-relaxed">Strong personality in bursts but long stretches without talking to chat made the middle hour feel like a solo stream.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
-                    Hot takes land well — your opinion at 34:20 sparked real debate
-                  </div>
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
-                    Chat went unread for 8+ minutes twice — viewers feel ignored
-                  </div>
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
-                    Opening 15 minutes too slow — hook the audience immediately
-                  </div>
-                </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[11px] font-bold text-accent-light mb-1">#1 Priority</p>
-                  <p className="text-xs text-muted leading-relaxed">You have the personality. The problem is consistency — chat interaction has to be constant, not occasional, for a just chatting stream to retain viewers.</p>
-                </div>
-              </div>
+            {/* Analytics — offset down */}
+            <div className="md:col-span-5 md:translate-y-8 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+              <img
+                src="/screenshots/analytics.png"
+                alt="Analytics dashboard with stream quality trend over time, content breakdown, and follower growth"
+                className="w-full h-auto"
+              />
             </div>
 
-            {/* Variety */}
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-                <span className="text-xs font-bold text-white/60">Stream Coach Report</span>
-                <span className="text-xs text-green-400 font-semibold">Building energy</span>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="flex items-center gap-2.5 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3.5 py-2.5">
-                  <Shuffle size={14} className="text-orange-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-orange-400">Variety Streamer</p>
-                    <p className="text-[11px] text-muted">Coaching for content flexibility and audience versatility.</p>
-                  </div>
-                </div>
-                <div className="flex gap-3 items-center">
-                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-green-400/50 bg-green-400/5 flex-shrink-0">
-                    <span className="text-lg font-extrabold text-green-400">74</span>
-                    <span className="text-[9px] text-muted">/100</span>
-                  </div>
-                  <p className="text-xs text-muted leading-relaxed">Good energy across multiple games — transitions were smooth but the audience reset each time you switched content.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
-                    Comfortable across all content — personality stays consistent
-                  </div>
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400/70 flex-shrink-0 mt-1" />
-                    Funny moments spread evenly — not dependent on one game
-                  </div>
-                  <div className="flex gap-2 items-start text-xs text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 flex-shrink-0 mt-1" />
-                    Announce transitions to chat — switching games without warning loses context
-                  </div>
-                </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
-                  <p className="text-[11px] font-bold text-accent-light mb-1">#1 Priority</p>
-                  <p className="text-xs text-muted leading-relaxed">Variety works when your personality is the constant. You have that — now make transitions feel intentional, not accidental.</p>
-                </div>
-              </div>
+            {/* VOD list — full width, pulled up slightly */}
+            <div className="md:col-span-12 md:-mt-2 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+              <img
+                src="/screenshots/vod-list.png"
+                alt="VOD list showing 8 analyzed streams with scores and coach report links"
+                className="w-full h-auto"
+              />
             </div>
           </div>
         </div>
