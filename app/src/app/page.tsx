@@ -115,8 +115,7 @@ const proFeatures = [
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-bg text-white noise">
-      {/* Global mesh gradient */}
-      <div className="fixed inset-0 mesh-gradient pointer-events-none z-0" />
+      {/* Clean background — no gradient mesh */}
 
       <div className="relative z-[1]">
       <NavBar />
@@ -179,7 +178,6 @@ export default function LandingPage() {
 
       {/* ─── Pain points ─── */}
       <section className="py-20 border-t border-border relative overflow-hidden">
-        <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 md:text-left">
             You don&apos;t have a team. Now you do.
@@ -219,7 +217,6 @@ export default function LandingPage() {
 
       {/* ─── How It Works ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden" id="how-it-works">
-        <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">How it works</span>
@@ -272,7 +269,6 @@ export default function LandingPage() {
 
       {/* ─── What Your Manager Does ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden" id="features">
-        <div className="absolute inset-0 glow-left pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Your manager&apos;s toolkit</span>
@@ -348,7 +344,7 @@ export default function LandingPage() {
           <div className="relative max-w-[960px] mx-auto">
             <div className="md:w-[75%] rounded-2xl overflow-hidden border border-border shadow-glow-lg">
               <img
-                src="/screenshots/coach-report.png"
+                src="/screenshots/coach-report.jpg"
                 alt="Stream coach report showing a score of 44 with specific priorities and missions for the next stream"
                 className="w-full h-auto"
               />
@@ -368,7 +364,6 @@ export default function LandingPage() {
 
       {/* ─── Product Screenshots ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden">
-        <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="flex justify-center mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">The full picture</span>
@@ -414,7 +409,6 @@ export default function LandingPage() {
 
       {/* ─── Pricing ─── */}
       <section id="pricing" className="py-24 border-t border-border relative overflow-hidden">
-        <div className="absolute inset-0 glow-bottom pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="flex justify-center mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Pricing</span>
@@ -496,8 +490,6 @@ export default function LandingPage() {
 
       {/* ─── Final CTA ─── */}
       <section className="py-28 border-t border-border text-center relative overflow-hidden">
-        <div className="absolute inset-0 glow-bg pointer-events-none" />
-        <div className="absolute inset-0 grid-bg opacity-20 pointer-events-none" />
         <div className="relative max-w-[680px] mx-auto px-6">
           <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
             Your stream deserves
