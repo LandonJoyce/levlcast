@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Play, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare, HeartPulse, Users, Newspaper, Zap } from "lucide-react";
+import { Check, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare, HeartPulse, Users, Newspaper, Zap } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import FaqSection from "@/components/FaqSection";
 
@@ -122,78 +122,55 @@ export default function LandingPage() {
       <NavBar />
 
       {/* ─── Hero ─── */}
-      <section className="relative pt-40 pb-24 overflow-hidden">
-        {/* Grid + glow background */}
-        <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[600px] glow-bg-top pointer-events-none" />
+      <section className="relative pt-32 md:pt-40 pb-20 md:pb-28 overflow-hidden">
+        {/* Subtle glow — one side only, not centered */}
+        <div className="absolute -top-40 -left-40 w-[700px] h-[700px] bg-accent/[0.07] rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="relative max-w-[1080px] mx-auto px-6 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-accent/[0.08] border border-accent/[0.2] text-accent-light/80 text-[11px] font-semibold px-4 py-1.5 rounded-full tracking-[0.08em] mb-10">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-light/70 animate-pulse" />
-            Founding member pricing — limited spots
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-5xl sm:text-7xl md:text-8xl font-extrabold tracking-[-3px] leading-[1.02] mb-6">
-            Your Personal
-            <br />
-            <span className="text-gradient">Stream Manager.</span>
-          </h1>
-
-          {/* Subheadline */}
-          <p className="text-lg text-muted max-w-[580px] mx-auto mb-10 leading-relaxed">
-            LevlCast watches your VODs and tells you — specifically — what to fix. The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live. Real coaching on your actual stream, so every session makes you sharper.
-          </p>
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-5">
-            <Link
-              href="/auth/login"
-              className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-7 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:scale-[0.97] w-full sm:w-auto justify-center"
-            >
-              Get Your Manager Free
-              <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-            </Link>
-            <button
-              disabled
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 border border-white/[0.08] text-white/25 font-medium px-8 py-4 rounded-full text-base cursor-not-allowed"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              Demo coming soon
-            </button>
-          </div>
-          <p className="text-xs text-muted">Free to start. No credit card required.</p>
-
-          {/* Mock dashboard preview */}
-          <div className="mt-16 max-w-2xl mx-auto">
-            <div className="card-accent p-5 rounded-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Newspaper size={14} className="text-blue-400" />
-                  <span className="text-xs text-muted font-semibold uppercase tracking-wide">Weekly Digest</span>
-                </div>
-                <span className="text-xs text-muted">Monday 9am</span>
+        <div className="relative max-w-[1080px] mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-center">
+            {/* Left — text */}
+            <div className="md:col-span-6 lg:col-span-5">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 bg-accent/[0.08] border border-accent/[0.2] text-accent-light/80 text-[11px] font-semibold px-4 py-1.5 rounded-full tracking-[0.08em] mb-8">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-light/70 animate-pulse" />
+                Founding member pricing — limited spots
               </div>
-              <p className="text-sm font-semibold text-white mb-3 text-left">
-                4 streams this week, avg 76 score, +120 followers. Your hype content is outperforming everything else by 2x.
+
+              {/* Headline */}
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-[-2px] leading-[1.05] mb-6">
+                Your Personal
+                <br />
+                <span className="text-gradient">Stream Manager.</span>
+              </h1>
+
+              {/* Subheadline */}
+              <p className="text-base text-muted max-w-[480px] mb-8 leading-relaxed">
+                LevlCast watches your VODs and tells you — specifically — what to fix. The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live. Real coaching on your actual stream, so every session makes you sharper.
               </p>
-              <div className="flex flex-wrap gap-2 mb-3">
-                <span className="text-[11px] bg-green-500/10 text-green-400 border border-green-500/20 px-2.5 py-1 rounded-full font-semibold">Health: Good</span>
-                <span className="text-[11px] bg-accent/10 text-accent-light border border-accent/20 px-2.5 py-1 rounded-full font-semibold">3 collab matches</span>
-                <span className="text-[11px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2.5 py-1 rounded-full font-semibold">2 action items</span>
+
+              {/* CTA */}
+              <div className="flex flex-col sm:flex-row items-start gap-4 mb-4">
+                <Link
+                  href="/auth/login"
+                  className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-7 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:scale-[0.97]"
+                >
+                  Get Your Manager Free
+                  <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                </Link>
               </div>
-              <div className="space-y-1.5 text-left">
-                <div className="flex items-start gap-2 text-xs text-white/70">
-                  <span className="text-accent-light mt-0.5">1.</span>
-                  Double down on hype content this week — it's driving 60% of your follower growth
-                </div>
-                <div className="flex items-start gap-2 text-xs text-white/70">
-                  <span className="text-accent-light mt-0.5">2.</span>
-                  Check your new collab matches — one streams the same games with a similar audience
-                </div>
+              <p className="text-xs text-muted">Free to start. No credit card required.</p>
+            </div>
+
+            {/* Right — real screenshot */}
+            <div className="md:col-span-6 lg:col-span-7 md:translate-y-4">
+              <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
+                <img
+                  src="/screenshots/coach-report.png"
+                  alt="AI coach report showing a stream score of 44 with specific priorities and missions"
+                  className="w-full h-auto"
+                />
               </div>
             </div>
           </div>
