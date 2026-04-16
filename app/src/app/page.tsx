@@ -394,8 +394,8 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Analytics — offset down */}
-            <div className="md:col-span-5 md:translate-y-8 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+            {/* Analytics */}
+            <div className="md:col-span-5 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
                 src="/screenshots/analytics.png"
                 alt="Analytics dashboard with stream quality trend over time, content breakdown, and follower growth"
@@ -403,8 +403,8 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* VOD list — full width, pulled up slightly */}
-            <div className="md:col-span-12 md:-mt-2 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+            {/* VOD list — full width */}
+            <div className="md:col-span-12 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
                 src="/screenshots/vod-list.png"
                 alt="VOD list showing 8 analyzed streams with scores and coach report links"
