@@ -87,55 +87,63 @@ function buildTranscript(segments: TranscriptSegment[]): string {
  * Snap a peak's boundaries to the nearest utterance boundaries.
  * Prevents clips from starting/ending mid-sentence.
  * If the timestamp falls in a gap between utterances, finds the closest one.
+ * Caps expansion at MAX_SNAP_DRIFT seconds to prevent clips ballooning over speech gaps.
  */
 function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): Peak {
   if (segments.length === 0) return peak;
 
-  // Find the nearest utterance start at or before peak.start
+  const MAX_SNAP_DRIFT = 10; // never push a boundary more than 10s from Claude's pick
+
+  // Find the nearest utterance start at or before peak.start (within drift limit)
   let snappedStart = peak.start;
   let bestStartDist = Infinity;
   for (const seg of segments) {
-    // Prefer utterances that start at or before the peak start
     if (seg.start <= peak.start) {
       const dist = peak.start - seg.start;
-      if (dist < bestStartDist) {
+      if (dist < bestStartDist && dist <= MAX_SNAP_DRIFT) {
         bestStartDist = dist;
         snappedStart = seg.start;
       }
     }
   }
-  // If nothing was before peak.start, find the closest utterance after
+  // If nothing was before peak.start within drift, find the closest utterance after (within drift)
   if (bestStartDist === Infinity) {
     for (const seg of segments) {
       const dist = Math.abs(seg.start - peak.start);
-      if (dist < bestStartDist) {
+      if (dist < bestStartDist && dist <= MAX_SNAP_DRIFT) {
         bestStartDist = dist;
         snappedStart = seg.start;
       }
     }
   }
 
-  // Find the nearest utterance end at or after peak.end
+  // Find the nearest utterance end at or after peak.end (within drift limit)
   let snappedEnd = peak.end;
   let bestEndDist = Infinity;
   for (const seg of segments) {
     if (seg.end >= peak.end) {
       const dist = seg.end - peak.end;
-      if (dist < bestEndDist) {
+      if (dist < bestEndDist && dist <= MAX_SNAP_DRIFT) {
         bestEndDist = dist;
         snappedEnd = seg.end;
       }
     }
   }
-  // If nothing was after peak.end, find the closest utterance before
+  // If nothing was after peak.end within drift, find the closest utterance before (within drift)
   if (bestEndDist === Infinity) {
     for (const seg of segments) {
       const dist = Math.abs(seg.end - peak.end);
-      if (dist < bestEndDist) {
+      if (dist < bestEndDist && dist <= MAX_SNAP_DRIFT) {
         bestEndDist = dist;
         snappedEnd = seg.end;
       }
     }
+  }
+
+  // Enforce max clip duration (90s) — trim end if snap expanded too much
+  const MAX_CLIP_DURATION = 90;
+  if (snappedEnd - snappedStart > MAX_CLIP_DURATION) {
+    snappedEnd = snappedStart + MAX_CLIP_DURATION;
   }
 
   if (snappedEnd - snappedStart >= 15) {
@@ -336,10 +344,27 @@ export async function detectPeaks(
   const rerankResponse = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 512,
-    system: `You are a viral content strategist selecting the best clips from a Twitch stream for TikTok.`,
+    system: `You are a viral content strategist selecting the best clips from a Twitch stream for TikTok. You are ruthlessly selective — you would rather return fewer clips than include mediocre ones.`,
     messages: [{
       role: "user",
-      content: `From these ${topCandidates.length} candidate clips, pick the ${MAX_PEAKS} with the highest viral potential for TikTok. Prioritize clips that work standalone with no context, have a strong hook in the first 3 seconds, and have clear emotional payoff. Return ONLY a JSON array of their 1-based numbers, e.g. [2, 5, 7, 11, 14, 16]. No explanation.\n\nCandidates:\n${candidateSummary}`,
+      content: `From these ${topCandidates.length} candidate clips, pick the BEST ${MAX_PEAKS} (or fewer if quality drops off) for TikTok.
+
+SELECTION CRITERIA — in order of importance:
+1. Works standalone with ZERO context — a stranger who never watched this streamer would still care
+2. Strong hook in the first 3 seconds — exclamation, reaction, or unexpected statement
+3. Clear emotional payoff — the clip builds to something and delivers
+4. The "reason" describes a genuine peak moment, not just normal conversation
+
+REJECT candidates where:
+- The reason describes normal conversation or generic commentary, not a real reaction
+- The moment only matters with full stream context
+- The streamer sounds flat or monotone based on the description
+- The score is barely above 0.60 and the reason is weak
+
+Return ONLY a JSON array of their 1-based numbers, e.g. [2, 5, 7, 11, 14, 16]. No explanation.
+
+Candidates:
+${candidateSummary}`,
     }],
   }), 3, 1000);
 
