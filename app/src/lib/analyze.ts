@@ -86,23 +86,55 @@ function buildTranscript(segments: TranscriptSegment[]): string {
 /**
  * Snap a peak's boundaries to the nearest utterance boundaries.
  * Prevents clips from starting/ending mid-sentence.
+ * If the timestamp falls in a gap between utterances, finds the closest one.
  */
 function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): Peak {
   if (segments.length === 0) return peak;
 
+  // Find the nearest utterance start at or before peak.start
   let snappedStart = peak.start;
+  let bestStartDist = Infinity;
   for (const seg of segments) {
-    if (seg.start <= peak.start && seg.end >= peak.start) {
-      snappedStart = seg.start;
-      break;
+    // Prefer utterances that start at or before the peak start
+    if (seg.start <= peak.start) {
+      const dist = peak.start - seg.start;
+      if (dist < bestStartDist) {
+        bestStartDist = dist;
+        snappedStart = seg.start;
+      }
+    }
+  }
+  // If nothing was before peak.start, find the closest utterance after
+  if (bestStartDist === Infinity) {
+    for (const seg of segments) {
+      const dist = Math.abs(seg.start - peak.start);
+      if (dist < bestStartDist) {
+        bestStartDist = dist;
+        snappedStart = seg.start;
+      }
     }
   }
 
+  // Find the nearest utterance end at or after peak.end
   let snappedEnd = peak.end;
+  let bestEndDist = Infinity;
   for (const seg of segments) {
-    if (seg.start <= peak.end && seg.end >= peak.end) {
-      snappedEnd = seg.end;
-      break;
+    if (seg.end >= peak.end) {
+      const dist = seg.end - peak.end;
+      if (dist < bestEndDist) {
+        bestEndDist = dist;
+        snappedEnd = seg.end;
+      }
+    }
+  }
+  // If nothing was after peak.end, find the closest utterance before
+  if (bestEndDist === Infinity) {
+    for (const seg of segments) {
+      const dist = Math.abs(seg.end - peak.end);
+      if (dist < bestEndDist) {
+        bestEndDist = dist;
+        snappedEnd = seg.end;
+      }
     }
   }
 
@@ -167,20 +199,35 @@ VERBAL PATTERNS THAT ALMOST ALWAYS MAKE GREAT CLIPS — actively look for these:
 - Genuine frustration, rage, or hype clearly expressed out loud
 - Anything where the streamer goes loud, fast, or emotional in their speech rhythm
 
+WHAT IS NOT A CLIP — do NOT select these:
+- Normal conversation that happens to mention an interesting topic but has no emotional peak or reaction
+- Generic commentary or narration ("ok so now we're going to...", "alright let's see...")
+- Moments that only make sense with full stream context — if a stranger wouldn't care, skip it
+- Quiet moments, setup time, or intro segments — silence is not a clip
+- Anything where the streamer sounds flat, tired, or monotone — energy is required
+- Moments where the streamer is just reading chat or donations without adding personality
+
 SOURCE QUALITY:
 This transcript was pre-filtered using speaker diarization to include only the streamer's voice — game audio, music, and NPC dialogue have been removed. Every line is something the streamer actually said. If you still see anything that looks like scripted dialogue or song lyrics, skip it — it slipped through the filter.
 
-SCORING (0.0 - 1.0):
+SCORING — be harsh. Most streams only have 1-3 genuinely good clips. Do NOT inflate scores to fill the 3-6 range. If only 2 moments clear the bar, return 2. An honest empty list is better than 6 mediocre clips.
 - 0.85-1.0: Stops mid-scroll. Strong hook in first 3 seconds, universal reaction, needs zero context.
 - 0.70-0.84: Strong clip. Clear emotional peak with payoff, works standalone.
 - 0.60-0.69: Decent clip. Relatable with minimal context.
-- Below 0.60: Skip.
+- Below 0.60: Not a clip. Do not include.
 
-CLIP BOUNDARIES — be precise:
-- Start: 4-6 seconds BEFORE the peak moment so the setup is there
-- End: 3-5 seconds AFTER the reaction so it fully lands
-- Duration: 30-90 seconds total. Sweet spot is 45-75 seconds.
-- Land on complete sentences — never cut mid-utterance
+CLIP BOUNDARIES — THIS IS CRITICAL, read carefully:
+Your timestamps MUST match the transcript. Do not estimate or approximate — find the EXACT utterance timestamps from the transcript that contain the peak moment.
+
+Step-by-step for each clip:
+1. Find the KEY utterance — the exact line in the transcript where the peak reaction happens
+2. Read the timestamp on that line — this is your anchor point
+3. Start = the timestamp of the utterance 1-2 lines BEFORE the key utterance (for setup/context)
+4. End = the timestamp of the utterance 1-2 lines AFTER the key utterance (for the reaction to land)
+5. Verify: are all the words you're quoting in "reason" actually between your start and end times? If not, adjust.
+
+Duration: 30-90 seconds total. Sweet spot is 45-75 seconds.
+Land on complete sentences — never cut mid-utterance.
 
 Timestamps are plain seconds (e.g. 813 = 813 seconds into the stream).
 Output "start" and "end" as plain integers. Minimum clip length: 20 seconds.
@@ -190,17 +237,17 @@ Respond with ONLY a JSON array (no markdown, no code fences):
 [
   {
     "title": "<hook-style title under 60 chars — what the streamer said or reacted to>",
-    "start": <start time as plain integer seconds>,
-    "end": <end time as plain integer seconds>,
+    "start": <start time as plain integer seconds — must be the timestamp of a real utterance in the transcript>,
+    "end": <end time as plain integer seconds — must be the timestamp of a real utterance in the transcript>,
     "score": <virality score 0.0-1.0>,
     "category": "<hype | funny | emotional | educational>",
-    "reason": "<why this will perform — quote the exact words from the transcript that signal the peak>",
+    "reason": "<why this will perform — quote the EXACT words from the transcript that signal the peak, with their timestamps>",
     "hook": "<what happens in the opening 3 seconds that stops someone scrolling>",
     "caption": "<TikTok caption under 150 chars — conversational, not salesy, 3-4 relevant hashtags>"
   }
 ]
 
-Return 3-6 peaks sorted by score descending. If nothing clears 0.60, return [].`;
+Return 1-6 peaks sorted by score descending. If nothing clears 0.60, return []. It is better to return fewer high-quality clips than to pad with mediocre ones.`;
 }
 
 async function runPeakDetection(
@@ -587,7 +634,16 @@ ${categoryGuideBlock}`;
         role: "user",
         content: `Review this Twitch stream and produce a coaching report the streamer can act on immediately.
 
-IMPORTANT: This transcript has been pre-filtered using speaker diarization to include ONLY the streamer's voice. Game audio, NPC dialogue, music, and other speakers have already been removed. Every line you read is something the streamer actually said. Dead air gaps in the transcript reflect real silence from the streamer — not background audio.
+IMPORTANT: This transcript has been pre-filtered using speaker diarization to include ONLY the streamer's voice. Game audio, NPC dialogue, music, and other speakers have already been removed. Every line you read is something the streamer actually said.
+
+SILENCE CONTEXT — read this before judging dead air:
+Dead air gaps in the transcript CAN mean the streamer was silent, BUT they can also mean:
+- The streamer was watching content (a video, movie, short film, YouTube video) — silence during watch-alongs is NORMAL and expected. No one wants the streamer talking over every second of a video.
+- The streamer had intro music/BRB screen playing while setting up — the first 1-3 minutes of silence is almost always setup time, not a cold open problem.
+- The streamer was in an intense gameplay moment where focus silence is natural (clutch plays, boss fights, tense situations).
+- The game itself has cinematic cutscenes the streamer is watching.
+
+Only flag silence as a real problem when the streamer SHOULD have been talking but wasn't — during downtime, between matches, during loading screens, or when chat is active and being ignored. Intentional silence during content consumption or intense gameplay is not dead air.
 
 STREAM INFO:
 - Title: "${vodTitle}"
@@ -657,7 +713,7 @@ OUTPUT RULES:
 - Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
 - Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
-- Cold open: score the first 5 minutes only. "strong" = hooked immediately, energy and presence from first words. "average" = took a few minutes to find footing. "weak" = opened cold, silent, or directionless. Note: 1 sentence, specific to what actually happened in those first minutes.
+- Cold open: score the first 5 minutes only. "strong" = hooked immediately, energy and presence from first words. "average" = took a few minutes to find footing. "weak" = opened cold, directionless, or clearly disengaged. Note: 1 sentence, specific to what actually happened in those first minutes. IMPORTANT: many streamers have 1-3 minutes of intro screen/music/setup before they start talking — this is normal and NOT a weak cold open. Judge from when they actually start speaking, not from timestamp 0:00.
 - momentum_crash: use the crash data provided. Describe the exact stretch where the stream flatlined and what the streamer should have done differently at that moment.
 - trend_vs_history: only populate if prior stream history is provided. Be direct — "improving", "declining", or "consistent". Name specific streams or scores if relevant.
 - No emojis. No padding. No filler.
