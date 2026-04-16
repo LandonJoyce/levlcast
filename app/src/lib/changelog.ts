@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8",
+    date: "2026-04-15",
+    title: "The Honest Coach Patch",
+    items: [
+      { type: "improved", text: "Landing page now leads with what the coach actually does — specific fixes for dead air, slow openings, and the habits you can't see while you're live" },
+      { type: "improved", text: "Gaming VODs are now correctly classified even when the transcript is quiet (game audio is stripped by speaker filtering) — the coach reads the stream title to know what you're actually playing" },
+      { type: "new",      text: "Positioning: real coaching for streamers growing the honest way — no bots, no shortcuts, just feedback on what you actually did" },
+    ],
+  },
+  {
     version: "v0.7",
     date: "2026-04-12",
     title: "The Visibility Patch",

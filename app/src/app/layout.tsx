@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s | LevlCast",
   },
   description:
-    "LevlCast is your personal streaming manager — coaching every stream, detecting burnout, finding collabs, and delivering a weekly game plan. Free to start.",
+    "LevlCast watches your Twitch VODs and tells you exactly what to fix — dead air, slow openings, weak engagement. Real coaching for streamers growing the honest way. Free to start.",
   keywords: [
     "twitch stream manager",
     "personal streaming manager",
@@ -40,16 +40,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast — Your Personal Streaming Manager",
+    title: "LevlCast — AI Stream Coach for Twitch Streamers",
     description:
-      "Your personal streaming manager — AI coaching, burnout detection, content strategy, collab matching, and a weekly game plan. Free to start.",
+      "AI coach that reviews your Twitch VODs and tells you specifically what to fix — dead air, slow openings, weak engagement. Real feedback, real growth.",
     siteName: "LevlCast",
   },
   twitter: {
     card: "summary_large_image",
-    title: "LevlCast — Your Personal Streaming Manager",
+    title: "LevlCast — AI Stream Coach for Twitch Streamers",
     description:
-      "Your personal streaming manager — AI coaching, burnout detection, content strategy, collab matching, and a weekly game plan. Free to start.",
+      "AI coach that reviews your Twitch VODs and tells you specifically what to fix. Real feedback, real growth.",
     site: "@levlcast",
   },
   manifest: "/manifest.json",

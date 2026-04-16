@@ -142,8 +142,8 @@ export default function LandingPage() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg text-muted max-w-[560px] mx-auto mb-10 leading-relaxed">
-            LevlCast manages your streaming career — coaching every stream, tracking your health, finding collabs, and telling you exactly what to focus on each week.
+          <p className="text-lg text-muted max-w-[580px] mx-auto mb-10 leading-relaxed">
+            LevlCast watches your VODs and tells you — specifically — what to fix. The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live. Real coaching for streamers growing the honest way.
           </p>
 
           {/* CTAs */}
@@ -224,8 +224,8 @@ export default function LandingPage() {
               },
               {
                 icon: MessageSquare,
-                title: "No feedback after you go live",
-                desc: "You don't know if that stream was good, bad, or average. There's no scorecard, no review, no plan for next time.",
+                title: "You don't know why it's not growing",
+                desc: "The habits holding you back — dead air, weak openings, ignored chat — are invisible to you in the moment. No one watches back your VODs and tells you the truth.",
               },
             ].map((item) => {
               const Icon = item.icon;
@@ -691,10 +691,10 @@ export default function LandingPage() {
 
       {/* ─── Built by a streamer ─── */}
       <section className="py-20 border-t border-border">
-        <div className="max-w-[640px] mx-auto px-6 text-center">
-          <p className="text-lg font-bold mb-3">Built by a streamer who needed a manager.</p>
+        <div className="max-w-[680px] mx-auto px-6 text-center">
+          <p className="text-lg font-bold mb-3">Built for streamers growing the honest way.</p>
           <p className="text-sm text-muted leading-relaxed">
-            LevlCast exists because growth stalled and there was no one to ask why. No coach, no manager, no feedback loop. So we built one.
+            Growth stalls. No one tells you why. The market is full of shortcuts — view bots, fake chat, inflated numbers — that don&apos;t actually build an audience. LevlCast is the opposite of that: a real feedback loop for real streamers. The fixes are specific, the growth is yours, and the results compound.
           </p>
         </div>
       </section>
@@ -712,8 +712,8 @@ export default function LandingPage() {
             <br />
             <span className="text-gradient">a manager.</span>
           </h2>
-          <p className="text-muted text-sm mb-10 max-w-[400px] mx-auto leading-relaxed">
-            Connect Twitch and get your first coaching report free. Your personal streaming manager starts working immediately.
+          <p className="text-muted text-sm mb-10 max-w-[440px] mx-auto leading-relaxed">
+            Connect Twitch and get your first coaching report free. Find out exactly what&apos;s holding your stream back — and what to do about it next time you go live.
           </p>
           <Link
             href="/auth/login"
