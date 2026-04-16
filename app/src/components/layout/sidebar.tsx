@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   TrendingUp,
   PenLine,
+  Twitch,
 } from "lucide-react";
 
 const navGroups = [
@@ -34,6 +35,7 @@ const navGroups = [
     items: [
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/dashboard/grow", label: "Growth", icon: TrendingUp },
+      { href: "/dashboard/twitch-panel", label: "Twitch Panel", icon: Twitch },
     ],
   },
   {

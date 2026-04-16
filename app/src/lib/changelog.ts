@@ -27,6 +27,7 @@ export const changelog: ChangelogEntry[] = [
       { type: "improved", text: "Landing page now leads with what the coach actually does — specific fixes for dead air, slow openings, and the habits you can't see while you're live" },
       { type: "improved", text: "Gaming VODs are now correctly classified even when the transcript is quiet (game audio is stripped by speaker filtering) — the coach reads the stream title to know what you're actually playing" },
       { type: "new",      text: "Sharper positioning: real coaching on your actual stream, so every session makes you sharper than the last" },
+      { type: "new",      text: "Twitch Panel — download a 'Coached by LevlCast' panel to put under your Twitch stream. Takes 30 seconds and shows your viewers you take growth seriously" },
     ],
   },
   {
