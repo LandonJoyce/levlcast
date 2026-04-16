@@ -232,6 +232,15 @@ WHAT IS NOT A CLIP — do NOT select these:
 - Anything where the streamer sounds flat, tired, or monotone — energy is required
 - Moments where the streamer is just reading chat or donations without adding personality
 
+CATEGORIES — pick the one that best fits the moment:
+- hype: excitement, celebration, big wins, "let's go" energy
+- funny: comedy, unexpected humor, jokes that land, absurd moments
+- emotional: vulnerability, heartfelt moments, genuine connection with chat
+- educational: teaching something, explaining a strategy, sharing knowledge
+- clutch_play: close calls, last-second saves, high-skill plays, "how did that work" moments
+- rage: genuine frustration, salt, tilt, getting tilted at the game or a situation
+- wholesome: kind moments, community love, heartwarming interactions
+
 SOURCE QUALITY:
 This transcript was pre-filtered using speaker diarization to include only the streamer's voice — game audio, music, and NPC dialogue have been removed. Every line is something the streamer actually said. If you still see anything that looks like scripted dialogue or song lyrics, skip it — it slipped through the filter.
 
@@ -265,7 +274,7 @@ Respond with ONLY a JSON array (no markdown, no code fences):
     "start": <start time as plain integer seconds — must be the timestamp of a real utterance in the transcript>,
     "end": <end time as plain integer seconds — must be the timestamp of a real utterance in the transcript>,
     "score": <virality score 0.0-1.0>,
-    "category": "<hype | funny | emotional | educational>",
+    "category": "<hype | funny | emotional | educational | clutch_play | rage | wholesome>",
     "reason": "<why this will perform — quote the EXACT words from the transcript that signal the peak, with their timestamps>",
     "hook": "<what happens in the opening 3 seconds that stops someone scrolling>",
     "caption": "<TikTok caption under 150 chars — conversational, not salesy, 3-4 relevant hashtags>"
