@@ -377,32 +377,49 @@ export default async function AnalyticsPage() {
             })()}
 
             {/* Category breakdown */}
-            {sortedCategories.length > 0 && (
-              <div className="bg-surface border border-border rounded-2xl p-6">
-                <h2 className="text-sm font-bold text-white mb-6">What Gets You Clipped</h2>
-                <div className="space-y-3">
-                  {sortedCategories.slice(0, 6).map(([cat, count]) => {
-                    const label = CATEGORY_LABELS[cat] || cat;
-                    const color = CATEGORY_COLORS[cat] || "#a78bfa";
-                    const pct = Math.round((count / totalPeaks) * 100);
-                    return (
-                      <div key={cat}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-white/80">{label}</span>
-                          <span className="text-xs text-muted">{count} moments · {pct}%</span>
+            {sortedCategories.length > 0 && (() => {
+              const GLOW: Record<string, { text: string; shadow: string; border: string; bg: string }> = {
+                hype:        { text: "text-purple-300", shadow: "0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.2)", border: "border-purple-500/40", bg: "bg-purple-500/10" },
+                funny:       { text: "text-yellow-300", shadow: "0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.2)",  border: "border-yellow-500/40", bg: "bg-yellow-500/10" },
+                educational: { text: "text-blue-300",   shadow: "0 0 20px rgba(59,130,246,0.5), 0 0 40px rgba(59,130,246,0.2)",   border: "border-blue-500/40",   bg: "bg-blue-500/10" },
+                emotional:   { text: "text-red-300",    shadow: "0 0 20px rgba(239,68,68,0.5), 0 0 40px rgba(239,68,68,0.2)",     border: "border-red-500/40",    bg: "bg-red-500/10" },
+                clutch_play: { text: "text-emerald-300",shadow: "0 0 20px rgba(16,185,129,0.5), 0 0 40px rgba(16,185,129,0.2)",   border: "border-emerald-500/40", bg: "bg-emerald-500/10" },
+                rage:        { text: "text-red-300",    shadow: "0 0 20px rgba(239,68,68,0.5), 0 0 40px rgba(239,68,68,0.2)",     border: "border-red-500/40",    bg: "bg-red-500/10" },
+                wholesome:   { text: "text-violet-300", shadow: "0 0 20px rgba(167,139,250,0.5), 0 0 40px rgba(167,139,250,0.2)", border: "border-violet-500/40", bg: "bg-violet-500/10" },
+              };
+              return (
+                <div className="bg-surface border border-border rounded-2xl p-6">
+                  <h2 className="text-sm font-bold text-white mb-5">What Gets You Clipped</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {sortedCategories.slice(0, 6).map(([cat, count], i) => {
+                      const label = CATEGORY_LABELS[cat] || cat;
+                      const pct = Math.round((count / totalPeaks) * 100);
+                      const glow = GLOW[cat];
+                      const isDominant = i === 0;
+                      return (
+                        <div
+                          key={cat}
+                          className={`px-3.5 py-2 rounded-xl border transition-all ${
+                            isDominant && glow
+                              ? `${glow.bg} ${glow.border} ${glow.text}`
+                              : "bg-white/[0.03] border-white/[0.06] text-muted"
+                          }`}
+                          style={isDominant && glow ? { boxShadow: glow.shadow } : undefined}
+                        >
+                          <span className={`text-sm font-bold ${isDominant && glow ? glow.text : "text-white/50"}`}>
+                            {label}
+                          </span>
+                          <span className={`text-xs ml-1.5 ${isDominant ? "text-white/50" : "text-white/20"}`}>
+                            {pct}%
+                          </span>
                         </div>
-                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: `${pct}%`, backgroundColor: color }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted mt-3">{totalPeaks} clip moments total</p>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Follower trend */}
