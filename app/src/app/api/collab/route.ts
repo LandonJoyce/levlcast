@@ -44,22 +44,26 @@ export async function GET(request: Request) {
         }
       }
 
-      enriched = suggestions.map((s) => {
-        if (s.is_external) {
+      enriched = suggestions
+        .map((s) => {
+          if (s.is_external) {
+            return {
+              ...s,
+              display_name: s.twitch_display_name || "Streamer",
+              avatar_url: s.twitch_avatar_url || null,
+              twitch_login: s.twitch_login,
+            };
+          }
+          const profile = profileMap[s.match_user_id];
           return {
             ...s,
-            display_name: s.twitch_display_name || "Streamer",
-            avatar_url: s.twitch_avatar_url || null,
-            twitch_login: s.twitch_login,
+            display_name: profile?.twitch_display_name || null,
+            avatar_url: profile?.twitch_avatar_url || null,
+            twitch_login: profile?.twitch_login || null,
           };
-        }
-        return {
-          ...s,
-          display_name: profileMap[s.match_user_id]?.twitch_display_name || "Streamer",
-          avatar_url: profileMap[s.match_user_id]?.twitch_avatar_url || null,
-          twitch_login: profileMap[s.match_user_id]?.twitch_login || null,
-        };
-      });
+        })
+        // Hide internal matches with no Twitch login — can't message them
+        .filter((s) => s.twitch_login);
     }
 
     return NextResponse.json({
