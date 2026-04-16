@@ -26,7 +26,7 @@ export const changelog: ChangelogEntry[] = [
     items: [
       { type: "improved", text: "Landing page now leads with what the coach actually does — specific fixes for dead air, slow openings, and the habits you can't see while you're live" },
       { type: "improved", text: "Gaming VODs are now correctly classified even when the transcript is quiet (game audio is stripped by speaker filtering) — the coach reads the stream title to know what you're actually playing" },
-      { type: "new",      text: "Positioning: real coaching for streamers growing the honest way — no bots, no shortcuts, just feedback on what you actually did" },
+      { type: "new",      text: "Sharper positioning: real coaching on your actual stream, so every session makes you sharper than the last" },
     ],
   },
   {

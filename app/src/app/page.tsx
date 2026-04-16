@@ -143,7 +143,7 @@ export default function LandingPage() {
 
           {/* Subheadline */}
           <p className="text-lg text-muted max-w-[580px] mx-auto mb-10 leading-relaxed">
-            LevlCast watches your VODs and tells you — specifically — what to fix. The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live. Real coaching for streamers growing the honest way.
+            LevlCast watches your VODs and tells you — specifically — what to fix. The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live. Real coaching on your actual stream, so every session makes you sharper.
           </p>
 
           {/* CTAs */}
@@ -692,9 +692,9 @@ export default function LandingPage() {
       {/* ─── Built by a streamer ─── */}
       <section className="py-20 border-t border-border">
         <div className="max-w-[680px] mx-auto px-6 text-center">
-          <p className="text-lg font-bold mb-3">Built for streamers growing the honest way.</p>
+          <p className="text-lg font-bold mb-3">Built for streamers who want real growth.</p>
           <p className="text-sm text-muted leading-relaxed">
-            Growth stalls. No one tells you why. The market is full of shortcuts — view bots, fake chat, inflated numbers — that don&apos;t actually build an audience. LevlCast is the opposite of that: a real feedback loop for real streamers. The fixes are specific, the growth is yours, and the results compound.
+            Growth stalls and no one tells you why. Big streamers have coaches and managers pointing at the exact things to fix. You&apos;ve been doing it alone. LevlCast is the feedback loop you&apos;ve been missing — specific notes on your actual stream, so every session makes you sharper than the last.
           </p>
         </div>
       </section>
