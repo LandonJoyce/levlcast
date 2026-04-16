@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const CATEGORY_LABELS: Record<string, string> = {
   hype: "Hype",
-  funny: "Funny",
+  funny: "Comedy",
   educational: "Educational",
   emotional: "Emotional",
   clutch_play: "Clutch Plays",

@@ -21,7 +21,7 @@ const CATEGORY_STYLE: Record<string, string> = {
 
 const CATEGORY_LABELS: Record<string, string> = {
   hype: "Hype",
-  funny: "Funny",
+  funny: "Comedy",
   educational: "Educational",
   emotional: "Emotional",
 };

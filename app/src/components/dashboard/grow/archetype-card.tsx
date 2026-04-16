@@ -170,7 +170,7 @@ const CATEGORY_GLOW: Record<string, { text: string; shadow: string; border: stri
 
 const CATEGORY_LABELS: Record<string, string> = {
   hype: "Hype",
-  funny: "Funny",
+  funny: "Comedy",
   educational: "Educational",
   emotional: "Emotional",
 };
