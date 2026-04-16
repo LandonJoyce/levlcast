@@ -1,97 +1,63 @@
 import Link from "next/link";
-import { Check, Twitch, Brain, Scissors, TrendingUp, BarChart2, MessageSquare, HeartPulse, Users, Newspaper, Zap } from "lucide-react";
+import { Check } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import FaqSection from "@/components/FaqSection";
 
 /* ─── How It Works steps ─── */
 const steps = [
   {
-    icon: Twitch,
     num: "01",
     label: "Connect Twitch",
     desc: "Sign in with Twitch. Your VODs sync automatically. Nothing to upload, nothing to configure.",
-    color: "text-[#9146FF]",
-    bg: "bg-[#9146FF]/10",
-    border: "border-[#9146FF]/20",
   },
   {
-    icon: Brain,
     num: "02",
     label: "AI Analyzes Everything",
     desc: "Every stream gets a full breakdown — peak moments, quality score, content style, and what's actually working.",
-    color: "text-accent-light",
-    bg: "bg-accent/10",
-    border: "border-accent/20",
   },
   {
-    icon: Zap,
     num: "03",
     label: "Get Your Game Plan",
     desc: "Monday morning, your manager delivers a weekly digest with action items, health signals, and growth strategy.",
-    color: "text-cyan",
-    bg: "bg-cyan/10",
-    border: "border-cyan/20",
   },
   {
-    icon: TrendingUp,
     num: "04",
     label: "Grow on Autopilot",
     desc: "Generate clips from your best moments, find collab partners, and track what's actually moving the needle.",
-    color: "text-neon",
-    bg: "bg-neon/10",
-    border: "border-neon/20",
   },
 ];
 
 /* ─── Manager features ─── */
 const managerFeatures = [
   {
-    icon: Brain,
     title: "Stream Coaching",
     desc: "After every stream, get a scored report with what worked, what didn't, and specific goals for next time. Not generic advice — feedback on your actual VOD.",
-    color: "text-accent-light",
-    bg: "bg-accent/10",
-    border: "border-accent/20",
+    accent: "bg-purple-500",
   },
   {
-    icon: HeartPulse,
     title: "Burnout Detection",
     desc: "Your manager tracks your energy, session length, frequency, and score trends. If you're burning out, you'll know before it tanks your channel.",
-    color: "text-orange-400",
-    bg: "bg-orange-500/10",
-    border: "border-orange-500/20",
+    accent: "bg-orange-500",
   },
   {
-    icon: BarChart2,
     title: "Content Strategy",
     desc: "See which content categories drive the most growth for your channel. Know whether to double down on hype content or try more variety.",
-    color: "text-green-400",
-    bg: "bg-green-500/10",
-    border: "border-green-500/20",
+    accent: "bg-green-500",
   },
   {
-    icon: Users,
     title: "Collab Matching",
     desc: "Get matched with streamers who complement your style. Internal matches from LevlCast users and external discoveries from across Twitch.",
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
+    accent: "bg-blue-500",
   },
   {
-    icon: Newspaper,
     title: "Weekly Digest",
     desc: "Every Monday, your personal manager compiles your week — stats, insights, and 2-3 action items. Like having a manager text you a game plan.",
-    color: "text-yellow-400",
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/20",
+    accent: "bg-yellow-500",
   },
   {
-    icon: Scissors,
     title: "Clip Generation",
     desc: "One click turns peak moments into ready-to-post clips. Your best content, extracted and formatted automatically.",
-    color: "text-purple-400",
-    bg: "bg-purple-500/10",
-    border: "border-purple-500/20",
+    accent: "bg-purple-500",
   },
 ];
 
@@ -188,26 +154,20 @@ export default function LandingPage() {
           {/* Asymmetric: two cards left, one featured card right */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-2 space-y-4">
-              <div className="card p-6 hover:border-accent/25 transition-colors group">
-                <div className="w-10 h-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-5 group-hover:bg-accent/15 transition-colors">
-                  <BarChart2 className="w-5 h-5 text-accent-light" />
-                </div>
+              <div className="card p-6 hover:border-accent/25 transition-colors relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent opacity-40" />
                 <h3 className="font-bold mb-2">No one managing your growth</h3>
                 <p className="text-sm text-muted leading-relaxed">You stream, you end, you guess. No one is tracking which content works, when you&apos;re burning out, or who you should collab with.</p>
               </div>
-              <div className="card p-6 hover:border-accent/25 transition-colors group">
-                <div className="w-10 h-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-5 group-hover:bg-accent/15 transition-colors">
-                  <Scissors className="w-5 h-5 text-accent-light" />
-                </div>
+              <div className="card p-6 hover:border-accent/25 transition-colors relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-purple-500 opacity-40" />
                 <h3 className="font-bold mb-2">Your best moments go unclipped</h3>
                 <p className="text-sm text-muted leading-relaxed">You had 5 great moments last stream. But you didn&apos;t clip them, so they disappeared when the VOD expired.</p>
               </div>
             </div>
             {/* Featured pain point — bigger, more padding */}
-            <div className="md:col-span-3 card p-8 md:p-10 hover:border-accent/25 transition-colors group flex flex-col justify-center">
-              <div className="w-12 h-12 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center mb-6 group-hover:bg-accent/15 transition-colors">
-                <MessageSquare className="w-6 h-6 text-accent-light" />
-              </div>
+            <div className="md:col-span-3 card p-8 md:p-10 hover:border-accent/25 transition-colors flex flex-col justify-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-red-500 opacity-40" />
               <h3 className="font-bold text-xl mb-3">You don&apos;t know why it&apos;s not growing</h3>
               <p className="text-[15px] text-muted leading-relaxed">The habits holding you back — dead air, weak openings, ignored chat — are invisible to you in the moment. No one watches back your VODs and tells you the truth.</p>
             </div>
@@ -232,14 +192,9 @@ export default function LandingPage() {
             {/* Step 1 — featured, horizontal layout */}
             <div className="card p-7 md:p-8 hover:border-accent/25 transition-colors group">
               <div className="flex flex-col md:flex-row md:items-center gap-5">
-                <div className={`w-14 h-14 ${steps[0].bg} border ${steps[0].border} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                  <Twitch className={`w-6 h-6 ${steps[0].color}`} />
-                </div>
+                <span className="text-5xl font-black text-white/[0.06] leading-none flex-shrink-0">01</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xs font-medium text-muted/60">{steps[0].num}</span>
-                    <h3 className="font-bold text-lg">{steps[0].label}</h3>
-                  </div>
+                  <h3 className="font-bold text-lg mb-2">{steps[0].label}</h3>
                   <p className="text-sm text-muted leading-relaxed max-w-[500px]">{steps[0].desc}</p>
                 </div>
               </div>
@@ -248,15 +203,11 @@ export default function LandingPage() {
             {/* Steps 2-4 — three columns, varied sizes */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
               {steps.slice(1).map((step, i) => {
-                const Icon = step.icon;
                 // 5-4-3 split for visual variety
                 const span = ["md:col-span-5", "md:col-span-4", "md:col-span-3"][i];
                 return (
                   <div key={step.num} className={`card p-6 hover:border-accent/25 transition-colors group ${span}`}>
-                    <div className={`w-10 h-10 ${step.bg} border ${step.border} rounded-xl flex items-center justify-center mb-4`}>
-                      <Icon className={`w-5 h-5 ${step.color}`} />
-                    </div>
-                    <div className="text-xs font-medium text-muted/60 mb-2">{step.num}</div>
+                    <span className="text-3xl font-black text-white/[0.06] leading-none block mb-4">{step.num}</span>
                     <h3 className="font-bold text-base mb-2">{step.label}</h3>
                     <p className="text-[13px] text-muted leading-relaxed">{step.desc}</p>
                   </div>
@@ -283,7 +234,6 @@ export default function LandingPage() {
           {/* Bento layout: intentionally asymmetric spans */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {managerFeatures.map((feat, i) => {
-              const Icon = feat.icon;
               // Varied column spans — no row looks the same
               const spanClass = [
                 "md:col-span-7", // Stream Coaching — hero feature, wider
@@ -299,13 +249,12 @@ export default function LandingPage() {
               return (
                 <div
                   key={feat.title}
-                  className={`card group hover:border-white/[0.14] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-px ${spanClass} ${isHero ? "p-8" : "p-6"}`}
+                  className={`card group hover:border-white/[0.14] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-px ${spanClass} ${isHero ? "p-8" : "p-6"} relative overflow-hidden`}
                 >
+                  {/* Colored top accent line */}
+                  <div className={`absolute top-0 left-0 right-0 h-[2px] ${feat.accent} opacity-40`} />
                   {isFull ? (
                     <div className="flex items-center gap-5">
-                      <div className={`w-10 h-10 ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300`}>
-                        <Icon className={`w-5 h-5 ${feat.color}`} />
-                      </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold mb-1">{feat.title}</h3>
                         <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
@@ -313,9 +262,6 @@ export default function LandingPage() {
                     </div>
                   ) : (
                     <>
-                      <div className={`${isHero ? "w-12 h-12" : "w-10 h-10"} ${feat.bg} border ${feat.border} rounded-xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300`}>
-                        <Icon className={`w-5 h-5 ${feat.color}`} />
-                      </div>
                       <h3 className={`font-bold mb-2 ${isHero ? "text-lg" : ""}`}>{feat.title}</h3>
                       <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
                     </>
