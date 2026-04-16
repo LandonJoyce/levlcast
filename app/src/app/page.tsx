@@ -167,8 +167,8 @@ export default function LandingPage() {
             <div className="md:col-span-6 lg:col-span-7 md:translate-y-4">
               <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
                 <img
-                  src="/screenshots/coach-report.png"
-                  alt="AI coach report showing a stream score of 44 with specific priorities and missions"
+                  src="/screenshots/hero-report.jpg"
+                  alt="AI coach report showing a stream score of 42 with specific priorities and missions"
                   className="w-full h-auto"
                 />
               </div>
@@ -221,31 +221,51 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border relative overflow-hidden" id="how-it-works">
         <div className="absolute inset-0 glow-right pointer-events-none" />
         <div className="max-w-[1080px] mx-auto px-6">
-          <div className="flex justify-center mb-5">
+          <div className="mb-5">
             <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">How it works</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-[-1.5px] text-center mb-16 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-[-1.5px] mb-16 leading-tight md:text-left">
             Connect once.
             <br />
             Get managed forever.
           </h2>
 
-          {/* 2x2 staggered grid instead of 4 equal columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto">
-            {steps.map((step, i) => {
-              const Icon = step.icon;
-              const isEven = i % 2 === 0;
-              return (
-                <div key={step.num} className={`relative card hover:border-accent/25 transition-colors group ${isEven ? "p-6 sm:p-7" : "p-6"} ${i >= 2 ? "sm:translate-y-3" : ""}`}>
-                  <div className={`${isEven ? "w-12 h-12" : "w-10 h-10"} ${step.bg} border ${step.border} rounded-xl flex items-center justify-center mb-4`}>
-                    <Icon className={`w-5 h-5 ${step.color}`} />
-                  </div>
-                  <div className="text-xs font-medium text-muted/60 mb-2">{step.num}</div>
-                  <h3 className="font-bold text-base mb-2">{step.label}</h3>
-                  <p className="text-[13px] text-muted leading-relaxed">{step.desc}</p>
+          {/* Step 1 featured wide, then 3 smaller cards in a row */}
+          <div className="space-y-5">
+            {/* Step 1 — featured, horizontal layout */}
+            <div className="card p-7 md:p-8 hover:border-accent/25 transition-colors group">
+              <div className="flex flex-col md:flex-row md:items-center gap-5">
+                <div className={`w-14 h-14 ${steps[0].bg} border ${steps[0].border} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                  <Twitch className={`w-6 h-6 ${steps[0].color}`} />
                 </div>
-              );
-            })}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-medium text-muted/60">{steps[0].num}</span>
+                    <h3 className="font-bold text-lg">{steps[0].label}</h3>
+                  </div>
+                  <p className="text-sm text-muted leading-relaxed max-w-[500px]">{steps[0].desc}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Steps 2-4 — three columns, varied sizes */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+              {steps.slice(1).map((step, i) => {
+                const Icon = step.icon;
+                // 5-4-3 split for visual variety
+                const span = ["md:col-span-5", "md:col-span-4", "md:col-span-3"][i];
+                return (
+                  <div key={step.num} className={`card p-6 hover:border-accent/25 transition-colors group ${span}`}>
+                    <div className={`w-10 h-10 ${step.bg} border ${step.border} rounded-xl flex items-center justify-center mb-4`}>
+                      <Icon className={`w-5 h-5 ${step.color}`} />
+                    </div>
+                    <div className="text-xs font-medium text-muted/60 mb-2">{step.num}</div>
+                    <h3 className="font-bold text-base mb-2">{step.label}</h3>
+                    <p className="text-[13px] text-muted leading-relaxed">{step.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
@@ -268,13 +288,13 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {managerFeatures.map((feat, i) => {
               const Icon = feat.icon;
-              // Varied column spans for organic layout: 7-5, 4-4-4, 12
+              // Varied column spans — no row looks the same
               const spanClass = [
                 "md:col-span-7", // Stream Coaching — hero feature, wider
                 "md:col-span-5", // Burnout Detection
-                "md:col-span-4", // Content Strategy
-                "md:col-span-4", // Collab Matching
-                "md:col-span-4", // Weekly Digest
+                "md:col-span-5", // Content Strategy — wider
+                "md:col-span-3", // Collab Matching — compact
+                "md:col-span-4", // Weekly Digest — medium
                 "md:col-span-12", // Clip Generation — full-width bar
               ][i];
               const isHero = i === 0;
