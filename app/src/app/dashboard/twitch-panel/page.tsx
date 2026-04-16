@@ -61,7 +61,7 @@ export default async function TwitchPanelPage() {
             src={panelImageUrl}
             alt="Coached by LevlCast panel"
             width={480}
-            height={147}
+            height={270}
             style={{ display: "block", width: "100%", height: "auto" }}
           />
         </div>
