@@ -286,29 +286,37 @@ export default async function AnalyticsPage() {
             {/* Score area chart */}
             {coachScores.length > 0 && (() => {
               const W = 560;
-              const H = 90;
-              const TOP = 22;
-              const PAD = 14;
+              const H = 120;
+              const TOP = 24;
+              const PAD = 28;
               const n = coachScores.length;
-              const slotW = (W - PAD * 2) / n;
+              const slotW = (W - PAD * 2) / Math.max(n - 1, 1);
               const dotColor = (s: number) => s >= 70 ? "#4ade80" : s >= 50 ? "#facc15" : "#f87171";
+              const dotGlow = (s: number) => s >= 70 ? "rgba(74,222,128,0.6)" : s >= 50 ? "rgba(250,204,21,0.5)" : "rgba(248,113,113,0.5)";
 
               const pts = coachScores.map((c, i) => ({
-                x: PAD + (i + 0.5) * slotW,
-                y: TOP + H - Math.max(4, (c.score / 100) * H),
+                x: PAD + i * slotW,
+                y: TOP + H - Math.max(8, (c.score / 100) * H),
                 score: c.score,
                 id: c.id,
                 date: c.date,
+                title: c.title,
                 isLatest: i === n - 1,
               }));
 
-              const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-              const areaPath = `${linePath} L${pts[n - 1].x.toFixed(1)},${(TOP + H).toFixed(1)} L${pts[0].x.toFixed(1)},${(TOP + H).toFixed(1)} Z`;
+              // Smooth curve using cubic bezier
+              const curvePath = pts.map((p, i) => {
+                if (i === 0) return `M${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+                const prev = pts[i - 1];
+                const cpx = (prev.x + p.x) / 2;
+                return `C${cpx.toFixed(1)},${prev.y.toFixed(1)} ${cpx.toFixed(1)},${p.y.toFixed(1)} ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+              }).join(" ");
+              const areaPath = `${curvePath} L${pts[n - 1].x.toFixed(1)},${(TOP + H).toFixed(1)} L${pts[0].x.toFixed(1)},${(TOP + H).toFixed(1)} Z`;
               const avgY = avgScore !== null ? TOP + H - (avgScore / 100) * H : null;
 
               return (
                 <div className="bg-surface border border-border rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-5">
                     <h2 className="text-sm font-bold text-white">Stream Quality Over Time</h2>
                     {scoreTrend !== null && scoreTrend !== 0 && (
                       <span className={`text-xs font-semibold flex items-center gap-1 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
@@ -318,12 +326,24 @@ export default async function AnalyticsPage() {
                     )}
                   </div>
 
-                  <svg viewBox={`0 0 ${W} ${TOP + H + 20}`} width="100%" className="overflow-visible">
+                  <svg viewBox={`0 0 ${W} ${TOP + H + 24}`} width="100%" className="overflow-visible">
                     <defs>
                       <linearGradient id="score-area-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(99,102,241,0.25)" />
-                        <stop offset="100%" stopColor="rgba(99,102,241,0)" />
+                        <stop offset="0%" stopColor="rgba(168,85,247,0.2)" />
+                        <stop offset="50%" stopColor="rgba(168,85,247,0.06)" />
+                        <stop offset="100%" stopColor="rgba(168,85,247,0)" />
                       </linearGradient>
+                      <linearGradient id="score-line-grad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="rgba(168,85,247,0.4)" />
+                        <stop offset="100%" stopColor="rgba(168,85,247,0.8)" />
+                      </linearGradient>
+                      <filter id="dot-glow">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
                     </defs>
 
                     {/* Grid lines at 25 / 50 / 75 */}
@@ -331,43 +351,53 @@ export default async function AnalyticsPage() {
                       const gy = TOP + H - (tick / 100) * H;
                       return (
                         <g key={tick}>
-                          <line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                          <text x={PAD - 4} y={gy + 3.5} textAnchor="end" fontSize="9" fill="rgba(255,255,255,0.2)">{tick}</text>
+                          <line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                          <text x={PAD - 6} y={gy + 3.5} textAnchor="end" fontSize="9" fill="rgba(255,255,255,0.15)">{tick}</text>
                         </g>
                       );
                     })}
 
-                    {/* Avg dashed line */}
+                    {/* Avg dashed line with label */}
                     {avgY !== null && (
-                      <line x1={PAD} y1={avgY} x2={W - PAD} y2={avgY} stroke="rgba(255,255,255,0.14)" strokeWidth="1" strokeDasharray="4 3" />
+                      <g>
+                        <line x1={PAD} y1={avgY} x2={W - PAD} y2={avgY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="4 4" />
+                        <text x={W - PAD + 4} y={avgY + 3.5} fontSize="8" fill="rgba(255,255,255,0.2)">avg</text>
+                      </g>
                     )}
 
                     {/* Area fill */}
                     <path d={areaPath} fill="url(#score-area-fill)" />
 
-                    {/* Trend line */}
-                    <path d={linePath} fill="none" stroke="rgba(99,102,241,0.55)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                    {/* Smooth trend line */}
+                    <path d={curvePath} fill="none" stroke="url(#score-line-grad)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
-                    {/* Clickable dot + label per stream */}
+                    {/* Clickable dots with glow */}
                     {pts.map((p) => (
                       <a key={`pt-${p.id}`} href={`/dashboard/vods/${p.id}`} style={{ cursor: "pointer" }}>
-                        <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize="10" fontWeight="600"
-                          fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.5}>
+                        {/* Score label */}
+                        <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="11" fontWeight="700"
+                          fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.6}>
                           {p.score}
                         </text>
-                        <circle cx={p.x} cy={p.y} r={p.isLatest ? 6 : 5}
-                          fill="transparent" stroke="none"
+                        {/* Glow ring */}
+                        <circle cx={p.x} cy={p.y} r={p.isLatest ? 8 : 6}
+                          fill={dotGlow(p.score)} fillOpacity={0.15}
                         />
+                        {/* Dot */}
                         <circle cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
-                          fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.65}
-                          stroke="rgba(0,0,0,0.4)" strokeWidth="1.5"
+                          fill={dotColor(p.score)} fillOpacity={p.isLatest ? 1 : 0.7}
+                          stroke={p.isLatest ? dotGlow(p.score) : "rgba(0,0,0,0.3)"}
+                          strokeWidth={p.isLatest ? 2 : 1.5}
+                          filter={p.isLatest ? "url(#dot-glow)" : undefined}
                         />
+                        {/* Larger hit area for clicking */}
+                        <circle cx={p.x} cy={p.y} r={12} fill="transparent" />
                       </a>
                     ))}
 
                     {/* Date labels */}
                     {pts.map((p) => (
-                      <text key={`date-${p.id}`} x={p.x} y={TOP + H + 16} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.3)">
+                      <text key={`date-${p.id}`} x={p.x} y={TOP + H + 18} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.25)">
                         {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </text>
                     ))}
