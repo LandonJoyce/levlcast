@@ -366,6 +366,30 @@ export async function downloadTwitchVodAudio(
 }
 
 /**
+ * Parse an M3U8 sub-playlist into segments with their actual durations.
+ * Uses EXTINF tags for accurate cumulative timestamps instead of assuming
+ * a fixed segment duration. Falls back to 10s if EXTINF parsing fails.
+ */
+function parseM3U8Segments(playlistText: string, baseUrl: string): { url: string; duration: number }[] {
+  const lines = playlistText.split("\n").map((l) => l.trim());
+  const segments: { url: string; duration: number }[] = [];
+  let pendingDuration = -1;
+
+  for (const line of lines) {
+    if (line.startsWith("#EXTINF:")) {
+      const match = line.match(/#EXTINF:([\d.]+)/);
+      pendingDuration = match ? parseFloat(match[1]) : 10;
+    } else if (line && !line.startsWith("#")) {
+      const url = line.startsWith("http") ? line : baseUrl + line;
+      segments.push({ url, duration: pendingDuration > 0 ? pendingDuration : 10 });
+      pendingDuration = -1;
+    }
+  }
+
+  return segments;
+}
+
+/**
  * Download Twitch VOD VIDEO segments for clip generation.
  * Selects the lowest available video quality (360p or 480p) to keep file sizes
  * small while still capturing actual video frames.
@@ -446,28 +470,46 @@ export async function downloadTwitchVodVideo(
 
   console.log(`[twitch] Using video quality for clip: ${qualities.find((q) => q.url === streamUrl)?.label}`);
 
-  // Step 4: Parse sub-playlist
+  // Step 4: Parse sub-playlist with actual EXTINF durations for accurate seeking
   const subRes = await fetch(streamUrl);
   if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
   const subText = await subRes.text();
   const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
 
-  const allSegmentUrls = subText
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith("#"))
-    .map((l) => (l.startsWith("http") ? l : baseUrl + l));
+  const parsedSegments = parseM3U8Segments(subText, baseUrl);
 
-  if (allSegmentUrls.length === 0) throw new Error("No segments found in playlist");
+  if (parsedSegments.length === 0) throw new Error("No segments found in playlist");
 
-  // Step 5: Download needed segments
-  const SEG_DURATION = 10;
-  const startIdx = Math.max(0, Math.floor(startSeconds / SEG_DURATION) - 2);
-  const endIdx = Math.min(allSegmentUrls.length - 1, Math.ceil(endSeconds / SEG_DURATION) + 2);
-  const needed = allSegmentUrls.slice(startIdx, endIdx + 1);
-  const segmentStartSeconds = startIdx * SEG_DURATION;
+  // Step 5: Find segments by cumulative time instead of assuming fixed 10s duration.
+  // This prevents timestamp drift on long VODs where segments vary slightly.
+  let cumulative = 0;
+  const segTimestamps: number[] = []; // cumulative start time of each segment
+  for (const seg of parsedSegments) {
+    segTimestamps.push(cumulative);
+    cumulative += seg.duration;
+  }
 
-  console.log(`[twitch] Downloading video segments ${startIdx}-${endIdx} of ${allSegmentUrls.length}`);
+  // Find first segment that starts before our target (with 2-segment buffer)
+  let startIdx = 0;
+  for (let i = 0; i < segTimestamps.length; i++) {
+    if (segTimestamps[i] + parsedSegments[i].duration >= startSeconds) {
+      startIdx = Math.max(0, i - 2);
+      break;
+    }
+  }
+  // Find last segment that covers our end time (with 2-segment buffer)
+  let endIdx = parsedSegments.length - 1;
+  for (let i = startIdx; i < segTimestamps.length; i++) {
+    if (segTimestamps[i] >= endSeconds) {
+      endIdx = Math.min(parsedSegments.length - 1, i + 2);
+      break;
+    }
+  }
+
+  const needed = parsedSegments.slice(startIdx, endIdx + 1).map((s) => s.url);
+  const segmentStartSeconds = segTimestamps[startIdx];
+
+  console.log(`[twitch] Downloading video segments ${startIdx}-${endIdx} of ${parsedSegments.length} (offset: ${segmentStartSeconds.toFixed(1)}s)`);
 
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
   const filePath = join(tempDir, "video.ts");

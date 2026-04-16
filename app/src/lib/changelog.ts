@@ -20,6 +20,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.1",
+    date: "2026-04-16",
+    title: "Clip Accuracy Overhaul",
+    items: [
+      { type: "improved", text: "Clips now match their descriptions much more accurately — timestamps are snapped to real speech boundaries with strict drift limits" },
+      { type: "improved", text: "Long streams (2+ hours) no longer miss great moments that happen on chunk boundaries" },
+      { type: "improved", text: "Stricter clip selection — fewer mediocre clips, only moments that actually stop someone scrolling" },
+      { type: "improved", text: "Coach no longer penalizes silence during intros, movie reactions, or intense gameplay" },
+      { type: "fix",      text: "Clips can no longer balloon past 90 seconds from timestamp snapping" },
+      { type: "fix",      text: "More precise video segment timing on long VODs prevents gradual timestamp drift" },
+    ],
+  },
+  {
     version: "v0.8",
     date: "2026-04-15",
     title: "The Honest Coach Patch",

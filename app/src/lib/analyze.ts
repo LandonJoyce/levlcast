@@ -153,6 +153,23 @@ function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): P
 }
 
 /**
+ * Deduplicate peaks that overlap — when two peaks start within `thresholdSeconds`
+ * of each other, keep the higher-scored one. This handles overlapping chunks
+ * detecting the same moment independently.
+ */
+function deduplicatePeaks(peaks: Peak[], thresholdSeconds: number): Peak[] {
+  const sorted = [...peaks].sort((a, b) => b.score - a.score);
+  const kept: Peak[] = [];
+  for (const peak of sorted) {
+    const isDuplicate = kept.some(
+      (k) => Math.abs(k.start - peak.start) < thresholdSeconds
+    );
+    if (!isDuplicate) kept.push(peak);
+  }
+  return kept;
+}
+
+/**
  * Calculate words per minute for a set of segments.
  */
 function calcWPM(segs: TranscriptSegment[]): number {
@@ -288,6 +305,9 @@ async function runPeakDetection(
 // How long each transcript chunk is when splitting long VODs.
 const CHUNK_SECONDS = 20 * 60;
 
+// Overlap between adjacent chunks so moments on boundaries aren't split.
+const CHUNK_OVERLAP = 2 * 60;
+
 // Maximum peaks returned per VOD.
 const MAX_PEAKS = 6;
 
@@ -314,12 +334,14 @@ export async function detectPeaks(
     return peaks.sort((a, b) => b.score - a.score).slice(0, MAX_PEAKS);
   }
 
+  // Build overlapping chunks so moments on boundaries aren't lost.
+  // Each chunk overlaps the next by CHUNK_OVERLAP seconds.
   const chunks: TranscriptSegment[][] = [];
   let chunkStart = 0;
   while (chunkStart < vodDuration) {
     const chunkEnd = chunkStart + CHUNK_SECONDS;
     chunks.push(segments.filter((s) => s.start >= chunkStart && s.start < chunkEnd));
-    chunkStart = chunkEnd;
+    chunkStart += CHUNK_SECONDS - CHUNK_OVERLAP;
   }
 
   const allPeaks: Peak[] = [];
@@ -329,7 +351,11 @@ export async function detectPeaks(
     allPeaks.push(...peaks);
   }
 
-  const topCandidates = allPeaks
+  // Deduplicate peaks from overlapping regions — if two peaks start within 30s
+  // of each other, keep the one with the higher score
+  const deduped = deduplicatePeaks(allPeaks, 30);
+
+  const topCandidates = deduped
     .sort((a, b) => b.score - a.score)
     .slice(0, RERANK_CANDIDATE_LIMIT);
 
