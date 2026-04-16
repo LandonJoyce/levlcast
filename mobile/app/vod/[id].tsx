@@ -6,15 +6,18 @@ import { colors } from '@/lib/colors';
 
 interface CoachReport {
   overall_score: number;
-  stream_summary: string;
+  streamer_type: 'gaming' | 'just_chatting' | 'irl' | 'variety' | 'educational';
   energy_trend: 'building' | 'declining' | 'consistent' | 'volatile';
   viewer_retention_risk: 'low' | 'medium' | 'high';
   strengths: string[];
   improvements: string[];
   best_moment: { time: string; description: string };
-  content_mix: { category: string; percentage: number }[];
   recommendation: string;
   next_stream_goals: string[];
+  cold_open?: { score: 'strong' | 'weak' | 'average'; note: string };
+  dead_zones?: Array<{ time: string; duration: number }>;
+  momentum_crash?: { time: string; duration_min: number; note: string };
+  trend_vs_history?: { direction: 'improving' | 'declining' | 'consistent' | 'first_stream'; note: string };
 }
 
 interface Peak {
@@ -64,6 +67,32 @@ const TREND_CONFIG = {
   declining:  { label: 'Declining',   color: colors.red,    icon: '↘' },
   consistent: { label: 'Consistent',  color: colors.yellow, icon: '→' },
   volatile:   { label: 'Volatile',    color: colors.muted,  icon: '↕' },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  hype: 'Hype',
+  funny: 'Comedy',
+  educational: 'Educational',
+  emotional: 'Emotional',
+  clutch_play: 'Clutch Plays',
+  rage: 'Rage',
+  wholesome: 'Wholesome',
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  hype: '#f59e0b',
+  funny: '#a78bfa',
+  educational: '#3b82f6',
+  emotional: '#f472b6',
+  clutch_play: '#22d3ee',
+  rage: '#ef4444',
+  wholesome: '#4ade80',
+};
+
+const COLD_OPEN_CONFIG = {
+  strong:  { label: 'Strong Open', color: colors.green },
+  average: { label: 'Average Open', color: colors.yellow },
+  weak:    { label: 'Weak Open', color: colors.red },
 };
 
 // Parses **Bold Label** — rest of text and renders bold label + dimmer text
@@ -415,23 +444,61 @@ export default function VodDetailScreen() {
             </View>
           )}
 
-          {/* Stream Summary */}
-          <View style={styles.summaryCard}>
-            <Text style={styles.sectionLabel}>STREAM SUMMARY</Text>
-            <Text style={styles.summaryText}>{report.stream_summary}</Text>
-          </View>
-
-          {/* Content Mix */}
-          {report.content_mix && report.content_mix.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>CONTENT MIX</Text>
-              <View style={styles.mixTags}>
-                {report.content_mix.map((item, i) => (
-                  <View key={i} style={styles.mixTag}>
-                    <Text style={styles.mixTagText}>{item.category} {item.percentage}%</Text>
-                  </View>
-                ))}
+          {/* Cold Open */}
+          {report.cold_open && (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Text style={styles.sectionLabel}>COLD OPEN</Text>
+                <View style={[styles.insightBadge, {
+                  backgroundColor: COLD_OPEN_CONFIG[report.cold_open.score]?.color + '18' || colors.muted + '18',
+                  borderColor: COLD_OPEN_CONFIG[report.cold_open.score]?.color + '50' || colors.muted + '50',
+                }]}>
+                  <Text style={[styles.insightBadgeText, {
+                    color: COLD_OPEN_CONFIG[report.cold_open.score]?.color || colors.muted,
+                  }]}>{COLD_OPEN_CONFIG[report.cold_open.score]?.label || report.cold_open.score}</Text>
+                </View>
               </View>
+              <Text style={styles.insightText}>{report.cold_open.note}</Text>
+            </View>
+          )}
+
+          {/* Momentum Crash */}
+          {report.momentum_crash && (
+            <View style={styles.insightCard}>
+              <Text style={styles.sectionLabel}>WORST ENERGY DROP</Text>
+              <Text style={styles.insightTime}>{report.momentum_crash.time} ({report.momentum_crash.duration_min} min)</Text>
+              <Text style={styles.insightText}>{report.momentum_crash.note}</Text>
+            </View>
+          )}
+
+          {/* Dead Zones */}
+          {report.dead_zones && report.dead_zones.length > 0 && (
+            <View style={styles.insightCard}>
+              <Text style={styles.sectionLabel}>DEAD ZONES</Text>
+              {report.dead_zones.map((dz, i) => (
+                <View key={i} style={styles.deadZoneRow}>
+                  <Text style={styles.deadZoneTime}>{dz.time}</Text>
+                  <Text style={styles.deadZoneDur}>{Math.round(dz.duration / 60)} min</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Trend vs History */}
+          {report.trend_vs_history && report.trend_vs_history.direction !== 'first_stream' && (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Text style={styles.sectionLabel}>TREND</Text>
+                <View style={[styles.insightBadge, {
+                  backgroundColor: (report.trend_vs_history.direction === 'improving' ? colors.green : report.trend_vs_history.direction === 'declining' ? colors.red : colors.yellow) + '18',
+                  borderColor: (report.trend_vs_history.direction === 'improving' ? colors.green : report.trend_vs_history.direction === 'declining' ? colors.red : colors.yellow) + '50',
+                }]}>
+                  <Text style={[styles.insightBadgeText, {
+                    color: report.trend_vs_history.direction === 'improving' ? colors.green : report.trend_vs_history.direction === 'declining' ? colors.red : colors.yellow,
+                  }]}>{report.trend_vs_history.direction === 'improving' ? 'Improving' : report.trend_vs_history.direction === 'declining' ? 'Declining' : 'Consistent'}</Text>
+                </View>
+              </View>
+              <Text style={styles.insightText}>{report.trend_vs_history.note}</Text>
             </View>
           )}
         </>
@@ -447,7 +514,14 @@ export default function VodDetailScreen() {
               <View key={i} style={styles.peakRow}>
                 <View style={styles.peakHeader}>
                   <Text style={styles.peakTitle}>{p.title}</Text>
-                  <Text style={styles.peakCategory}>{p.category}</Text>
+                  <View style={[styles.peakCategoryPill, {
+                    backgroundColor: (CATEGORY_COLORS[p.category] || colors.accentLight) + '18',
+                    borderColor: (CATEGORY_COLORS[p.category] || colors.accentLight) + '50',
+                  }]}>
+                    <Text style={[styles.peakCategoryText, {
+                      color: CATEGORY_COLORS[p.category] || colors.accentLight,
+                    }]}>{CATEGORY_LABELS[p.category] || p.category}</Text>
+                  </View>
                 </View>
                 <Text style={styles.peakReason}>{p.reason}</Text>
                 <View style={styles.peakMeta}>
@@ -567,20 +641,23 @@ const styles = StyleSheet.create({
   bestMomentTime: { fontSize: 22, fontWeight: '800', color: colors.accentLight, marginBottom: 4 },
   bestMomentDesc: { fontSize: 13, color: colors.text, lineHeight: 19 },
 
-  // Summary
-  summaryCard: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 14 },
-  summaryText: { fontSize: 13, color: colors.text, lineHeight: 20 },
-
-  // Content mix
-  mixTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-  mixTag: { backgroundColor: 'rgba(124,58,237,0.12)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(124,58,237,0.25)' },
-  mixTagText: { fontSize: 12, fontWeight: '600', color: colors.accentLight },
+  // Insight cards (cold open, momentum crash, dead zones, trend)
+  insightCard: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 14 },
+  insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  insightBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1 },
+  insightBadgeText: { fontSize: 11, fontWeight: '700' },
+  insightTime: { fontSize: 16, fontWeight: '800', color: colors.accentLight, marginBottom: 4 },
+  insightText: { fontSize: 13, color: colors.text, lineHeight: 20 },
+  deadZoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
+  deadZoneTime: { fontSize: 13, fontWeight: '600', color: colors.text },
+  deadZoneDur: { fontSize: 12, fontWeight: '600', color: colors.muted },
 
   // Peak moments
   peakRow: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 8 },
   peakHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
   peakTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.text },
-  peakCategory: { fontSize: 11, fontWeight: '600', color: colors.accentLight, textTransform: 'capitalize', backgroundColor: 'rgba(124,58,237,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  peakCategoryPill: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
+  peakCategoryText: { fontSize: 11, fontWeight: '700' },
   peakReason: { fontSize: 12, color: colors.muted, lineHeight: 17, marginBottom: 8 },
   peakMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   peakMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
