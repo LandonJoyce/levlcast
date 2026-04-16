@@ -383,10 +383,10 @@ export default function LandingPage() {
             VOD scores, content analytics, streamer health, and collab matches — all in one dashboard, updated after every stream.
           </p>
 
-          {/* Staggered screenshot layout */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-            {/* Dashboard — slightly larger */}
-            <div className="md:col-span-7 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+          {/* Screenshot layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Dashboard */}
+            <div className="rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
                 src="/screenshots/dashboard.jpg"
                 alt="Dashboard showing recent stream scores, streamer health warning, VOD stats, and collab matches"
@@ -395,7 +395,7 @@ export default function LandingPage() {
             </div>
 
             {/* Analytics */}
-            <div className="md:col-span-5 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+            <div className="rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
                 src="/screenshots/analytics.png"
                 alt="Analytics dashboard with stream quality trend over time, content breakdown, and follower growth"
@@ -404,7 +404,7 @@ export default function LandingPage() {
             </div>
 
             {/* VOD list — full width */}
-            <div className="md:col-span-12 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+            <div className="md:col-span-2 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
                 src="/screenshots/vod-list.jpg"
                 alt="VOD list showing 8 analyzed streams with scores and coach report links"
