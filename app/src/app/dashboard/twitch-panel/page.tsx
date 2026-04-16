@@ -15,12 +15,11 @@ export default async function TwitchPanelPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_login, twitch_display_name")
+    .select("twitch_login")
     .eq("id", user!.id)
     .single();
 
   const login = profile?.twitch_login || "";
-  const displayName = profile?.twitch_display_name || "Streamer";
 
   // Personalized referral link. Uses twitch login as the ref tag so we can
   // attribute signups later if we add tracking.
@@ -28,8 +27,9 @@ export default async function TwitchPanelPage() {
     ? `https://levlcast.com/?ref=${encodeURIComponent(login)}`
     : "https://levlcast.com/";
 
-  // Panel image URL — passes the display name so the subtitle personalizes.
-  const panelImageUrl = `/api/twitch-panel?name=${encodeURIComponent(displayName)}`;
+  // Panel image URL — intentionally generic so the viewer-facing CTA
+  // nudges visitors toward LevlCast, not toward the streamer.
+  const panelImageUrl = `/api/twitch-panel`;
 
   return (
     <div className="max-w-[820px]">

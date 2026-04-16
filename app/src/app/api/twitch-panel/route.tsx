@@ -12,10 +12,7 @@ import type { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const name = searchParams.get("name")?.slice(0, 20) || "";
-
+export async function GET(_req: NextRequest) {
   return new ImageResponse(
     (
       <div
@@ -139,9 +136,7 @@ export async function GET(req: NextRequest) {
                 display: "flex",
               }}
             >
-              {name
-                ? `Real feedback on every ${name} stream`
-                : "Real feedback on every stream · levlcast.com"}
+              AI stream coach for Twitch · levlcast.com
             </div>
           </div>
         </div>
