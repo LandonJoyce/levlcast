@@ -29,7 +29,7 @@ export default async function TwitchPanelPage() {
 
   // Panel image URL — intentionally generic so the viewer-facing CTA
   // nudges visitors toward LevlCast, not toward the streamer.
-  const panelImageUrl = `/screenshots/twitch-panel.jpg`;
+  const panelImageUrl = `/screenshots/twitch-panel.png`;
 
   return (
     <div className="max-w-[820px]">
@@ -60,15 +60,15 @@ export default async function TwitchPanelPage() {
           <img
             src={panelImageUrl}
             alt="Coached by LevlCast panel"
-            width={480}
-            height={270}
+            width={320}
+            height={100}
             style={{ display: "block", width: "100%", height: "auto" }}
           />
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <a
             href={panelImageUrl}
-            download="coached-by-levlcast.jpg"
+            download="coached-by-levlcast.png"
             className="inline-flex items-center gap-2 bg-accent text-white font-semibold text-sm px-4 py-2.5 rounded-full hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] transition-all"
           >
             <Download size={15} />
@@ -120,7 +120,7 @@ export default async function TwitchPanelPage() {
             },
             {
               title: "Upload the image and paste the link",
-              body: "Upload coached-by-levlcast.jpg as the image, paste your panel link above into the Image Links To field, and save.",
+              body: "Upload coached-by-levlcast.png as the image, paste your panel link above into the Image Links To field, and save.",
             },
           ].map((step, i) => (
             <li key={i} className="flex gap-4">
