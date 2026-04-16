@@ -124,9 +124,17 @@ export default async function GrowPage() {
       ) : (
         <div className="space-y-5">
 
-          {/* Momentum strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Score trend */}
+          {/* Archetype — featured at top */}
+          <ArchetypeCard
+            dominantCategory={dominantCategory}
+            dominantStreamerType={dominantStreamerType}
+            categoryCounts={categoryCounts}
+            totalPeaks={totalPeaks}
+          />
+
+          {/* Momentum — asymmetric: score wide, content + month narrow */}
+          <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
+            {/* Score trend — wider */}
             <div className="bg-surface border border-border rounded-2xl px-5 py-5">
               <p className="text-[11px] text-muted/70 font-medium mb-3">Score Trend</p>
               {scoreTrend === "up" && (
@@ -158,97 +166,81 @@ export default async function GrowPage() {
               )}
             </div>
 
-            {/* Top content */}
-            <div className="bg-surface border border-border rounded-2xl px-5 py-5">
-              <p className="text-[11px] text-muted/70 font-medium mb-3">Best Content</p>
-              {dominantCategory ? (
-                <>
-                  <span className={`inline-flex items-center text-xl font-extrabold capitalize px-2.5 py-0.5 rounded-full mb-1 ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
-                    {CATEGORY_LABELS[dominantCategory] ?? dominantCategory}
-                  </span>
-                  <p className="text-xs text-muted mt-1">
-                    {Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)}% of clip moments
-                  </p>
-                </>
-              ) : (
-                <span className="text-xl font-extrabold text-muted">—</span>
-              )}
-            </div>
-
-            {/* Streams this month */}
-            <div className="bg-surface border border-border rounded-2xl px-5 py-5">
-              <p className="text-[11px] text-muted/70 font-medium mb-3">This Month</p>
-              <div className="flex items-end gap-1.5 mb-1">
-                <span className={`text-4xl font-extrabold leading-none ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
-                  {recentStreamCount}
-                </span>
-                <span className="text-xs text-muted pb-1">streams</span>
+            {/* Right stack: content + month */}
+            <div className="flex flex-col gap-3">
+              <div className="bg-surface border border-border rounded-2xl px-5 py-4">
+                <p className="text-[11px] text-muted/70 font-medium mb-2">Best Content</p>
+                {dominantCategory ? (
+                  <>
+                    <span className={`inline-flex items-center text-lg font-extrabold capitalize px-2.5 py-0.5 rounded-full ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
+                      {CATEGORY_LABELS[dominantCategory] ?? dominantCategory}
+                    </span>
+                    <p className="text-xs text-muted mt-1">
+                      {Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)}% of clip moments
+                    </p>
+                  </>
+                ) : (
+                  <span className="text-lg font-extrabold text-muted">—</span>
+                )}
               </div>
-              <p className="text-xs text-muted">
-                {recentStreamCount >= 20 ? "Excellent pace" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs improvement" : "Stream more"}
-              </p>
+              <div className="bg-surface border border-border rounded-2xl px-5 py-4">
+                <p className="text-[11px] text-muted/70 font-medium mb-2">This Month</p>
+                <div className="flex items-end gap-1.5">
+                  <span className={`text-3xl font-extrabold leading-none ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
+                    {recentStreamCount}
+                  </span>
+                  <span className="text-xs text-muted pb-0.5">streams · {recentStreamCount >= 20 ? "Excellent" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs work" : "Stream more"}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Tactics — hero position */}
+          {/* Consistency — full width above tactics */}
+          <ConsistencyGrid streamDates={streamDates} />
+
+          {/* Tactics */}
           <TacticsCarousel />
 
-          {/* Two col: Clips + Consistency */}
-          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
-
-            {/* Top clips */}
-            {topClips && topClips.length > 0 && (
-              <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                  <div>
-                    <h2 className="text-sm font-bold text-white">Your Best Clips</h2>
-                    <p className="text-xs text-muted mt-0.5">Post these on TikTok, YouTube Shorts, and Kick first</p>
-                  </div>
-                  <Link href="/dashboard/clips" className="text-xs font-semibold text-accent-light hover:underline">See all →</Link>
+          {/* Top clips — full width */}
+          {topClips && topClips.length > 0 && (
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div>
+                  <h2 className="text-sm font-bold text-white">Your Best Clips</h2>
+                  <p className="text-xs text-muted mt-0.5">Post these on TikTok, YouTube Shorts, and Kick first</p>
                 </div>
-                <div className="divide-y divide-border">
-                  {topClips.map((clip, i) => (
-                    <div key={clip.id} className="flex items-center gap-4 px-5 py-3">
-                      <span className={`text-xs font-bold w-5 text-center flex-shrink-0 ${i === 0 ? "text-yellow-400" : "text-muted/40"}`}>
-                        {i + 1}
-                      </span>
-                      <video preload="metadata" muted playsInline className="w-16 aspect-video rounded bg-black flex-shrink-0 object-cover"><source src={clip.video_url} type="video/mp4" /></video>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{clip.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${CATEGORY_STYLE[clip.peak_category] || "bg-white/5 text-muted"}`}>
-                            {clip.peak_category}
-                          </span>
-                          <span className="text-xs text-muted line-clamp-1">{clip.caption_text}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Sparkles size={11} className={scoreColor(clip.peak_score)} />
-                        <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>{Math.round(clip.peak_score * 100)}</span>
+                <Link href="/dashboard/clips" className="text-xs font-semibold text-accent-light hover:underline">See all →</Link>
+              </div>
+              <div className="divide-y divide-border">
+                {topClips.map((clip, i) => (
+                  <div key={clip.id} className="flex items-center gap-4 px-5 py-3">
+                    <span className={`text-xs font-bold w-5 text-center flex-shrink-0 ${i === 0 ? "text-yellow-400" : "text-muted/40"}`}>
+                      {i + 1}
+                    </span>
+                    <video preload="metadata" muted playsInline className="w-16 aspect-video rounded bg-black flex-shrink-0 object-cover"><source src={clip.video_url} type="video/mp4" /></video>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{clip.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${CATEGORY_STYLE[clip.peak_category] || "bg-white/5 text-muted"}`}>
+                          {clip.peak_category}
+                        </span>
+                        <span className="text-xs text-muted line-clamp-1">{clip.caption_text}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <div className="px-5 py-3 border-t border-border bg-white/[0.02]">
-                  <p className="text-xs text-muted leading-relaxed">
-                    When someone finds your clip on TikTok and comes to Twitch, they expect that same version of you. Stream like your top clips every time.
-                  </p>
-                </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Sparkles size={11} className={scoreColor(clip.peak_score)} />
+                      <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>{Math.round(clip.peak_score * 100)}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* Consistency */}
-            <ConsistencyGrid streamDates={streamDates} />
-          </div>
-
-          {/* Archetype — compact, bottom */}
-          <ArchetypeCard
-            dominantCategory={dominantCategory}
-            dominantStreamerType={dominantStreamerType}
-            categoryCounts={categoryCounts}
-            totalPeaks={totalPeaks}
-            compact
-          />
+              <div className="px-5 py-3 border-t border-border bg-white/[0.02]">
+                <p className="text-xs text-muted leading-relaxed">
+                  When someone finds your clip on TikTok and comes to Twitch, they expect that same version of you. Stream like your top clips every time.
+                </p>
+              </div>
+            </div>
+          )
         </div>
       )}
     </div>

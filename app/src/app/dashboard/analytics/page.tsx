@@ -161,11 +161,10 @@ export default async function AnalyticsPage() {
         </div>
       ) : (
         <>
-          {/* Score + Insights */}
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 mb-6">
+          {/* Score + Insights — score narrower, insights wider */}
+          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 mb-6">
             {/* Score hero */}
-            <div className="p-px rounded-[22px] bg-gradient-to-b from-accent/30 to-accent/[0.06]">
-            <div className="bg-surface rounded-[21px] px-6 py-7 flex flex-col justify-center h-full">
+            <div className="bg-surface border border-border rounded-2xl px-6 py-7 flex flex-col justify-center">
               <p className="text-xs text-muted/80 font-medium mb-3">
                 Stream Score
               </p>
@@ -187,7 +186,6 @@ export default async function AnalyticsPage() {
               {progressArc && (
                 <p className="text-xs text-white/40 mt-2 leading-relaxed">{progressArc}</p>
               )}
-            </div>
             </div>
 
             {/* Insights */}
@@ -283,8 +281,8 @@ export default async function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Charts row — score trend + category breakdown side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 mb-6">
+          {/* Charts row — score trend + category breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mb-6">
             {/* Score area chart */}
             {coachScores.length > 0 && (() => {
               const W = 560;
