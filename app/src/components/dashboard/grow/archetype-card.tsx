@@ -265,34 +265,31 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
 
         {/* Right — breakdown */}
         <div className="lg:w-72 flex-shrink-0">
-          <p className="text-xs text-muted font-medium mb-3">Peak breakdown across all streams</p>
-          <div className="flex rounded-lg overflow-hidden h-4 w-full gap-px mb-4">
+          <p className="text-xs text-muted font-medium mb-4">Content breakdown</p>
+          <div className="space-y-3">
             {Object.entries(categoryCounts)
               .filter(([, count]) => count > 0)
               .sort((a, b) => b[1] - a[1])
-              .map(([cat, count]) => (
-                <div
-                  key={cat}
-                  className={CATEGORY_COLORS[cat]}
-                  style={{ width: `${(count / totalPeaks) * 100}%` }}
-                  title={`${CATEGORY_LABELS[cat]}: ${count}`}
-                />
-              ))}
-          </div>
-          <div className="space-y-2">
-            {Object.entries(categoryCounts)
-              .filter(([, count]) => count > 0)
-              .sort((a, b) => b[1] - a[1])
-              .map(([cat, count]) => (
-                <div key={cat} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-sm ${CATEGORY_COLORS[cat]}`} />
-                    <span className="text-xs text-white/70">{CATEGORY_LABELS[cat]}</span>
+              .map(([cat, count]) => {
+                const pct = Math.round((count / totalPeaks) * 100);
+                const color = CATEGORY_COLORS[cat] || "bg-white/20";
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white/70">{CATEGORY_LABELS[cat]}</span>
+                      <span className="text-[11px] text-muted">{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${color}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-xs text-muted">{count} peaks · {Math.round((count / totalPeaks) * 100)}%</span>
-                </div>
-              ))}
+                );
+              })}
           </div>
+          <p className="text-[10px] text-muted mt-3">{totalPeaks} clip moments total</p>
         </div>
       </div>
     </div>
