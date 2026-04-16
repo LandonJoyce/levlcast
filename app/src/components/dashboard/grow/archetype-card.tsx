@@ -161,6 +161,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   emotional: "bg-red-400",
 };
 
+const CATEGORY_GLOW: Record<string, { text: string; shadow: string; border: string; bg: string }> = {
+  hype:        { text: "text-purple-300", shadow: "0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.2)", border: "border-purple-500/40", bg: "bg-purple-500/10" },
+  funny:       { text: "text-yellow-300", shadow: "0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.2)",  border: "border-yellow-500/40", bg: "bg-yellow-500/10" },
+  educational: { text: "text-blue-300",   shadow: "0 0 20px rgba(59,130,246,0.5), 0 0 40px rgba(59,130,246,0.2)",   border: "border-blue-500/40",   bg: "bg-blue-500/10" },
+  emotional:   { text: "text-red-300",    shadow: "0 0 20px rgba(239,68,68,0.5), 0 0 40px rgba(239,68,68,0.2)",     border: "border-red-500/40",    bg: "bg-red-500/10" },
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   hype: "Hype",
   funny: "Funny",
@@ -221,22 +228,28 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
               </p>
             </div>
           </div>
-          {/* Compact breakdown bar */}
-          <div className="flex-shrink-0 w-28">
-            <div className="flex rounded overflow-hidden h-2 w-full gap-px">
-              {Object.entries(categoryCounts)
-                .filter(([, count]) => count > 0)
-                .sort((a, b) => b[1] - a[1])
-                .map(([cat, count]) => (
-                  <div
+          {/* Compact breakdown pills */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {Object.entries(categoryCounts)
+              .filter(([, count]) => count > 0)
+              .sort((a, b) => b[1] - a[1])
+              .map(([cat], i) => {
+                const glow = CATEGORY_GLOW[cat];
+                const isDominant = i === 0;
+                return (
+                  <span
                     key={cat}
-                    className={CATEGORY_COLORS[cat]}
-                    style={{ width: `${(count / totalPeaks) * 100}%` }}
-                    title={`${CATEGORY_LABELS[cat]}: ${count}`}
-                  />
-                ))}
-            </div>
-            <p className="text-[10px] text-muted mt-1 text-right">{totalPeaks} clip moments</p>
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                      isDominant && glow
+                        ? `${glow.bg} ${glow.border} ${glow.text}`
+                        : "bg-white/[0.03] border-white/[0.06] text-white/30"
+                    }`}
+                    style={isDominant && glow ? { boxShadow: glow.shadow } : undefined}
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </span>
+                );
+              })}
           </div>
         </div>
       </div>
@@ -263,33 +276,38 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
           <p className="text-sm text-white/50 leading-relaxed max-w-xl">{archetype?.description}</p>
         </div>
 
-        {/* Right — breakdown */}
-        <div className="lg:w-72 flex-shrink-0">
-          <p className="text-xs text-muted font-medium mb-4">Content breakdown</p>
-          <div className="space-y-3">
+        {/* Right — breakdown as glowing pills */}
+        <div className="lg:w-64 flex-shrink-0">
+          <p className="text-xs text-muted font-medium mb-4">Your content mix</p>
+          <div className="flex flex-wrap gap-2">
             {Object.entries(categoryCounts)
               .filter(([, count]) => count > 0)
               .sort((a, b) => b[1] - a[1])
-              .map(([cat, count]) => {
+              .map(([cat, count], i) => {
                 const pct = Math.round((count / totalPeaks) * 100);
-                const color = CATEGORY_COLORS[cat] || "bg-white/20";
+                const glow = CATEGORY_GLOW[cat];
+                const isDominant = i === 0;
                 return (
-                  <div key={cat}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-white/70">{CATEGORY_LABELS[cat]}</span>
-                      <span className="text-[11px] text-muted">{pct}%</span>
-                    </div>
-                    <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${color}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                  <div
+                    key={cat}
+                    className={`px-3.5 py-2 rounded-xl border transition-all ${
+                      isDominant && glow
+                        ? `${glow.bg} ${glow.border} ${glow.text}`
+                        : "bg-white/[0.03] border-white/[0.06] text-muted"
+                    }`}
+                    style={isDominant && glow ? { boxShadow: glow.shadow } : undefined}
+                  >
+                    <span className={`text-sm font-bold ${isDominant && glow ? glow.text : "text-white/50"}`}>
+                      {CATEGORY_LABELS[cat]}
+                    </span>
+                    <span className={`text-xs ml-1.5 ${isDominant ? "text-white/50" : "text-white/20"}`}>
+                      {pct}%
+                    </span>
                   </div>
                 );
               })}
           </div>
-          <p className="text-[10px] text-muted mt-3">{totalPeaks} clip moments total</p>
+          <p className="text-[10px] text-muted mt-3">{totalPeaks} clip moments across all streams</p>
         </div>
       </div>
     </div>
