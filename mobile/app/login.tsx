@@ -4,7 +4,6 @@ import {
   ActivityIndicator, Alert, Platform, Linking,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as ExpoLinking from 'expo-linking';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -19,7 +18,7 @@ export default function LoginScreen() {
   async function handleTwitchLogin() {
     setLoading(true);
     try {
-      const redirectUrl = ExpoLinking.createURL('/auth/callback');
+      const redirectUrl = 'https://www.levlcast.com/auth/callback';
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'twitch',
