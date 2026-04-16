@@ -240,7 +240,7 @@ export default async function GrowPage() {
                 </p>
               </div>
             </div>
-          )
+          )}
         </div>
       )}
     </div>
