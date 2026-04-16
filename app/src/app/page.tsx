@@ -406,7 +406,7 @@ export default function LandingPage() {
             {/* VOD list — full width */}
             <div className="md:col-span-12 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
-                src="/screenshots/vod-list.png"
+                src="/screenshots/vod-list.jpg"
                 alt="VOD list showing 8 analyzed streams with scores and coach report links"
                 className="w-full h-auto"
               />
