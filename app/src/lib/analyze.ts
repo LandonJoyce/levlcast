@@ -959,7 +959,8 @@ OUTPUT RULES:
 - NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
 - Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
 - Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
-- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence fix specific to this stream, then: Quote: "[exact words from the transcript where the problem is visible]". If prior history flags this as recurring, start the label with "RECURRING: ". Max 30 words after label.
+- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence fix specific to this stream, then a timestamp reference: "at MM:SS". If you can see the EXACT words verbatim in the transcript samples above, you may add Quote: "[exact words]" — but ONLY if you are reading those words directly from the samples. Never reconstruct or paraphrase a quote from memory — if you are not 100% certain the words appear exactly as written in the samples provided, use the timestamp only. If prior history flags this as recurring, start the label with "RECURRING: ". Max 30 words after label.
+- Strengths: use timestamps (at MM:SS) to anchor each moment — do NOT include quotes in strengths, only timestamps.
 - Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe", "No Opinion". Storytelling: "No Callback", "Dropped The Story", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper", "Chat Co-star". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
 - Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
@@ -994,9 +995,9 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "**Label** — specific moment + how to do more of it. Max 20 words."
   ],
   "improvements": [
-    "**Label** — when/where it showed up. Fix specific to this stream. Quote: \"[exact words]\" at MM:SS. Max 30 words.",
-    "**Label** — when/where it showed up. Fix specific to this stream. Quote: \"[exact words]\" at MM:SS. Max 30 words.",
-    "**Label** — when/where it showed up. Fix specific to this stream. Quote: \"[exact words]\" at MM:SS. Max 30 words."
+    "**Label** — when/where it showed up. Fix specific to this stream. at MM:SS. (Only add Quote: \"[exact words]\" if those exact words are visible verbatim in the transcript samples — otherwise timestamp only.)",
+    "**Label** — when/where it showed up. Fix specific to this stream. at MM:SS.",
+    "**Label** — when/where it showed up. Fix specific to this stream. at MM:SS."
   ],
   "best_moment": {
     "time": "<MM:SS>",
