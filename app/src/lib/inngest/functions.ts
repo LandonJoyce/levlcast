@@ -168,8 +168,9 @@ export const analyzeVod = inngest.createFunction(
           .eq("id", userId)
           .single();
 
-        const score = (coachReport as any)?.overall_score;
-        const priority = (coachReport as any)?.recommendation ?? "";
+        const report = coachReport as { overall_score?: number; recommendation?: string };
+        const score = report.overall_score;
+        const priority = report.recommendation ?? "";
         const snippet = priority.length > 80 ? priority.slice(0, 77) + "..." : priority;
 
         await sendPush(profile?.expo_push_token, {

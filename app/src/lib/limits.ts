@@ -58,11 +58,13 @@ export async function getUserUsage(
     new Date(profile.subscription_expires_at) < new Date();
 
   if (isExpired) {
-    // Subscription lapsed — downgrade silently so the user can't abuse expired pro access
+    // Subscription lapsed — downgrade silently. The extra .eq("plan", "pro") makes this
+    // a conditional update so concurrent requests can't race each other into inconsistent state.
     await supabase
       .from("profiles")
       .update({ plan: "free", updated_at: new Date().toISOString() })
-      .eq("id", userId);
+      .eq("id", userId)
+      .eq("plan", "pro");
   }
 
   const plan: "free" | "pro" =

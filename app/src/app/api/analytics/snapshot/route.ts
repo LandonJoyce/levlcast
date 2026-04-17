@@ -58,7 +58,12 @@ export async function POST() {
     return NextResponse.json({ error: "followers_scope_missing" }, { status: 403 });
   }
 
-  const json = await res.json();
+  let json: { total?: number };
+  try {
+    json = await res.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid response from Twitch" }, { status: 502 });
+  }
   const followerCount: number = json.total ?? 0;
 
   await supabase.from("follower_snapshots").insert({

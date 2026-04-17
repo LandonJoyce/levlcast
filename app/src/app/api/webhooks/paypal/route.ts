@@ -40,7 +40,12 @@ async function verifyPayPalWebhook(
     return false;
   }
 
-  const { access_token } = await tokenRes.json();
+  const tokenData = await tokenRes.json();
+  const access_token: string | undefined = tokenData?.access_token;
+  if (!access_token) {
+    console.error("[webhook/paypal] No access_token in PayPal token response");
+    return false;
+  }
 
   // Call PayPal's webhook verification endpoint
   const verifyRes = await fetch(
