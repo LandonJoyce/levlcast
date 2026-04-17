@@ -956,21 +956,23 @@ SCORING — be honest, most streams land 50-70:
 - Below 40: Fundamentals need attention.
 
 OUTPUT RULES:
-- stream_story: 2 sentences max. What this stream was and what the one defining thing that happened was. No scores, no advice — just the arc. If the title doesn't name a game, do not name one.
-- community_note: 1-2 sentences. Who watches this type of stream and whether this stream gave them what they came for. Reference what the community specifically wants from this category and one concrete thing the stream did or didn't do for them. Not generic — name the specific type of viewer community this stream attracts.
-- NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
+
+NO QUOTES ANYWHERE — GLOBAL RULE: Do not reconstruct or quote what the streamer said word-for-word in any field. Not in cold_open, not in strengths, not in improvements, not in stream_story, not anywhere. You only see transcript samples — you will get words wrong and wrong words destroy the report's credibility. Describe what happened using timestamps and actions only. "At 3:12 the streamer had a rage outburst" — not "the streamer said 'holy shit I can't believe that'." This rule overrides everything else.
+
+- stream_story: 2 sentences max. What this stream was about and the one defining moment. No scores, no advice, no quoted words. If the title doesn't explicitly name a game, do not name one.
+- community_note: 1 sentence. What this community wants and whether they got it. No quoted words.
+- NEVER give generic advice. Every sentence must reference a specific timestamp or observable thing from this stream.
 - Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
-- Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
-- Strengths: **2-3 word label** — one sentence, MM:SS timestamp, how to replicate. HARD LIMIT: 15 words after the label. No quotes.
-- Improvements: **2-3 word label** — when/where it showed up (MM:SS), one-line fix. HARD LIMIT: 20 words after the label. No quotes. If recurring from prior reports, prefix with "RECURRING: ".
-- Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe", "No Opinion". Storytelling: "No Callback", "Dropped The Story", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper", "Chat Co-star". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
-- Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
-- Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
-- Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
-- Cold open: score the first 5 minutes only. "strong" = hooked immediately, energy and presence from first words. "average" = took a few minutes to find footing. "weak" = opened cold, directionless, or clearly disengaged. Note: 1 sentence, specific to what actually happened in those first minutes. IMPORTANT: many streamers have 1-3 minutes of intro screen/music/setup before they start talking — this is normal and NOT a weak cold open. Judge from when they actually start speaking, not from timestamp 0:00.
-- score_breakdown: honest sub-scores (0-100) for energy (WPM consistency, peaks vs. flat zones), engagement (chat chemistry, personality moments), consistency (sustained quality vs. crashes), content (originality, opinion strength, clip-worthiness). These should add up logically to the overall_score.
-- momentum_crash: use the crash data provided. Describe the exact stretch where the stream flatlined and what the streamer should have done differently at that moment.
-- trend_vs_history: only populate if prior stream history is provided. Be direct — "improving", "declining", or "consistent". Name specific streams or scores if relevant.
+- Strengths: **2-3 word label** — what happened at MM:SS and how to replicate it. HARD LIMIT: 15 words. No quotes ever.
+- Improvements: **2-3 word label** — what the problem was at MM:SS and the one-line fix. HARD LIMIT: 20 words. No quotes ever. If recurring, prefix with "RECURRING: ".
+- Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe". Storytelling: "No Callback", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
+- Best moment: describe what the streamer DID and why it worked — actions and energy, not reconstructed words.
+- Recommendation: Lead with the insight, not a timestamp. 1-2 sentences. The single biggest lever. No quoted words.
+- Goals: concrete actions tied to specific problems from this stream. Not "engage more with chat."
+- Cold open: score the first 5 minutes. Note: 1 sentence describing what HAPPENED (energy level, presence, setup) — no reconstructed quotes from those minutes. Many streamers have 1-3 min of intro/setup — judge from when they actually start speaking.
+- score_breakdown: honest sub-scores 0-100 for energy, engagement, consistency, content.
+- momentum_crash: describe the stretch, what was happening, what should have happened instead. No quoted words.
+- trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent".
 - No emojis. No padding. No filler.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
