@@ -903,6 +903,8 @@ Classification rules:
 - Title is ambiguous/generic → fall back on transcript content.
 - When in doubt between gaming and just_chatting, prefer gaming — variety streamers almost never stream pure chat.
 
+CRITICAL — DO NOT HALLUCINATE GAME NAMES: If the stream title is ambiguous (e.g. "3v3s", "ranked grind", "late night stream", "session") and does not explicitly name a game, do NOT infer or name a specific game anywhere in your output — not in stream_story, not in feedback, not anywhere. Refer to "the game" or the game mode only. Naming the wrong game destroys report credibility instantly.
+
 EVALUATION — work through ALL of these before writing a single word of feedback. Dead air gets AT MOST one improvement slot — the other two must come from the dimensions below:
 
 1. ENERGY CURVE: Use the sparkline DATA only — this is a passive readout of WPM across the stream. Where did the graph drop to flat? Find the 1-2 worst drops and the 1 best high, and match those timestamps to the transcript to understand what was happening. This dimension is about READING what the data shows, not judging behavior.
@@ -954,13 +956,13 @@ SCORING — be honest, most streams land 50-70:
 - Below 40: Fundamentals need attention.
 
 OUTPUT RULES:
-- stream_story: 2-4 sentences. The narrative arc of this specific stream — what it was about, what the main turning points were, what the overall vibe was. Written like a knowledgeable friend summarizing the stream to the streamer. No scores, no advice — just the story. This appears at the top of their report before any numbers.
+- stream_story: 2 sentences max. What this stream was and what the one defining thing that happened was. No scores, no advice — just the arc. If the title doesn't name a game, do not name one.
 - community_note: 1-2 sentences. Who watches this type of stream and whether this stream gave them what they came for. Reference what the community specifically wants from this category and one concrete thing the stream did or didn't do for them. Not generic — name the specific type of viewer community this stream attracts.
 - NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
 - Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
 - Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
-- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared (always include a MM:SS timestamp so the streamer can jump to it), one sentence fix specific to this stream. NO quotes — timestamps only. Fabricated or reconstructed quotes destroy report credibility. If prior history flags this as recurring, start the label with "RECURRING: ". Max 30 words after label.
-- Strengths: **2-3 word label** — one sentence naming the moment with a MM:SS timestamp and how to replicate it. NO quotes — timestamps only. Max 20 words after label.
+- Strengths: **2-3 word label** — one sentence, MM:SS timestamp, how to replicate. HARD LIMIT: 15 words after the label. No quotes.
+- Improvements: **2-3 word label** — when/where it showed up (MM:SS), one-line fix. HARD LIMIT: 20 words after the label. No quotes. If recurring from prior reports, prefix with "RECURRING: ".
 - Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe", "No Opinion". Storytelling: "No Callback", "Dropped The Story", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper", "Chat Co-star". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
 - Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.

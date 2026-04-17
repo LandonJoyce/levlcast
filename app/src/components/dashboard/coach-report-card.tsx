@@ -75,16 +75,43 @@ function ScoreDeltaBadge({ score, previousScore }: { score: number; previousScor
   );
 }
 
-/** Renders "**Bold Label** — rest of text" with the bold part highlighted. Falls back to plain text. */
-function BoldLeadText({ text, className }: { text: string; className?: string }) {
-  const match = text.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
-  if (!match) return <span className={className}>{text}</span>;
+/**
+ * Renders a coach item (strength or improvement) as a clean two-line card:
+ *   Line 1: bold label  +  optional RECURRING badge  +  timestamp chip (right)
+ *   Line 2: body text (dimmer, smaller)
+ *
+ * Parses: [RECURRING: ]**Label** — body text. at MM:SS.
+ */
+function CoachItem({ text, accent }: { text: string; accent: "green" | "yellow" }) {
+  const recurring = /^RECURRING:\s*/i.test(text);
+  const cleaned   = text.replace(/^RECURRING:\s*/i, "");
+
+  const labelMatch = cleaned.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
+  if (!labelMatch) return <p className="text-xs text-white/55 leading-relaxed">{text}</p>;
+
+  const label = labelMatch[1];
+  let   body  = labelMatch[2].trim();
+
+  // Pull trailing "at MM:SS" out of the body
+  const tsMatch = body.match(/\s+at\s+(\d{1,2}:\d{2})\.?\s*$/i);
+  const ts      = tsMatch ? tsMatch[1] : null;
+  if (tsMatch) body = body.slice(0, tsMatch.index).trim().replace(/\.$/, "");
+
+  const labelColor = accent === "green" ? "text-green-400" : "text-yellow-400";
+
   return (
-    <span className={className}>
-      <span className="font-bold text-white/90">{match[1]}</span>
-      <span className="text-white/40"> — </span>
-      {match[2]}
-    </span>
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-2">
+        {recurring && (
+          <span className="text-[8px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full flex-shrink-0">
+            Recurring
+          </span>
+        )}
+        <span className={`text-xs font-bold ${labelColor} leading-none`}>{label}</span>
+        {ts && <span className="ml-auto text-[10px] font-mono text-white/20 flex-shrink-0">{ts}</span>}
+      </div>
+      <p className="text-xs text-white/50 leading-relaxed">{body}</p>
+    </div>
   );
 }
 
@@ -494,37 +521,39 @@ export function CoachReportCard({
                 );
               })()}
 
-              {/* What Worked / Fix for Next Stream */}
-              <div className="flex flex-col gap-3">
-                <div className="bg-green-500/5 border border-green-500/15 rounded-xl p-4">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Star size={12} className="text-green-400" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-green-400">What Worked</span>
+              {/* What Worked */}
+              {(report.strengths ?? []).length > 0 && (
+                <div className="rounded-xl border border-green-500/15 overflow-hidden">
+                  <div className="flex items-center gap-1.5 px-4 py-2.5 bg-green-500/5 border-b border-green-500/10">
+                    <Star size={11} className="text-green-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-green-400">What Worked</span>
                   </div>
-                  <ul className="space-y-2.5">
+                  <div className="divide-y divide-white/[0.04]">
                     {(report.strengths ?? []).map((s, i) => (
-                      <li key={i} className="text-sm text-white/65 flex gap-2">
-                        <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400/70" />
-                        <BoldLeadText text={s} />
-                      </li>
+                      <div key={i} className="px-4 py-3">
+                        <CoachItem text={s} accent="green" />
+                      </div>
                     ))}
-                  </ul>
-                </div>
-                <div className="bg-yellow-500/5 border border-yellow-500/15 rounded-xl p-4">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <AlertCircle size={12} className="text-yellow-400" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-yellow-400">Fix for Next Stream</span>
                   </div>
-                  <ul className="space-y-2.5">
-                    {(report.improvements ?? []).map((s, i) => (
-                      <li key={i} className="text-sm text-white/65 flex gap-2">
-                        <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-yellow-400/70" />
-                        <BoldLeadText text={s} />
-                      </li>
-                    ))}
-                  </ul>
                 </div>
-              </div>
+              )}
+
+              {/* Fix for Next Stream */}
+              {(report.improvements ?? []).length > 0 && (
+                <div className="rounded-xl border border-yellow-500/15 overflow-hidden">
+                  <div className="flex items-center gap-1.5 px-4 py-2.5 bg-yellow-500/5 border-b border-yellow-500/10">
+                    <AlertCircle size={11} className="text-yellow-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-400">Fix for Next Stream</span>
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {(report.improvements ?? []).map((s, i) => (
+                      <div key={i} className="px-4 py-3">
+                        <CoachItem text={s} accent="yellow" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
