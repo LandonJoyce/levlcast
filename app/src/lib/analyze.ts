@@ -429,6 +429,8 @@ export interface CoachReport {
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
   dead_zones?: Array<{ time: string; duration: number }>;
+  // 2-4 sentence narrative summary of what this stream was about — shown before scores
+  stream_story?: string;
   // Component breakdown — 4 sub-scores that feed into overall_score
   score_breakdown?: {
     energy: number;      // 0-100: speaking energy, pacing, WPM consistency
@@ -871,15 +873,15 @@ Classification rules:
 
 EVALUATION — work through ALL of these before writing a single word of feedback. Dead air gets AT MOST one improvement slot — the other two must come from the dimensions below:
 
-1. ENERGY CURVE: Use the sparkline. Where did energy spike vs. flatline? Find the 1-2 worst drops and the 1 best high — what was happening in the transcript at each?
+1. ENERGY CURVE: Use the sparkline DATA only — this is a passive readout of WPM across the stream. Where did the graph drop to flat? Find the 1-2 worst drops and the 1 best high, and match those timestamps to the transcript to understand what was happening. This dimension is about READING what the data shows, not judging behavior.
 
-2. DEAD AIR: Was it intentional (gameplay, watchalong) or momentum loss? Only flag it if it genuinely hurt. One slot max — do not let this dominate.
+2. DEAD AIR: Was silence intentional (gameplay, watchalong) or momentum loss? Only flag it if it genuinely hurt. One slot max — do not let this dominate.
 
 3. OPINIONS & TAKES: Did the streamer share strong opinions? Hot takes on the game, meta, culture, or life? Or did they just narrate and react without a point of view? Big streamers are opinionated — they make people agree or disagree, and both are growth. If this stream was mostly neutral play-by-play with no strong take, that's worth flagging.
 
 4. STORYTELLING & CALLBACKS: Did they tell any personal stories? Did they callback to earlier in the stream or a previous session? Callbacks ("remember when I said…", "like that time last week…") create continuity and make regulars feel rewarded. No callbacks = each stream feels disposable.
 
-5. HYPE ARCHITECTURE: Did they BUILD to moments or just react randomly? Top streamers manufacture peaks — they verbally escalate tension before a big play, they set up bits with a premise. Did this streamer let moments happen or did they create them?
+5. HYPE ARCHITECTURE: This is about INTENTIONAL BEHAVIOR — did they build to moments, or just react after the fact? Top streamers verbally escalate tension before a big play, set up bits with a premise, announce stakes before something happens. This is distinct from Energy Curve (which is raw WPM data) — a stream can have high WPM energy but zero intentional build-up, or low WPM but still manufacture moments well. Only flag this if you can see clear missed opportunities where they reacted instead of building.
 
 6. TRANSITION HANDLING: What happened during loading screens, queue waits, game deaths, or menu time? These are when average streamers go quiet or ramble. Top streamers have a transition move — a story, a question for chat, a hot take. Did they use these moments or waste them?
 
@@ -905,6 +907,7 @@ SCORING — be honest, most streams land 50-70:
 - Below 40: Fundamentals need attention.
 
 OUTPUT RULES:
+- stream_story: 2-4 sentences. The narrative arc of this specific stream — what it was about, what the main turning points were, what the overall vibe was. Written like a knowledgeable friend summarizing the stream to the streamer. No scores, no advice — just the story. This appears at the top of their report before any numbers.
 - NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
 - Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
 - Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
@@ -921,6 +924,7 @@ OUTPUT RULES:
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
+  "stream_story": "<2-4 sentences. The story arc of this stream — what happened, main turning points, overall vibe. No scores or advice. Written like a friend summarizing it.>",
   "overall_score": <integer 0-100>,
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
   "energy_trend": "<building | declining | consistent | volatile>",
