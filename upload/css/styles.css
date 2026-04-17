@@ -954,4 +954,145 @@ body {
   .cta-title { letter-spacing: -1.5px; }
   .feature-grid { grid-template-columns: 1fr; }
   .feature-card--highlight { grid-column: span 1; }
+  .pricing-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Hero trust line ───────────────────────────────────────── */
+.hero-trust {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+/* ── Pricing section ───────────────────────────────────────── */
+.pricing {
+  padding: 100px 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 760px;
+  margin: 48px auto 0;
+  text-align: left;
+}
+
+.pricing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pricing-card--pro {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: linear-gradient(160deg, rgba(124,58,237,0.06) 0%, var(--surface) 60%);
+}
+
+.pricing-card-pro-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.pricing-plan {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pricing-price {
+  margin-top: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.pricing-amount {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.pricing-period {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.pricing-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pricing-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.pricing-features li {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pricing-check {
+  color: var(--accent-light);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pricing-cta-free,
+.pricing-cta-pro {
+  display: block;
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.pricing-cta-free {
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: transparent;
+}
+
+.pricing-cta-free:hover { border-color: rgba(255,255,255,0.2); }
+
+.pricing-cta-pro {
+  background: var(--accent);
+  color: #fff;
+}
+
+.pricing-cta-pro:hover { opacity: 0.9; transform: translateY(-1px); }
