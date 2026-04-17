@@ -26,19 +26,22 @@ export function WeeklyDigestSection() {
   const [locked, setLocked] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  function load() {
+  function load(autoRefreshIfStale = false) {
     setLoading(true);
     fetch("/api/digest")
       .then((r) => r.json())
       .then((data) => {
         if (data.locked) { setLocked(true); return; }
         setDigest(data.latest ?? null);
+        if (autoRefreshIfStale && data.needs_refresh) {
+          generate();
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(true); }, []);
 
   async function generate() {
     setGenerating(true);

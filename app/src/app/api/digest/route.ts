@@ -37,7 +37,25 @@ export async function GET(request: Request) {
     const history = digests || [];
     const latest = history.length > 0 ? history[0] : null;
 
-    return NextResponse.json({ latest, history: history.reverse() });
+    // Compute whether a refresh is needed:
+    // 1. The stored digest is from a different week window than today
+    // 2. OR the user has analyzed a new VOD in the last 24h (fresh data worth reflecting)
+    const expectedWeekStart = new Date();
+    expectedWeekStart.setDate(expectedWeekStart.getDate() - 7);
+    const expectedWeekStartStr = expectedWeekStart.toISOString().split("T")[0];
+    const weekChanged = !latest || latest.week_start !== expectedWeekStartStr;
+
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: recentAnalyses } = await supabase
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "ready")
+      .gte("analyzed_at", yesterday);
+
+    const needs_refresh = weekChanged || (recentAnalyses ?? 0) > 0;
+
+    return NextResponse.json({ latest, history: history.reverse(), needs_refresh });
   } catch (err) {
     console.error("[api/digest] Unexpected error:", err);
     return NextResponse.json({ latest: null, history: [] });
