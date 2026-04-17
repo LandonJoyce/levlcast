@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendActivationEmail(to: string, name: string): Promise<void> {
   await resend.emails.send({
-    from: "LevlCast <support@levlcast.com>",
+    from: "LevlCast <hello@levlcast.com>",
     to,
     subject: "Your first stream analysis is waiting",
     html: `<!DOCTYPE html>
