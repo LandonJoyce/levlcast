@@ -429,6 +429,13 @@ export interface CoachReport {
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
   dead_zones?: Array<{ time: string; duration: number }>;
+  // Component breakdown — 4 sub-scores that feed into overall_score
+  score_breakdown?: {
+    energy: number;      // 0-100: speaking energy, pacing, WPM consistency
+    engagement: number;  // 0-100: chat interaction, personality, reactions
+    consistency: number; // 0-100: sustained quality vs. crashes and dead zones
+    content: number;     // 0-100: content quality, originality, opinion strength
+  };
   // Longitudinal coaching — populated when prior stream history is available
   trend_vs_history?: {
     direction: "improving" | "declining" | "consistent" | "first_stream";
@@ -570,6 +577,105 @@ function calcCommentaryDensity(segments: TranscriptSegment[]): number {
 }
 
 /**
+ * Build problem-weighted transcript samples for the coach prompt.
+ *
+ * Strategy for long streams (>= 15 min):
+ *   1. Opening — first 100 segments (always; cold-open quality + early vibe)
+ *   2. Closing — last 80 segments (always; how the stream ended)
+ *   3. Three worst-energy middle zones — 80 lines each, pulled from the
+ *      5-minute blocks with the lowest average WPM between opening and closing.
+ *      These are the dead spots the coach needs to see to give grounded advice.
+ *
+ * Total: ~340 lines (fewer tokens than the old even-5-sample approach, but
+ * concentrated where the problems actually live instead of evenly spread).
+ *
+ * For short streams (< 15 min of energy data), falls back to 3 even sections
+ * so short VODs still get full coverage without redundancy.
+ */
+function buildWeightedTranscriptSamples(
+  segments: TranscriptSegment[],
+  energyMap: { minute: number; wpm: number }[],
+): string {
+  const OPENING_LINES = 100;
+  const BLOCK_LINES = 80;
+
+  // Short-stream fallback: 3 even sections (opening/middle/closing)
+  if (energyMap.length < 15) {
+    const labels = ["Opening", "Middle", "Closing"];
+    return Array.from({ length: 3 }, (_, i) => {
+      const centerFraction = i / 2;
+      const centerIdx = Math.floor(centerFraction * (segments.length - 1));
+      const start = Math.max(0, centerIdx - Math.floor(OPENING_LINES / 2));
+      const end = Math.min(segments.length, start + OPENING_LINES);
+      const segsSlice = segments.slice(start, end);
+      const wpm = calcWPM(segsSlice);
+      const lines = segsSlice.map((s) => `[${formatTime(s.start)}] ${s.text}`);
+      return `--- ${labels[i]} (${wpm} wpm) ---\n${lines.join("\n")}`;
+    }).join("\n\n");
+  }
+
+  const sections: { label: string; text: string }[] = [];
+
+  // 1. Opening
+  const openingSegs = segments.slice(0, OPENING_LINES);
+  sections.push({
+    label: `Opening (${calcWPM(openingSegs)} wpm)`,
+    text: openingSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+  });
+
+  // 2. Closing
+  const closingSegs = segments.slice(-BLOCK_LINES);
+  sections.push({
+    label: `Closing (${calcWPM(closingSegs)} wpm)`,
+    text: closingSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+  });
+
+  // 3. Worst-energy middle blocks
+  const openingEndSec = openingSegs[openingSegs.length - 1]?.end ?? 0;
+  const closingStartSec = closingSegs[0]?.start ?? (segments[segments.length - 1]?.end ?? 0);
+  const BLOCK_SEC = 5 * 60;
+
+  const middleBlocks: { startSec: number; avgWpm: number }[] = [];
+  for (let t = openingEndSec; t + BLOCK_SEC < closingStartSec; t += BLOCK_SEC) {
+    const blockSegs = segments.filter((s) => s.start >= t && s.start < t + BLOCK_SEC);
+    if (blockSegs.length < 5) continue;
+    middleBlocks.push({ startSec: t, avgWpm: calcWPM(blockSegs) });
+  }
+
+  // Take the 3 lowest-WPM blocks (worst dead zones)
+  const worstBlocks = [...middleBlocks]
+    .sort((a, b) => a.avgWpm - b.avgWpm)
+    .slice(0, 3);
+
+  for (const block of worstBlocks) {
+    const blockSegs = segments
+      .filter((s) => s.start >= block.startSec && s.start < block.startSec + BLOCK_SEC)
+      .slice(0, BLOCK_LINES);
+    if (blockSegs.length === 0) continue;
+    const wpm = calcWPM(blockSegs);
+    const tag = wpm < 80 ? "DEAD ZONE" : wpm < 110 ? "LOW ENERGY" : "quiet zone";
+    sections.push({
+      label: `${tag} at ${formatTime(block.startSec)} (${wpm} wpm)`,
+      text: blockSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+    });
+  }
+
+  // If no middle blocks found (very short gap between opening and closing), add even middle
+  if (worstBlocks.length === 0) {
+    const midStart = Math.floor(segments.length * 0.4);
+    const midSegs = segments.slice(midStart, midStart + BLOCK_LINES);
+    if (midSegs.length > 0) {
+      sections.push({
+        label: `Middle (${calcWPM(midSegs)} wpm)`,
+        text: midSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+      });
+    }
+  }
+
+  return sections.map((s) => `--- ${s.label} ---\n${s.text}`).join("\n\n");
+}
+
+/**
  * Generate an AI stream coaching report from a transcript and detected peaks.
  * Uses Sonnet for higher quality coaching feedback — this is the flagship feature.
  */
@@ -591,23 +697,16 @@ export async function generateCoachReport(
   const vodDuration = segments[segments.length - 1].end;
   const totalMinutes = Math.round(vodDuration / 60);
 
-  // ── Transcript samples: 5 evenly-spaced sections + context around each peak ──
-  const LINES_PER_SECTION = 120;
-  const sectionLabels = ["Opening", "Early", "Middle", "Late", "Closing"];
-  const sectionTranscripts: string[] = [];
+  // ── Full energy map (minute-by-minute WPM) — built first so sampling can use it ──
+  const energyMap = buildEnergyMap(segments, vodDuration);
+  const sparkline = renderEnergySparkline(energyMap);
+  const sparklineLabel = energyMap
+    .filter((e) => e.minute % 5 === 0)
+    .map((e) => `${e.minute}m`)
+    .join("   ");
 
-  for (let i = 0; i < 5; i++) {
-    const centerFraction = i / 4;
-    const centerIdx = Math.floor(centerFraction * (segments.length - 1));
-    const start = Math.max(0, centerIdx - Math.floor(LINES_PER_SECTION / 2));
-    const end = Math.min(segments.length, start + LINES_PER_SECTION);
-    const secsInSection = segments.slice(start, end);
-    const wpm = calcWPM(secsInSection);
-    const lines = secsInSection.map((s) => `[${formatTime(s.start)}] ${s.text}`);
-    sectionTranscripts.push(`--- ${sectionLabels[i]} (${wpm} wpm) ---\n${lines.join("\n")}`);
-  }
-
-  const transcriptSamples = sectionTranscripts.join("\n\n");
+  // ── Problem-weighted transcript samples (opening + closing + worst energy zones) ──
+  const transcriptSamples = buildWeightedTranscriptSamples(segments, energyMap);
 
   // ── Peak context windows — transcript around each detected peak ──
   const peakContextBlock = buildPeakContextWindows(peaks, segments);
@@ -634,15 +733,6 @@ export async function generateCoachReport(
   const overallWPM = calcWPM(segments);
   const commentaryDensity = calcCommentaryDensity(segments);
 
-  // ── Full energy map (minute-by-minute WPM sparkline) ──
-  const energyMap = buildEnergyMap(segments, vodDuration);
-  const sparkline = renderEnergySparkline(energyMap);
-  // Label every 5th minute for orientation
-  const sparklineLabel = energyMap
-    .filter((e) => e.minute % 5 === 0)
-    .map((e) => `${e.minute}m`)
-    .join("   ");
-
   // ── Momentum crash — worst energy valley ──
   const crash = findMomentumCrash(energyMap, segments);
   const crashBlock = crash
@@ -652,13 +742,18 @@ ${crash.excerpt}`
 
   // ── Prior stream history for longitudinal coaching ──
   const historyBlock = (priorReports && priorReports.length > 0)
-    ? `PREVIOUS STREAM HISTORY (this streamer has been coached before — use this to identify patterns, improvements, or recurring problems):
+    ? `PREVIOUS STREAM HISTORY (this streamer has been coached before — use this to spot patterns):
 ${priorReports.map((r, i) => `Stream ${i + 1} ago (${r.date}, score ${r.score}):
   Priority: ${r.recommendation}
   Top fix: ${r.top_improvement}`).join("\n")}
 
-If the same problem has appeared in multiple past reports, name it directly — they've been told before and it's still happening.
-If this stream shows improvement on a past problem, call it out — earned recognition is more motivating than generic praise.`
+ANTI-REPETITION RULE — this is critical:
+- Before writing each improvement, check if the same problem appeared in 2+ prior reports above.
+- If yes: prefix that improvement with "RECURRING: " and be blunt — they have been told before.
+- If no: this is a new finding from this stream — write it fresh, no prior-report language.
+- Do NOT recycle prior reports' exact wording. If the same label would appear twice, drop the repeat.
+- New problems visible only in this stream take priority over repeating history.
+If this stream shows improvement on a past problem, note it in trend_vs_history — earned recognition matters.`
     : "";
 
   // ── Peaks summary for coaching context ──
@@ -722,7 +817,7 @@ ${peaksSummary}
 ${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this carefully — this is the raw evidence for what made the best moments work or why moments are missing):
 ${peakContextBlock}` : ""}
 
-STREAM TRANSCRIPT SAMPLES (5 sections across the full stream, with wpm per section to show energy curve):
+STREAM TRANSCRIPT SAMPLES (problem-weighted — opening, closing, and worst-energy zones with wpm labels):
 ${transcriptSamples}
 
 STEP 0 — FIND THE STREAM'S STORY (do this first, before anything else):
@@ -768,12 +863,13 @@ SCORING — be honest, most streams land 50-70:
 OUTPUT RULES:
 - NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
 - Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
-- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence with a fix that only works for this stream. Max 25 words after label.
+- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence fix specific to this stream, then on the next line: Quote: "[exact words from the transcript where the problem is visible]". If prior history flags this as recurring, start the label with "RECURRING: ". Max 30 words after label.
 - Labels must sound like a fellow streamer: "Dead Air", "Chat Sleeping", "Going Off", "Energy Diff", "Grinding Silent", "Clipped That", "No Hype". Never: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
 - Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
 - Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
 - Cold open: score the first 5 minutes only. "strong" = hooked immediately, energy and presence from first words. "average" = took a few minutes to find footing. "weak" = opened cold, directionless, or clearly disengaged. Note: 1 sentence, specific to what actually happened in those first minutes. IMPORTANT: many streamers have 1-3 minutes of intro screen/music/setup before they start talking — this is normal and NOT a weak cold open. Judge from when they actually start speaking, not from timestamp 0:00.
+- score_breakdown: honest sub-scores (0-100) for energy (WPM consistency, peaks vs. flat zones), engagement (chat chemistry, personality moments), consistency (sustained quality vs. crashes), content (originality, opinion strength, clip-worthiness). These should add up logically to the overall_score.
 - momentum_crash: use the crash data provided. Describe the exact stretch where the stream flatlined and what the streamer should have done differently at that moment.
 - trend_vs_history: only populate if prior stream history is provided. Be direct — "improving", "declining", or "consistent". Name specific streams or scores if relevant.
 - No emojis. No padding. No filler.
@@ -784,6 +880,12 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
   "energy_trend": "<building | declining | consistent | volatile>",
   "viewer_retention_risk": "<low | medium | high>",
+  "score_breakdown": {
+    "energy": <integer 0-100>,
+    "engagement": <integer 0-100>,
+    "consistency": <integer 0-100>,
+    "content": <integer 0-100>
+  },
   "cold_open": {
     "score": "<strong | average | weak>",
     "note": "<1 sentence about exactly what happened in the first 5 minutes>"
@@ -794,9 +896,9 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "**Label** — specific moment + how to do more of it. Max 20 words."
   ],
   "improvements": [
-    "**Label** — when/where it showed up. Fix specific to this stream. Max 25 words.",
-    "**Label** — when/where it showed up. Fix specific to this stream. Max 25 words.",
-    "**Label** — when/where it showed up. Fix specific to this stream. Max 25 words."
+    "**Label** — when/where it showed up. Fix specific to this stream. Quote: \"[exact words]\" at MM:SS. Max 30 words.",
+    "**Label** — when/where it showed up. Fix specific to this stream. Quote: \"[exact words]\" at MM:SS. Max 30 words.",
+    "**Label** — when/where it showed up. Fix specific to this stream. Quote: \"[exact words]\" at MM:SS. Max 30 words."
   ],
   "best_moment": {
     "time": "<MM:SS>",
