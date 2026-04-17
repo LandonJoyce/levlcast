@@ -306,10 +306,17 @@ export function CoachReportCard({
         <div className="p-5 space-y-4">
 
           {/* Stream story — narrative arc before the numbers */}
-          {report.stream_story && (
-            <div className="flex gap-3">
-              <div className="w-0.5 rounded-full bg-gradient-to-b from-white/20 to-white/0 flex-shrink-0" />
-              <p className="text-sm text-white/55 leading-relaxed italic">{report.stream_story}</p>
+          {(report.stream_story || report.community_note) && (
+            <div className="space-y-2">
+              {report.stream_story && (
+                <div className="flex gap-3">
+                  <div className="w-0.5 rounded-full bg-gradient-to-b from-white/20 to-white/0 flex-shrink-0" />
+                  <p className="text-sm text-white/55 leading-relaxed italic">{report.stream_story}</p>
+                </div>
+              )}
+              {report.community_note && (
+                <p className="text-xs text-white/35 leading-relaxed pl-3 border-l border-white/[0.06]">{report.community_note}</p>
+              )}
             </div>
           )}
 

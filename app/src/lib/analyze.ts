@@ -431,6 +431,8 @@ export interface CoachReport {
   dead_zones?: Array<{ time: string; duration: number }>;
   // 2-4 sentence narrative summary of what this stream was about — shown before scores
   stream_story?: string;
+  // 1-2 sentences on the viewer community this content attracts and whether this stream served them
+  community_note?: string;
   // Component breakdown — 4 sub-scores that feed into overall_score
   score_breakdown?: {
     energy: number;      // 0-100: speaking energy, pacing, WPM consistency
@@ -463,7 +465,11 @@ export interface PriorCoachSummary {
 
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
   gaming: `GAMING STREAMER COACHING STANDARDS:
-What separates top gaming streamers from average ones:
+
+WHO WATCHES GAMING STREAMS AND WHAT THEY WANT:
+Gaming viewers chose this stream over thousands of others playing the same game. That means they're there for the PERSONALITY attached to the gameplay, not just the gameplay. They clip and share hype, rage, and funny moments — they're your natural marketing department if you give them material. They follow streamers who have strong opinions on the game (patches, meta, other players, design choices) because it gives them something to agree or argue with. Competitive game viewers respect skill and call out bad play bluntly. Story/RPG game viewers want genuine discovery — they want to feel the story through you. Cozy game viewers want warmth and parasocial comfort. Know which of these you're curating and lean into it — the chat will reflect back exactly what you give them. A passionate opinionated gaming chat is built by a passionate opinionated streamer.
+
+WHAT TO GIVE YOUR COMMUNITY: Strong takes on the game. Genuine vocal reactions that let them feel the stakes. Running commentary that adds personality on top of what's on screen — not narrating the obvious, but adding your lens to it. Make your regulars feel rewarded with callbacks and inside jokes. Make new viewers feel welcomed with brief context. The community you build will clip moments that match your energy — give them the energy worth clipping.
 
 COMMENTARY: The commentary IS the content — not just narrating what's on screen, but adding personality, prediction, and emotion on top of it. Silence during intense gameplay is fine. Silence during downtime is dead content.
 
@@ -477,10 +483,14 @@ FAILURE FRAMING: The best gaming streamers are entertaining whether winning or l
 
 CHAT AS STADIUM: Treat chat like a crowd watching a live event. Big moments are announced with energy. Low moments are narrated with drama. The streamer creates the emotional arc, not just the game.
 
-WHAT TO LOOK FOR: Is commentary adding personality or narrating the obvious? Are dead moments being used for community building? Are they sharing opinions that create debate? Did they build to moments or just react? Are they making failure entertaining?`,
+WHAT TO LOOK FOR: Is commentary adding personality or narrating the obvious? Are dead moments being used for community building? Are they sharing opinions that create debate? Did they build to moments or just react? Are they making failure entertaining? Is the advice calibrated to the specific type of gaming community (competitive, story, cozy) this title suggests?`,
 
   just_chatting: `JUST CHATTING STREAMER COACHING STANDARDS:
-What separates top just chatting streamers from average ones:
+
+WHO WATCHES JUST CHATTING STREAMS AND WHAT THEY WANT:
+Just chatting viewers have explicitly chosen a personality over any content. They're not here for information or gameplay — they're here for THIS person. That's both the highest ceiling and the hardest room to keep. These viewers are parasocial by nature — they feel like they know the streamer personally, they defend them in other communities, they come back daily. They clip and share hot takes, debate moments, and vulnerable personal stories. They have zero tolerance for filler — if there's no personality driving the conversation, they leave within minutes. They are the most loyal community type if you earn it, and the most fickle if you don't. They WANT to feel like they're hanging out with a friend who has a point of view on everything. Their chat WILL reflect the streamer's energy exactly — a flat detached streamer gets a flat detached chat. An opinionated passionate streamer gets a chat that argues, defends, and clips everything.
+
+WHAT TO GIVE YOUR COMMUNITY: Unfiltered personality. Real stories with stakes. Opinions they can agree with or push back on. Remember their regulars by name — these viewers become your loudest advocates when they feel seen. The just chatting community grows through word-of-mouth, clips, and genuinely entertaining moments — not discoverability. Give them content worth talking about.
 
 RADICAL AUTHENTICITY: Performed emotions or polished delivery kills just chatting. The most growth comes from unfiltered genuine personality — uncertainty, contradictions, oversharing. Viewers follow because it feels real.
 
@@ -497,7 +507,11 @@ CALLBACKS: Did they reference something from earlier in the stream or a past str
 WHAT TO LOOK FOR: Is genuine personality showing or is it a performance? Are they making strong takes that could generate debate? Are they building actual relationships with chat or just responding and moving on? Did any storytelling land or fall flat? Did they callback to anything?`,
 
   irl: `IRL STREAMER COACHING STANDARDS:
-What separates top IRL streamers from average ones:
+
+WHO WATCHES IRL STREAMS AND WHAT THEY WANT:
+IRL viewers are vicarious adventurers — they're watching to experience places and situations they can't or won't themselves. They want to feel like they're on the adventure with the streamer. They clip unexpected moments, authentic stranger interactions, and genuine reactions to the environment. They're forgiving of technical hiccups but completely unforgiving of boredom — if the environment isn't being made interesting, they leave. IRL communities are some of the most reactive and engaged when it's working: they vote on decisions, they react to the environment in real time, they feel like co-pilots. When it stops working, they feel like they're watching someone walk around staring at their phone. The community the streamer builds is usually adventurous and opinionated — they'll push the streamer to do more, go further, engage more. Give them moments worth pushing for.
+
+WHAT TO GIVE YOUR COMMUNITY: Make them feel like they're there. Narrate your thoughts out loud. Let them influence decisions. React genuinely to unexpected things — don't manage or dampen reactions. The IRL community wants to feel like the stream could go anywhere at any moment.
 
 ENVIRONMENTAL NARRATION: The location is a co-character. Top IRL streamers narrate their environment and give the viewer a perspective, not just carry a camera. "What you're looking at is…" / "This place is wild because…" — they translate their environment into content.
 
@@ -512,7 +526,11 @@ CHAT AS COMPANION: Did they loop chat in? "Chat should I go in?" / "Chat what do
 WHAT TO LOOK FOR: Is the viewer getting a genuine perspective on the environment? Are internal thoughts being narrated? Did any stranger interaction go somewhere real? Is chat being treated as a companion or ignored?`,
 
   variety: `VARIETY STREAMER COACHING STANDARDS:
-What separates top variety streamers from average ones:
+
+WHO WATCHES VARIETY STREAMS AND WHAT THEY WANT:
+Variety viewers have self-selected for the person, not the content. They usually found this streamer through a specific game or moment and decided to follow the person regardless of what they play. That means they're generally loyal, but they also need to be constantly reminded WHY they followed — the consistent personality and values that make this streamer recognizable no matter what's on screen. New viewers landing on a variety stream have no game anchor, so they need to feel the personality immediately or they leave. Variety communities are often long-term fans who feel invested — they discuss the streamer's opinions on games, they debate game choices, they react to transitions. They clip moments that show the streamer's personality more than gameplay peaks. The risk: without a consistent identity, the community becomes a scattered group who each like different game eras of the streamer and don't cohesively grow together.
+
+WHAT TO GIVE YOUR COMMUNITY: A consistent voice they can recognize in any game. Bring them along explicitly through transitions. Have opinions that carry across contexts — the streamer's perspective on games, life, and ideas is what binds the community, not any single game.
 
 CONSISTENT PERSONALITY: The personality, not the game, is what viewers follow. Top variety streamers have a recognizable identity — a tone, a set of opinions, a reaction style — that's consistent whether they're playing an FPS or a cozy game. Did this stream show a clear personality, or did they just mold to whatever the current game demanded?
 
@@ -525,7 +543,11 @@ ENERGY MANAGEMENT: Switching games can re-energize but can also reset momentum. 
 WHAT TO LOOK FOR: Is there a consistent personality recognizable across any game? Are transitions smooth with connective tissue? Would a new viewer understand who this person is regardless of what they're playing? Are they sharing opinions that carry over between games?`,
 
   educational: `EDUCATIONAL STREAMER COACHING STANDARDS:
-What separates top educational streamers from average ones:
+
+WHO WATCHES EDUCATIONAL STREAMS AND WHAT THEY WANT:
+Educational stream viewers are the most intentional audience on Twitch — they showed up to learn something specific, and they're impatient if they feel their time is being wasted. They're also the most likely to share content outside Twitch: clips go to YouTube, Reddit, Twitter, Discord servers. They deeply reward genuine expertise and punish overconfidence they can see through. Their engagement pattern is different from other communities: they ask questions, they push back on errors, they remember what was said in previous streams. They build real knowledge relationships with streamers they trust. The educational community grows through reputation — if the streamer is consistently right, helpful, and honest about uncertainty, word spreads. If they overclaim or waste time, that also spreads. These viewers are more forgiving of production quality but less forgiving of wasted time or wrong information.
+
+WHAT TO GIVE YOUR COMMUNITY: Respect their time — have a clear direction for each stream and deliver on it. Be honest about uncertainty — "I'm not 100% sure, let me work through this" is content. Let chat push back and engage with corrections respectfully. These viewers want to learn WITH you, not just FROM you.
 
 TEACHING AS ENTERTAINMENT: Socratic method, real-time problem solving, genuine curiosity make learning feel like discovery. Dry lecture delivery drives viewers away. Did this stream feel like watching someone figure something out, or like a lecture?
 
@@ -895,7 +917,9 @@ EVALUATION — work through ALL of these before writing a single word of feedbac
 
 11. CLOSING ENERGY: How did the stream end? Did they build toward a finish (raid announcement, goal recap, memorable sign-off) or did it just fizzle? The last 10 minutes shapes whether a viewer comes back.
 
-12. HISTORY: If prior reports exist — specifically which problems are recurring vs. improved? Name the pattern directly.
+12. COMMUNITY CURATION: Based on the streamer type and what you can infer from the transcript — is the content actually serving the community this stream type attracts? What do viewers of THIS specific category want, and did this stream give it to them? Chats reflect the streamer — an engaged, opinionated, loyal community is built by a streamer who consistently gives them something to react to. If the stream is generic or safe, the community will stay small and passive. If there are specific moments where the streamer either nailed or missed what their community wants, name them.
+
+13. HISTORY: If prior reports exist — specifically which problems are recurring vs. improved? Name the pattern directly.
 
 DEAD AIR RULE: If dead air already appears as a strength (rare) or improvement, do NOT mention it again elsewhere. Repeating the same dimension in multiple fields is lazy coaching.
 
@@ -908,6 +932,7 @@ SCORING — be honest, most streams land 50-70:
 
 OUTPUT RULES:
 - stream_story: 2-4 sentences. The narrative arc of this specific stream — what it was about, what the main turning points were, what the overall vibe was. Written like a knowledgeable friend summarizing the stream to the streamer. No scores, no advice — just the story. This appears at the top of their report before any numbers.
+- community_note: 1-2 sentences. Who watches this type of stream and whether this stream gave them what they came for. Reference what the community specifically wants from this category and one concrete thing the stream did or didn't do for them. Not generic — name the specific type of viewer community this stream attracts.
 - NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
 - Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
 - Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
@@ -925,6 +950,7 @@ OUTPUT RULES:
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "stream_story": "<2-4 sentences. The story arc of this stream — what happened, main turning points, overall vibe. No scores or advice. Written like a friend summarizing it.>",
+  "community_note": "<1-2 sentences. Who watches this stream type, what they came for, and one specific thing this stream did or missed for that community.>",
   "overall_score": <integer 0-100>,
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
   "energy_trend": "<building | declining | consistent | volatile>",
