@@ -462,54 +462,80 @@ export interface PriorCoachSummary {
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
   gaming: `GAMING STREAMER COACHING STANDARDS:
 What separates top gaming streamers from average ones:
-- The commentary IS the content — not just narrating what is happening on screen, but adding personality, prediction, and emotion on top of it. Silence during intense gameplay can be fine, but silence during downtime is dead content.
-- Live vocal reactions matter more than the outcome. A loud genuine reaction to a near-miss is more entertaining than winning silently. Top gaming streamers make the viewer FEEL the stakes.
-- Downtime between action (loading, menus, queue waiting) is when great gaming streamers build community. They tell personal stories, ask chat questions, or give hot takes on the game or gaming culture. This is where personality is built.
-- Confident voice even in failure. The best gaming streamers are entertaining whether winning or losing because they frame both as stories. Self-deprecating humor in failure keeps viewers invested.
-- Strong opinions on the game — patches, meta, other players' decisions, bad design choices. Opinion-driven commentary creates clips and debate, which drives growth.
-- Treating chat like a stadium crowd — big moments are announced with energy. Low moments are narrated with drama. The streamer creates the emotional arc for the viewer, not just the game.
 
-Key coaching focus areas: Is commentary adding value or narrating the obvious? Are dead moments being energized? Are they sharing opinions worth clipping? Is energy proportional to what's happening?`,
+COMMENTARY: The commentary IS the content — not just narrating what's on screen, but adding personality, prediction, and emotion on top of it. Silence during intense gameplay is fine. Silence during downtime is dead content.
+
+OPINIONS ON THE GAME: Big gaming streamers share strong opinions constantly — on patches, meta, other streamers' decisions, bad design, what the game gets right. Opinion-driven commentary creates clips and debate. A streamer who just plays without a point of view is invisible.
+
+HYPE ARCHITECTURE: Top streamers manufacture peaks — they verbally escalate tension before a big play, they announce stakes before a clutch moment, they set up the story before something pays off. Average streamers just react after the fact.
+
+TRANSITIONS & DOWNTIME: Loading screens, queue waits, and game deaths are when great gaming streamers build community — personal stories, asking chat for hot takes, giving opinions on the meta. These moments separate 1k streamers from 100-viewer streamers.
+
+FAILURE FRAMING: The best gaming streamers are entertaining whether winning or losing because they frame both as stories. Self-deprecating humor in failure, genuine rage that becomes a bit, analysis of what went wrong — all of these keep viewers invested when the game isn't going well.
+
+CHAT AS STADIUM: Treat chat like a crowd watching a live event. Big moments are announced with energy. Low moments are narrated with drama. The streamer creates the emotional arc, not just the game.
+
+WHAT TO LOOK FOR: Is commentary adding personality or narrating the obvious? Are dead moments being used for community building? Are they sharing opinions that create debate? Did they build to moments or just react? Are they making failure entertaining?`,
 
   just_chatting: `JUST CHATTING STREAMER COACHING STANDARDS:
 What separates top just chatting streamers from average ones:
-- Radical authenticity is the product. Performed emotions or overly polished delivery kills it. The most growth comes from unfiltered, genuine personality.
-- React content done right requires genuine real-time processing — first authentic reaction, not a performed one. Realness is what gets clipped.
-- Parasocial relationship building: remembering regulars by name, referencing past streams, treating chat like a room of friends. This converts lurkers into loyals.
-- Hot takes create organic clip spread. A strong opinion — even controversial — generates debate, sharing, and return visits. Streamers who avoid controversy avoid organic growth.
-- Long-form conversation skills: holding attention through 2-4 hours with just personality. Requires genuine interests, stories, and opinions.
-- Making chat part of the content: the best just chatting streamers turn chat messages into comedic material or debate partners. Chat is a co-star.
 
-Key coaching focus areas: Is genuine personality showing or is it a performance? Are they building real relationships with chat? Are they sharing opinions strong enough to clip and argue about?`,
+RADICAL AUTHENTICITY: Performed emotions or polished delivery kills just chatting. The most growth comes from unfiltered genuine personality — uncertainty, contradictions, oversharing. Viewers follow because it feels real.
+
+OPINION DENSITY: Hot takes create organic clip spread. A strong opinion — even controversial — generates debate, sharing, and return visits. Streamers who avoid controversy avoid organic growth. The question to ask: did they say anything that someone would screenshot and argue about?
+
+STORYTELLING STRUCTURE: Top just chatting streamers don't just talk — they build stories with a premise, escalation, and payoff. "So this actually happened to me…" → setup → build → reaction. Rambling without structure loses viewers even if the content is interesting.
+
+CHAT AS CO-STAR: The best just chatting streamers turn chat messages into comedic material or debate partners. They argue with chatters, bring up a comment to make the room react, remember what a regular said last week. Chat shapes the stream.
+
+PARASOCIAL DEPTH: Remembering regulars by name, referencing past streams, treating chat like a room of friends converts lurkers into loyals. Streamers who never build this relationship stay small.
+
+CALLBACKS: Did they reference something from earlier in the stream or a past stream? Callbacks reward loyal viewers and create the sense that this streamer has a continuous world, not just isolated sessions.
+
+WHAT TO LOOK FOR: Is genuine personality showing or is it a performance? Are they making strong takes that could generate debate? Are they building actual relationships with chat or just responding and moving on? Did any storytelling land or fall flat? Did they callback to anything?`,
 
   irl: `IRL STREAMER COACHING STANDARDS:
 What separates top IRL streamers from average ones:
-- Environmental storytelling: the location is a co-character. Top IRL streamers narrate their environment and give the viewer a perspective, not just carry a camera.
-- Engaging strangers authentically. Natural conversations that go somewhere unexpected beat scripted interactions every time.
-- Narrating internal thoughts in real time creates intimacy and makes the viewer feel inside the streamer's head.
-- Reacting naturally to unexpected moments is the content. Genuine unscripted reactions are the clips — managing these moments kills them.
-- Chat as a companion: the best IRL streamers loop chat in, read reactions, ask chat what to do next.
 
-Key coaching focus areas: Is the viewer getting a genuine perspective? Are thoughts being narrated out loud? Is chat being treated as a companion or ignored?`,
+ENVIRONMENTAL NARRATION: The location is a co-character. Top IRL streamers narrate their environment and give the viewer a perspective, not just carry a camera. "What you're looking at is…" / "This place is wild because…" — they translate their environment into content.
+
+INTERNAL MONOLOGUE: Narrating internal thoughts in real time creates intimacy and makes the viewer feel inside the streamer's head. "I'm actually nervous about this" / "I don't know if I should go in" — this is the IRL version of hype architecture.
+
+STRANGER INTERACTIONS: Natural conversations that go somewhere unexpected beat scripted interactions every time. Did they engage anyone? Did it go somewhere real or did they bail early?
+
+UNSCRIPTED REACTIONS: Genuine unscripted reactions are the content. Managing or dampening these kills them. The best IRL moments are when something unexpected happens and they let themselves react fully.
+
+CHAT AS COMPANION: Did they loop chat in? "Chat should I go in?" / "Chat what do you think of this?" — making chat feel like they're on the adventure with the streamer.
+
+WHAT TO LOOK FOR: Is the viewer getting a genuine perspective on the environment? Are internal thoughts being narrated? Did any stranger interaction go somewhere real? Is chat being treated as a companion or ignored?`,
 
   variety: `VARIETY STREAMER COACHING STANDARDS:
 What separates top variety streamers from average ones:
-- The personality, not the game, is what viewers follow. A consistent identity makes them recognizable whether playing an FPS or a cozy game.
-- Smooth transitions need narrative connective tissue. Top variety streamers bring chat along explicitly — they don't just switch.
-- Building loyal audience who follow the person, not the category. This happens through consistent personality and values.
-- Energy management: switching games can re-energize but can also reset momentum. Top variety streamers time switches to capitalize on energy, not escape it.
 
-Key coaching focus areas: Is there a consistent personality recognizable across any game? Are transitions smooth? Would a new viewer understand who this person is regardless of what they're playing?`,
+CONSISTENT PERSONALITY: The personality, not the game, is what viewers follow. Top variety streamers have a recognizable identity — a tone, a set of opinions, a reaction style — that's consistent whether they're playing an FPS or a cozy game. Did this stream show a clear personality, or did they just mold to whatever the current game demanded?
+
+TRANSITION CRAFTSMANSHIP: Smooth transitions need narrative connective tissue. Top variety streamers bring chat along explicitly — "Alright we're done with that, I want to try something completely different" — not just switching without comment. Abrupt transitions reset momentum and lose new viewers.
+
+OPINIONS ACROSS CONTEXTS: The best variety streamers have takes on everything — they'll share an opinion on the game they just switched away from, compare the two, or bring in outside context. This creates the sense that they're a personality, not just a game-switching machine.
+
+ENERGY MANAGEMENT: Switching games can re-energize but can also reset momentum. Top variety streamers time switches to capitalize on energy highs or to escape energy lows strategically — they're intentional about it.
+
+WHAT TO LOOK FOR: Is there a consistent personality recognizable across any game? Are transitions smooth with connective tissue? Would a new viewer understand who this person is regardless of what they're playing? Are they sharing opinions that carry over between games?`,
 
   educational: `EDUCATIONAL STREAMER COACHING STANDARDS:
 What separates top educational streamers from average ones:
-- Teaching as entertainment: Socratic method, real-time problem solving, genuine curiosity make learning feel like discovery. Dry lecture delivery drives viewers away.
-- Accessible complexity: analogies and metaphors that make difficult topics click instantly. If a viewer needs background knowledge, most leave.
-- Acknowledging mistakes and confusion builds trust. Working through uncertainty live is more valuable than projecting false confidence.
-- Structured segments with clear payoffs keep retention high. Give the viewer a destination upfront.
-- Chat-driven content: letting chat questions steer the content creates investment and ownership.
 
-Key coaching focus areas: Is the teaching style engaging or dry lecture? Are complex topics made genuinely accessible? Is uncertainty handled authentically? Is chat shaping the direction?`,
+TEACHING AS ENTERTAINMENT: Socratic method, real-time problem solving, genuine curiosity make learning feel like discovery. Dry lecture delivery drives viewers away. Did this stream feel like watching someone figure something out, or like a lecture?
+
+ACCESSIBLE COMPLEXITY: Analogies and metaphors that make difficult topics click instantly. If a viewer needs background knowledge to follow along, most leave. Did they explain things in a way that a smart beginner could follow, or did they assume knowledge?
+
+AUTHENTIC UNCERTAINTY: Acknowledging mistakes and confusion builds trust. Working through uncertainty live is more valuable than projecting false confidence. "I'm actually not sure about this, let me think through it…" is content. Bluffing through gaps loses the audience when they catch it.
+
+STRUCTURED PAYOFFS: Top educational streamers give the viewer a destination upfront — "By the end of this I'm going to show you…" — and then deliver on it. Structure keeps retention high.
+
+CHAT-DRIVEN PIVOTS: Letting chat questions steer the content creates investment and ownership. Did they respond to questions in a way that deepened the topic, or did they dismiss them to stay on script?
+
+WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex topics made genuinely accessible? Is uncertainty handled authentically or faked? Did chat shape the direction at any point?`,
 };
 
 /** Compute per-minute WPM across the full stream. */
@@ -843,28 +869,47 @@ Classification rules:
 - Title is ambiguous/generic → fall back on transcript content.
 - When in doubt between gaming and just_chatting, prefer gaming — variety streamers almost never stream pure chat.
 
-EVALUATION — work through each before writing feedback:
+EVALUATION — work through ALL of these before writing a single word of feedback. Dead air gets AT MOST one improvement slot — the other two must come from the dimensions below:
 
-1. ENERGY CURVE: Use the sparkline and minute-by-minute data. Where exactly did energy die? What was happening in the transcript at those moments?
-2. DEAD AIR: Which gaps were from the game (acceptable) vs. losing momentum (bad)? Only flag the ones that actually hurt.
-3. PERSONALITY: When did their real personality show? What triggered it? How often did it happen vs. how often were they just filling air?
-4. CHAT: Were they treating chat as a co-star or an afterthought? Did any specific chat interaction go well or get ignored?
-5. PEAKS: What specifically created the detected peaks? If peaks are weak or missing, what was happening in the transcript where a peak should have been?
-6. NARRATIVE: Did the stream have a story? Did it build toward anything? Where did it feel alive vs. dead?
-7. HISTORY: If prior reports exist — has this streamer improved on past problems? Or are the same issues recurring? Name it directly.
+1. ENERGY CURVE: Use the sparkline. Where did energy spike vs. flatline? Find the 1-2 worst drops and the 1 best high — what was happening in the transcript at each?
+
+2. DEAD AIR: Was it intentional (gameplay, watchalong) or momentum loss? Only flag it if it genuinely hurt. One slot max — do not let this dominate.
+
+3. OPINIONS & TAKES: Did the streamer share strong opinions? Hot takes on the game, meta, culture, or life? Or did they just narrate and react without a point of view? Big streamers are opinionated — they make people agree or disagree, and both are growth. If this stream was mostly neutral play-by-play with no strong take, that's worth flagging.
+
+4. STORYTELLING & CALLBACKS: Did they tell any personal stories? Did they callback to earlier in the stream or a previous session? Callbacks ("remember when I said…", "like that time last week…") create continuity and make regulars feel rewarded. No callbacks = each stream feels disposable.
+
+5. HYPE ARCHITECTURE: Did they BUILD to moments or just react randomly? Top streamers manufacture peaks — they verbally escalate tension before a big play, they set up bits with a premise. Did this streamer let moments happen or did they create them?
+
+6. TRANSITION HANDLING: What happened during loading screens, queue waits, game deaths, or menu time? These are when average streamers go quiet or ramble. Top streamers have a transition move — a story, a question for chat, a hot take. Did they use these moments or waste them?
+
+7. CHAT CO-STAR: Not just "did they read chat" — did they make chat feel like they shaped the stream? Did they build on a chat message, argue with a chatter, give a regular a moment? Or did they read messages and respond with "yeah" / "lol" / "true" and move on?
+
+8. AUDIENCE ONBOARDING: Did they ever acknowledge or welcome new viewers? Did they explain context ("so what I'm doing is…") or just play for their regulars? Streamers who never onboard new viewers have a ceiling on how big they can get.
+
+9. VOCAL VARIETY: Based on the transcript, was their delivery flat and monotone (short statements, no escalation, no variation in sentence structure) or did it have range (long escalating sentences, sudden short punchy reactions, rhetorical questions to chat, building speculation)? Flat delivery kills retention even when the content is good.
+
+10. PERSONALITY AUTHENTICITY: Were there moments where their real self came out — an unexpected reaction, an off-script thought, genuine frustration or joy? Or did the stream feel performed and safe? Vulnerability and imperfection are what get clipped and shared.
+
+11. CLOSING ENERGY: How did the stream end? Did they build toward a finish (raid announcement, goal recap, memorable sign-off) or did it just fizzle? The last 10 minutes shapes whether a viewer comes back.
+
+12. HISTORY: If prior reports exist — specifically which problems are recurring vs. improved? Name the pattern directly.
+
+DEAD AIR RULE: If dead air already appears as a strength (rare) or improvement, do NOT mention it again elsewhere. Repeating the same dimension in multiple fields is lazy coaching.
 
 SCORING — be honest, most streams land 50-70:
-- 85-100: Rare. High energy throughout, strong personality, great chat chemistry, multiple clip-worthy moments.
-- 70-84: Solid. Clear strengths. A couple obvious things to fix.
-- 55-69: Average. Watchable but forgettable. Energy or engagement needs work.
-- 40-54: Below average. Dead air, flat delivery, or weak engagement throughout.
+- 85-100: Rare. High energy throughout, strong personality, opinionated delivery, great chat chemistry, multiple clip-worthy moments.
+- 70-84: Solid. Clear strengths and 2-3 obvious fixes. Usually has opinions and some storytelling.
+- 55-69: Average. Watchable but forgettable. Missing opinions, transitions, or chat depth.
+- 40-54: Below average. Passive delivery, missed transitions, no real takes, or dead engagement.
 - Below 40: Fundamentals need attention.
 
 OUTPUT RULES:
 - NEVER give generic advice. Every sentence must reference a specific moment, timestamp, or thing that actually happened in this stream.
+- Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
 - Strengths: **2-3 word label** — one sentence naming WHEN/WHAT the strength showed up and how to replicate it. Max 20 words after label.
-- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence fix specific to this stream, then on the next line: Quote: "[exact words from the transcript where the problem is visible]". If prior history flags this as recurring, start the label with "RECURRING: ". Max 30 words after label.
-- Labels must sound like a fellow streamer: "Dead Air", "Chat Sleeping", "Going Off", "Energy Diff", "Grinding Silent", "Clipped That", "No Hype". Never: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
+- Improvements: **2-3 word label** — one sentence on exactly when/where the problem appeared, one sentence fix specific to this stream, then: Quote: "[exact words from the transcript where the problem is visible]". If prior history flags this as recurring, start the label with "RECURRING: ". Max 30 words after label.
+- Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe", "No Opinion". Storytelling: "No Callback", "Dropped The Story", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper", "Chat Co-star". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
 - Best moment: tell the actual story of what happened — what the streamer said or did, what made it land. Not a description of the category of moment.
 - Recommendation: 1-2 sentences. Reference what happened in this stream. The single biggest lever to pull next time.
 - Goals: concrete and tied to this stream's specific issues. Not "engage more with chat" — tell them what to do that would have fixed the exact problem you saw today.
