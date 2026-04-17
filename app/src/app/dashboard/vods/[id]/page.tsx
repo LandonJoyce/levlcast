@@ -154,6 +154,21 @@ export default async function VodDetailPage({
             </div>
           )}
 
+          {/* Clip nudge — shown after analysis when no clips made yet */}
+          {peaks.length > 0 && readyClips.length === 0 && processingClips.length === 0 && (
+            <div className="flex items-center justify-between gap-4 bg-accent/[0.08] border border-accent/25 rounded-xl px-5 py-4">
+              <div>
+                <p className="text-sm font-bold text-white mb-0.5">
+                  {peaks.length} clip moment{peaks.length !== 1 ? "s" : ""} found
+                </p>
+                <p className="text-xs text-white/50">Turn your best moments into shareable clips — scroll down to generate.</p>
+              </div>
+              <a href="#clip-moments" className="flex-shrink-0 bg-accent hover:opacity-90 transition-opacity text-white text-xs font-bold px-4 py-2 rounded-full">
+                Generate Clips
+              </a>
+            </div>
+          )}
+
           {/* Dead Zones */}
           {coachReport?.dead_zones && coachReport.dead_zones.length > 0 && (
             <div className="bg-surface border border-border rounded-2xl p-5">
@@ -248,7 +263,7 @@ export default async function VodDetailPage({
 
           {/* Peak Moments */}
           {peaks.length > 0 && (
-            <div>
+            <div id="clip-moments">
               <h2 className="text-base font-bold mb-3">
                 Clip Moments ({peaks.length})
               </h2>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Twitch, Brain, Zap, X } from "lucide-react";
+import { Twitch, Brain, Zap } from "lucide-react";
 
 const STORAGE_KEY = "levlcast_welcome_seen";
 
@@ -40,13 +40,9 @@ export default function WelcomeModal({ name }: { name: string }) {
     }
   }, []);
 
-  function dismiss() {
+  function handleCTA() {
     localStorage.setItem(STORAGE_KEY, "1");
     setVisible(false);
-  }
-
-  function handleCTA() {
-    dismiss();
     router.push("/dashboard/vods");
   }
 
@@ -54,22 +50,11 @@ export default function WelcomeModal({ name }: { name: string }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={dismiss}
-      />
+      {/* Non-dismissible backdrop — user must choose an action */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
       {/* Modal */}
       <div className="relative w-full max-w-md bg-surface border border-border rounded-2xl p-8 shadow-2xl">
-        {/* Dismiss X */}
-        <button
-          onClick={dismiss}
-          className="absolute top-4 right-4 text-muted hover:text-white transition-colors"
-          aria-label="Close"
-        >
-          <X size={18} />
-        </button>
 
         {/* Header */}
         <div className="mb-6">
@@ -104,9 +89,9 @@ export default function WelcomeModal({ name }: { name: string }) {
           Sync My First VOD →
         </button>
 
-        {/* Dismiss */}
+        {/* Secondary — still sends them to VODs */}
         <button
-          onClick={dismiss}
+          onClick={handleCTA}
           className="w-full text-center text-xs text-muted hover:text-white transition-colors mt-3 py-1"
         >
           I'll explore on my own

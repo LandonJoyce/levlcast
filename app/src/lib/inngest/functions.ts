@@ -2,11 +2,12 @@
  * lib/inngest/functions.ts — background jobs for LevlCast.
  *
  * FUNCTIONS:
- *   analyzeVod       — VOD transcription + peak detection + coaching report
- *   generateClip     — clip extraction from a detected peak
- *   cleanupStuckVods — cron: mark stuck VODs as failed
- *   cleanupStuckClips— cron: mark stuck clips as failed
+ *   analyzeVod           — VOD transcription + peak detection + coaching report
+ *   generateClip         — clip extraction from a detected peak
+ *   cleanupStuckVods     — cron: mark stuck VODs as failed
+ *   cleanupStuckClips    — cron: mark stuck clips as failed
  *   computeBurnoutScores — cron (weekly): burnout detection for all active users
+ *   sendActivationNudge  — cron (hourly): email users who signed up 24h ago but never analyzed
  */
 
 import { inngest } from "./client";
@@ -20,6 +21,7 @@ import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
+import { sendActivationEmail } from "@/lib/email";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -977,5 +979,58 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
     }
 
     return { processed };
+  }
+);
+
+// ─── Activation Nudge ─────────────────────────────────────────────────────
+// Runs every hour. Finds users who signed up 24–25 hours ago and have never
+// analyzed a VOD, then sends a single activation email to bring them back.
+// The 1-hour window ensures each user is caught exactly once without needing
+// a separate "email sent" tracking column.
+
+export const sendActivationNudge = inngest.createFunction(
+  { id: "send-activation-nudge" },
+  { cron: "0 * * * *" }, // every hour on the hour
+  async () => {
+    const supabase = createAdminClient();
+
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const windowStart = new Date(now.getTime() - 25 * 60 * 60 * 1000);
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, twitch_display_name")
+      .gte("created_at", windowStart.toISOString())
+      .lt("created_at", windowEnd.toISOString());
+
+    if (!profiles || profiles.length === 0) return { sent: 0 };
+
+    let sent = 0;
+
+    for (const profile of profiles) {
+      try {
+        const { count } = await supabase
+          .from("vods")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", profile.id)
+          .eq("status", "ready");
+
+        if ((count ?? 0) > 0) continue;
+
+        const { data: { user } } = await supabase.auth.admin.getUserById(profile.id);
+        if (!user?.email) continue;
+
+        const name = profile.twitch_display_name || "Streamer";
+        await sendActivationEmail(user.email, name);
+        sent++;
+
+        console.log(`[activation-nudge] Sent to ${user.email.slice(0, 4)}***`);
+      } catch (err) {
+        console.error(`[activation-nudge] Failed for user ${profile.id.slice(0, 8)}:`, err);
+      }
+    }
+
+    return { sent };
   }
 );

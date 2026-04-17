@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.2",
+    date: "2026-04-17",
+    title: "Retention & Onboarding",
+    items: [
+      { type: "improved", text: "Welcome screen now sends you straight to your VODs — no dead ends after sign up" },
+      { type: "new",      text: "After your first analysis, a banner shows exactly how many clip moments are ready and takes you straight there" },
+      { type: "new",      text: "If you sign up but don't analyze a stream within 24 hours, LevlCast emails you a reminder" },
+    ],
+  },
+  {
     version: "v0.8.1",
     date: "2026-04-16",
     title: "Clip Accuracy Overhaul",
