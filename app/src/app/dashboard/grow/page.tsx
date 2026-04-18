@@ -16,7 +16,13 @@ const CATEGORY_STYLE: Record<string, string> = {
   hype: "bg-purple-500/10 text-purple-400",
   funny: "bg-yellow-500/10 text-yellow-400",
   educational: "bg-blue-500/10 text-blue-400",
-  emotional: "bg-red-500/10 text-red-400",
+  emotional: "bg-pink-500/10 text-pink-400",
+  clutch_play: "bg-emerald-500/10 text-emerald-400",
+  clutch: "bg-emerald-500/10 text-emerald-400",
+  rage: "bg-red-500/10 text-red-400",
+  wholesome: "bg-violet-500/10 text-violet-400",
+  hot_take: "bg-orange-500/10 text-orange-400",
+  story: "bg-cyan-500/10 text-cyan-400",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -24,6 +30,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   funny: "Comedy",
   educational: "Educational",
   emotional: "Emotional",
+  clutch_play: "Clutch",
+  clutch: "Clutch",
+  rage: "Rage",
+  wholesome: "Wholesome",
+  hot_take: "Hot Take",
+  story: "Story",
 };
 
 function scoreColor(score: number) {

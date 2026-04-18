@@ -9,9 +9,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   funny: "Comedy",
   educational: "Educational",
   emotional: "Emotional",
-  clutch_play: "Clutch Plays",
+  clutch_play: "Clutch",
+  clutch: "Clutch",
   rage: "Rage",
   wholesome: "Wholesome",
+  hot_take: "Hot Take",
+  story: "Story",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -20,8 +23,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   educational: "#3b82f6",
   emotional: "#ec4899",
   clutch_play: "#10b981",
+  clutch: "#10b981",
   rage: "#ef4444",
   wholesome: "#a78bfa",
+  hot_take: "#f97316",
+  story: "#06b6d4",
 };
 
 function mostCommon(arr: string[]): string | null {

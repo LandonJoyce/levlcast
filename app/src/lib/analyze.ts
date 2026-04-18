@@ -205,83 +205,118 @@ function buildPeakContextWindows(peaks: Peak[], segments: TranscriptSegment[]): 
  * Returns scored peaks with clip boundaries, captions, and scroll-stopping hooks.
  */
 function buildPeakDetectionPrompt(vodTitle: string, transcript: string): string {
-  return `Find the best moments to clip from this Twitch stream transcript for TikTok/short-form content.
+  return `You are selecting clips from a Twitch VOD transcript for TikTok and YouTube Shorts. Your job is to find moments that will stop someone mid-scroll — someone who has never seen this streamer before and has no loyalty to them.
 
 Stream title: "${vodTitle}"
 
 Timestamped transcript (--- Xs pause --- marks significant silences):
 ${transcript}
 
-YOUR JOB: Find 3-6 moments where the streamer has a genuine strong reaction or says something compelling enough to stop a viewer mid-scroll. These need to hook someone in the first 3 seconds.
+━━━ WHAT MAKES A CLIP GO VIRAL ━━━
 
-VERBAL PATTERNS THAT ALMOST ALWAYS MAKE GREAT CLIPS — actively look for these:
-- Exclamations at the start of an utterance: "WAIT", "NO", "BRO", "OH MY GOD", "WHAT", "ARE YOU SERIOUS", "NO WAY", "YO"
-- Repeated escalating words: "let's go let's go let's go", "no no no no", "wait wait wait", "oh oh oh"
-- Genuine laughter: "haha", "I'm dead", "I can't", "I'm crying", "bro I'm done"
-- Hot takes stated with conviction: "I actually think [strong opinion]", "real talk", "unpopular opinion", "nah [take]"
-- Disbelief or shock: "I can't believe", "how is that even", "there's no way", "that is actually insane"
-- Story setup with a clear payoff — buildup followed by a strong reaction
-- Genuine frustration, rage, or hype clearly expressed out loud
-- Anything where the streamer goes loud, fast, or emotional in their speech rhythm
+Every clip that performs has THREE things:
+1. A HOOK in the first 2-3 seconds that creates an open loop or instant reaction ("wait, what is happening?")
+2. A BUILD — rising tension, escalating energy, or a setup that makes you lean in
+3. A PAYOFF — the reaction, the punchline, the win, the loss, the moment that releases the tension
 
-WHAT IS NOT A CLIP — do NOT select these:
-- Normal conversation that happens to mention an interesting topic but has no emotional peak or reaction
-- Generic commentary or narration ("ok so now we're going to...", "alright let's see...")
-- Moments that only make sense with full stream context — if a stranger wouldn't care, skip it
-- Quiet moments, setup time, or intro segments — silence is not a clip
-- Anything where the streamer sounds flat, tired, or monotone — energy is required
-- Moments where the streamer is just reading chat or donations without adding personality
+If a moment has all three, it is a clip. If it is missing any one of them, it is not.
 
-CATEGORIES — pick the one that best fits the moment:
-- hype: excitement, celebration, big wins, "let's go" energy
-- funny: comedy, unexpected humor, jokes that land, absurd moments
-- emotional: vulnerability, heartfelt moments, genuine connection with chat
-- educational: teaching something, explaining a strategy, sharing knowledge
-- clutch_play: close calls, last-second saves, high-skill plays, "how did that work" moments
-- rage: genuine frustration, salt, tilt, getting tilted at the game or a situation
-- wholesome: kind moments, community love, heartwarming interactions
+━━━ THE 8 CLIP ARCHETYPES — match every moment to one ━━━
 
-SOURCE QUALITY:
-This transcript was pre-filtered using speaker diarization to include only the streamer's voice — game audio, music, and NPC dialogue have been removed. Every line is something the streamer actually said. If you still see anything that looks like scripted dialogue or song lyrics, skip it — it slipped through the filter.
+1. HYPE — The "LET'S GO" moment. Energy spike, celebration, win, clutch play. Fast speech, exclamations, repeating words ("yes yes yes", "let's go let's go"). Viewer reaction: "that was insane."
+   Viral trigger: people share things that made them feel excited.
 
-SCORING — be harsh. Most streams only have 1-3 genuinely good clips. Do NOT inflate scores to fill the 3-6 range. If only 2 moments clear the bar, return 2. An honest empty list is better than 6 mediocre clips.
-- 0.85-1.0: Stops mid-scroll. Strong hook in first 3 seconds, universal reaction, needs zero context.
-- 0.70-0.84: Strong clip. Clear emotional peak with payoff, works standalone.
-- 0.60-0.69: Decent clip. Relatable with minimal context.
-- Below 0.60: Not a clip. Do not include.
+2. COMEDY — Unexpected twist, absurd observation, self-aware joke, timing that lands perfectly. The streamer is either the punchline or delivers one. Viewer reaction: "I'm dead."
+   Viral trigger: people share things that made them laugh out loud.
 
-CLIP BOUNDARIES — THIS IS CRITICAL, read carefully:
-Your timestamps MUST match the transcript. Do not estimate or approximate — find the EXACT utterance timestamps from the transcript that contain the peak moment.
+3. RAGE/TILT — Genuine frustration, salt, disbelief at the game or a situation. NOT performed anger — real emotional response. The best rage clips have an escalation arc. Viewer reaction: "this is literally me."
+   Viral trigger: extreme relatability — everyone has felt this.
 
-Step-by-step for each clip:
-1. Find the KEY utterance — the exact line in the transcript where the peak reaction happens
-2. Read the timestamp on that line — this is your anchor point
-3. Start = the timestamp of the utterance 1-2 lines BEFORE the key utterance (for setup/context)
-4. End = the timestamp of the utterance 1-2 lines AFTER the key utterance (for the reaction to land)
-5. Verify: are all the words you're quoting in "reason" actually between your start and end times? If not, adjust.
+4. CLUTCH — High-stakes moment that looked lost then flipped, or required obvious skill to pull off. The setup (it looks bad) is as important as the payoff (it works). Viewer reaction: "how did they do that."
+   Viral trigger: people share skill they want others to see.
 
-Duration: 30-90 seconds total. Sweet spot is 45-75 seconds.
-Land on complete sentences — never cut mid-utterance.
+5. HOT TAKE — Bold opinion stated with conviction. Controversial read, unpopular opinion, calling something out. The streamer takes a real position, not a soft one. Viewer reaction: "I agree / I strongly disagree."
+   Viral trigger: opinion content drives comments and shares.
 
-Timestamps are plain seconds (e.g. 813 = 813 seconds into the stream).
-Output "start" and "end" as plain integers. Minimum clip length: 20 seconds.
+6. STORY — Has a clear beginning, middle, and end inside the clip window. Setup establishes stakes, something happens, streamer reacts with resolution. Viewer reaction: "wait what happened next."
+   Viral trigger: narrative tension keeps people watching to the end.
+
+7. EMOTIONAL — Genuine vulnerability, heartfelt moment, real connection with chat. NOT performed emotion — something the streamer actually feels. Viewer reaction: "this hit different."
+   Viral trigger: authentic human moments are rare online and get shared.
+
+8. KNOWLEDGE DROP — Explains something in a way that makes the viewer say "I never thought of it that way." A fast, confident insight or strategy breakdown. Viewer reaction: "I learned something."
+   Viral trigger: people share content that makes them look smart when they share it.
+
+━━━ VERBAL SIGNALS — scan for these patterns ━━━
+
+HIGH-CONFIDENCE clip signals (almost always a clip):
+- Exclamations that open an utterance: "WAIT—", "NO—", "BRO—", "OH MY GOD—", "WHAT—", "NO WAY—", "YO—", "HOLD ON—"
+- Word repetition with rising energy: "no no no no", "yes yes yes", "go go go", "wait wait wait"
+- Laughter markers: "I'm dead", "I can't", "bro stop", "I'm crying", "I'm done"
+- Conviction language: "real talk", "genuinely", "I actually think", "unpopular opinion", "nobody talks about this"
+- Disbelief: "there is no way", "how is that even legal", "that is actually insane", "I'm not making this up"
+- Story payoff signals: "and then—", "so what happened was—", "I kid you not"
+- Self-roast or self-awareness: streamer laughing at their own mistake or calling themselves out
+
+MEDIUM-CONFIDENCE signals (needs context check):
+- Rhetorical questions with stakes: "why would you ever—", "who decided that—"
+- Escalating commentary during gameplay: pace quickens, sentences get shorter
+- Direct address to chat with emotion: "chat did you see that", "chat I'm not okay"
+
+NOT a clip (skip immediately):
+- Flat narration: "ok so", "alright", "let me", "now I'm going to"
+- Reading donations or subs without a reaction that stands alone
+- Explaining game mechanics with no emotional hook
+- Any moment where speech is slow, low-energy, or monotone
+- Silences longer than 5 seconds inside the clip window
+- Moments that need 10+ minutes of context to understand why they matter
+
+━━━ SCORING ━━━
+
+Be harsh. Most streams have 1-3 real clips. Padding with weak moments makes the product look bad.
+
+- 0.85-1.0: Mid-scroll stopper. Hook is immediate. No context needed. Universal emotion. Could perform on any account.
+- 0.70-0.84: Strong clip. Clear arc, clear payoff. Works standalone with minor context.
+- 0.60-0.69: Decent clip. Has a genuine moment but hook is softer or needs mild context.
+- Below 0.60: Do not include.
+
+Ask yourself for every candidate: "Would I stop scrolling for this if I had never heard of this streamer?" If the honest answer is no, the score is below 0.60.
+
+━━━ CLIP BOUNDARIES — CRITICAL ━━━
+
+Your timestamps MUST match utterances in the transcript exactly. Do not estimate.
+
+Step by step:
+1. Find the PAYOFF utterance — the exact line where the peak moment lands
+2. Find the BUILD — go back 2-4 utterances to where the setup begins
+3. Set START = timestamp of the first utterance of the build
+4. Set END = timestamp 1-2 utterances after the payoff (let the reaction breathe)
+5. Check: does the clip arc have setup, build, and payoff within your start/end window? If not, adjust.
+
+Duration: 30-90 seconds. Sweet spot is 45-75 seconds.
+Never cut mid-utterance. Land on complete sentences.
+Timestamps are plain seconds (e.g. 234 = 234 seconds into the stream).
+Output start and end as plain integers. Minimum clip: 20 seconds.
 No emojis. Clean text only.
 
-Respond with ONLY a JSON array (no markdown, no code fences):
+━━━ OUTPUT FORMAT ━━━
+
+Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
+
 [
   {
-    "title": "<hook-style title under 60 chars — what the streamer said or reacted to>",
-    "start": <start time as plain integer seconds — must be the timestamp of a real utterance in the transcript>,
-    "end": <end time as plain integer seconds — must be the timestamp of a real utterance in the transcript>,
-    "score": <virality score 0.0-1.0>,
-    "category": "<hype | funny | emotional | educational | clutch_play | rage | wholesome>",
-    "reason": "<why this will perform — quote the EXACT words from the transcript that signal the peak, with their timestamps>",
-    "hook": "<what happens in the opening 3 seconds that stops someone scrolling>",
-    "caption": "<TikTok caption under 150 chars — conversational, not salesy, 3-4 relevant hashtags>"
+    "title": "<hook-style title under 60 chars — reads like a TikTok title, not a label>",
+    "start": <integer seconds — exact utterance timestamp from transcript>,
+    "end": <integer seconds — exact utterance timestamp from transcript>,
+    "score": <0.0-1.0>,
+    "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
+    "reason": "<2-3 sentences: what is the arc, what utterances anchor it, why a stranger would care>",
+    "hook": "<exactly what happens in the first 2-3 seconds that creates an open loop or instant reaction>",
+    "caption": "<TikTok/Shorts caption under 150 chars — conversational tone, 3-4 relevant hashtags>"
   }
 ]
 
-Return 1-6 peaks sorted by score descending. If nothing clears 0.60, return []. It is better to return fewer high-quality clips than to pad with mediocre ones.`;
+Return 1-6 clips sorted by score descending. Fewer great clips beats more mediocre ones every time.`;
 }
 
 async function runPeakDetection(
@@ -294,7 +329,7 @@ async function runPeakDetection(
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 3000,
-    system: `You are a viral content strategist who specializes in Twitch-to-TikTok clip selection. You have a sharp eye for the exact moment in a stream that would stop someone scrolling — you understand pacing, emotional escalation, and what makes a stranger care about someone they've never watched. You are decisive and specific: you identify the exact utterances that make a moment work, and you pick clip boundaries that make the clip feel complete.`,
+    system: `You are a senior clip editor who has spent years cutting Twitch VODs into viral TikToks and YouTube Shorts. You know the difference between a moment that excites the streamer's existing fans and a moment that will stop a complete stranger mid-scroll. You think in terms of clip arcs — setup, build, payoff — and you are ruthless about quality. You would rather return two perfect clips than six mediocre ones. You understand that the first 2-3 seconds of a clip determine everything, and you select boundaries with surgical precision so every clip starts on a hook and ends on a resolution.`,
     messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript) }],
   }), 3, 1000);
 
