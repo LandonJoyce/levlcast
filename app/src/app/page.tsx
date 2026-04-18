@@ -132,8 +132,8 @@ export default function LandingPage() {
             <div className="md:col-span-6 lg:col-span-7 md:translate-y-4">
               <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
                 <img
-                  src="/screenshots/hero-report.jpg"
-                  alt="AI coach report showing a stream score of 42 with specific priorities and missions"
+                  src="/screenshots/hero-report.png"
+                  alt="AI coach report showing a stream score with priorities, missions and silence gaps"
                   className="w-full h-auto"
                 />
               </div>
