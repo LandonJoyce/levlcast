@@ -347,47 +347,45 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Product Screenshots ─── */}
+      {/* ─── Analytics Showcase ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden">
         <div className="max-w-[1080px] mx-auto px-6">
-          <div className="flex justify-center mb-5">
-            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">The full picture</span>
-          </div>
-          <h2 className="text-4xl font-extrabold tracking-tight text-center mb-4">
-            Track everything. Improve every stream.
-          </h2>
-          <p className="text-center text-muted text-sm max-w-[480px] mx-auto mb-14 leading-relaxed">
-            VOD scores, content analytics, streamer health, and collab matches — all in one dashboard, updated after every stream.
-          </p>
+          <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
 
-          {/* Screenshot layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Analytics */}
-            <div className="rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
+            {/* Screenshot */}
+            <div className="w-full md:w-[55%] flex-shrink-0 rounded-2xl overflow-hidden border border-border shadow-glow-lg">
               <img
                 src="/screenshots/image15.png"
-                alt="Analytics dashboard with performance pulse, stream quality trend, best stream, and content breakdown"
+                alt="Analytics dashboard showing performance pulse, stream score trend, best stream, and content breakdown"
                 className="w-full h-auto"
               />
             </div>
 
-            {/* Growth Playbook */}
-            <div className="rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
-              <img
-                src="/screenshots/image17.png"
-                alt="Growth Playbook showing archetype, consistency grid, top clips, and weekly tactics"
-                className="w-full h-auto"
-              />
+            {/* Copy */}
+            <div className="flex-1 text-center md:text-left">
+              <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full mb-5">The full picture</span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-5">
+                You can&apos;t fix what<br className="hidden sm:block" /> you can&apos;t see.
+              </h2>
+              <p className="text-muted text-sm leading-relaxed mb-8 max-w-[380px] mx-auto md:mx-0">
+                Every stream gets scored, charted, and broken down — so you always know exactly where you peaked, where you dropped off, and what to do differently next time.
+              </p>
+              <ul className="space-y-3 text-sm text-muted max-w-[360px] mx-auto md:mx-0">
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
+                  <span>Stream score trend across every VOD you&apos;ve analyzed</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
+                  <span>Best stream and hottest clip moment highlighted automatically</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
+                  <span>Content breakdown — see which category actually gets clipped</span>
+                </li>
+              </ul>
             </div>
 
-            {/* VOD list — full width */}
-            <div className="md:col-span-2 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
-              <img
-                src="/screenshots/image16.png"
-                alt="VODs page showing 8 analyzed streams with scores, moments, and coach report links"
-                className="w-full h-auto"
-              />
-            </div>
           </div>
         </div>
       </section>
