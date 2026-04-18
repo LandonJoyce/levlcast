@@ -2,14 +2,14 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
-  TrendingUp, TrendingDown, Minus, Activity, Star, AlertCircle,
-  Lightbulb, Target, Gamepad2, MessageCircle, Map, Shuffle, BookOpen,
+  TrendingUp, TrendingDown, Minus, Activity, AlertCircle,
+  Target, Gamepad2, MessageCircle, Map, Shuffle, BookOpen,
   Volume2, VolumeX, Pause, Play, Loader2, Flame, Zap, ShieldAlert, Clock,
   CheckCircle2,
 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
   gaming:        { label: "Gaming",        icon: <Gamepad2 size={11} />      },
@@ -19,14 +19,10 @@ const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
   educational:   { label: "Educational",   icon: <BookOpen size={11} />      },
 };
 
-function scoreHex(n: number) {
-  return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171";
-}
-function scoreCls(n: number) {
-  return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400";
-}
+function scoreHex(n: number) { return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171"; }
+function scoreCls(n: number) { return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400"; }
 
-function stripText(raw: string): { label: string; body: string; ts: string | null; recurring: boolean } {
+function parseItem(raw: string) {
   const recurring = /^RECURRING:\s*/i.test(raw);
   const cleaned   = raw.replace(/^RECURRING:\s*/i, "");
   const m = cleaned.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
@@ -38,14 +34,82 @@ function stripText(raw: string): { label: string; body: string; ts: string | nul
   return { label: m[1], body, ts, recurring };
 }
 
-// ─── Audio ───────────────────────────────────────────────────────────────────
+// ─── Arc Gauge ────────────────────────────────────────────────────────────────
+
+function ArcGauge({ score }: { score: number }) {
+  const hex = scoreHex(score);
+  const cls = scoreCls(score);
+
+  // Arc: 220° sweep centered at bottom, r=70, viewBox 160×120
+  const R  = 70;
+  const cx = 80;
+  const cy = 90;
+  const startAngle = -200; // degrees from 3 o'clock (right)
+  const sweep      = 220;
+
+  function polar(angle: number, r: number = R) {
+    const rad = (angle * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  const start = polar(startAngle);
+  const end   = polar(startAngle + sweep);
+  const progEnd = polar(startAngle + (score / 100) * sweep);
+  const largeArc = sweep > 180 ? 1 : 0;
+  const progLarge = (score / 100) * sweep > 180 ? 1 : 0;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 200, height: 140 }}>
+      <svg width="200" height="140" viewBox="0 0 160 120" className="absolute inset-0">
+        {/* Track */}
+        <path
+          d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${largeArc} 1 ${end.x} ${end.y}`}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        {/* Progress */}
+        {score > 0 && (
+          <path
+            d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${progLarge} 1 ${progEnd.x} ${progEnd.y}`}
+            fill="none"
+            stroke={hex}
+            strokeWidth="6"
+            strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 6px ${hex})` }}
+          />
+        )}
+        {/* Tick marks at 25/50/75 */}
+        {[25, 50, 75].map((v) => {
+          const a = startAngle + (v / 100) * sweep;
+          const inner = polar(a, R - 10);
+          const outer = polar(a, R - 4);
+          return (
+            <line key={v} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
+              stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />
+          );
+        })}
+      </svg>
+
+      {/* Center number */}
+      <div className="flex flex-col items-center" style={{ marginTop: 12 }}>
+        <div className="flex items-baseline gap-1">
+          <span className={`font-black tabular-nums leading-none ${cls}`} style={{ fontSize: 52 }}>{score}</span>
+          <span className="text-xl font-bold text-white/20">/100</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
 
 function buildScript(r: CoachReport, prev?: number) {
   const p = [`Stream score: ${r.overall_score} out of 100.`];
   if (prev !== undefined) {
     const d = r.overall_score - prev;
-    if (d > 0) p.push(`Up ${d} from last stream.`);
-    else if (d < 0) p.push(`Down ${Math.abs(d)} from last stream.`);
+    if (d > 0) p.push(`Up ${d} from last stream.`); else if (d < 0) p.push(`Down ${Math.abs(d)} from last stream.`);
   }
   p.push(`Number one priority. ${r.recommendation}`);
   (r.next_stream_goals ?? []).forEach((g, i) => p.push(`Mission ${i + 1}. ${g}`));
@@ -55,10 +119,10 @@ function buildScript(r: CoachReport, prev?: number) {
 type PS = "idle" | "loading" | "playing" | "paused";
 
 function useAudio(r: CoachReport, prev?: number) {
-  const [ps, setPs]    = useState<PS>("idle");
-  const audioRef       = useRef<HTMLAudioElement | null>(null);
-  const blobRef        = useRef<string | null>(null);
-  const speechRef      = useRef(false);
+  const [ps, setPs]  = useState<PS>("idle");
+  const audioRef     = useRef<HTMLAudioElement | null>(null);
+  const blobRef      = useRef<string | null>(null);
+  const speechRef    = useRef(false);
 
   useEffect(() => () => {
     audioRef.current?.pause();
@@ -96,7 +160,6 @@ function useAudio(r: CoachReport, prev?: number) {
     if (speechRef.current) window.speechSynthesis?.pause(); else audioRef.current?.pause();
     setPs("paused");
   }, []);
-
   const stop = useCallback(() => {
     if (speechRef.current) { window.speechSynthesis?.cancel(); speechRef.current = false; }
     else if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
@@ -115,199 +178,203 @@ export function CoachReportCard({ report, previousScore, streak = 0 }: {
   const tc    = report.streamer_type ? TYPE_CONFIG[report.streamer_type] : null;
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
   const hex   = scoreHex(report.overall_score);
-  const cls   = scoreCls(report.overall_score);
 
-  // pill helpers
-  const energyPill = {
-    cls: report.energy_trend === "building"  ? "bg-green-500/10 border-green-500/25 text-green-300"
-       : report.energy_trend === "declining" ? "bg-red-500/10 border-red-500/25 text-red-300"
-       : report.energy_trend === "volatile"  ? "bg-yellow-500/10 border-yellow-500/25 text-yellow-300"
-       : "bg-white/[0.05] border-white/10 text-white/45",
-    label: report.energy_trend === "building"  ? "Building Energy"
-         : report.energy_trend === "declining" ? "Declining Energy"
-         : report.energy_trend === "volatile"  ? "Volatile Energy"
-         : "Consistent Energy",
-    icon: report.energy_trend === "building"  ? <TrendingUp size={11} />
-        : report.energy_trend === "declining" ? <TrendingDown size={11} />
-        : report.energy_trend === "volatile"  ? <Activity size={11} />
-        : <Minus size={11} />,
+  const energyInfo = {
+    label: report.energy_trend === "building" ? "Building Energy" : report.energy_trend === "declining" ? "Declining Energy" : report.energy_trend === "volatile" ? "Volatile Energy" : "Consistent Energy",
+    cls:   report.energy_trend === "building" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.energy_trend === "declining" ? "bg-red-500/10 border-red-500/20 text-red-300" : report.energy_trend === "volatile" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-white/[0.05] border-white/10 text-white/40",
+    icon:  report.energy_trend === "building" ? <TrendingUp size={11} /> : report.energy_trend === "declining" ? <TrendingDown size={11} /> : report.energy_trend === "volatile" ? <Activity size={11} /> : <Minus size={11} />,
   };
 
-  const retPill = {
-    cls: report.viewer_retention_risk === "low"    ? "bg-green-500/10 border-green-500/25 text-green-300"
-       : report.viewer_retention_risk === "medium" ? "bg-yellow-500/10 border-yellow-500/25 text-yellow-300"
-       : "bg-red-500/10 border-red-500/25 text-red-300",
-    label: report.viewer_retention_risk === "low" ? "Low Retention Risk"
-         : report.viewer_retention_risk === "medium" ? "High Retention Risk"
-         : "High Retention Risk",
+  const retInfo = {
+    label: `${report.viewer_retention_risk === "low" ? "Low" : report.viewer_retention_risk === "medium" ? "Medium" : "High"} Retention Risk`,
+    cls:   report.viewer_retention_risk === "low" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.viewer_retention_risk === "medium" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
   };
 
-  const coldPill = report.cold_open ? {
-    cls: report.cold_open.score === "strong" ? "bg-green-500/10 border-green-500/25 text-green-300"
-       : report.cold_open.score === "average" ? "bg-yellow-500/10 border-yellow-500/25 text-yellow-300"
-       : "bg-red-500/10 border-red-500/25 text-red-300",
-    label: report.cold_open.score === "strong" ? "Strong Open"
-         : report.cold_open.score === "average" ? "Slow Start"
-         : "Cold Open",
+  const coldInfo = report.cold_open ? {
+    label: report.cold_open.score === "strong" ? "Strong Open" : report.cold_open.score === "average" ? "Slow Start" : "Cold Open",
+    cls:   report.cold_open.score === "strong" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.cold_open.score === "average" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
   } : null;
 
   const gaps = report.dead_zones ?? [];
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-surface overflow-hidden">
+    <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)" }}>
         <div className="flex items-center gap-2.5">
-          <Zap size={14} className="text-accent-light" />
-          <span className="font-extrabold text-base text-white tracking-tight">Stream Debrief</span>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.2)", boxShadow: "0 0 12px rgba(139,92,246,0.3)" }}>
+            <Zap size={13} className="text-violet-300" />
+          </div>
+          <span className="font-extrabold text-sm text-white tracking-wide">Stream Debrief</span>
         </div>
         <div className="flex items-center gap-2">
           {streak >= 2 && (
-            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-400/20 text-orange-300">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-400/20 text-orange-300">
               <Flame size={10} />{streak} streak
             </span>
           )}
           {tc && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/10 text-white/50">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border text-white/45" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.09)" }}>
               {tc.icon}{tc.label}
             </span>
           )}
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-6">
+      <div className="px-6 py-6 space-y-5">
 
-        {/* ── Score card ── */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-6 py-6">
-          {/* Centered score number */}
-          <div className="flex items-baseline justify-center gap-2 mb-5">
-            <span className={`text-8xl font-black tabular-nums leading-none ${cls}`}>{report.overall_score}</span>
-            <span className="text-3xl font-bold text-white/20">/100</span>
-          </div>
+        {/* ── Score hero card ── */}
+        <div
+          className="rounded-2xl overflow-hidden relative"
+          style={{
+            background: `radial-gradient(ellipse 70% 60% at 50% 0%, ${hex}18 0%, rgba(10,9,20,0) 70%), rgba(255,255,255,0.025)`,
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          {/* Subtle top glow line */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-px" style={{ background: `linear-gradient(90deg, transparent, ${hex}60, transparent)` }} />
 
-          {/* Progress bar */}
-          <div className="h-2 rounded-full bg-white/[0.07] overflow-hidden mb-4">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${report.overall_score}%`, backgroundColor: hex, boxShadow: `0 0 12px ${hex}60`, transition: "width 0.7s ease" }}
-            />
-          </div>
+          <div className="px-6 pt-6 pb-5">
+            {/* Arc gauge centered */}
+            <div className="flex justify-center mb-2">
+              <ArcGauge score={report.overall_score} />
+            </div>
 
-          {/* Delta row */}
-          <div className="flex items-center justify-between mb-4">
-            {delta !== null ? (
-              <span className={`flex items-center gap-1.5 text-sm font-semibold ${delta > 0 ? "text-green-400" : delta < 0 ? "text-red-400" : "text-white/30"}`}>
-                {delta > 0 ? <TrendingUp size={14} /> : delta < 0 ? <TrendingDown size={14} /> : <Minus size={14} />}
-                {delta > 0 ? `+${delta}` : delta} from last
+            {/* Delta */}
+            <div className="flex items-center justify-center mb-5">
+              {delta !== null ? (
+                <span className={`flex items-center gap-1.5 text-sm font-semibold ${delta > 0 ? "text-green-400" : delta < 0 ? "text-red-400" : "text-white/30"}`}>
+                  {delta > 0 ? <TrendingUp size={13} /> : delta < 0 ? <TrendingDown size={13} /> : <Minus size={13} />}
+                  {delta > 0 ? `+${delta}` : delta} from last stream
+                </span>
+              ) : <span className="text-sm text-white/20">First report</span>}
+            </div>
+
+            {/* Pills centered */}
+            <div className="flex flex-wrap justify-center gap-2 mb-4">
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${energyInfo.cls}`}>
+                {energyInfo.icon}{energyInfo.label}
               </span>
-            ) : <span />}
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${retInfo.cls}`}>
+                <ShieldAlert size={11} />{retInfo.label}
+              </span>
+              {coldInfo && (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${coldInfo.cls}`}>
+                  {coldInfo.label}
+                </span>
+              )}
+            </div>
 
-            {/* Quick Listen */}
-            {ps === "idle" && (
-              <button onClick={play} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/40 hover:text-white/75 transition-colors">
-                <Volume2 size={12} />Quick Listen
-              </button>
-            )}
-            {ps === "loading" && (
-              <span className="flex items-center gap-1.5 text-xs text-white/25"><Loader2 size={12} className="animate-spin" />Loading...</span>
-            )}
-            {(ps === "playing" || ps === "paused") && (
-              <div className="flex items-center gap-1">
-                <button onClick={ps === "playing" ? pause : play} className="p-1.5 rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/50 hover:text-white transition-colors">
-                  {ps === "playing" ? <Pause size={12} /> : <Play size={12} />}
-                </button>
-                <button onClick={stop} className="p-1.5 text-white/20 hover:text-red-400 transition-colors"><VolumeX size={12} /></button>
+            {/* Divider */}
+            <div className="border-t border-white/[0.05] pt-4 flex items-center justify-between">
+              <p className="text-xs text-white/25 font-medium">Performance Score</p>
+              {/* Quick Listen */}
+              <div>
+                {ps === "idle" && (
+                  <button onClick={play} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl text-white/35 hover:text-white/75 transition-colors" style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+                    <Volume2 size={12} />Quick Listen
+                  </button>
+                )}
+                {ps === "loading" && <span className="flex items-center gap-1.5 text-xs text-white/25"><Loader2 size={12} className="animate-spin" />Loading...</span>}
+                {(ps === "playing" || ps === "paused") && (
+                  <div className="flex items-center gap-1">
+                    <button onClick={ps === "playing" ? pause : play} className="p-1.5 rounded-xl text-white/50 hover:text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+                      {ps === "playing" ? <Pause size={12} /> : <Play size={12} />}
+                    </button>
+                    <button onClick={stop} className="p-1.5 text-white/20 hover:text-red-400 transition-colors"><VolumeX size={12} /></button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          {/* Pills */}
-          <div className="flex flex-wrap gap-2">
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${energyPill.cls}`}>
-              {energyPill.icon}{energyPill.label}
-            </span>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${retPill.cls}`}>
-              <ShieldAlert size={11} />{retPill.label}
-            </span>
-            {coldPill && (
-              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${coldPill.cls}`}>
-                {coldPill.label}
-              </span>
-            )}
+            </div>
           </div>
         </div>
 
         {/* Stream story */}
         {report.stream_story && (
-          <p className="text-sm text-white/55 leading-relaxed italic">{report.stream_story}</p>
+          <div className="px-1">
+            <p className="text-sm text-white/50 leading-relaxed italic">{report.stream_story}</p>
+          </div>
         )}
 
         {/* Cold open note */}
         {report.cold_open?.note && (
-          <p className="text-sm text-white/40 leading-relaxed border-l-2 border-white/[0.08] pl-4">{report.cold_open.note}</p>
+          <div className="pl-4 border-l-2 border-white/[0.08]">
+            <p className="text-sm text-white/38 leading-relaxed">{report.cold_open.note}</p>
+          </div>
         )}
 
-        {/* #1 Priority */}
-        <div className="rounded-xl p-5 border" style={{ borderColor: "rgba(139,92,246,0.3)", background: "linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.05) 100%)" }}>
+        {/* ── #1 Priority ── */}
+        <div
+          className="rounded-xl p-5 relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.06) 60%, rgba(10,9,20,0) 100%)",
+            border: "1px solid rgba(139,92,246,0.28)",
+            boxShadow: "0 0 30px rgba(139,92,246,0.08) inset",
+          }}
+        >
+          <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.5), transparent)" }} />
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(139,92,246,0.25)" }}>
-              <Lightbulb size={14} className="text-violet-300" />
-            </div>
-            <span className="text-xs font-extrabold uppercase tracking-widest text-violet-400">#1 Priority</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">#1 Priority</span>
           </div>
-          <p className="text-base leading-relaxed text-white/90 font-medium">{report.recommendation}</p>
+          <p className="text-[15px] leading-relaxed text-white/90 font-medium">{report.recommendation}</p>
         </div>
 
-        {/* Score breakdown */}
+        {/* ── Score breakdown ── */}
         {report.score_breakdown && (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2.5">
             {(["energy", "engagement", "consistency", "content"] as const).map((k) => {
-              const v = report.score_breakdown![k];
+              const v   = report.score_breakdown![k];
+              const c   = scoreHex(v);
+              const cls = scoreCls(v);
+              const pct = v;
               return (
-                <div key={k} className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3 text-center">
-                  <div className={`text-2xl font-extrabold leading-none mb-1 ${scoreCls(v)}`}>{v}</div>
-                  <div className="text-[10px] text-white/30 capitalize">{k}</div>
+                <div key={k} className="rounded-xl px-3 py-3 text-center" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className={`text-2xl font-extrabold leading-none mb-2 ${cls}`}>{v}</div>
+                  <div className="h-1 rounded-full mb-1.5 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: c }} />
+                  </div>
+                  <div className="text-[9px] text-white/25 capitalize tracking-wide">{k}</div>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Best Moment */}
+        {/* ── Best Moment ── */}
         {report.best_moment && (
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-4 flex items-start gap-4">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-accent/10 border border-accent/20">
-              <Star size={14} className="text-accent-light" />
-            </div>
+          <div
+            className="rounded-xl px-4 py-4 flex items-start gap-4"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `2px solid rgba(139,92,246,0.5)` }}
+          >
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-accent-light mb-1.5">Best Moment</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1.5">Best Moment</p>
               <p className="text-sm text-white/70 leading-relaxed">{report.best_moment.description}</p>
             </div>
-            <span className="text-sm font-mono text-white/25 flex-shrink-0 pt-0.5">{report.best_moment.time}</span>
+            <span className="text-sm font-mono font-bold flex-shrink-0 pt-0.5" style={{ color: "rgba(139,92,246,0.6)" }}>{report.best_moment.time}</span>
           </div>
         )}
 
-        {/* What Worked / Fix for Next — two columns */}
+        {/* ── What Worked / Fix for Next ── */}
         {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
           <div className="grid grid-cols-2 gap-3">
             {/* What Worked */}
-            <div className="rounded-xl border border-white/[0.07] overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-green-500/10 bg-green-500/[0.05]">
+            <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(74,222,128,0.12)" }}>
+              <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(74,222,128,0.08)", background: "rgba(74,222,128,0.05)" }}>
                 <CheckCircle2 size={12} className="text-green-400" />
-                <span className="text-xs font-bold uppercase tracking-widest text-green-400">What Worked</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-green-400">What Worked</span>
               </div>
-              <div className="divide-y divide-white/[0.05]">
+              <div className="divide-y divide-white/[0.04]">
                 {(report.strengths ?? []).map((s, i) => {
-                  const { label, body, ts, recurring } = stripText(s);
+                  const { label, body, ts, recurring } = parseItem(s);
                   return (
                     <div key={i} className="px-4 py-3 space-y-1">
                       {recurring && <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full">Recurring</span>}
-                      <p className="text-sm font-bold text-green-400 leading-tight">
-                        {label || body}
-                        {ts && <span className="font-mono text-white/20 text-xs ml-1.5">{ts}</span>}
-                      </p>
-                      {label && <p className="text-sm text-white/50 leading-relaxed">{body}</p>}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-bold text-green-400 leading-tight">{label || body}</p>
+                        {ts && <span className="text-xs font-mono text-white/20 flex-shrink-0">{ts}</span>}
+                      </div>
+                      {label && <p className="text-xs text-white/45 leading-relaxed">{body}</p>}
                     </div>
                   );
                 })}
@@ -315,22 +382,22 @@ export function CoachReportCard({ report, previousScore, streak = 0 }: {
             </div>
 
             {/* Fix for Next */}
-            <div className="rounded-xl border border-white/[0.07] overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-yellow-500/10 bg-yellow-500/[0.05]">
+            <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(250,204,21,0.12)" }}>
+              <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(250,204,21,0.08)", background: "rgba(250,204,21,0.04)" }}>
                 <AlertCircle size={12} className="text-yellow-400" />
-                <span className="text-xs font-bold uppercase tracking-widest text-yellow-400">Fix for Next</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">Fix for Next</span>
               </div>
-              <div className="divide-y divide-white/[0.05]">
+              <div className="divide-y divide-white/[0.04]">
                 {(report.improvements ?? []).map((s, i) => {
-                  const { label, body, ts, recurring } = stripText(s);
+                  const { label, body, ts, recurring } = parseItem(s);
                   return (
                     <div key={i} className="px-4 py-3 space-y-1">
                       {recurring && <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full">Recurring</span>}
-                      <p className="text-sm font-bold text-yellow-400 leading-tight">
-                        {label || body}
-                        {ts && <span className="font-mono text-white/20 text-xs ml-1.5">{ts}</span>}
-                      </p>
-                      {label && <p className="text-sm text-white/50 leading-relaxed">{body}</p>}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-bold text-yellow-400 leading-tight">{label || body}</p>
+                        {ts && <span className="text-xs font-mono text-white/20 flex-shrink-0">{ts}</span>}
+                      </div>
+                      {label && <p className="text-xs text-white/45 leading-relaxed">{body}</p>}
                     </div>
                   );
                 })}
@@ -339,45 +406,56 @@ export function CoachReportCard({ report, previousScore, streak = 0 }: {
           </div>
         )}
 
-        {/* Your Missions */}
+        {/* ── Your Missions ── */}
         {(report.next_stream_goals ?? []).length > 0 && (
-          <div>
+          <div className="rounded-xl px-5 py-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-2 mb-4">
               <Target size={13} className="text-accent-light" />
-              <span className="text-xs font-bold uppercase tracking-widest text-accent-light">Your Missions</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent-light">Your Missions</span>
             </div>
             <div className="space-y-3">
               {(report.next_stream_goals ?? []).map((goal, i) => (
                 <div key={i} className="flex items-start gap-3.5">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full border border-white/[0.1] bg-white/[0.04] flex items-center justify-center text-xs font-bold text-white/35 mt-0.5">
+                  <div
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
+                    style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.22)", color: "rgba(167,139,250,0.8)" }}
+                  >
                     {i + 1}
-                  </span>
-                  <span className="text-sm text-white/70 leading-relaxed flex-1">{goal}</span>
+                  </div>
+                  <span className="text-sm text-white/68 leading-relaxed flex-1">{goal}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Silence Gaps */}
+        {/* ── Silence Gaps ── */}
         {gaps.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Clock size={12} className="text-white/25" />
-              <span className="text-xs font-bold uppercase tracking-widest text-white/25">Silence Gaps</span>
+              <Clock size={11} className="text-white/20" />
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/20">Silence Gaps</span>
+              <span className="ml-auto text-[10px] text-white/15">{gaps.length} detected</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {gaps.map((g, i) => {
                 const s   = g.duration;
                 const dur = s >= 60 ? `${Math.floor(s / 60)}m${s % 60 > 0 ? ` ${s % 60}s` : ""}` : `${s}s`;
-                const c   = s >= 300 ? "border-red-500/25 bg-red-500/[0.07] text-red-300"
-                  : s >= 120 ? "border-yellow-500/25 bg-yellow-500/[0.07] text-yellow-300"
-                  : "border-white/[0.09] bg-white/[0.03] text-white/40";
+                const bad = s >= 300;
+                const mid = s >= 120;
                 return (
-                  <span key={i} className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${c}`}>
-                    <span className="font-mono">{g.time}</span>
-                    <span className="text-[10px] opacity-70">·</span>
-                    <span>{dur} gap</span>
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold"
+                    style={{
+                      background: bad ? "rgba(248,113,113,0.07)" : mid ? "rgba(250,204,21,0.07)" : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${bad ? "rgba(248,113,113,0.2)" : mid ? "rgba(250,204,21,0.2)" : "rgba(255,255,255,0.08)"}`,
+                      color: bad ? "#fca5a5" : mid ? "#fde68a" : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    <span className="font-mono text-[10px] opacity-70">{g.time}</span>
+                    <span className="w-px h-3 opacity-20" style={{ background: "currentColor" }} />
+                    <span className="font-bold">{dur} gap</span>
                   </span>
                 );
               })}
