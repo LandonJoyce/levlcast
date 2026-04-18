@@ -362,20 +362,20 @@ export default function LandingPage() {
 
           {/* Screenshot layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Dashboard */}
+            {/* Analytics */}
             <div className="rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
-                src="/screenshots/dashboard.jpg"
-                alt="Dashboard showing recent stream scores, streamer health warning, VOD stats, and collab matches"
+                src="/screenshots/image15.png"
+                alt="Analytics dashboard with performance pulse, stream quality trend, best stream, and content breakdown"
                 className="w-full h-auto"
               />
             </div>
 
-            {/* Analytics */}
+            {/* Growth Playbook */}
             <div className="rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
-                src="/screenshots/analytics.png"
-                alt="Analytics dashboard with stream quality trend over time, content breakdown, and follower growth"
+                src="/screenshots/image17.png"
+                alt="Growth Playbook showing archetype, consistency grid, top clips, and weekly tactics"
                 className="w-full h-auto"
               />
             </div>
@@ -383,8 +383,8 @@ export default function LandingPage() {
             {/* VOD list — full width */}
             <div className="md:col-span-2 rounded-2xl overflow-hidden border border-border hover:border-accent/25 transition-colors">
               <img
-                src="/screenshots/vod-list.jpg"
-                alt="VOD list showing 8 analyzed streams with scores and coach report links"
+                src="/screenshots/image16.png"
+                alt="VODs page showing 8 analyzed streams with scores, moments, and coach report links"
                 className="w-full h-auto"
               />
             </div>
