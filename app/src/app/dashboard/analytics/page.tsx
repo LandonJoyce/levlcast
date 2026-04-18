@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { FollowerTrend } from "@/components/dashboard/follower-trend";
 import { formatDuration } from "@/lib/utils";
-import { Sparkles, TrendingUp, TrendingDown, Trophy, Zap, Clock, Flame, BarChart2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Trophy, Zap, Clock, Flame, BarChart2, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -151,10 +151,16 @@ export default async function AnalyticsPage() {
 
   const isEmpty = vods.length === 0;
 
+  const avgScoreColor = avgScore === null ? "" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400";
+  const latestScoreColor = latestScore === null ? "" : latestScore >= 70 ? "text-green-400" : latestScore >= 50 ? "text-yellow-400" : "text-red-400";
+
   return (
     <div>
+      {/* Page header */}
       <div className="mb-8">
-        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Performance data</span>
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">
+          Performance data
+        </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Analytics</h1>
         <p className="text-sm text-muted">Your streaming story, by the numbers.</p>
       </div>
@@ -167,128 +173,49 @@ export default async function AnalyticsPage() {
         </div>
       ) : (
         <>
-          {/* Score + Insights — score narrower, insights wider */}
-          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 mb-6">
-            {/* Score hero */}
-            <div className="bg-surface border border-border rounded-2xl px-6 py-7 flex flex-col justify-center">
-              <p className="text-xs text-muted/80 font-medium mb-3">
-                Stream Score
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            {/* Avg Score */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className={`text-4xl font-extrabold leading-none mb-1 ${avgScoreColor}`}>
+                {avgScore !== null ? avgScore : "—"}
               </p>
-              <div className="flex items-end gap-3 mb-1.5">
-                <p className={`text-6xl font-extrabold leading-none ${avgScore === null ? "" : avgScore >= 70 ? "text-green-400" : avgScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>
-                  {avgScore !== null ? avgScore : "—"}
-                </p>
-                {scoreTrend !== null && scoreTrend !== 0 && (
-                  <span className={`text-sm font-bold flex items-center gap-0.5 mb-1.5 ${scoreTrend > 0 ? "text-green-400" : "text-red-400"}`}>
-                    {scoreTrend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                    {scoreTrend > 0 ? "+" : ""}{scoreTrend}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-muted">
-                avg across {coachScores.length} stream{coachScores.length !== 1 ? "s" : ""}
-                {latestScore !== null && coachScores.length > 1 && ` · latest: ${latestScore}`}
+              <p className="text-xs font-semibold text-white/70 mb-0.5">Avg Score</p>
+              <p className="text-[11px] text-white/35">
+                across {coachScores.length} stream{coachScores.length !== 1 ? "s" : ""}
               </p>
-              {progressArc && (
-                <p className="text-xs text-white/40 mt-2 leading-relaxed">{progressArc}</p>
-              )}
             </div>
 
-            {/* Insights */}
-            <div className="bg-surface border border-border rounded-2xl px-6 py-5">
-              <p className="text-xs text-muted font-medium mb-4">
-                Stream Insights
+            {/* Latest */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className={`text-4xl font-extrabold leading-none mb-1 ${latestScoreColor}`}>
+                {latestScore !== null ? latestScore : "—"}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Best stream */}
-                {bestStream && (
-                  <Link href={`/dashboard/vods/${bestStream.id}`} className="flex items-start gap-3 group">
-                    <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Trophy size={15} className="text-yellow-400" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted mb-0.5">Best Stream</p>
-                      <p className="text-sm font-semibold text-white truncate group-hover:text-accent-light transition-colors">
-                        {bestStream.title}
-                      </p>
-                      <p className="text-xs text-muted">
-                        Score: <span className={`font-bold ${bestStream.score >= 70 ? "text-green-400" : bestStream.score >= 50 ? "text-yellow-400" : "text-red-400"}`}>{bestStream.score}</span>
-                        {" · "}{new Date(bestStream.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </p>
-                    </div>
-                  </Link>
-                )}
+              <p className="text-xs font-semibold text-white/70 mb-0.5">Latest</p>
+              <p className="text-[11px] text-white/35">most recent stream</p>
+            </div>
 
-                {/* Content score comparison */}
-                {contentInsight && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Zap size={15} className="text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted mb-0.5">What Works Best</p>
-                      <p className="text-sm font-semibold text-white">
-                        {contentInsight.best.label} scores higher
-                      </p>
-                      <p className="text-xs text-muted">
-                        avg {contentInsight.best.avg} vs {contentInsight.worst.avg} for {contentInsight.worst.label}
-                      </p>
-                    </div>
-                  </div>
-                )}
+            {/* Clip Moments */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className="text-4xl font-extrabold leading-none mb-1 text-violet-400">
+                {totalPeaks}
+              </p>
+              <p className="text-xs font-semibold text-white/70 mb-0.5">Clip Moments</p>
+              <p className="text-[11px] text-white/35">across analyzed streams</p>
+            </div>
 
-                {/* Best moment */}
-                {bestPeak && (
-                  <Link href={`/dashboard/vods/${bestPeak.vodId}`} className="flex items-start gap-3 group">
-                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Flame size={15} className="text-red-400" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted mb-0.5">Hottest Moment</p>
-                      <p className="text-sm font-semibold text-white truncate group-hover:text-accent-light transition-colors">
-                        {bestPeak.title}
-                      </p>
-                      <p className="text-xs text-muted">
-                        Score: <span className="font-bold text-white">{Math.round(bestPeak.score * 100)}</span>
-                        {" · "}{bestPeak.vodTitle}
-                      </p>
-                    </div>
-                  </Link>
-                )}
-
-                {/* Sweet spot or fallback stat */}
-                {sweetSpot ? (
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Clock size={15} className="text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted mb-0.5">Sweet Spot Length</p>
-                      <p className="text-sm font-semibold text-white">{sweetSpot.label}</p>
-                      <p className="text-xs text-muted">{sweetSpot.comparison}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Sparkles size={15} className="text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted mb-0.5">Clip Moments Per Stream</p>
-                      <p className="text-sm font-semibold text-white">
-                        {analyzedVods.length > 0 ? (totalPeaks / analyzedVods.length).toFixed(1) : "0"}
-                      </p>
-                      <p className="text-xs text-muted">{totalPeaks} total across {analyzedVods.length} streams</p>
-
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* Total Clips */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className="text-4xl font-extrabold leading-none mb-1 text-white">
+                {totalClips}
+              </p>
+              <p className="text-xs font-semibold text-white/70 mb-0.5">Clips Generated</p>
+              <p className="text-[11px] text-white/35">ready to share</p>
             </div>
           </div>
 
-          {/* Charts row — score trend + category breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mb-6">
+          {/* Chart + Category breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mb-5">
             {/* Score area chart */}
             {coachScores.length > 0 && (() => {
               const W = 560;
@@ -321,7 +248,10 @@ export default async function AnalyticsPage() {
               const avgY = avgScore !== null ? TOP + H - (avgScore / 100) * H : null;
 
               return (
-                <div className="bg-surface border border-border rounded-2xl p-6">
+                <div
+                  className="rounded-2xl p-6"
+                  style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
                   <div className="flex items-center justify-between mb-5">
                     <h2 className="text-sm font-bold text-white">Stream Quality Over Time</h2>
                     {scoreTrend !== null && scoreTrend !== 0 && (
@@ -408,94 +338,219 @@ export default async function AnalyticsPage() {
                       </text>
                     ))}
                   </svg>
+
+                  {progressArc && (
+                    <p className="text-[11px] text-white/35 italic mt-2 leading-relaxed">{progressArc}</p>
+                  )}
                 </div>
               );
             })()}
 
-            {/* Category breakdown */}
+            {/* Category breakdown — percentage bar list */}
             {sortedCategories.length > 0 && (() => {
-              const GLOW: Record<string, { text: string; shadow: string; border: string; bg: string }> = {
-                hype:        { text: "text-purple-300", shadow: "0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.2)", border: "border-purple-500/40", bg: "bg-purple-500/10" },
-                funny:       { text: "text-yellow-300", shadow: "0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.2)",  border: "border-yellow-500/40", bg: "bg-yellow-500/10" },
-                educational: { text: "text-blue-300",   shadow: "0 0 20px rgba(59,130,246,0.5), 0 0 40px rgba(59,130,246,0.2)",   border: "border-blue-500/40",   bg: "bg-blue-500/10" },
-                emotional:   { text: "text-red-300",    shadow: "0 0 20px rgba(239,68,68,0.5), 0 0 40px rgba(239,68,68,0.2)",     border: "border-red-500/40",    bg: "bg-red-500/10" },
-                clutch_play: { text: "text-emerald-300",shadow: "0 0 20px rgba(16,185,129,0.5), 0 0 40px rgba(16,185,129,0.2)",   border: "border-emerald-500/40", bg: "bg-emerald-500/10" },
-                rage:        { text: "text-red-300",    shadow: "0 0 20px rgba(239,68,68,0.5), 0 0 40px rgba(239,68,68,0.2)",     border: "border-red-500/40",    bg: "bg-red-500/10" },
-                wholesome:   { text: "text-violet-300", shadow: "0 0 20px rgba(167,139,250,0.5), 0 0 40px rgba(167,139,250,0.2)", border: "border-violet-500/40", bg: "bg-violet-500/10" },
-              };
+              const dominantCat = sortedCategories[0][0];
+              const dominantColor = CATEGORY_COLORS[dominantCat] || "#8b5cf6";
               return (
-                <div className="bg-surface border border-border rounded-2xl p-6">
+                <div
+                  className="rounded-2xl p-6"
+                  style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
                   <h2 className="text-sm font-bold text-white mb-5">What Gets You Clipped</h2>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-3">
                     {sortedCategories.slice(0, 6).map(([cat, count], i) => {
                       const label = CATEGORY_LABELS[cat] || cat;
                       const pct = Math.round((count / totalPeaks) * 100);
-                      const glow = GLOW[cat];
+                      const color = CATEGORY_COLORS[cat] || "#8b5cf6";
                       const isDominant = i === 0;
                       return (
                         <div
                           key={cat}
-                          className={`px-3.5 py-2 rounded-xl border transition-all ${
-                            isDominant && glow
-                              ? `${glow.bg} ${glow.border} ${glow.text}`
-                              : "bg-white/[0.03] border-white/[0.06] text-muted"
-                          }`}
-                          style={isDominant && glow ? { boxShadow: glow.shadow } : undefined}
+                          className={`flex items-center gap-3 ${isDominant ? "pl-3 border-l-2" : "pl-3 border-l-2 border-transparent"}`}
+                          style={isDominant ? { borderLeftColor: dominantColor } : undefined}
                         >
-                          <span className={`text-sm font-bold ${isDominant && glow ? glow.text : "text-white/50"}`}>
+                          <span className={`text-xs font-medium w-20 flex-shrink-0 ${isDominant ? "text-white" : "text-white/55"}`}>
                             {label}
                           </span>
-                          <span className={`text-xs ml-1.5 ${isDominant ? "text-white/50" : "text-white/20"}`}>
+                          <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{ width: `${pct}%`, backgroundColor: color, opacity: isDominant ? 1 : 0.45 }}
+                            />
+                          </div>
+                          <span className={`text-[11px] font-semibold w-8 text-right flex-shrink-0 ${isDominant ? "text-white/80" : "text-white/35"}`}>
                             {pct}%
                           </span>
                         </div>
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-muted mt-3">{totalPeaks} clip moments total</p>
+                  <p className="text-[10px] text-white/30 mt-4">{totalPeaks} clip moments total</p>
                 </div>
               );
             })()}
           </div>
 
+          {/* Insights grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            {/* Best Stream */}
+            {bestStream && (
+              <Link
+                href={`/dashboard/vods/${bestStream.id}`}
+                className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4 flex items-start gap-4 group overflow-hidden hover:bg-white/[0.04] transition-colors"
+              >
+                <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, rgba(234,179,8,0.5), transparent)" }} />
+                <div className="w-9 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Trophy size={16} className="text-yellow-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-white/45 font-medium mb-0.5">Best Stream</p>
+                  <p className="text-sm font-semibold text-white truncate group-hover:text-violet-300 transition-colors">
+                    {bestStream.title}
+                  </p>
+                  <p className="text-xs text-white/45 mt-0.5">
+                    Score:{" "}
+                    <span className={`font-bold ${bestStream.score >= 70 ? "text-green-400" : bestStream.score >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                      {bestStream.score}
+                    </span>
+                    {" · "}{new Date(bestStream.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                </div>
+              </Link>
+            )}
+
+            {/* Hottest Moment */}
+            {bestPeak && (
+              <Link
+                href={`/dashboard/vods/${bestPeak.vodId}`}
+                className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4 flex items-start gap-4 group overflow-hidden hover:bg-white/[0.04] transition-colors"
+              >
+                <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, rgba(239,68,68,0.5), transparent)" }} />
+                <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Flame size={16} className="text-red-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-white/45 font-medium mb-0.5">Hottest Moment</p>
+                  <p className="text-sm font-semibold text-white truncate group-hover:text-violet-300 transition-colors">
+                    {bestPeak.title}
+                  </p>
+                  <p className="text-xs text-white/45 mt-0.5">
+                    Score:{" "}
+                    <span className="font-bold text-white">{Math.round(bestPeak.score * 100)}</span>
+                    {" · "}{bestPeak.vodTitle}
+                  </p>
+                </div>
+              </Link>
+            )}
+
+            {/* What Works Best */}
+            {contentInsight && (
+              <div className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4 flex items-start gap-4 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, rgba(139,92,246,0.5), transparent)" }} />
+                <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap size={16} className="text-violet-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-white/45 font-medium mb-0.5">What Works Best</p>
+                  <p className="text-sm font-semibold text-white">
+                    {contentInsight.best.label} scores higher
+                  </p>
+                  <p className="text-xs text-white/45 mt-0.5">
+                    avg {contentInsight.best.avg} vs {contentInsight.worst.avg} for {contentInsight.worst.label}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Sweet Spot or fallback */}
+            {sweetSpot ? (
+              <div className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4 flex items-start gap-4 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, rgba(59,130,246,0.5), transparent)" }} />
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={16} className="text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-white/45 font-medium mb-0.5">Sweet Spot Length</p>
+                  <p className="text-sm font-semibold text-white">{sweetSpot.label}</p>
+                  <p className="text-xs text-white/45 mt-0.5">{sweetSpot.comparison}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="relative rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4 flex items-start gap-4 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, rgba(59,130,246,0.5), transparent)" }} />
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={16} className="text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-white/45 font-medium mb-0.5">Clip Moments Per Stream</p>
+                  <p className="text-sm font-semibold text-white">
+                    {analyzedVods.length > 0 ? (totalPeaks / analyzedVods.length).toFixed(1) : "0"}
+                  </p>
+                  <p className="text-xs text-white/45 mt-0.5">{totalPeaks} total across {analyzedVods.length} streams</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Follower trend */}
-          <div className="mb-6">
+          <div className="mb-5">
             <FollowerTrend snapshots={snapshots} needsReconnect={false} />
           </div>
 
           {/* Recent streams table */}
           {analyzedVods.length > 0 && (
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+            >
+              <div className="px-5 py-4 border-b border-white/[0.07]">
                 <h2 className="text-sm font-bold text-white">Recent Streams</h2>
               </div>
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-white/[0.04]">
                 {analyzedVods.slice(0, 10).map((vod) => {
                   const peaks = (vod.peak_data as Array<{ score: number; category: string }>) || [];
                   const coachScore = vod.coach_report ? (vod.coach_report as any).overall_score : null;
-                  const scoreColor = coachScore === null ? "text-muted" : coachScore >= 70 ? "text-green-400" : coachScore >= 50 ? "text-yellow-400" : "text-red-400";
+                  const rowAccentColor = coachScore === null ? "rgba(255,255,255,0.08)" : coachScore >= 70 ? "#4ade80" : coachScore >= 50 ? "#facc15" : "#f87171";
+                  const scoreTextColor = coachScore === null ? "text-white/40" : coachScore >= 70 ? "text-green-400" : coachScore >= 50 ? "text-yellow-400" : "text-red-400";
                   const topCat = peaks.length > 0 ? mostCommon(peaks.map(p => p.category)) : null;
+                  const catColor = topCat ? CATEGORY_COLORS[topCat] : null;
+
                   return (
                     <Link
                       key={vod.id}
                       href={`/dashboard/vods/${vod.id}`}
-                      className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors"
+                      className="flex items-center gap-0 hover:bg-white/[0.02] transition-colors"
                     >
-                      <div className="min-w-0 flex-1 mr-4">
-                        <p className="text-sm font-medium text-white/90 truncate">{vod.title}</p>
-                        <p className="text-xs text-muted mt-0.5">
-                          {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          {" · "}{formatDuration(vod.duration_seconds)}
-                          {" · "}{peaks.length} clip moment{peaks.length !== 1 ? "s" : ""}
-                          {topCat && ` · ${CATEGORY_LABELS[topCat] || topCat}`}
-                        </p>
-                      </div>
-                      {coachScore !== null && (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <Sparkles size={12} className={scoreColor} />
-                          <span className={`text-sm font-bold ${scoreColor}`}>{coachScore}</span>
+                      {/* Left color bar */}
+                      <div className="w-[3px] self-stretch flex-shrink-0 rounded-l" style={{ backgroundColor: rowAccentColor, opacity: 0.7 }} />
+
+                      <div className="flex items-center justify-between px-5 py-3 flex-1 min-w-0">
+                        <div className="min-w-0 flex-1 mr-4">
+                          <p className="text-sm font-medium text-white/90 truncate">{vod.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-xs text-white/40">
+                              {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              {" · "}{formatDuration(vod.duration_seconds)}
+                              {" · "}{peaks.length} moment{peaks.length !== 1 ? "s" : ""}
+                            </span>
+                            {topCat && (
+                              <span
+                                className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                                style={{
+                                  color: catColor || "rgba(255,255,255,0.5)",
+                                  backgroundColor: catColor ? `${catColor}18` : "rgba(255,255,255,0.05)",
+                                }}
+                              >
+                                {CATEGORY_LABELS[topCat] || topCat}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      )}
+                        {coachScore !== null && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className={`text-xl font-extrabold leading-none ${scoreTextColor}`}>{coachScore}</span>
+                          </div>
+                        )}
+                      </div>
                     </Link>
                   );
                 })}
@@ -507,4 +562,3 @@ export default async function AnalyticsPage() {
     </div>
   );
 }
-

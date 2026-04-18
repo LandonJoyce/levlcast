@@ -38,6 +38,19 @@ const CATEGORY_LABELS: Record<string, string> = {
   story: "Story",
 };
 
+const CATEGORY_COLORS: Record<string, string> = {
+  hype: "#a855f7",
+  funny: "#facc15",
+  educational: "#3b82f6",
+  emotional: "#ec4899",
+  clutch_play: "#10b981",
+  clutch: "#10b981",
+  rage: "#ef4444",
+  wholesome: "#a78bfa",
+  hot_take: "#f97316",
+  story: "#06b6d4",
+};
+
 function scoreColor(score: number) {
   if (score >= 0.7) return "text-green-400";
   if (score >= 0.4) return "text-yellow-400";
@@ -116,10 +129,19 @@ export default async function GrowPage() {
 
   const hasData = totalPeaks > 0;
 
+  const dominantCatColor = dominantCategory ? CATEGORY_COLORS[dominantCategory] : "#8b5cf6";
+  const dominantCatLabel = dominantCategory ? (CATEGORY_LABELS[dominantCategory] ?? dominantCategory) : null;
+  const dominantCatPct = dominantCategory && totalPeaks > 0
+    ? Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)
+    : null;
+
   return (
     <div>
+      {/* Page header */}
       <div className="mb-8">
-        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Growth strategy</span>
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">
+          Growth strategy
+        </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Growth Playbook</h1>
         <p className="text-sm text-muted">How to keep growing — every week, every stream.</p>
       </div>
@@ -136,7 +158,74 @@ export default async function GrowPage() {
       ) : (
         <div className="space-y-5">
 
-          {/* Archetype — featured at top */}
+          {/* Stats strip */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Score Trend */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className="text-[11px] text-white/45 font-medium mb-2">Score Trend</p>
+              {scoreTrend === "up" && (
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp size={18} className="text-green-400 flex-shrink-0" />
+                  <span className="text-lg font-extrabold text-green-400 leading-tight">Trending Up</span>
+                </div>
+              )}
+              {scoreTrend === "down" && (
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingDown size={18} className="text-red-400 flex-shrink-0" />
+                  <span className="text-lg font-extrabold text-red-400 leading-tight">Slipping</span>
+                </div>
+              )}
+              {scoreTrend === "flat" && (
+                <div className="flex items-center gap-2 mb-1">
+                  <Minus size={18} className="text-yellow-400 flex-shrink-0" />
+                  <span className="text-lg font-extrabold text-yellow-400 leading-tight">Steady</span>
+                </div>
+              )}
+              {scoreTrend === null && avgScore !== null && (
+                <p className="text-3xl font-extrabold leading-none mb-1 text-white">{avgScore}</p>
+              )}
+              {avgScore !== null && (
+                <p className="text-[11px] text-white/40">
+                  {scoreTrend !== null ? `avg ${avgScore}` : "avg score"}
+                </p>
+              )}
+            </div>
+
+            {/* Best Content */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className="text-[11px] text-white/45 font-medium mb-2">Best Content</p>
+              {dominantCatLabel ? (
+                <>
+                  <p
+                    className="text-2xl font-extrabold leading-tight mb-1 capitalize"
+                    style={{ color: dominantCatColor }}
+                  >
+                    {dominantCatLabel}
+                  </p>
+                  {dominantCatPct !== null && (
+                    <p className="text-[11px] text-white/40">{dominantCatPct}% of clip moments</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-2xl font-extrabold leading-tight text-white/30">—</p>
+              )}
+            </div>
+
+            {/* Consistency */}
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+              <p className="text-[11px] text-white/45 font-medium mb-2">Consistency</p>
+              <p className={`text-3xl font-extrabold leading-none mb-1 ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
+                {recentStreamCount}
+              </p>
+              <p className="text-[11px] text-white/40">
+                streams this month
+                {" · "}
+                {recentStreamCount >= 20 ? "Excellent" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs work" : "Stream more"}
+              </p>
+            </div>
+          </div>
+
+          {/* Archetype — featured full width */}
           <ArchetypeCard
             dominantCategory={dominantCategory}
             dominantStreamerType={dominantStreamerType}
@@ -144,110 +233,84 @@ export default async function GrowPage() {
             totalPeaks={totalPeaks}
           />
 
-          {/* Momentum — asymmetric: score wide, content + month narrow */}
-          <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
-            {/* Score trend — wider */}
-            <div className="bg-surface border border-border rounded-2xl px-5 py-5">
-              <p className="text-[11px] text-muted/70 font-medium mb-3">Score Trend</p>
-              {scoreTrend === "up" && (
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp size={20} className="text-green-400" />
-                  <span className="text-xl font-extrabold text-green-400">Trending Up</span>
-                </div>
-              )}
-              {scoreTrend === "down" && (
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingDown size={20} className="text-red-400" />
-                  <span className="text-xl font-extrabold text-red-400">Slipping</span>
-                </div>
-              )}
-              {scoreTrend === "flat" && (
-                <div className="flex items-center gap-2 mb-1">
-                  <Minus size={20} className="text-yellow-400" />
-                  <span className="text-xl font-extrabold text-yellow-400">Steady</span>
-                </div>
-              )}
-              {scoreTrend === null && avgScore !== null && (
-                <div className="flex items-end gap-1.5 mb-1">
-                  <span className="text-4xl font-extrabold text-white leading-none">{avgScore}</span>
-                  <span className="text-xs text-muted pb-1">avg score</span>
-                </div>
-              )}
-              {avgScore !== null && scoreTrend !== null && (
-                <p className="text-xs text-muted">Avg: {avgScore}</p>
-              )}
-            </div>
-
-            {/* Right stack: content + month */}
-            <div className="flex flex-col gap-3">
-              <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-                <p className="text-[11px] text-muted/70 font-medium mb-2">Best Content</p>
-                {dominantCategory ? (
-                  <>
-                    <span className={`inline-flex items-center text-lg font-extrabold capitalize px-2.5 py-0.5 rounded-full ${CATEGORY_STYLE[dominantCategory] || "text-white"}`}>
-                      {CATEGORY_LABELS[dominantCategory] ?? dominantCategory}
-                    </span>
-                    <p className="text-xs text-muted mt-1">
-                      {Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)}% of clip moments
-                    </p>
-                  </>
-                ) : (
-                  <span className="text-lg font-extrabold text-muted">—</span>
-                )}
-              </div>
-              <div className="bg-surface border border-border rounded-2xl px-5 py-4">
-                <p className="text-[11px] text-muted/70 font-medium mb-2">This Month</p>
-                <div className="flex items-end gap-1.5">
-                  <span className={`text-3xl font-extrabold leading-none ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
-                    {recentStreamCount}
-                  </span>
-                  <span className="text-xs text-muted pb-0.5">streams · {recentStreamCount >= 20 ? "Excellent" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs work" : "Stream more"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Consistency — full width above tactics */}
+          {/* Consistency grid */}
           <ConsistencyGrid streamDates={streamDates} />
 
           {/* Tactics */}
           <TacticsCarousel />
 
-          {/* Top clips — full width */}
+          {/* Top Clips */}
           {topClips && topClips.length > 0 && (
-            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
                 <div>
                   <h2 className="text-sm font-bold text-white">Your Best Clips</h2>
-                  <p className="text-xs text-muted mt-0.5">Post these on TikTok, YouTube Shorts, and Kick first</p>
+                  <p className="text-xs text-white/40 mt-0.5">Post these on TikTok, YouTube Shorts, and Kick first</p>
                 </div>
-                <Link href="/dashboard/clips" className="text-xs font-semibold text-accent-light hover:underline">See all →</Link>
+                <Link href="/dashboard/clips" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors">
+                  See all →
+                </Link>
               </div>
-              <div className="divide-y divide-border">
-                {topClips.map((clip, i) => (
-                  <div key={clip.id} className="flex items-center gap-4 px-5 py-3">
-                    <span className={`text-xs font-bold w-5 text-center flex-shrink-0 ${i === 0 ? "text-yellow-400" : "text-muted/40"}`}>
-                      {i + 1}
-                    </span>
-                    <video preload="metadata" muted playsInline className="w-16 aspect-video rounded bg-black flex-shrink-0 object-cover"><source src={clip.video_url} type="video/mp4" /></video>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{clip.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${CATEGORY_STYLE[clip.peak_category] || "bg-white/5 text-muted"}`}>
-                          {clip.peak_category}
+
+              {/* Clip rows */}
+              <div className="divide-y divide-white/[0.04]">
+                {topClips.map((clip, i) => {
+                  const isTop = i === 0;
+                  const catLabel = CATEGORY_LABELS[clip.peak_category] || clip.peak_category;
+                  return (
+                    <div
+                      key={clip.id}
+                      className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isTop ? "border border-yellow-500/15 bg-yellow-500/[0.03]" : "hover:bg-white/[0.02]"}`}
+                    >
+                      {/* Rank */}
+                      <span className={`text-sm font-bold w-5 text-center flex-shrink-0 ${isTop ? "text-yellow-400" : "text-white/25"}`}>
+                        {i + 1}
+                      </span>
+
+                      {/* Thumbnail */}
+                      <video
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-16 aspect-video rounded-lg bg-black flex-shrink-0 object-cover"
+                      >
+                        <source src={clip.video_url} type="video/mp4" />
+                      </video>
+
+                      {/* Title + category */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${isTop ? "text-white" : "text-white/80"}`}>
+                          {clip.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${CATEGORY_STYLE[clip.peak_category] || "bg-white/5 text-white/40"}`}>
+                            {catLabel}
+                          </span>
+                          {clip.caption_text && (
+                            <span className="text-xs text-white/35 truncate line-clamp-1">{clip.caption_text}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Virality score */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Sparkles size={11} className={scoreColor(clip.peak_score)} />
+                        <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>
+                          {Math.round(clip.peak_score * 100)}
                         </span>
-                        <span className="text-xs text-muted line-clamp-1">{clip.caption_text}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Sparkles size={11} className={scoreColor(clip.peak_score)} />
-                      <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>{Math.round(clip.peak_score * 100)}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <div className="px-5 py-3 border-t border-border bg-white/[0.02]">
-                <p className="text-xs text-muted leading-relaxed">
+
+              {/* Footer tip */}
+              <div className="px-5 py-3.5 border-t border-white/[0.05] bg-white/[0.015]">
+                <p className="text-xs text-white/35 leading-relaxed">
                   When someone finds your clip on TikTok and comes to Twitch, they expect that same version of you. Stream like your top clips every time.
                 </p>
               </div>
