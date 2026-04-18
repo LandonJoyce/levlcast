@@ -114,42 +114,50 @@ export function TacticsCarousel() {
   const tactic = TACTICS[index];
 
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+    <div
+      className="rounded-2xl overflow-hidden relative h-full flex flex-col"
+      style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.6), transparent)" }} />
+
+      <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div>
-          <h2 className="text-sm font-bold text-white">How to Get More Viewers</h2>
-          <p className="text-xs text-muted mt-0.5">Backed by real streaming data</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-0.5">This Week's Tactics</p>
+          <h2 className="text-sm font-bold text-white">Small moves. Real growth.</h2>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">{index + 1} / {TACTICS.length}</span>
-          <button onClick={prev} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
-            <ChevronLeft size={16} className="text-muted" />
+          <span className="text-[11px] font-bold tabular-nums text-white/40">{index + 1} / {TACTICS.length}</span>
+          <button onClick={prev} aria-label="Previous" className="p-1.5 rounded-lg transition-colors border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12]">
+            <ChevronLeft size={14} className="text-white/50" />
           </button>
-          <button onClick={next} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
-            <ChevronRight size={16} className="text-muted" />
+          <button onClick={next} aria-label="Next" className="p-1.5 rounded-lg transition-colors border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12]">
+            <ChevronRight size={14} className="text-white/50" />
           </button>
         </div>
       </div>
 
-      <div className="p-5">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.07] text-[10px] font-semibold mb-3 ${tactic.tagColor}`}>{tactic.tag}</span>
-        <h3 className="text-base font-bold text-white mb-2 leading-snug">{tactic.title}</h3>
-        <p className="text-sm text-muted leading-relaxed mb-4">{tactic.body}</p>
+      <div className="px-6 py-5 flex-1">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-extrabold uppercase tracking-widest mb-3 ${tactic.tagColor}`}>{tactic.tag}</span>
+        <h3 className="text-base sm:text-lg font-black text-white mb-2 leading-snug tracking-tight">{tactic.title}</h3>
+        <p className="text-sm text-white/55 leading-relaxed mb-4">{tactic.body}</p>
 
         {tactic.stat && (
-          <div className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
-            <span className={`text-2xl font-extrabold ${tactic.tagColor}`}>{tactic.stat}</span>
-            <span className="text-xs text-muted">{tactic.statLabel}</span>
+          <div
+            className="rounded-xl px-4 py-3 mb-4 flex items-center gap-3 relative overflow-hidden"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderLeft: "2px solid rgba(139,92,246,0.5)" }}
+          >
+            <span className={`text-3xl font-black tabular-nums leading-none ${tactic.tagColor}`}>{tactic.stat}</span>
+            <span className="text-xs text-white/50 leading-relaxed">{tactic.statLabel}</span>
           </div>
         )}
 
         {tactic.href && (
           tactic.internal ? (
-            <Link href={tactic.href} className="text-xs font-semibold text-accent-light hover:underline">
+            <Link href={tactic.href} className="inline-flex items-center gap-1 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors">
               {tactic.hrefLabel} →
             </Link>
           ) : (
-            <a href={tactic.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-light hover:underline">
+            <a href={tactic.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors">
               {tactic.hrefLabel} <ExternalLink size={10} />
             </a>
           )
@@ -157,12 +165,13 @@ export function TacticsCarousel() {
       </div>
 
       {/* Dot indicators */}
-      <div className="flex items-center justify-center gap-1.5 pb-4">
+      <div className="flex items-center justify-center gap-1.5 pb-5">
         {TACTICS.map((_, i) => (
           <button
             key={i}
+            aria-label={`Tactic ${i + 1}`}
             onClick={() => setIndex(i)}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${i === index ? "bg-accent-light w-3" : "bg-white/20"}`}
+            className={`h-1.5 rounded-full transition-all ${i === index ? "w-5 bg-violet-400" : "w-1.5 bg-white/15 hover:bg-white/25"}`}
           />
         ))}
       </div>

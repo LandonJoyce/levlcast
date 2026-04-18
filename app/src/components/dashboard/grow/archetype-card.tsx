@@ -256,29 +256,50 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
     );
   }
 
+  // Hex for archetype color
+  const archetypeHex =
+    archetype?.color === "text-purple-400" ? "#a855f7"
+    : archetype?.color === "text-yellow-400" ? "#facc15"
+    : archetype?.color === "text-blue-400" ? "#3b82f6"
+    : archetype?.color === "text-red-400" ? "#ef4444"
+    : archetype?.color === "text-emerald-400" ? "#10b981"
+    : archetype?.color === "text-orange-400" ? "#f97316"
+    : archetype?.color === "text-cyan-400" ? "#06b6d4"
+    : archetype?.color === "text-pink-400" ? "#ec4899"
+    : archetype?.color === "text-violet-400" ? "#8b5cf6"
+    : "#8b5cf6";
+
   return (
-    <div className={`bg-surface border rounded-2xl p-6 ${archetype?.border || "border-border"}`}>
-      <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+    <div
+      className="rounded-2xl relative overflow-hidden"
+      style={{
+        background: `radial-gradient(ellipse 70% 60% at 0% 0%, ${archetypeHex}18 0%, rgba(10,9,20,0) 65%), rgba(10,9,20,0.98)`,
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}
+    >
+      <div className="absolute top-0 left-0 w-40 h-px" style={{ background: `linear-gradient(90deg, ${archetypeHex}80, transparent)` }} />
+
+      <div className="flex flex-col lg:flex-row lg:items-start gap-8 px-6 py-7">
         {/* Left — archetype identity */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-3">
-            <p className="text-xs text-muted font-medium">Your Streamer Archetype</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: archetypeHex }}>Your Streamer Archetype</p>
             {dominantStreamerType && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/40">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/45">
                 {STREAMER_TYPE_LABELS[dominantStreamerType] ?? dominantStreamerType}
               </span>
             )}
           </div>
-          <h2 className={`text-3xl font-extrabold mb-1 ${archetype?.color || "text-white"}`}>
+          <h2 className={`text-3xl sm:text-4xl font-black tracking-tight leading-none mb-2 ${archetype?.color || "text-white"}`}>
             {archetype?.label || "Analyzing..."}
           </h2>
-          <p className="text-sm text-white/60 mb-3">{archetype?.tagline}</p>
-          <p className="text-sm text-white/50 leading-relaxed max-w-xl">{archetype?.description}</p>
+          <p className="text-base text-white/70 font-medium mb-3 italic">{archetype?.tagline}</p>
+          <p className="text-sm text-white/55 leading-relaxed max-w-xl">{archetype?.description}</p>
         </div>
 
         {/* Right — breakdown as glowing pills */}
         <div className="lg:w-64 flex-shrink-0">
-          <p className="text-xs text-muted font-medium mb-4">Your content mix</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-4">Your content mix</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(categoryCounts)
               .filter(([, count]) => count > 0)
@@ -293,21 +314,21 @@ export function ArchetypeCard({ dominantCategory, dominantStreamerType, category
                     className={`px-3.5 py-2 rounded-xl border transition-all ${
                       isDominant && glow
                         ? `${glow.bg} ${glow.border} ${glow.text}`
-                        : "bg-white/[0.03] border-white/[0.06] text-muted"
+                        : "bg-white/[0.025] border-white/[0.06]"
                     }`}
                     style={isDominant && glow ? { boxShadow: glow.shadow } : undefined}
                   >
-                    <span className={`text-sm font-bold ${isDominant && glow ? glow.text : "text-white/50"}`}>
+                    <span className={`text-sm font-bold ${isDominant && glow ? glow.text : "text-white/55"}`}>
                       {CATEGORY_LABELS[cat]}
                     </span>
-                    <span className={`text-xs ml-1.5 ${isDominant ? "text-white/50" : "text-white/20"}`}>
+                    <span className={`text-xs font-bold tabular-nums ml-1.5 ${isDominant ? "text-white/55" : "text-white/25"}`}>
                       {pct}%
                     </span>
                   </div>
                 );
               })}
           </div>
-          <p className="text-[10px] text-muted mt-3">{totalPeaks} clip moments across all streams</p>
+          <p className="text-[10px] text-white/30 mt-3 font-medium">{totalPeaks} clip moments across all streams</p>
         </div>
       </div>
     </div>

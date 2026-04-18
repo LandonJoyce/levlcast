@@ -41,82 +41,101 @@ export function ConsistencyGrid({ streamDates }: { streamDates: Set<string> }) {
     weeks.push(days.slice(i, i + 7));
   }
 
+  const pulseHex = streamed >= 20 ? "#4ade80" : streamed >= 12 ? "#facc15" : "#8b5cf6";
+
   return (
-    <div className="bg-surface border border-border rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-sm font-semibold text-white mb-0.5">Stream Consistency</h2>
-          <p className="text-xs text-muted">Last 28 days</p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-extrabold text-white">{streamed}<span className="text-sm font-medium text-muted ml-1">/ 28</span></p>
-          {streak > 1 && (
-            <p className="text-xs text-accent-light font-medium">{streak}-day streak</p>
-          )}
+    <div
+      className="rounded-2xl relative overflow-hidden h-full"
+      style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div className="absolute top-0 left-0 w-24 h-px" style={{ background: `linear-gradient(90deg, ${pulseHex}60, transparent)` }} />
+
+      <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-0.5">Stream Cadence</p>
+            <h2 className="text-sm font-bold text-white">Consistency drives growth.</h2>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-3xl font-black tabular-nums leading-none text-white">
+              {streamed}<span className="text-sm font-bold text-white/25 ml-1">/ 28</span>
+            </p>
+            {streak > 1 && (
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-orange-400 mt-1">{streak}-day streak</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Calendar grid — 4 weeks as columns, 7 days as rows */}
-      <div className="flex gap-3">
-        {/* Day labels */}
-        <div className="flex flex-col gap-1.5 pt-0.5">
-          {DAY_LABELS.map((label, i) => (
-            <div key={i} className="h-4 flex items-center">
-              <span className="text-[10px] text-muted/40 w-3">{label}</span>
-            </div>
-          ))}
+      <div className="px-6 py-5">
+        {/* Calendar grid */}
+        <div className="flex gap-3 mb-4">
+          <div className="flex flex-col gap-1.5 pt-0.5">
+            {DAY_LABELS.map((label, i) => (
+              <div key={i} className="h-4 flex items-center">
+                <span className="text-[10px] text-white/25 w-3 font-semibold">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-1.5 flex-1">
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-1.5 flex-1">
+                {week.map((day) => {
+                  const didStream = streamDates.has(day);
+                  const isToday = day === today;
+                  return (
+                    <div
+                      key={day}
+                      title={`${new Date(day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${didStream ? " — streamed" : ""}`}
+                      className={`h-4 rounded-[3px] transition-all ${didStream ? "" : "bg-white/[0.04]"} ${isToday ? "ring-1 ring-violet-400/60" : ""}`}
+                      style={didStream ? { background: `linear-gradient(135deg, ${pulseHex}, ${pulseHex}cc)`, boxShadow: `0 0 6px ${pulseHex}55` } : undefined}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Week columns */}
-        <div className="flex gap-1.5 flex-1">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-1.5 flex-1">
-              {week.map((day) => {
-                const didStream = streamDates.has(day);
-                const isToday = day === today;
-                return (
-                  <div
-                    key={day}
-                    title={`${new Date(day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${didStream ? " — streamed" : ""}`}
-                    className={`h-4 rounded-[3px] transition-all ${
-                      didStream
-                        ? "bg-accent"
-                        : "bg-white/[0.04]"
-                    } ${isToday ? "ring-1 ring-accent-light/50" : ""}`}
-                  />
-                );
-              })}
-            </div>
-          ))}
+        {/* Legend */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-[2px]" style={{ background: pulseHex }} />
+            <span className="text-[10px] text-white/40 font-semibold">Streamed</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-[2px] bg-white/[0.04]" />
+            <span className="text-[10px] text-white/40 font-semibold">Off</span>
+          </div>
         </div>
+
+        {/* Tip */}
+        {streamed > 0 && (
+          <div
+            className="p-3.5 rounded-xl text-xs leading-relaxed relative overflow-hidden"
+            style={{
+              background: streamed >= 20
+                ? "linear-gradient(135deg, rgba(74,222,128,0.12) 0%, rgba(22,163,74,0.04) 60%, rgba(10,9,20,0) 100%)"
+                : streamed >= 12
+                ? "linear-gradient(135deg, rgba(250,204,21,0.1) 0%, rgba(202,138,4,0.04) 60%, rgba(10,9,20,0) 100%)"
+                : "rgba(255,255,255,0.02)",
+              border: streamed >= 20
+                ? "1px solid rgba(74,222,128,0.22)"
+                : streamed >= 12
+                ? "1px solid rgba(250,204,21,0.22)"
+                : "1px solid rgba(255,255,255,0.06)",
+              color: streamed >= 20 ? "#86efac" : streamed >= 12 ? "#fde68a" : "rgba(255,255,255,0.55)",
+            }}
+          >
+            {streamed >= 20
+              ? "Streaming consistently — the algorithm loves you."
+              : streamed >= 12
+              ? "Good pace. Push for 5+ days/week to hit the sweet spot."
+              : "Consistency is the biggest factor for growth. Even 3x/week makes a big difference."}
+          </div>
+        )}
       </div>
-
-      {/* Footer */}
-      <div className="flex items-center gap-4 mt-3">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-[2px] bg-accent" />
-          <span className="text-[10px] text-muted">Streamed</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-[2px] bg-white/[0.04]" />
-          <span className="text-[10px] text-muted">Off</span>
-        </div>
-      </div>
-
-      {/* Tip — only show when there's enough data to be useful */}
-      {streamed > 0 && (
-        <div className={`mt-3 p-3 rounded-xl text-xs leading-relaxed ${
-          streamed >= 20 ? "bg-green-500/10 border border-green-500/20 text-green-300"
-          : streamed >= 12 ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-300"
-          : "bg-white/[0.03] border border-white/[0.06] text-muted"
-        }`}>
-          {streamed >= 20
-            ? "Streaming consistently — the algorithm loves you."
-            : streamed >= 12
-            ? "Good pace. Push for 5+ days/week to hit the sweet spot."
-            : "Consistency is the biggest factor for growth. Even 3x/week makes a big difference."}
-        </div>
-      )}
     </div>
   );
 }

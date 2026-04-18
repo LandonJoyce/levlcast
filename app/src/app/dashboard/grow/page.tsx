@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArchetypeCard } from "@/components/dashboard/grow/archetype-card";
 import { ConsistencyGrid } from "@/components/dashboard/grow/consistency-grid";
 import { TacticsCarousel } from "@/components/dashboard/grow/tactics-carousel";
-import { TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ChevronRight, Play } from "lucide-react";
 import Link from "next/link";
 
 interface Peak {
@@ -11,19 +11,6 @@ interface Peak {
   title: string;
   caption: string;
 }
-
-const CATEGORY_STYLE: Record<string, string> = {
-  hype: "bg-purple-500/10 text-purple-400",
-  funny: "bg-yellow-500/10 text-yellow-400",
-  educational: "bg-blue-500/10 text-blue-400",
-  emotional: "bg-pink-500/10 text-pink-400",
-  clutch_play: "bg-emerald-500/10 text-emerald-400",
-  clutch: "bg-emerald-500/10 text-emerald-400",
-  rage: "bg-red-500/10 text-red-400",
-  wholesome: "bg-violet-500/10 text-violet-400",
-  hot_take: "bg-orange-500/10 text-orange-400",
-  story: "bg-cyan-500/10 text-cyan-400",
-};
 
 const CATEGORY_LABELS: Record<string, string> = {
   hype: "Hype",
@@ -51,10 +38,47 @@ const CATEGORY_COLORS: Record<string, string> = {
   story: "#06b6d4",
 };
 
-function scoreColor(score: number) {
-  if (score >= 0.7) return "text-green-400";
-  if (score >= 0.4) return "text-yellow-400";
-  return "text-muted";
+function scoreHex(n: number) { return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171"; }
+function scoreCls(n: number) { return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400"; }
+
+// ─── Arc Gauge ────────────────────────────────────────────────────────────
+function ArcGauge({ score, size = 180 }: { score: number; size?: number }) {
+  const hex = scoreHex(score);
+  const cls = scoreCls(score);
+  const R = 70, cx = 80, cy = 90;
+  const startAngle = -200, sweep = 220;
+  const polar = (a: number, r = R) => {
+    const rad = (a * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+  const start = polar(startAngle);
+  const end = polar(startAngle + sweep);
+  const progEnd = polar(startAngle + (score / 100) * sweep);
+  const largeArc = sweep > 180 ? 1 : 0;
+  const progLarge = (score / 100) * sweep > 180 ? 1 : 0;
+  const numSize = Math.round(size * 0.26);
+  const suffixSize = Math.round(size * 0.1);
+
+  return (
+    <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: size, height: size * 0.72 }}>
+      <svg width={size} height={size * 0.72} viewBox="0 0 160 120" className="absolute inset-0">
+        <path d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${largeArc} 1 ${end.x} ${end.y}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" strokeLinecap="round" />
+        {score > 0 && (
+          <path d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${progLarge} 1 ${progEnd.x} ${progEnd.y}`} fill="none" stroke={hex} strokeWidth="6" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 6px ${hex})` }} />
+        )}
+        {[25, 50, 75].map((v) => {
+          const a = startAngle + (v / 100) * sweep;
+          const inner = polar(a, R - 10);
+          const outer = polar(a, R - 4);
+          return <line key={v} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />;
+        })}
+      </svg>
+      <div className="flex items-baseline gap-1" style={{ marginTop: size * 0.08 }}>
+        <span className={`font-black tabular-nums leading-none ${cls}`} style={{ fontSize: numSize }}>{score}</span>
+        <span className="font-bold text-white/20" style={{ fontSize: suffixSize }}>/100</span>
+      </div>
+    </div>
+  );
 }
 
 export default async function GrowPage() {
@@ -77,7 +101,7 @@ export default async function GrowPage() {
     .order("peak_score", { ascending: false })
     .limit(5);
 
-  const categoryCounts: Record<string, number> = { hype: 0, funny: 0, educational: 0, emotional: 0 };
+  const categoryCounts: Record<string, number> = {};
   const streamerTypeCounts: Record<string, number> = {};
   const coachScores: number[] = [];
 
@@ -85,7 +109,7 @@ export default async function GrowPage() {
     const peaks = (vod.peak_data as Peak[]) || [];
     for (const peak of peaks) {
       const cat = peak.category?.toLowerCase();
-      if (cat && cat in categoryCounts) categoryCounts[cat]++;
+      if (cat) categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
     }
     const report = vod.coach_report as any;
     const streamerType = report?.streamer_type;
@@ -107,10 +131,11 @@ export default async function GrowPage() {
     (vods || []).map((v) => v.stream_date?.slice(0, 10)).filter(Boolean)
   );
 
-  // Score trend: compare oldest 3 vs newest 3 (scores are in desc order by stream_date)
-  const reversed = [...coachScores].reverse(); // oldest first
+  // Score trend: compare oldest 3 vs newest 3 (scores desc by stream_date → reverse for oldest first)
+  const reversed = [...coachScores].reverse();
   let scoreTrend: "up" | "down" | "flat" | null = null;
   let avgScore: number | null = null;
+  let trendDelta: number | null = null;
   if (reversed.length >= 1) {
     avgScore = Math.round(reversed.reduce((a, b) => a + b, 0) / reversed.length);
   }
@@ -120,6 +145,7 @@ export default async function GrowPage() {
     const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
     const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
     const delta = recentAvg - earlyAvg;
+    trendDelta = Math.round(delta);
     scoreTrend = delta >= 3 ? "up" : delta <= -3 ? "down" : "flat";
   }
 
@@ -134,6 +160,38 @@ export default async function GrowPage() {
   const dominantCatPct = dominantCategory && totalPeaks > 0
     ? Math.round((categoryCounts[dominantCategory] / totalPeaks) * 100)
     : null;
+
+  // Pulse color keyed to trend/avg
+  const pulseHex = scoreTrend === "up" ? "#4ade80"
+    : scoreTrend === "down" ? "#f87171"
+    : avgScore !== null ? scoreHex(avgScore)
+    : "#8b5cf6";
+
+  const pulseHeadline = scoreTrend === "up"
+    ? "You're trending up."
+    : scoreTrend === "down"
+    ? "You're slipping — time to reset."
+    : scoreTrend === "flat"
+    ? "You've got a consistent baseline."
+    : avgScore !== null
+    ? "Your formula is starting to show."
+    : "Let's build your playbook.";
+
+  const pulseSub = scoreTrend === "up" && trendDelta !== null
+    ? `Your recent streams average ${trendDelta} points higher than your early ones. Keep the pattern going.`
+    : scoreTrend === "down" && trendDelta !== null
+    ? `Recent streams are ${Math.abs(trendDelta)} points below your early pace. Below are the levers to pull.`
+    : scoreTrend === "flat"
+    ? `You're holding steady. Time to break through by sharpening your highest-performing content.`
+    : avgScore !== null
+    ? `Across ${reversed.length} stream${reversed.length !== 1 ? "s" : ""}, your avg coach score is ${avgScore}.`
+    : "Analyze more streams to unlock trend insights.";
+
+  const consistencyBadge =
+    recentStreamCount >= 20 ? { label: "Excellent pace", color: "#4ade80" }
+    : recentStreamCount >= 12 ? { label: "Good pace", color: "#4ade80" }
+    : recentStreamCount >= 6 ? { label: "Needs work", color: "#facc15" }
+    : { label: "Stream more", color: "#f87171" };
 
   return (
     <div>
@@ -158,74 +216,76 @@ export default async function GrowPage() {
       ) : (
         <div className="space-y-5">
 
-          {/* Stats strip */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* Score Trend */}
-            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
-              <p className="text-[11px] text-white/45 font-medium mb-2">Score Trend</p>
-              {scoreTrend === "up" && (
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp size={18} className="text-green-400 flex-shrink-0" />
-                  <span className="text-lg font-extrabold text-green-400 leading-tight">Trending Up</span>
-                </div>
-              )}
-              {scoreTrend === "down" && (
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingDown size={18} className="text-red-400 flex-shrink-0" />
-                  <span className="text-lg font-extrabold text-red-400 leading-tight">Slipping</span>
-                </div>
-              )}
-              {scoreTrend === "flat" && (
-                <div className="flex items-center gap-2 mb-1">
-                  <Minus size={18} className="text-yellow-400 flex-shrink-0" />
-                  <span className="text-lg font-extrabold text-yellow-400 leading-tight">Steady</span>
-                </div>
-              )}
-              {scoreTrend === null && avgScore !== null && (
-                <p className="text-3xl font-extrabold leading-none mb-1 text-white">{avgScore}</p>
-              )}
-              {avgScore !== null && (
-                <p className="text-[11px] text-white/40">
-                  {scoreTrend !== null ? `avg ${avgScore}` : "avg score"}
-                </p>
-              )}
-            </div>
+          {/* ── GROWTH PULSE HERO ─────────────────────────────────────── */}
+          <div
+            className="rounded-2xl relative overflow-hidden"
+            style={{
+              background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${pulseHex}15 0%, rgba(10,9,20,0) 70%), rgba(10,9,20,0.98)`,
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-px" style={{ background: `linear-gradient(90deg, transparent, ${pulseHex}60, transparent)` }} />
 
-            {/* Best Content */}
-            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
-              <p className="text-[11px] text-white/45 font-medium mb-2">Best Content</p>
-              {dominantCatLabel ? (
-                <>
-                  <p
-                    className="text-2xl font-extrabold leading-tight mb-1 capitalize"
-                    style={{ color: dominantCatColor }}
-                  >
-                    {dominantCatLabel}
-                  </p>
-                  {dominantCatPct !== null && (
-                    <p className="text-[11px] text-white/40">{dominantCatPct}% of clip moments</p>
+            <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 sm:gap-10 items-center px-6 py-7">
+              {avgScore !== null ? (
+                <div className="flex justify-center sm:justify-start">
+                  <ArcGauge score={avgScore} size={190} />
+                </div>
+              ) : null}
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-2">Growth Pulse</p>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  {scoreTrend === "up" && <TrendingUp size={22} className="text-green-400 flex-shrink-0" />}
+                  {scoreTrend === "down" && <TrendingDown size={22} className="text-red-400 flex-shrink-0" />}
+                  {scoreTrend === "flat" && <Minus size={22} className="text-yellow-400 flex-shrink-0" />}
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">{pulseHeadline}</h2>
+                </div>
+                <p className="text-sm text-white/55 leading-relaxed mb-4">{pulseSub}</p>
+
+                <div className="flex flex-wrap gap-2">
+                  {trendDelta !== null && trendDelta !== 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border"
+                      style={{
+                        background: trendDelta > 0 ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
+                        borderColor: trendDelta > 0 ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)",
+                        color: trendDelta > 0 ? "#4ade80" : "#f87171",
+                      }}
+                    >
+                      {trendDelta > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                      {trendDelta > 0 ? `+${trendDelta}` : trendDelta} pts
+                    </span>
                   )}
-                </>
-              ) : (
-                <p className="text-2xl font-extrabold leading-tight text-white/30">—</p>
-              )}
-            </div>
-
-            {/* Consistency */}
-            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
-              <p className="text-[11px] text-white/45 font-medium mb-2">Consistency</p>
-              <p className={`text-3xl font-extrabold leading-none mb-1 ${recentStreamCount >= 12 ? "text-green-400" : recentStreamCount >= 6 ? "text-yellow-400" : "text-red-400"}`}>
-                {recentStreamCount}
-              </p>
-              <p className="text-[11px] text-white/40">
-                streams this month
-                {" · "}
-                {recentStreamCount >= 20 ? "Excellent" : recentStreamCount >= 12 ? "Good pace" : recentStreamCount >= 6 ? "Needs work" : "Stream more"}
-              </p>
+                  {dominantCatLabel && (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border"
+                      style={{
+                        background: `${dominantCatColor}12`,
+                        borderColor: `${dominantCatColor}30`,
+                        color: dominantCatColor,
+                      }}
+                    >
+                      {dominantCatLabel} ({dominantCatPct}%)
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border"
+                    style={{
+                      background: `${consistencyBadge.color}10`,
+                      borderColor: `${consistencyBadge.color}25`,
+                      color: consistencyBadge.color,
+                    }}
+                  >
+                    {recentStreamCount} streams · {consistencyBadge.label}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/55">
+                    {totalPeaks} clip moments
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Archetype — featured full width */}
+          {/* ── ARCHETYPE CARD (existing component) ──────────────────── */}
           <ArchetypeCard
             dominantCategory={dominantCategory}
             dominantStreamerType={dominantStreamerType}
@@ -233,89 +293,141 @@ export default async function GrowPage() {
             totalPeaks={totalPeaks}
           />
 
-          {/* Consistency grid */}
-          <ConsistencyGrid streamDates={streamDates} />
+          {/* ── CONSISTENCY + TACTICS (side by side on desktop) ──────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <ConsistencyGrid streamDates={streamDates} />
+            <TacticsCarousel />
+          </div>
 
-          {/* Tactics */}
-          <TacticsCarousel />
+          {/* ── TOP CLIPS — #1 hero, others rows ───────────────────── */}
+          {topClips && topClips.length > 0 && (() => {
+            const hero = topClips[0];
+            const rest = topClips.slice(1);
+            const heroColor = CATEGORY_COLORS[hero.peak_category] || "#8b5cf6";
+            const heroLabel = CATEGORY_LABELS[hero.peak_category] || hero.peak_category;
+            const heroPct = Math.round(hero.peak_score * 100);
 
-          {/* Top Clips */}
-          {topClips && topClips.length > 0 && (
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                <div>
-                  <h2 className="text-sm font-bold text-white">Your Best Clips</h2>
-                  <p className="text-xs text-white/40 mt-0.5">Post these on TikTok, YouTube Shorts, and Kick first</p>
+            return (
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+              >
+                <div className="px-6 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-0.5">Your Best Clips</p>
+                    <h2 className="text-sm font-bold text-white">Post these first — they convert strangers.</h2>
+                  </div>
+                  <Link href="/dashboard/clips" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
+                    See all <ChevronRight size={12} />
+                  </Link>
                 </div>
-                <Link href="/dashboard/clips" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors">
-                  See all →
-                </Link>
-              </div>
 
-              {/* Clip rows */}
-              <div className="divide-y divide-white/[0.04]">
-                {topClips.map((clip, i) => {
-                  const isTop = i === 0;
-                  const catLabel = CATEGORY_LABELS[clip.peak_category] || clip.peak_category;
-                  return (
-                    <div
-                      key={clip.id}
-                      className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isTop ? "border border-yellow-500/15 bg-yellow-500/[0.03]" : "hover:bg-white/[0.02]"}`}
-                    >
-                      {/* Rank */}
-                      <span className={`text-sm font-bold w-5 text-center flex-shrink-0 ${isTop ? "text-yellow-400" : "text-white/25"}`}>
-                        {i + 1}
-                      </span>
-
-                      {/* Thumbnail */}
+                {/* #1 Hero */}
+                <Link
+                  href="/dashboard/clips"
+                  className="block px-6 py-6 relative overflow-hidden group transition-colors hover:bg-white/[0.02]"
+                  style={{
+                    background: `linear-gradient(135deg, ${heroColor}10 0%, ${heroColor}04 60%, rgba(10,9,20,0) 100%)`,
+                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div className="absolute top-0 left-0 w-32 h-px" style={{ background: `linear-gradient(90deg, ${heroColor}80, transparent)` }} />
+                  <div className="flex items-center gap-5">
+                    {/* Video thumb */}
+                    <div className="relative w-32 sm:w-44 aspect-video flex-shrink-0 rounded-xl overflow-hidden bg-black" style={{ border: `1px solid ${heroColor}30` }}>
                       <video
                         preload="metadata"
                         muted
                         playsInline
-                        className="w-16 aspect-video rounded-lg bg-black flex-shrink-0 object-cover"
+                        className="w-full h-full object-cover"
                       >
-                        <source src={clip.video_url} type="video/mp4" />
+                        <source src={hero.video_url} type="video/mp4" />
                       </video>
-
-                      {/* Title + category */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${isTop ? "text-white" : "text-white/80"}`}>
-                          {clip.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize ${CATEGORY_STYLE[clip.peak_category] || "bg-white/5 text-white/40"}`}>
-                            {catLabel}
-                          </span>
-                          {clip.caption_text && (
-                            <span className="text-xs text-white/35 truncate line-clamp-1">{clip.caption_text}</span>
-                          )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${heroColor}`, boxShadow: `0 0 16px ${heroColor}80` }}>
+                          <Play size={16} className="text-white ml-0.5" fill="white" />
                         </div>
                       </div>
+                      <span className="absolute top-1.5 left-1.5 text-[10px] font-extrabold uppercase tracking-widest text-white px-1.5 py-0.5 rounded" style={{ background: `${heroColor}`, boxShadow: `0 0 8px ${heroColor}90` }}>
+                        #1
+                      </span>
+                    </div>
 
-                      {/* Virality score */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Sparkles size={11} className={scoreColor(clip.peak_score)} />
-                        <span className={`text-sm font-bold ${scoreColor(clip.peak_score)}`}>
-                          {Math.round(clip.peak_score * 100)}
+                    {/* Text */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: heroColor, background: `${heroColor}15`, border: `1px solid ${heroColor}30` }}>
+                          {heroLabel}
                         </span>
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40">Virality {heroPct}/100</span>
+                      </div>
+                      <p className="text-base sm:text-lg font-black text-white leading-tight mb-1 line-clamp-2">{hero.title}</p>
+                      {hero.caption_text && (
+                        <p className="text-xs text-white/40 line-clamp-2">{hero.caption_text}</p>
+                      )}
+                      <div className="mt-3 h-1.5 rounded-full bg-white/[0.05] overflow-hidden max-w-xs">
+                        <div className="h-full rounded-full" style={{ width: `${heroPct}%`, background: `linear-gradient(90deg, ${heroColor}aa, ${heroColor})`, boxShadow: `0 0 8px ${heroColor}55` }} />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                </Link>
 
-              {/* Footer tip */}
-              <div className="px-5 py-3.5 border-t border-white/[0.05] bg-white/[0.015]">
-                <p className="text-xs text-white/35 leading-relaxed">
-                  When someone finds your clip on TikTok and comes to Twitch, they expect that same version of you. Stream like your top clips every time.
-                </p>
+                {/* Other clip rows */}
+                <div className="divide-y divide-white/[0.04]">
+                  {rest.map((clip, i) => {
+                    const color = CATEGORY_COLORS[clip.peak_category] || "#8b5cf6";
+                    const label = CATEGORY_LABELS[clip.peak_category] || clip.peak_category;
+                    const pct = Math.round(clip.peak_score * 100);
+                    return (
+                      <div
+                        key={clip.id}
+                        className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.02] transition-colors"
+                      >
+                        <span className="text-sm font-black w-5 text-center flex-shrink-0 text-white/30 tabular-nums">
+                          {i + 2}
+                        </span>
+
+                        <video
+                          preload="metadata"
+                          muted
+                          playsInline
+                          className="w-20 aspect-video rounded-lg bg-black flex-shrink-0 object-cover"
+                          style={{ border: `1px solid ${color}25` }}
+                        >
+                          <source src={clip.video_url} type="video/mp4" />
+                        </video>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white/85 truncate mb-1">{clip.title}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color, background: `${color}15` }}>
+                              {label}
+                            </span>
+                            {clip.caption_text && (
+                              <span className="text-xs text-white/35 truncate line-clamp-1">{clip.caption_text}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="w-16 h-1 rounded-full bg-white/[0.05] overflow-hidden hidden sm:block">
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                          </div>
+                          <span className="text-lg font-black tabular-nums leading-none" style={{ color }}>{pct}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="px-6 py-4 border-t border-white/[0.05] bg-white/[0.015]">
+                  <p className="text-xs text-white/35 leading-relaxed">
+                    When a stranger lands on your Twitch from a clip, they expect this version of you. Stream like your top clips every time.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>
