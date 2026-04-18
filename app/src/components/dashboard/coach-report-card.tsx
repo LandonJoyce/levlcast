@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   TrendingUp, TrendingDown, Minus, Activity, AlertCircle,
   Target, Gamepad2, MessageCircle, Map, Shuffle, BookOpen,
-  Volume2, VolumeX, Pause, Play, Loader2, Flame, Zap, ShieldAlert, Clock,
+  Volume2, VolumeX, Pause, Play, Loader2, Flame, ShieldAlert, Clock,
   CheckCircle2,
 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
@@ -203,9 +203,6 @@ export function CoachReportCard({ report, previousScore, streak = 0 }: {
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)" }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.2)", boxShadow: "0 0 12px rgba(139,92,246,0.3)" }}>
-            <Zap size={13} className="text-violet-300" />
-          </div>
           <span className="font-extrabold text-sm text-white tracking-wide">Stream Debrief</span>
         </div>
         <div className="flex items-center gap-2">
