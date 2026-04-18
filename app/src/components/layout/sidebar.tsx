@@ -13,7 +13,6 @@ import {
   LogOut,
   ArrowLeft,
   TrendingUp,
-  PenLine,
   Twitch,
 } from "lucide-react";
 
@@ -27,7 +26,6 @@ const navGroups = [
     items: [
       { href: "/dashboard/vods", label: "VODs", icon: Film },
       { href: "/dashboard/clips", label: "Clips", icon: Scissors },
-      { href: "/dashboard/planner", label: "Titles", icon: PenLine },
     ],
   },
   {
