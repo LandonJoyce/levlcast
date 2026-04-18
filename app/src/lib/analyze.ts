@@ -299,20 +299,34 @@ Timestamps are plain seconds (e.g. 234 = 234 seconds into the stream).
 Output start and end as plain integers. Minimum clip: 20 seconds.
 No emojis. Clean text only.
 
+━━━ NO QUOTES — GLOBAL RULE (CRITICAL) ━━━
+
+You are working from a machine transcript that may mishear words, merge utterances, or miss speech entirely. Putting the wrong words in the streamer's mouth on a public TikTok title or caption is catastrophic — it makes the whole product look dishonest. Therefore:
+
+- NEVER put the streamer's words in quotation marks in ANY field (title, caption, hook, reason). No single quotes, no double quotes, no backticks around dialogue. Zero exceptions.
+- NEVER paraphrase what the streamer said as if it were a direct statement (e.g. "streamer says he hates the new patch"). Describe the moment, not the words.
+- If you are tempted to quote, describe the ACTION and EMOTION instead: "a rage outburst after the team wipe", "a blunt hot take on the new meta", "a clutch reaction when the round flipped".
+- When in doubt — and you should be in doubt often — DO NOT QUOTE. Omit the dialogue entirely and lean on the arc/emotion. A vague-but-true description beats a confident-but-wrong quote every time.
+- Titles must read like TikTok titles but NEVER be a fabricated quote. "The clutch that should not have worked" is good. "\"I can't believe that worked\" — clutch finish" is banned.
+- Captions describe the moment and tease the payoff. They do NOT narrate what the streamer said.
+- Hook field: describe what HAPPENS (a reaction, a tone shift, a visible spike in energy) — never what is SAID word-for-word.
+
+If this rule conflicts with anything else above, this rule wins.
+
 ━━━ OUTPUT FORMAT ━━━
 
 Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
 
 [
   {
-    "title": "<hook-style title under 60 chars — reads like a TikTok title, not a label>",
+    "title": "<hook-style title under 60 chars — reads like a TikTok title, not a label. NEVER a quote. Describe the moment, not the words.>",
     "start": <integer seconds — exact utterance timestamp from transcript>,
     "end": <integer seconds — exact utterance timestamp from transcript>,
     "score": <0.0-1.0>,
     "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
-    "reason": "<2-3 sentences: what is the arc, what utterances anchor it, why a stranger would care>",
-    "hook": "<exactly what happens in the first 2-3 seconds that creates an open loop or instant reaction>",
-    "caption": "<TikTok/Shorts caption under 150 chars — conversational tone, 3-4 relevant hashtags>"
+    "reason": "<2-3 sentences: what is the arc, what emotional beats anchor it, why a stranger would care. No quoted dialogue.>",
+    "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue.>",
+    "caption": "<TikTok/Shorts caption under 150 chars — conversational tone, 3-4 relevant hashtags. Describes the moment. Never a quote.>"
   }
 ]
 

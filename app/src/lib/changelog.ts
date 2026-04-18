@@ -20,6 +20,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.5",
+    date: "2026-04-17",
+    title: "No Fake Quotes",
+    items: [
+      { type: "improved", text: "Clip titles and captions no longer invent dialogue — if the AI isn't certain what you said, it describes the moment instead of quoting you" },
+      { type: "improved", text: "Stricter no-quote rules across every clip field so your posts never put the wrong words in your mouth" },
+    ],
+  },
+  {
     version: "v0.8.4",
     date: "2026-04-17",
     title: "Dashboard & VODs Redesign",
