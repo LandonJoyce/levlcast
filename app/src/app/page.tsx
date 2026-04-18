@@ -329,14 +329,14 @@ export default function LandingPage() {
           <div className="relative max-w-[960px] mx-auto">
             <div className="md:w-[75%] rounded-2xl overflow-hidden border border-border shadow-glow-lg">
               <img
-                src="/screenshots/coach-report.jpg"
-                alt="Stream coach report showing a score of 44 with specific priorities and missions for the next stream"
+                src="/screenshots/image12.png"
+                alt="Stream coach report showing score, priorities and missions"
                 className="w-full h-auto"
               />
             </div>
             <div className="mt-5 md:mt-0 md:absolute md:right-0 md:bottom-[-40px] md:w-[60%] rounded-2xl overflow-hidden border border-border shadow-glow-lg bg-bg">
               <img
-                src="/screenshots/coach-feedback.png"
+                src="/screenshots/image13.png"
                 alt="Detailed coaching feedback showing what worked and specific fixes for the next stream"
                 className="w-full h-auto"
               />
