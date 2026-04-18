@@ -5,7 +5,50 @@ import { CollabCard } from "@/components/dashboard/collab-card";
 import { WeeklyDigestSection } from "@/components/dashboard/weekly-digest-section";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
-import { Film, CheckCircle2, Circle, ArrowRight, Sparkles } from "lucide-react";
+import { Film, CheckCircle2, Circle, ArrowRight, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+
+function scoreHex(n: number) { return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171"; }
+function scoreCls(n: number) { return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400"; }
+
+// ─── Arc Gauge ────────────────────────────────────────────────────────────
+function ArcGauge({ score, size = 170 }: { score: number; size?: number }) {
+  const hex = scoreHex(score);
+  const cls = scoreCls(score);
+  const R = 70, cx = 80, cy = 90;
+  const startAngle = -200, sweep = 220;
+  const polar = (a: number, r = R) => {
+    const rad = (a * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+  const start = polar(startAngle);
+  const end = polar(startAngle + sweep);
+  const progEnd = polar(startAngle + (score / 100) * sweep);
+  const largeArc = sweep > 180 ? 1 : 0;
+  const progLarge = (score / 100) * sweep > 180 ? 1 : 0;
+  const numSize = Math.round(size * 0.26);
+  const suffixSize = Math.round(size * 0.1);
+
+  return (
+    <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: size, height: size * 0.72 }}>
+      <svg width={size} height={size * 0.72} viewBox="0 0 160 120" className="absolute inset-0">
+        <path d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${largeArc} 1 ${end.x} ${end.y}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" strokeLinecap="round" />
+        {score > 0 && (
+          <path d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${progLarge} 1 ${progEnd.x} ${progEnd.y}`} fill="none" stroke={hex} strokeWidth="6" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 6px ${hex})` }} />
+        )}
+        {[25, 50, 75].map((v) => {
+          const a = startAngle + (v / 100) * sweep;
+          const inner = polar(a, R - 10);
+          const outer = polar(a, R - 4);
+          return <line key={v} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />;
+        })}
+      </svg>
+      <div className="flex items-baseline gap-1" style={{ marginTop: size * 0.08 }}>
+        <span className={`font-black tabular-nums leading-none ${cls}`} style={{ fontSize: numSize }}>{score}</span>
+        <span className="font-bold text-white/20" style={{ fontSize: suffixSize }}>/100</span>
+      </div>
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -16,7 +59,7 @@ export default async function DashboardPage() {
     supabase.from("clips").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
     supabase.from("vods").select("peak_data").eq("user_id", user!.id).eq("status", "ready").not("peak_data", "is", null),
     supabase.from("profiles").select("twitch_display_name").eq("id", user!.id).single(),
-    supabase.from("vods").select("id, title, coach_report, stream_date, peak_data, status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(5),
+    supabase.from("vods").select("id, title, coach_report, stream_date, peak_data, status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(6),
     supabase.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
   ]);
 
@@ -26,13 +69,24 @@ export default async function DashboardPage() {
   const totalPeaks = (peaksResult.data || []).reduce((sum, v) => sum + ((v.peak_data as any[])?.length || 0), 0);
   const displayName = profileResult.data?.twitch_display_name || "Streamer";
   const recentVods = recentVodsResult.data || [];
-  const latestVod = recentVods[0] || null;
-  const latestScore = latestVod ? (latestVod.coach_report as any)?.overall_score : null;
+  const readyVods = recentVods.filter((v) => v.status === "ready");
+  const latestReady = readyVods[0] || null;
+  const latestScore = latestReady ? (latestReady.coach_report as any)?.overall_score as number | null : null;
+  const prevScore = readyVods[1] ? (readyVods[1].coach_report as any)?.overall_score as number | undefined : undefined;
+  const delta = latestScore !== null && prevScore !== undefined ? latestScore - prevScore : null;
   const unclipped = Math.max(0, totalPeaks - totalClips);
 
   const isEmpty = totalVods === 0 && totalClips === 0;
   const needsOnboarding = !isEmpty && (totalAnalyzed === 0 || totalClips === 0);
 
+  const latestHex = latestScore !== null ? scoreHex(latestScore) : "#8b5cf6";
+
+  const headline = latestScore === null
+    ? "Ready when you are."
+    : latestScore >= 75 ? "That last stream hit."
+    : latestScore >= 60 ? "Solid run. Let's build on it."
+    : latestScore >= 45 ? "You've got a foundation."
+    : "Reset time — here's what to fix.";
 
   return (
     <div>
@@ -40,6 +94,9 @@ export default async function DashboardPage() {
 
       {/* Greeting */}
       <div className="mb-8">
+        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">
+          Welcome back
+        </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Hey, {displayName}</h1>
         <p className="text-sm text-muted">
           {isEmpty ? "Let's get your stream set up." : needsOnboarding ? "You're getting started — here's what to do next." : "Here's what's happening with your stream."}
@@ -47,10 +104,17 @@ export default async function DashboardPage() {
       </div>
 
       {isEmpty ? (
-        <div className="bg-surface border border-border rounded-2xl p-16 text-center">
-          <Film size={28} className="text-muted mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">No VODs yet</h2>
-          <p className="text-sm text-muted max-w-md mx-auto mb-8">
+        <div
+          className="rounded-2xl p-16 text-center relative overflow-hidden"
+          style={{
+            background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(139,92,246,0.12) 0%, rgba(10,9,20,0) 70%), rgba(10,9,20,0.98)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent)" }} />
+          <Film size={28} className="text-violet-400/60 mx-auto mb-4" />
+          <h2 className="text-xl font-black mb-2 tracking-tight">No VODs yet</h2>
+          <p className="text-sm text-white/55 max-w-md mx-auto mb-8 leading-relaxed">
             Sync your Twitch VODs to get started. LevlCast will analyze your streams and find the best moments automatically.
           </p>
           <Link href="/dashboard/vods" className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-6 py-3 rounded-full transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] active:scale-[0.97]">
@@ -63,64 +127,129 @@ export default async function DashboardPage() {
           {/* LEFT — main content */}
           <div className="space-y-5">
 
-            {/* Onboarding checklist */}
+            {/* Onboarding checklist — premium violet */}
             {needsOnboarding && (
-              <div className="rounded-2xl border border-accent/20 bg-accent/[0.04] p-5">
-                <h2 className="text-sm font-bold text-white mb-4">Getting Started</h2>
-                <div className="space-y-3">
-                  <OnboardingStep done={totalVods > 0} label="Sync your Twitch VODs" detail={totalVods > 0 ? `${totalVods} VOD${totalVods !== 1 ? "s" : ""} synced` : "Import your recent streams from Twitch"} href="/dashboard/vods" cta="Go to VODs" />
-                  <OnboardingStep done={totalAnalyzed > 0} label="Analyze your first stream" detail={totalAnalyzed > 0 ? `${totalAnalyzed} stream${totalAnalyzed !== 1 ? "s" : ""} analyzed` : "Get a coach score and find your peak moments"} href="/dashboard/vods" cta="Pick a VOD" />
-                  <OnboardingStep done={totalClips > 0} label="Generate your first clip" detail={totalClips > 0 ? `${totalClips} clip${totalClips !== 1 ? "s" : ""} generated` : "Turn your best moments into shareable clips"} href={latestVod ? `/dashboard/vods/${latestVod.id}` : "/dashboard/vods"} cta="Make a clip" />
+              <div
+                className="rounded-2xl relative overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.05) 60%, rgba(10,9,20,0) 100%)",
+                  border: "1px solid rgba(139,92,246,0.28)",
+                  boxShadow: "0 0 30px rgba(139,92,246,0.08) inset",
+                }}
+              >
+                <div className="absolute top-0 left-0 w-32 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.7), transparent)" }} />
+                <div className="px-6 py-5">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1">Getting Started</p>
+                  <h2 className="text-lg font-black text-white mb-5 tracking-tight">Your first moves</h2>
+                  <div className="space-y-4">
+                    <OnboardingStep done={totalVods > 0} label="Sync your Twitch VODs" detail={totalVods > 0 ? `${totalVods} VOD${totalVods !== 1 ? "s" : ""} synced` : "Import your recent streams from Twitch"} href="/dashboard/vods" cta="Go to VODs" />
+                    <OnboardingStep done={totalAnalyzed > 0} label="Analyze your first stream" detail={totalAnalyzed > 0 ? `${totalAnalyzed} stream${totalAnalyzed !== 1 ? "s" : ""} analyzed` : "Get a coach score and find your peak moments"} href="/dashboard/vods" cta="Pick a VOD" />
+                    <OnboardingStep done={totalClips > 0} label="Generate your first clip" detail={totalClips > 0 ? `${totalClips} clip${totalClips !== 1 ? "s" : ""} generated` : "Turn your best moments into shareable clips"} href={latestReady ? `/dashboard/vods/${latestReady.id}` : "/dashboard/vods"} cta="Make a clip" />
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Latest stream score */}
-            {latestScore !== null && latestVod && (
+            {/* Latest stream HERO pulse */}
+            {latestScore !== null && latestReady && (
               <Link
-                href={`/dashboard/vods/${latestVod.id}`}
-                className="block rounded-2xl border border-white/[0.06] bg-surface p-5 hover:border-white/10 transition-colors group"
+                href={`/dashboard/vods/${latestReady.id}`}
+                className="block rounded-2xl relative overflow-hidden group transition-all hover:-translate-y-px"
+                style={{
+                  background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${latestHex}15 0%, rgba(10,9,20,0) 70%), rgba(10,9,20,0.98)`,
+                  border: "1px solid rgba(255,255,255,0.07)",
+                }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted font-medium mb-1">Latest stream</p>
-                    <p className="text-base font-bold text-white truncate">{latestVod.title}</p>
-                    <p className="text-xs text-muted mt-1">{new Date(latestVod.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}</p>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-px" style={{ background: `linear-gradient(90deg, transparent, ${latestHex}60, transparent)` }} />
+
+                <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 sm:gap-8 items-center px-6 py-6">
+                  <div className="flex justify-center sm:justify-start">
+                    <ArcGauge score={latestScore} size={170} />
                   </div>
-                  <div className="text-right ml-6 flex-shrink-0">
-                    <p className={`text-5xl font-extrabold ${latestScore >= 70 ? "text-green-400" : latestScore >= 50 ? "text-yellow-400" : "text-red-400"}`}>{latestScore}</p>
-                    <p className="text-[10px] text-muted mt-1">stream score</p>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">Your Latest Stream</p>
+                      <ChevronRight size={14} className="text-violet-400/40 group-hover:text-violet-300 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-tight truncate">{headline}</h2>
+                    <p className="text-sm font-semibold text-white/80 truncate mb-1">{latestReady.title}</p>
+                    <p className="text-xs text-white/40 mb-4">
+                      {new Date(latestReady.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {delta !== null && delta !== 0 && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border"
+                          style={{
+                            background: delta > 0 ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
+                            borderColor: delta > 0 ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)",
+                            color: delta > 0 ? "#4ade80" : "#f87171",
+                          }}
+                        >
+                          {delta > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                          {delta > 0 ? `+${delta}` : delta} vs previous
+                        </span>
+                      )}
+                      {unclipped > 0 && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-violet-400/25 bg-violet-500/10 text-violet-300">
+                          {unclipped} moment{unclipped !== 1 ? "s" : ""} to clip
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/55">
+                        View full report
+                      </span>
+                    </div>
                   </div>
                 </div>
               </Link>
             )}
 
             {/* Recent streams */}
-            {recentVods.filter(v => v.status === "ready").length > 1 && (
-              <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-                  <h2 className="text-sm font-bold text-white">Recent Streams</h2>
-                  <Link href="/dashboard/vods" className="text-xs font-semibold text-accent-light hover:underline">See all →</Link>
+            {readyVods.length > 1 && (
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+              >
+                <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-0.5">Recent Streams</p>
+                    <h2 className="text-sm font-bold text-white">Your last {Math.min(readyVods.length - 1, 4)} analyzed</h2>
+                  </div>
+                  <Link href="/dashboard/vods" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
+                    See all <ChevronRight size={12} />
+                  </Link>
                 </div>
-                <div className="divide-y divide-border">
-                  {recentVods.filter(v => v.status === "ready").slice(0, 4).map((vod) => {
-                    const score = (vod.coach_report as any)?.overall_score;
+
+                <div className="divide-y divide-white/[0.04]">
+                  {readyVods.slice(1, 5).map((vod) => {
+                    const score = (vod.coach_report as any)?.overall_score as number | undefined;
                     const peaks = (vod.peak_data as any[])?.length || 0;
-                    const scoreColor = !score ? "text-muted" : score >= 70 ? "text-green-400" : score >= 50 ? "text-yellow-400" : "text-red-400";
+                    const rowHex = score === undefined ? "#4b5563" : scoreHex(score);
+                    const scoreTextColor = score === undefined ? "text-white/40" : scoreCls(score);
+
                     return (
-                      <Link key={vod.id} href={`/dashboard/vods/${vod.id}`} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-white/90 font-medium truncate">{vod.title}</p>
-                          <p className="text-xs text-muted mt-0.5">
-                            {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {peaks} peak{peaks !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                        {score !== undefined && (
-                          <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
-                            <Sparkles size={11} className={scoreColor} />
-                            <span className={`text-sm font-bold ${scoreColor}`}>{score}</span>
+                      <Link key={vod.id} href={`/dashboard/vods/${vod.id}`} className="flex items-stretch group hover:bg-white/[0.02] transition-colors">
+                        <div className="w-[3px] flex-shrink-0" style={{ background: rowHex, opacity: 0.8 }} />
+
+                        <div className="flex items-center gap-4 px-5 py-3.5 flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">{vod.title}</p>
+                            <p className="text-xs text-white/40 mt-0.5">
+                              {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {peaks} moment{peaks !== 1 ? "s" : ""}
+                            </p>
                           </div>
-                        )}
+
+                          {score !== undefined && (
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="w-16 h-1 rounded-full bg-white/[0.05] overflow-hidden hidden sm:block">
+                                <div className="h-full rounded-full" style={{ width: `${score}%`, background: rowHex, boxShadow: `0 0 6px ${rowHex}55` }} />
+                              </div>
+                              <span className={`text-xl font-black tabular-nums leading-none ${scoreTextColor}`}>{score}</span>
+                              <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
+                            </div>
+                          )}
+                        </div>
                       </Link>
                     );
                   })}
@@ -145,20 +274,36 @@ export default async function DashboardPage() {
             <BurnoutCard />
 
             {/* Quick stats */}
-            <div className="bg-surface border border-border rounded-2xl p-5">
-              <h2 className="text-xs font-medium text-muted mb-4">Your numbers</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <StatBox label="VODs" value={totalVods} href="/dashboard/vods" />
-                <StatBox label="Analyzed" value={totalAnalyzed} href="/dashboard/vods" />
-                <StatBox label="Peak Moments" value={totalPeaks} href="/dashboard/clips" />
-                <StatBox label="Clips Made" value={totalClips} href="/dashboard/clips" />
+            <div
+              className="rounded-2xl overflow-hidden relative"
+              style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+            >
+              <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.6), transparent)" }} />
+
+              <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-0.5">Your Numbers</p>
+                <h2 className="text-sm font-bold text-white">Lifetime totals</h2>
               </div>
-              {unclipped > 0 && (
-                <Link href="/dashboard/clips" className="mt-3 flex items-center justify-between text-xs font-semibold text-accent-light hover:underline">
-                  <span>{unclipped} peak{unclipped !== 1 ? "s" : ""} ready to clip</span>
-                  <ArrowRight size={12} />
-                </Link>
-              )}
+
+              <div className="px-6 py-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <StatBox label="VODs" value={totalVods} href="/dashboard/vods" color="#8b5cf6" />
+                  <StatBox label="Analyzed" value={totalAnalyzed} href="/dashboard/vods" color="#4ade80" />
+                  <StatBox label="Clip Moments" value={totalPeaks} href="/dashboard/clips" color="#facc15" />
+                  <StatBox label="Clips Made" value={totalClips} href="/dashboard/clips" color="#ec4899" />
+                </div>
+                {unclipped > 0 && (
+                  <Link href="/dashboard/clips" className="mt-4 flex items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 group transition-colors"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(10,9,20,0) 100%)",
+                      border: "1px solid rgba(139,92,246,0.22)",
+                    }}
+                  >
+                    <span className="text-xs font-bold text-violet-300">{unclipped} moment{unclipped !== 1 ? "s" : ""} ready to clip</span>
+                    <ArrowRight size={12} className="text-violet-400 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                )}
+              </div>
             </div>
 
           </div>
@@ -168,11 +313,19 @@ export default async function DashboardPage() {
   );
 }
 
-function StatBox({ label, value, href }: { label: string; value: number; href: string }) {
+function StatBox({ label, value, href, color }: { label: string; value: number; href: string; color: string }) {
   return (
-    <Link href={href} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 surface-hover block">
-      <p className="text-xl font-extrabold text-white">{value}</p>
-      <p className="text-[11px] text-muted mt-0.5">{label}</p>
+    <Link
+      href={href}
+      className="rounded-xl px-3.5 py-3 block relative overflow-hidden transition-all hover:-translate-y-px"
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <div className="absolute top-0 left-0 w-12 h-px" style={{ background: `linear-gradient(90deg, ${color}80, transparent)` }} />
+      <p className="text-2xl font-black tabular-nums leading-none" style={{ color }}>{value}</p>
+      <p className="text-[11px] font-medium text-white/45 mt-1.5">{label}</p>
     </Link>
   );
 }
@@ -182,13 +335,17 @@ function OnboardingStep({ done, label, detail, href, cta }: {
 }) {
   return (
     <div className="flex items-center gap-3">
-      {done ? <CheckCircle2 size={18} className="text-green-400 flex-shrink-0" /> : <Circle size={18} className="text-white/20 flex-shrink-0" />}
+      {done ? (
+        <CheckCircle2 size={18} className="text-green-400 flex-shrink-0" style={{ filter: "drop-shadow(0 0 4px rgba(74,222,128,0.4))" }} />
+      ) : (
+        <Circle size={18} className="text-violet-400/50 flex-shrink-0" />
+      )}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${done ? "text-white/50 line-through" : "text-white"}`}>{label}</p>
-        <p className="text-xs text-muted">{detail}</p>
+        <p className={`text-sm font-bold ${done ? "text-white/40 line-through" : "text-white"}`}>{label}</p>
+        <p className="text-xs text-white/45 mt-0.5">{detail}</p>
       </div>
       {!done && (
-        <Link href={href} className="flex items-center gap-1 text-xs font-semibold text-accent-light hover:underline flex-shrink-0">
+        <Link href={href} className="flex items-center gap-1 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors flex-shrink-0">
           {cta} <ArrowRight size={12} />
         </Link>
       )}
