@@ -20,6 +20,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.3",
+    date: "2026-04-17",
+    title: "Analytics & Growth Redesign",
+    items: [
+      { type: "improved", text: "Analytics page now opens with a full Performance Pulse — your average coach score, trend, and streak all at a glance" },
+      { type: "improved", text: "Best Stream and Hottest Moment get their own featured cards so your wins don't get buried" },
+      { type: "improved", text: "Category breakdown shows your #1 archetype front and center, with every category ranked on glowing bars" },
+      { type: "improved", text: "Growth page now leads with a Growth Pulse card that tells you plainly if you're trending up, flat, or slipping" },
+      { type: "improved", text: "Top Clips #1 clip gets a hero treatment so you know exactly which one to post first" },
+      { type: "improved", text: "Follower trend, consistency grid, and tactics carousel upgraded to match the new premium look" },
+    ],
+  },
+  {
     version: "v0.8.2",
     date: "2026-04-17",
     title: "Retention & Onboarding",
