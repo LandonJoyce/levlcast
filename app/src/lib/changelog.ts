@@ -20,6 +20,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.4",
+    date: "2026-04-17",
+    title: "Dashboard & VODs Redesign",
+    items: [
+      { type: "improved", text: "Home dashboard now opens with a big Latest Stream hero — your score, trend, and next action all in one card" },
+      { type: "improved", text: "Recent streams list got progress bars and bigger score readouts so you can scan your history in seconds" },
+      { type: "improved", text: "Onboarding checklist redesigned as a featured violet card — clear, glowing, and impossible to miss" },
+      { type: "improved", text: "VODs page now starts with a clean status strip (total / analyzed / processing) and a Start Here spotlight for your first analysis" },
+      { type: "improved", text: "VOD rows show thumbnails with a score badge, a progress bar, and a status accent stripe — one layout that works on every screen size" },
+    ],
+  },
+  {
     version: "v0.8.3",
     date: "2026-04-17",
     title: "Analytics & Growth Redesign",
