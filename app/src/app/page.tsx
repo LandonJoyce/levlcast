@@ -12,70 +12,58 @@ const steps = [
   },
   {
     num: "02",
-    label: "AI Analyzes Everything",
-    desc: "Every stream gets a full breakdown — peak moments, quality score, content style, and what's actually working.",
+    label: "Get Your Score",
+    desc: "Hit analyze on any VOD. Your AI coach scores every moment — energy, retention, best clips — in minutes.",
   },
   {
     num: "03",
-    label: "Get Your Game Plan",
-    desc: "Monday morning, your manager delivers a weekly digest with action items, health signals, and growth strategy.",
-  },
-  {
-    num: "04",
-    label: "Grow on Autopilot",
-    desc: "Generate clips from your best moments, find collab partners, and track what's actually moving the needle.",
+    label: "Clip and Post",
+    desc: "Your best moments get clipped automatically. Post to YouTube Shorts in one tap.",
   },
 ];
 
-/* ─── Manager features ─── */
+/* ─── Features ─── */
 const managerFeatures = [
   {
     title: "Stream Coaching",
-    desc: "After every stream, get a scored report with what worked, what didn't, and specific goals for next time. Not generic advice — feedback on your actual VOD.",
+    desc: "After every stream, get a scored report with what worked, what didn't, and one specific goal for next time. Feedback on your actual VOD — not generic tips.",
     accent: "bg-purple-500",
   },
   {
-    title: "Burnout Detection",
-    desc: "Your manager tracks your energy, session length, frequency, and score trends. If you're burning out, you'll know before it tanks your channel.",
-    accent: "bg-orange-500",
-  },
-  {
-    title: "Content Strategy",
-    desc: "See which content categories drive the most growth for your channel. Know whether to double down on hype content or try more variety.",
-    accent: "bg-green-500",
-  },
-  {
-    title: "Collab Matching",
-    desc: "Get matched with streamers who complement your style. Internal matches from LevlCast users and external discoveries from across Twitch.",
+    title: "Smart Clips",
+    desc: "AI detects your best hype, comedy, and clutch moments. One tap generates a ready-to-post clip — no editing needed.",
     accent: "bg-blue-500",
   },
   {
-    title: "Weekly Digest",
-    desc: "Every Monday, your personal manager compiles your week — stats, insights, and 2-3 action items. Like having a manager text you a game plan.",
-    accent: "bg-yellow-500",
+    title: "YouTube Shorts",
+    desc: "Post clips directly to YouTube Shorts from the app. Your best content, live on your channel without leaving LevlCast.",
+    accent: "bg-red-500",
   },
-  {
-    title: "Clip Generation",
-    desc: "One click turns peak moments into ready-to-post clips. Your best content, extracted and formatted automatically.",
-    accent: "bg-purple-500",
-  },
+];
+
+/* ─── Rank tiers ─── */
+const rankTiers = [
+  { name: "Fresh Streamer",     range: "0–39",  style: "border-white/10 text-white/40" },
+  { name: "Rising Talent",      range: "40–54", style: "border-accent/30 text-accent-light" },
+  { name: "Consistent Creator", range: "55–69", style: "border-accent/30 text-accent-light" },
+  { name: "Crowd Favorite",     range: "70–79", style: "border-yellow-500/30 text-yellow-400" },
+  { name: "Elite Entertainer",  range: "80–89", style: "border-yellow-500/40 text-yellow-300" },
+  { name: "LevlCast Legend",    range: "90–100", style: "border-yellow-400/60 text-yellow-300", legend: true },
 ];
 
 /* ─── Pricing features ─── */
 const freeFeatures = [
   "1 VOD analysis per month",
-  "AI coaching report",
-  "5 clips total",
+  "AI coaching report + score",
+  "5 clips per month",
+  "iOS & web app",
 ];
 const proFeatures = [
   "20 VOD analyses per month",
-  "Full AI coach report every stream",
-  "20 clip generations per month",
-  "Weekly manager digest",
-  "Burnout monitoring",
-  "Content performance analytics",
-  "Collab matching",
-  "Priority processing",
+  "20 clips per month",
+  "YouTube Shorts posting",
+  "Title generator",
+  "Everything in Free",
 ];
 
 export default function LandingPage() {
@@ -119,7 +107,7 @@ export default function LandingPage() {
                   href="/auth/login"
                   className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-7 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:scale-[0.97]"
                 >
-                  Get Your Manager Free
+                  Get Your First Report Free
                   <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </span>
@@ -226,88 +214,36 @@ export default function LandingPage() {
             Get managed forever.
           </h2>
 
-          {/* Step 1 featured wide, then 3 smaller cards in a row */}
-          <div className="space-y-5">
-            {/* Step 1 — featured, horizontal layout */}
-            <div className="card p-7 md:p-8 hover:border-accent/25 transition-colors group">
-              <div className="flex flex-col md:flex-row md:items-center gap-5">
-                <span className="text-5xl font-black text-white/[0.06] leading-none flex-shrink-0">01</span>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-lg mb-2">{steps[0].label}</h3>
-                  <p className="text-sm text-muted leading-relaxed max-w-[500px]">{steps[0].desc}</p>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {steps.map((step) => (
+              <div key={step.num} className="card p-7 hover:border-accent/25 transition-colors group">
+                <span className="text-4xl font-black text-white/[0.06] leading-none block mb-5">{step.num}</span>
+                <h3 className="font-bold text-base mb-2">{step.label}</h3>
+                <p className="text-sm text-muted leading-relaxed">{step.desc}</p>
               </div>
-            </div>
-
-            {/* Steps 2-4 — three columns, varied sizes */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-              {steps.slice(1).map((step, i) => {
-                // 5-4-3 split for visual variety
-                const span = ["md:col-span-5", "md:col-span-4", "md:col-span-3"][i];
-                return (
-                  <div key={step.num} className={`card p-6 hover:border-accent/25 transition-colors group ${span}`}>
-                    <span className="text-3xl font-black text-white/[0.06] leading-none block mb-4">{step.num}</span>
-                    <h3 className="font-bold text-base mb-2">{step.label}</h3>
-                    <p className="text-[13px] text-muted leading-relaxed">{step.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ─── What Your Manager Does ─── */}
+      {/* ─── Features ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden" id="features">
         <div className="max-w-[1080px] mx-auto px-6">
           <div className="mb-5">
-            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">Your manager&apos;s toolkit</span>
+            <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full">What you get</span>
           </div>
-          <h2 className="text-4xl font-extrabold tracking-tight mb-4 md:text-left">
-            Everything a real manager would do.
+          <h2 className="text-4xl font-extrabold tracking-tight mb-14 md:text-left">
+            Everything you need.<br />Nothing you don&apos;t.
           </h2>
-          <p className="text-muted text-sm max-w-[480px] mb-14 leading-relaxed md:text-left">
-            LevlCast doesn&apos;t just analyze clips. It watches over your entire streaming career and tells you what to do about it.
-          </p>
 
-          {/* Bento layout: intentionally asymmetric spans */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {managerFeatures.map((feat, i) => {
-              // Varied column spans — no row looks the same
-              const spanClass = [
-                "md:col-span-7", // Stream Coaching — hero feature, wider
-                "md:col-span-5", // Burnout Detection
-                "md:col-span-5", // Content Strategy — wider
-                "md:col-span-3", // Collab Matching — compact
-                "md:col-span-4", // Weekly Digest — medium
-                "md:col-span-12", // Clip Generation — full-width bar
-              ][i];
-              const isHero = i === 0;
-              const isFull = i === 5;
-
-              return (
-                <div
-                  key={feat.title}
-                  className={`card group hover:border-white/[0.14] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-px ${spanClass} ${isHero ? "p-8" : "p-6"} relative overflow-hidden`}
-                >
-                  {/* Colored top accent line */}
-                  <div className={`absolute top-0 left-0 right-0 h-[2px] ${feat.accent} opacity-40`} />
-                  {isFull ? (
-                    <div className="flex items-center gap-5">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold mb-1">{feat.title}</h3>
-                        <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h3 className={`font-bold mb-2 ${isHero ? "text-lg" : ""}`}>{feat.title}</h3>
-                      <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {managerFeatures.map((feat) => (
+              <div key={feat.title} className="card p-7 hover:border-white/[0.14] transition-all hover:-translate-y-px relative overflow-hidden">
+                <div className={`absolute top-0 left-0 right-0 h-[2px] ${feat.accent} opacity-40`} />
+                <h3 className="font-bold text-base mb-2">{feat.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{feat.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -347,46 +283,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Analytics Showcase ─── */}
+      {/* ─── Rank System ─── */}
       <section className="py-24 border-t border-border relative overflow-hidden">
-        <div className="max-w-[1080px] mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
+        <div className="max-w-[1080px] mx-auto px-6 text-center">
+          <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full mb-5">Your score. Your rank.</span>
+          <h2 className="text-4xl font-extrabold tracking-tight mb-4">
+            Level up, stream by stream.
+          </h2>
+          <p className="text-muted text-sm max-w-[420px] mx-auto mb-14 leading-relaxed">
+            Every stream earns a score. Your last 5 streams set your rank. Keep analyzing — keep climbing.
+          </p>
 
-            {/* Screenshot */}
-            <div className="w-full md:w-[55%] flex-shrink-0 rounded-2xl overflow-hidden border border-border shadow-glow-lg">
-              <img
-                src="/screenshots/image15.png"
-                alt="Analytics dashboard showing performance pulse, stream score trend, best stream, and content breakdown"
-                className="w-full h-auto"
-              />
-            </div>
-
-            {/* Copy */}
-            <div className="flex-1 text-center md:text-left">
-              <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3.5 py-1 rounded-full mb-5">The full picture</span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-5">
-                You can&apos;t fix what<br className="hidden sm:block" /> you can&apos;t see.
-              </h2>
-              <p className="text-muted text-sm leading-relaxed mb-8 max-w-[380px] mx-auto md:mx-0">
-                Every stream gets scored, charted, and broken down — so you always know exactly where you peaked, where you dropped off, and what to do differently next time.
-              </p>
-              <ul className="space-y-3 text-sm text-muted max-w-[360px] mx-auto md:mx-0">
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
-                  <span>Stream score trend across every VOD you&apos;ve analyzed</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
-                  <span>Best stream and hottest clip moment highlighted automatically</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-neon flex-shrink-0 mt-0.5" />
-                  <span>Content breakdown — see which category actually gets clipped</span>
-                </li>
-              </ul>
-            </div>
-
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {rankTiers.map((tier, i) => (
+              <div key={tier.name} className="flex items-center gap-3">
+                <div className={`rounded-2xl px-5 py-4 border text-center min-w-[120px] transition-all hover:-translate-y-1 ${tier.style} ${tier.legend ? "shadow-[0_0_24px_rgba(250,204,21,0.15)]" : ""}`} style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <p className="text-[10px] font-bold opacity-60 mb-1">{tier.range}</p>
+                  <p className="text-sm font-bold leading-tight">{tier.name}{tier.legend ? " 👑" : ""}</p>
+                </div>
+                {i < rankTiers.length - 1 && <span className="text-white/20 text-sm font-bold flex-shrink-0">→</span>}
+              </div>
+            ))}
           </div>
+
+          <p className="text-xs text-muted mt-8">Where does your stream score land?</p>
         </div>
       </section>
 
@@ -486,12 +406,12 @@ export default function LandingPage() {
             href="/auth/login"
             className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-8 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_50px_rgba(124,58,237,0.5)] hover:-translate-y-0.5 active:scale-[0.97] mb-4"
           >
-            Get Your Manager Free
+            Get Your First Report Free
             <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </span>
           </Link>
-          <p className="text-xs text-muted">Founding member price locks in at $9.99/mo forever.</p>
+          <p className="text-xs text-muted">Free to start. No credit card required.</p>
         </div>
       </section>
 
