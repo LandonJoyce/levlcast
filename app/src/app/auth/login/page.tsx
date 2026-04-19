@@ -49,15 +49,15 @@ function LoginForm() {
     <div className="bg-surface border border-border rounded-2xl p-8">
       <h2 className="text-lg font-bold mb-2">Welcome to LevlCast</h2>
       <p className="text-sm text-muted mb-6">
-        Connect your Twitch account to get your personal manager.
+        Connect your Twitch account to get your first coaching report.
       </p>
 
       {/* Value bullets */}
       <ul className="space-y-2.5 mb-8">
         {[
-          "AI coaching report after every stream",
-          "Burnout detection and content strategy",
-          "Weekly game plan with action items",
+          "AI coaching score after every stream",
+          "Auto-detect your best clip moments",
+          "Post clips to YouTube Shorts in one tap",
         ].map((item) => (
           <li key={item} className="flex items-center gap-2.5 text-sm text-muted">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-light flex-shrink-0" />
@@ -98,7 +98,7 @@ export default function LoginPage() {
           LevlCast
         </h1>
         <p className="text-muted text-sm mb-12">
-          Your personal streaming manager.
+          Your AI stream coach.
         </p>
 
         <Suspense fallback={
