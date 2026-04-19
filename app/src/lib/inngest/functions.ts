@@ -1002,6 +1002,73 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
   }
 );
 
+// ─── Streak Nudge ──────────────────────────────────────────────────────────
+// Runs daily at 2pm UTC. Finds users whose most recent ready VOD was analyzed
+// in the 4–5 day window — at risk but not yet broken. Fires exactly once per
+// drought without needing a separate tracking column.
+
+export const sendStreakNudge = inngest.createFunction(
+  { id: "send-streak-nudge" },
+  { cron: "0 14 * * *" }, // daily 2pm UTC
+  async ({ step }) => {
+    const supabase = createAdminClient();
+
+    return await step.run("notify-at-risk-streaks", async () => {
+      const now = new Date();
+      const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString();
+      const fourDaysAgo = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, expo_push_token, twitch_display_name")
+        .not("expo_push_token", "is", null);
+
+      if (!profiles?.length) return { sent: 0 };
+
+      let sent = 0;
+
+      for (const profile of profiles) {
+        try {
+          const { data: recentVods } = await supabase
+            .from("vods")
+            .select("status, analyzed_at")
+            .eq("user_id", profile.id)
+            .order("stream_date", { ascending: false })
+            .limit(20);
+
+          if (!recentVods?.length) continue;
+
+          // Compute streak (consecutive ready VODs from most recent)
+          let streak = 0;
+          for (const v of recentVods) {
+            if (v.status === "ready") streak++;
+            else break;
+          }
+          if (streak < 2) continue;
+
+          // Most recent ready VOD must be in the 4–5 day at-risk window
+          const mostRecentReady = recentVods.find((v) => v.status === "ready");
+          if (!mostRecentReady?.analyzed_at) continue;
+          const analyzedAt = mostRecentReady.analyzed_at;
+          if (analyzedAt < fiveDaysAgo || analyzedAt >= fourDaysAgo) continue;
+
+          await sendPush(profile.expo_push_token, {
+            title: `Your ${streak}-stream streak is at risk`,
+            body: "Analyze your next stream to keep it alive.",
+          });
+
+          sent++;
+          console.log(`[streak-nudge] Sent to user ${profile.id.slice(0, 8)}, streak: ${streak}`);
+        } catch (err) {
+          console.error(`[streak-nudge] Failed for user ${profile.id.slice(0, 8)}:`, err);
+        }
+      }
+
+      return { sent };
+    });
+  }
+);
+
 // ─── Activation Nudge ─────────────────────────────────────────────────────
 // Runs every hour. Finds users who signed up 24–25 hours ago and have never
 // analyzed a VOD, then sends a single activation email to bring them back.

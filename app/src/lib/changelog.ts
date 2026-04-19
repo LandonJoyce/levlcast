@@ -20,6 +20,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.9",
+    date: "2026-04-18",
+    title: "Rivals, Wrapped & Challenges",
+    items: [
+      { type: "new", text: "Rival system — pick any LevlCast streamer as your rival and track your score vs theirs after every stream" },
+      { type: "new", text: "Monthly Wrapped — your full month in review: average score, best stream, best clip moment, score arc, and shareable card" },
+      { type: "new", text: "Weekly challenge — a new score target every week shown on your VODs page" },
+      { type: "new", text: "Next stream target — a personalized score to beat displayed before every stream" },
+      { type: "new", text: "Streak protection push — get notified on mobile when your analysis streak is at risk" },
+    ],
+  },
+  {
     version: "v0.8.7",
     date: "2026-04-18",
     title: "Score Reveal + Titles",

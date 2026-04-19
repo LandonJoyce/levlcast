@@ -3,7 +3,8 @@ import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { formatDuration } from "@/lib/utils";
-import { Film, ChevronRight, Sparkles } from "lucide-react";
+import { Film, ChevronRight, Sparkles, Target, Trophy, Flame } from "lucide-react";
+import { RivalWidget } from "@/components/dashboard/rival-widget";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import Link from "next/link";
 
@@ -24,17 +25,78 @@ export default async function VodsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: vods } = await supabase
-    .from("vods")
-    .select("*")
-    .eq("user_id", user!.id)
-    .order("stream_date", { ascending: false });
+  const [{ data: vods }, { data: rivalRow }] = await Promise.all([
+    supabase.from("vods").select("*").eq("user_id", user!.id).order("stream_date", { ascending: false }),
+    supabase.from("rivals").select("rival_twitch_login, rival_id").eq("challenger_id", user!.id).maybeSingle(),
+  ]);
 
   const vodList = vods || [];
   const hasProcessing = vodList.some((v) => v.status === "transcribing" || v.status === "analyzing");
   const analyzed = vodList.filter((v) => v.status === "ready").length;
   const pending = vodList.filter((v) => v.status === "pending").length;
   const processing = vodList.filter((v) => v.status === "transcribing" || v.status === "analyzing").length;
+
+  // Weekly challenge — deterministic from ISO week number
+  const CHALLENGES = [
+    { text: "Score 65 or higher on your next stream", threshold: 65 },
+    { text: "Score 70 or higher on your next stream", threshold: 70 },
+    { text: "Score 75 or higher on your next stream", threshold: 75 },
+    { text: "Score 70 or higher on your next stream", threshold: 70 },
+    { text: "Score 75 or higher on your next stream", threshold: 75 },
+    { text: "Score 80 or higher on your next stream", threshold: 80 },
+  ];
+  const weekIdx = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % CHALLENGES.length;
+  const weekChallenge = CHALLENGES[weekIdx];
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const readyVods = vodList.filter((v) => v.status === "ready");
+  const thisWeekScores = readyVods
+    .filter((v) => (v as any).analyzed_at && (v as any).analyzed_at >= sevenDaysAgo)
+    .map((v) => (v.coach_report as any)?.overall_score as number)
+    .filter((s) => typeof s === "number");
+
+  const challengeCompleted = thisWeekScores.some((s) => s >= weekChallenge.threshold);
+  const lastScore = readyVods[0] ? (readyVods[0].coach_report as any)?.overall_score as number | undefined : undefined;
+  const nextTarget = lastScore !== undefined
+    ? Math.min(lastScore + (lastScore >= 90 ? 1 : lastScore >= 80 ? 3 : lastScore >= 70 ? 5 : 7), 100)
+    : undefined;
+
+  // Rival data
+  let rivalInitial = null;
+  if (rivalRow?.rival_id) {
+    const { data: rivalVod } = await supabase
+      .from("vods")
+      .select("coach_report")
+      .eq("user_id", rivalRow.rival_id)
+      .eq("status", "ready")
+      .order("analyzed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: rivalProfile } = await supabase
+      .from("profiles")
+      .select("twitch_display_name")
+      .eq("id", rivalRow.rival_id)
+      .single();
+    rivalInitial = {
+      rivalLogin: rivalRow.rival_twitch_login,
+      rivalName: rivalProfile?.twitch_display_name ?? null,
+      rivalFound: true,
+      myScore: lastScore ?? null,
+      rivalScore: (rivalVod?.coach_report as any)?.overall_score ?? null,
+      myStreak: 0,
+      rivalStreak: 0,
+    };
+  } else if (rivalRow) {
+    rivalInitial = {
+      rivalLogin: rivalRow.rival_twitch_login,
+      rivalName: null,
+      rivalFound: false,
+      myScore: lastScore ?? null,
+      rivalScore: null,
+      myStreak: 0,
+      rivalStreak: 0,
+    };
+  }
 
   return (
     <div>
@@ -48,7 +110,14 @@ export default async function VodsPage() {
           <p className="text-sm text-muted">Sync your Twitch streams and find the best moments.</p>
           <p className="text-xs text-muted/50 mt-1">After a stream ends, wait a few minutes before syncing.</p>
         </div>
-        <SyncButton />
+        <div className="flex items-center gap-3">
+          {analyzed >= 2 && (
+            <Link href="/dashboard/wrapped" className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full transition-all" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#a78bfa" }}>
+              <Trophy size={11} />Monthly Wrapped
+            </Link>
+          )}
+          <SyncButton />
+        </div>
       </div>
 
       {vodList.length === 0 ? (
@@ -127,6 +196,63 @@ export default async function VodsPage() {
             <StatTile label="Analyzed" value={analyzed} color="#4ade80" />
             <StatTile label={processing > 0 ? "Processing" : "Pending"} value={processing > 0 ? processing : pending} color="#facc15" />
           </div>
+
+          {/* Weekly challenge + next target + rival */}
+          {analyzed > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Weekly challenge */}
+              <div
+                className="rounded-2xl p-5 relative overflow-hidden"
+                style={{
+                  background: challengeCompleted
+                    ? "linear-gradient(135deg, rgba(74,222,128,0.1) 0%, rgba(10,9,20,0) 100%)"
+                    : "linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(10,9,20,0) 100%)",
+                  border: challengeCompleted ? "1px solid rgba(74,222,128,0.25)" : "1px solid rgba(139,92,246,0.25)",
+                }}
+              >
+                <div className="absolute top-0 left-0 w-24 h-px" style={{ background: challengeCompleted ? "linear-gradient(90deg, rgba(74,222,128,0.6), transparent)" : "linear-gradient(90deg, rgba(139,92,246,0.6), transparent)" }} />
+                <div className="flex items-center gap-2 mb-2">
+                  {challengeCompleted
+                    ? <Trophy size={11} className="text-green-400" />
+                    : <Flame size={11} className="text-violet-400" />}
+                  <span className={`text-[10px] font-extrabold uppercase tracking-widest ${challengeCompleted ? "text-green-400" : "text-violet-400"}`}>
+                    Weekly Challenge
+                  </span>
+                  {challengeCompleted && (
+                    <span className="ml-auto text-[10px] font-extrabold uppercase tracking-widest text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
+                      Done
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-bold text-white leading-snug">{weekChallenge.text}</p>
+                {thisWeekScores.length > 0 && !challengeCompleted && (
+                  <p className="text-xs text-white/35 mt-1.5">Best this week: <span className="text-white/60 font-semibold">{Math.max(...thisWeekScores)}/100</span></p>
+                )}
+              </div>
+
+              {/* Next stream target */}
+              {nextTarget !== undefined && (
+                <div
+                  className="rounded-2xl p-5 relative overflow-hidden"
+                  style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
+                  <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(250,204,21,0.5), transparent)" }} />
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target size={11} className="text-yellow-400" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">Next Stream Target</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-black tabular-nums text-yellow-400">{nextTarget}</span>
+                    <span className="text-sm font-bold text-white/25">/100</span>
+                  </div>
+                  <p className="text-xs text-white/35 mt-1">Beat your last score of <span className="text-white/55 font-semibold">{lastScore}</span></p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rival widget */}
+          {analyzed > 0 && <RivalWidget initial={rivalInitial} />}
 
           {/* VOD list */}
           <div
