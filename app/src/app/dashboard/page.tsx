@@ -77,7 +77,7 @@ export default async function DashboardPage() {
   const unclipped = Math.max(0, totalPeaks - totalClips);
 
   // Streamer title from last 5 ready scores
-  const last5Scores = readyVods.slice(0, 5).map((v) => (v.coach_report as any)?.overall_score as number).filter((s) => typeof s === "number");
+  const last5Scores = readyVods.slice(0, 5).map((v) => Number((v.coach_report as any)?.overall_score)).filter((s) => Number.isFinite(s));
   const avg5 = last5Scores.length > 0 ? last5Scores.reduce((a, b) => a + b, 0) / last5Scores.length : 0;
   const streamerTitle = last5Scores.length === 0 ? null
     : avg5 >= 90 ? "LevlCast Legend"
