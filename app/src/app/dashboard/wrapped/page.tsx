@@ -111,7 +111,7 @@ export default async function WrappedPage() {
 
           {/* Stats grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatBlock label="Streams" value={vods.length.toString()} color="#8b5cf6" />
+            <StatBlock label="Analyzed" value={vods.length.toString()} color="#8b5cf6" />
             <StatBlock label="Best Score" value={`${bestScore}`} color={scoreHex(bestScore)} />
             <StatBlock label="Worst Score" value={`${worstScore}`} color={scoreHex(worstScore)} />
             <StatBlock label="Total Time" value={formatDuration(totalDuration)} color="#facc15" />
