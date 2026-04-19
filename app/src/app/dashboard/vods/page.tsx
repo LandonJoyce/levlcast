@@ -108,11 +108,6 @@ export default async function VodsPage() {
               <span className="font-semibold uppercase tracking-wider text-[10px] opacity-80">Streak</span>
             </div>
           )}
-          {analyzed >= 2 && (
-            <Link href="/dashboard/wrapped" className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full transition-all" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#a78bfa" }}>
-              <Trophy size={11} />Monthly Wrapped
-            </Link>
-          )}
           <SyncButton />
         </div>
       </div>
