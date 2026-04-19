@@ -5,7 +5,7 @@ import { CollabCard } from "@/components/dashboard/collab-card";
 import { WeeklyDigestSection } from "@/components/dashboard/weekly-digest-section";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
-import { Film, CheckCircle2, Circle, ArrowRight, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { Film, CheckCircle2, Circle, ArrowRight, ChevronRight, TrendingUp, TrendingDown, Trophy } from "lucide-react";
 
 function scoreHex(n: number) { return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171"; }
 function scoreCls(n: number) { return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400"; }
@@ -75,6 +75,17 @@ export default async function DashboardPage() {
   const prevScore = readyVods[1] ? (readyVods[1].coach_report as any)?.overall_score as number | undefined : undefined;
   const delta = latestScore !== null && prevScore !== undefined ? latestScore - prevScore : null;
   const unclipped = Math.max(0, totalPeaks - totalClips);
+
+  // Streamer title from last 5 ready scores
+  const last5Scores = readyVods.slice(0, 5).map((v) => (v.coach_report as any)?.overall_score as number).filter((s) => typeof s === "number");
+  const avg5 = last5Scores.length > 0 ? last5Scores.reduce((a, b) => a + b, 0) / last5Scores.length : 0;
+  const streamerTitle = last5Scores.length === 0 ? null
+    : avg5 >= 90 ? "LevlCast Legend"
+    : avg5 >= 80 ? "Elite Entertainer"
+    : avg5 >= 70 ? "Crowd Favorite"
+    : avg5 >= 55 ? "Consistent Creator"
+    : avg5 >= 40 ? "Rising Talent"
+    : "Fresh Streamer";
 
   const isEmpty = totalVods === 0 && totalClips === 0;
   const needsOnboarding = !isEmpty && (totalAnalyzed === 0 || totalClips === 0);
@@ -173,6 +184,11 @@ export default async function DashboardPage() {
                       <ChevronRight size={14} className="text-violet-400/40 group-hover:text-violet-300 group-hover:translate-x-0.5 transition-all" />
                     </div>
                     <h2 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-tight truncate">{headline}</h2>
+                    {streamerTitle && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full mb-2" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", color: "#facc15" }}>
+                        <Trophy size={9} />{streamerTitle}
+                      </span>
+                    )}
                     <p className="text-sm font-semibold text-white/80 truncate mb-1">{latestReady.title}</p>
                     <p className="text-xs text-white/40 mb-4">
                       {new Date(latestReady.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
