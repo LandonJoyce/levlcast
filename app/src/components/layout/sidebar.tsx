@@ -7,40 +7,19 @@ import {
   LayoutDashboard,
   Film,
   Scissors,
-  BarChart3,
-  Link2,
   Settings,
   LogOut,
   ArrowLeft,
-  TrendingUp,
-  Twitch,
 } from "lucide-react";
 
 const navGroups = [
   {
     label: null,
-    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
-  },
-  {
-    label: "Create",
     items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/dashboard/vods", label: "VODs", icon: Film },
       { href: "/dashboard/clips", label: "Clips", icon: Scissors },
-    ],
-  },
-  {
-    label: "Grow",
-    items: [
-      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/dashboard/grow", label: "Growth", icon: TrendingUp },
-      { href: "/dashboard/twitch-panel", label: "Twitch Panel", icon: Twitch },
-    ],
-  },
-  {
-    label: "Account",
-    items: [
-      { href: "/dashboard/connections", label: "Connections", icon: Link2 },
-      { href: "/dashboard/settings", label: "Settings", icon: Settings },
+      { href: "/dashboard/settings", label: "Account", icon: Settings },
     ],
   },
 ];
