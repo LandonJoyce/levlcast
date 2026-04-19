@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BurnoutCard } from "@/components/dashboard/burnout-card";
 import { MonetizationCard } from "@/components/dashboard/monetization-card";
-import { CollabCard } from "@/components/dashboard/collab-card";
-import { WeeklyDigestSection } from "@/components/dashboard/weekly-digest-section";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import Link from "next/link";
 import { Film, CheckCircle2, Circle, ArrowRight, ChevronRight, TrendingUp, TrendingDown, Trophy } from "lucide-react";
@@ -292,12 +290,6 @@ export default async function DashboardPage() {
                 </div>
               </div>
             )}
-
-            {/* Collab Finder */}
-            <CollabCard />
-
-            {/* Weekly Digest */}
-            <WeeklyDigestSection />
 
             {/* Monetization */}
             <MonetizationCard />
