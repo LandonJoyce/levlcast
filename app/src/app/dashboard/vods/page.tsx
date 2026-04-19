@@ -1,9 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { formatDuration } from "@/lib/utils";
-import { Film, ChevronRight, Sparkles, Target, Trophy, Flame } from "lucide-react";
+import { Film, ChevronRight, Sparkles, Target, Trophy, Flame, Zap } from "lucide-react";
 import { RivalWidget } from "@/components/dashboard/rival-widget";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import Link from "next/link";
@@ -36,22 +36,25 @@ export default async function VodsPage() {
   const pending = vodList.filter((v) => v.status === "pending").length;
   const processing = vodList.filter((v) => v.status === "transcribing" || v.status === "analyzing").length;
 
-  // Weekly challenge — deterministic from ISO week number
+  // Weekly challenge — resets Monday 00:00 UTC (epoch is Thursday, so shift +3 days)
   const CHALLENGES = [
-    { text: "Score 65 or higher on your next stream", threshold: 65 },
-    { text: "Score 70 or higher on your next stream", threshold: 70 },
-    { text: "Score 75 or higher on your next stream", threshold: 75 },
-    { text: "Score 70 or higher on your next stream", threshold: 70 },
-    { text: "Score 75 or higher on your next stream", threshold: 75 },
-    { text: "Score 80 or higher on your next stream", threshold: 80 },
+    { text: "Score 65 or higher this week", threshold: 65 },
+    { text: "Score 70 or higher this week", threshold: 70 },
+    { text: "Score 75 or higher this week", threshold: 75 },
+    { text: "Score 70 or higher this week", threshold: 70 },
+    { text: "Score 75 or higher this week", threshold: 75 },
+    { text: "Score 80 or higher this week", threshold: 80 },
   ];
-  const weekIdx = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % CHALLENGES.length;
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const weekIdx = Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS) % CHALLENGES.length;
   const weekChallenge = CHALLENGES[weekIdx];
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // Week boundary aligned to Monday 00:00 UTC so "this week" matches the challenge reset
+  const weekStartMs = Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS) * WEEK_MS - 3 * 24 * 60 * 60 * 1000;
+  const weekStartIso = new Date(weekStartMs).toISOString();
   const readyVods = vodList.filter((v) => v.status === "ready");
   const thisWeekScores = readyVods
-    .filter((v) => (v as any).analyzed_at && (v as any).analyzed_at >= sevenDaysAgo)
+    .filter((v) => (v as any).analyzed_at && (v as any).analyzed_at >= weekStartIso)
     .map((v) => (v.coach_report as any)?.overall_score as number)
     .filter((s) => typeof s === "number");
 
@@ -61,41 +64,105 @@ export default async function VodsPage() {
     ? Math.min(lastScore + (lastScore >= 90 ? 1 : lastScore >= 80 ? 3 : lastScore >= 70 ? 5 : 7), 100)
     : undefined;
 
-  // Rival data
+  // Analysis streak — consecutive ready VODs from most recent (matches streak-nudge logic)
+  let analysisStreak = 0;
+  for (const v of vodList) {
+    if (v.status === "ready") analysisStreak++;
+    else break;
+  }
+
+  // Weekly challenge streak — count consecutive past weeks (including this if completed) where user beat that week's threshold
+  const nowWeekIdxAbs = Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS);
+  const scoresByWeekAbs = new Map<number, number[]>();
+  for (const v of readyVods) {
+    const at = (v as any).analyzed_at as string | null;
+    if (!at) continue;
+    const abs = Math.floor((new Date(at).getTime() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS);
+    const score = (v.coach_report as any)?.overall_score as number | undefined;
+    if (typeof score !== "number") continue;
+    if (!scoresByWeekAbs.has(abs)) scoresByWeekAbs.set(abs, []);
+    scoresByWeekAbs.get(abs)!.push(score);
+  }
+  let challengeStreak = 0;
+  // Start from this week if completed, else the previous week
+  let cursor = challengeCompleted ? nowWeekIdxAbs : nowWeekIdxAbs - 1;
+  while (cursor >= nowWeekIdxAbs - 12) {
+    const scores = scoresByWeekAbs.get(cursor);
+    if (!scores || scores.length === 0) break;
+    const threshold = CHALLENGES[((cursor % CHALLENGES.length) + CHALLENGES.length) % CHALLENGES.length].threshold;
+    if (!scores.some((s) => s >= threshold)) break;
+    challengeStreak++;
+    cursor--;
+  }
+
+  // Rival data — auto-link if the rival login now matches a LevlCast profile
   let rivalInitial = null;
-  if (rivalRow?.rival_id) {
-    const { data: rivalVod } = await supabase
-      .from("vods")
-      .select("coach_report")
-      .eq("user_id", rivalRow.rival_id)
-      .eq("status", "ready")
-      .order("analyzed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const { data: rivalProfile } = await supabase
-      .from("profiles")
-      .select("twitch_display_name")
-      .eq("id", rivalRow.rival_id)
-      .single();
-    rivalInitial = {
-      rivalLogin: rivalRow.rival_twitch_login,
-      rivalName: rivalProfile?.twitch_display_name ?? null,
-      rivalFound: true,
-      myScore: lastScore ?? null,
-      rivalScore: (rivalVod?.coach_report as any)?.overall_score ?? null,
-      myStreak: 0,
-      rivalStreak: 0,
-    };
-  } else if (rivalRow) {
-    rivalInitial = {
-      rivalLogin: rivalRow.rival_twitch_login,
-      rivalName: null,
-      rivalFound: false,
-      myScore: lastScore ?? null,
-      rivalScore: null,
-      myStreak: 0,
-      rivalStreak: 0,
-    };
+  if (rivalRow) {
+    const admin = createAdminClient();
+    let linkedId = rivalRow.rival_id;
+    if (!linkedId) {
+      const { data: latecomer } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("twitch_login", rivalRow.rival_twitch_login)
+        .maybeSingle();
+      if (latecomer?.id) {
+        linkedId = latecomer.id;
+        await supabase.from("rivals").update({ rival_id: linkedId }).eq("challenger_id", user!.id);
+      }
+    }
+
+    if (linkedId) {
+      const [{ data: rivalVods }, { data: rivalProfile }] = await Promise.all([
+        admin
+          .from("vods")
+          .select("coach_report, analyzed_at")
+          .eq("user_id", linkedId)
+          .eq("status", "ready")
+          .order("analyzed_at", { ascending: false })
+          .limit(5),
+        admin.from("profiles").select("twitch_display_name").eq("id", linkedId).single(),
+      ]);
+      const rivalScores = (rivalVods ?? [])
+        .map((v: { coach_report: any }) => (v.coach_report as any)?.overall_score as number)
+        .filter((s: number) => typeof s === "number");
+      const myRecentScores = readyVods
+        .slice(0, 5)
+        .map((v) => (v.coach_report as any)?.overall_score as number)
+        .filter((s) => typeof s === "number");
+      const pairs = Math.min(myRecentScores.length, rivalScores.length);
+      let myWins = 0;
+      let rivalWins = 0;
+      for (let i = 0; i < pairs; i++) {
+        if (myRecentScores[i] > rivalScores[i]) myWins++;
+        else if (myRecentScores[i] < rivalScores[i]) rivalWins++;
+      }
+      rivalInitial = {
+        rivalLogin: rivalRow.rival_twitch_login,
+        rivalName: rivalProfile?.twitch_display_name ?? null,
+        rivalFound: true,
+        myScore: lastScore ?? null,
+        rivalScore: rivalScores[0] ?? null,
+        myStreak: 0,
+        rivalStreak: 0,
+        myWins,
+        rivalWins,
+        headToHeadCount: pairs,
+      };
+    } else {
+      rivalInitial = {
+        rivalLogin: rivalRow.rival_twitch_login,
+        rivalName: null,
+        rivalFound: false,
+        myScore: lastScore ?? null,
+        rivalScore: null,
+        myStreak: 0,
+        rivalStreak: 0,
+        myWins: 0,
+        rivalWins: 0,
+        headToHeadCount: 0,
+      };
+    }
   }
 
   return (
@@ -111,6 +178,13 @@ export default async function VodsPage() {
           <p className="text-xs text-muted/50 mt-1">After a stream ends, wait a few minutes before syncing.</p>
         </div>
         <div className="flex items-center gap-3">
+          {analysisStreak >= 2 && (
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full" style={{ background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.3)", color: "#fb923c" }}>
+              <Zap size={11} />
+              <span className="tabular-nums">{analysisStreak}</span>
+              <span className="font-semibold uppercase tracking-wider text-[10px] opacity-80">Streak</span>
+            </div>
+          )}
           {analyzed >= 2 && (
             <Link href="/dashboard/wrapped" className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full transition-all" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#a78bfa" }}>
               <Trophy size={11} />Monthly Wrapped
@@ -227,6 +301,12 @@ export default async function VodsPage() {
                 <p className="text-sm font-bold text-white leading-snug">{weekChallenge.text}</p>
                 {thisWeekScores.length > 0 && !challengeCompleted && (
                   <p className="text-xs text-white/35 mt-1.5">Best this week: <span className="text-white/60 font-semibold">{Math.max(...thisWeekScores)}/100</span></p>
+                )}
+                {challengeStreak >= 2 && (
+                  <p className="text-xs mt-1.5 inline-flex items-center gap-1 text-orange-400/90">
+                    <Flame size={11} />
+                    <span className="font-semibold">{challengeStreak} weeks in a row</span>
+                  </p>
                 )}
               </div>
 

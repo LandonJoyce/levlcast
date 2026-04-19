@@ -17,8 +17,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid Twitch login" }, { status: 400 });
   }
 
-  // Look up rival's profile by twitch_login
+  // Block rivaling yourself
   const admin = createAdminClient();
+  const { data: myProfile } = await admin
+    .from("profiles")
+    .select("twitch_login")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (myProfile?.twitch_login && myProfile.twitch_login.toLowerCase() === login) {
+    return NextResponse.json({ error: "You can't rival yourself." }, { status: 400 });
+  }
+
+  // Look up rival's profile by twitch_login
   const { data: rivalProfile } = await admin
     .from("profiles")
     .select("id, twitch_display_name, twitch_login")

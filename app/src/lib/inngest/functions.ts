@@ -1047,7 +1047,7 @@ export const sendStreakNudge = inngest.createFunction(
           if (streak < 2) continue;
 
           // Most recent ready VOD must be in the 4–5 day at-risk window
-          const mostRecentReady = recentVods.find((v) => v.status === "ready");
+          const mostRecentReady = recentVods.find((v: { status: string; analyzed_at: string | null }) => v.status === "ready");
           if (!mostRecentReady?.analyzed_at) continue;
           const analyzedAt = mostRecentReady.analyzed_at;
           if (analyzedAt < fiveDaysAgo || analyzedAt >= fourDaysAgo) continue;

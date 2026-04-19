@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Swords, X, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Swords, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface RivalData {
   rivalLogin: string;
@@ -11,18 +12,24 @@ interface RivalData {
   rivalScore: number | null;
   myStreak: number;
   rivalStreak: number;
+  myWins?: number;
+  rivalWins?: number;
+  headToHeadCount?: number;
 }
 
 export function RivalWidget({ initial }: { initial: RivalData | null }) {
+  const router = useRouter();
   const [rival, setRival] = useState<RivalData | null>(initial);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function setRivalByLogin() {
     const login = input.trim().toLowerCase();
     if (!login) return;
     setError(null);
+    setNotice(null);
 
     startTransition(async () => {
       const res = await fetch("/api/rivals", {
@@ -32,15 +39,24 @@ export function RivalWidget({ initial }: { initial: RivalData | null }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to set rival"); return; }
-      if (!data.found) { setError("That streamer isn't on LevlCast yet. Challenge them to join!"); return; }
-      setRival({ rivalLogin: login, rivalName: data.rival?.twitch_display_name ?? login, rivalFound: true, myScore: initial?.myScore ?? null, rivalScore: null, myStreak: initial?.myStreak ?? 0, rivalStreak: 0 });
+      if (!data.found) {
+        setRival({ rivalLogin: login, rivalName: login, rivalFound: false, myScore: initial?.myScore ?? null, rivalScore: null, myStreak: initial?.myStreak ?? 0, rivalStreak: 0, myWins: 0, rivalWins: 0, headToHeadCount: 0 });
+        setNotice("Rival set — they're not on LevlCast yet. Invite them to start the head-to-head.");
+        setInput("");
+        router.refresh();
+        return;
+      }
+      setRival({ rivalLogin: login, rivalName: data.rival?.twitch_display_name ?? login, rivalFound: true, myScore: initial?.myScore ?? null, rivalScore: null, myStreak: initial?.myStreak ?? 0, rivalStreak: 0, myWins: 0, rivalWins: 0, headToHeadCount: 0 });
       setInput("");
+      router.refresh();
     });
   }
 
   async function clearRival() {
     await fetch("/api/rivals", { method: "DELETE" });
     setRival(null);
+    setNotice(null);
+    router.refresh();
   }
 
   const myScore = rival?.myScore ?? null;
@@ -82,6 +98,7 @@ export function RivalWidget({ initial }: { initial: RivalData | null }) {
             </button>
           </div>
           {error && <p className="text-xs text-red-400/80 mt-2">{error}</p>}
+          {notice && <p className="text-xs text-violet-400/80 mt-2">{notice}</p>}
         </div>
       ) : (
         <div>
@@ -119,6 +136,26 @@ export function RivalWidget({ initial }: { initial: RivalData | null }) {
                 ? <span className="text-red-400">Behind by {Math.abs(delta)} points — step it up</span>
                 : <span className="text-white/30">Dead even</span>}
             </p>
+          )}
+
+          {(rival.headToHeadCount ?? 0) >= 2 && (
+            <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-white/[0.05]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Head-to-head</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold tabular-nums">
+                <span className="text-green-400">{rival.myWins}W</span>
+                <span className="text-white/20">·</span>
+                <span className="text-red-400">{rival.rivalWins}L</span>
+                {(rival.headToHeadCount! - (rival.myWins ?? 0) - (rival.rivalWins ?? 0)) > 0 && (
+                  <>
+                    <span className="text-white/20">·</span>
+                    <span className="text-white/40">{rival.headToHeadCount! - (rival.myWins ?? 0) - (rival.rivalWins ?? 0)}T</span>
+                  </>
+                )}
+                <span className="text-white/25 font-normal">last {rival.headToHeadCount}</span>
+              </div>
+            </div>
           )}
 
           {!rival.rivalFound && (

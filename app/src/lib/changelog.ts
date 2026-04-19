@@ -20,6 +20,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.10",
+    date: "2026-04-18",
+    title: "Streaks, Rivals Polish & Animated Wrapped",
+    items: [
+      { type: "new", text: "Analysis streak badge — your consecutive-stream streak is now front and center on the VODs page" },
+      { type: "new", text: "Head-to-head record — rival card now shows your wins, losses, and ties across your last 5 streams" },
+      { type: "new", text: "Weekly challenge streak — see how many weeks in a row you've hit your target" },
+      { type: "improved", text: "Rivals now auto-link when your rival joins LevlCast — no need to re-add them" },
+      { type: "improved", text: "Monthly Wrapped average score animates up from zero when you open it" },
+      { type: "improved", text: "Weekly challenge resets cleanly on Monday with clearer 'this week' wording" },
+      { type: "fix", text: "Can no longer set yourself as your own rival" },
+      { type: "fix", text: "Rival card now refreshes right after you pick someone, even if their data is still coming in" },
+    ],
+  },
+  {
     version: "v0.8.9",
     date: "2026-04-18",
     title: "Rivals, Wrapped & Challenges",
