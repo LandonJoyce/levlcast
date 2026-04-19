@@ -79,13 +79,18 @@ export default async function DashboardPage() {
   // Streamer title from last 5 ready scores
   const last5Scores = readyVods.slice(0, 5).map((v) => Number((v.coach_report as any)?.overall_score)).filter((s) => Number.isFinite(s));
   const avg5 = last5Scores.length > 0 ? last5Scores.reduce((a, b) => a + b, 0) / last5Scores.length : 0;
-  const streamerTitle = last5Scores.length === 0 ? null
-    : avg5 >= 90 ? "LevlCast Legend"
-    : avg5 >= 80 ? "Elite Entertainer"
-    : avg5 >= 70 ? "Crowd Favorite"
-    : avg5 >= 55 ? "Consistent Creator"
-    : avg5 >= 40 ? "Rising Talent"
-    : "Fresh Streamer";
+  const RANK_TIERS = [
+    { title: "Fresh Streamer",     min: 0,  next: 40  },
+    { title: "Rising Talent",      min: 40, next: 55  },
+    { title: "Consistent Creator", min: 55, next: 70  },
+    { title: "Crowd Favorite",     min: 70, next: 80  },
+    { title: "Elite Entertainer",  min: 80, next: 90  },
+    { title: "LevlCast Legend",    min: 90, next: null },
+  ];
+  const currentTier = last5Scores.length === 0 ? null : RANK_TIERS.slice().reverse().find((t) => avg5 >= t.min) ?? RANK_TIERS[0];
+  const streamerTitle = currentTier?.title ?? null;
+  const nextTier = currentTier?.next !== null ? RANK_TIERS.find((t) => t.min === currentTier?.next) ?? null : null;
+  const rankProgress = currentTier && nextTier ? Math.min(1, (avg5 - currentTier.min) / (nextTier.min - currentTier.min)) : 1;
 
   const isEmpty = totalVods === 0 && totalClips === 0;
   const needsOnboarding = !isEmpty && (totalAnalyzed === 0 || totalClips === 0);
@@ -185,9 +190,24 @@ export default async function DashboardPage() {
                     </div>
                     <h2 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-tight truncate">{headline}</h2>
                     {streamerTitle && (
-                      <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full mb-2" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", color: "#facc15" }}>
-                        <Trophy size={9} />{streamerTitle}
-                      </span>
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", color: "#facc15" }}>
+                            <Trophy size={9} />{streamerTitle}
+                          </span>
+                          {nextTier && (
+                            <span className="text-[10px] text-white/30 font-semibold">
+                              {Math.round(avg5 * 10) / 10} / {nextTier.min} avg → <span className="text-white/50">{nextTier.title}</span>
+                            </span>
+                          )}
+                        </div>
+                        {nextTier && (
+                          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden w-full">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${rankProgress * 100}%`, background: "linear-gradient(90deg, #facc15, #fb923c)", boxShadow: "0 0 6px rgba(250,204,21,0.4)" }} />
+                          </div>
+                        )}
+                        {!nextTier && <p className="text-[10px] text-yellow-400/60 font-semibold">You&apos;ve hit the top rank.</p>}
+                      </div>
                     )}
                     <p className="text-sm font-semibold text-white/80 truncate mb-1">{latestReady.title}</p>
                     <p className="text-xs text-white/40 mb-4">
