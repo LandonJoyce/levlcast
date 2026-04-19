@@ -1,10 +1,9 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { formatDuration } from "@/lib/utils";
 import { Film, ChevronRight, Sparkles, Target, Trophy, Flame, Zap } from "lucide-react";
-import { RivalWidget } from "@/components/dashboard/rival-widget";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import Link from "next/link";
 
@@ -25,10 +24,7 @@ export default async function VodsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: vods }, { data: rivalRow }] = await Promise.all([
-    supabase.from("vods").select("*").eq("user_id", user!.id).order("stream_date", { ascending: false }),
-    supabase.from("rivals").select("rival_twitch_login, rival_id").eq("challenger_id", user!.id).maybeSingle(),
-  ]);
+  const { data: vods } = await supabase.from("vods").select("*").eq("user_id", user!.id).order("stream_date", { ascending: false });
 
   const vodList = vods || [];
   const hasProcessing = vodList.some((v) => v.status === "transcribing" || v.status === "analyzing");
@@ -93,76 +89,6 @@ export default async function VodsPage() {
     if (!scores.some((s) => s >= threshold)) break;
     challengeStreak++;
     cursor--;
-  }
-
-  // Rival data — auto-link if the rival login now matches a LevlCast profile
-  let rivalInitial = null;
-  if (rivalRow) {
-    const admin = createAdminClient();
-    let linkedId = rivalRow.rival_id;
-    if (!linkedId) {
-      const { data: latecomer } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("twitch_login", rivalRow.rival_twitch_login)
-        .maybeSingle();
-      if (latecomer?.id) {
-        linkedId = latecomer.id;
-        await supabase.from("rivals").update({ rival_id: linkedId }).eq("challenger_id", user!.id);
-      }
-    }
-
-    if (linkedId) {
-      const [{ data: rivalVods }, { data: rivalProfile }] = await Promise.all([
-        admin
-          .from("vods")
-          .select("coach_report, analyzed_at")
-          .eq("user_id", linkedId)
-          .eq("status", "ready")
-          .order("analyzed_at", { ascending: false })
-          .limit(5),
-        admin.from("profiles").select("twitch_display_name").eq("id", linkedId).single(),
-      ]);
-      const rivalScores = (rivalVods ?? [])
-        .map((v: { coach_report: any }) => (v.coach_report as any)?.overall_score as number)
-        .filter((s: number) => typeof s === "number");
-      const myRecentScores = readyVods
-        .slice(0, 5)
-        .map((v) => (v.coach_report as any)?.overall_score as number)
-        .filter((s) => typeof s === "number");
-      const pairs = Math.min(myRecentScores.length, rivalScores.length);
-      let myWins = 0;
-      let rivalWins = 0;
-      for (let i = 0; i < pairs; i++) {
-        if (myRecentScores[i] > rivalScores[i]) myWins++;
-        else if (myRecentScores[i] < rivalScores[i]) rivalWins++;
-      }
-      rivalInitial = {
-        rivalLogin: rivalRow.rival_twitch_login,
-        rivalName: rivalProfile?.twitch_display_name ?? null,
-        rivalFound: true,
-        myScore: lastScore ?? null,
-        rivalScore: rivalScores[0] ?? null,
-        myStreak: 0,
-        rivalStreak: 0,
-        myWins,
-        rivalWins,
-        headToHeadCount: pairs,
-      };
-    } else {
-      rivalInitial = {
-        rivalLogin: rivalRow.rival_twitch_login,
-        rivalName: null,
-        rivalFound: false,
-        myScore: lastScore ?? null,
-        rivalScore: null,
-        myStreak: 0,
-        rivalStreak: 0,
-        myWins: 0,
-        rivalWins: 0,
-        headToHeadCount: 0,
-      };
-    }
   }
 
   return (
@@ -331,8 +257,7 @@ export default async function VodsPage() {
             </div>
           )}
 
-          {/* Rival widget */}
-          {analyzed > 0 && <RivalWidget initial={rivalInitial} />}
+
 
           {/* VOD list */}
           <div
