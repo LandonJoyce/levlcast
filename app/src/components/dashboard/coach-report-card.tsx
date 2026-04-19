@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, AlertCircle,
   Target, Gamepad2, MessageCircle, Map, Shuffle, BookOpen,
   Volume2, VolumeX, Pause, Play, Loader2, Flame, ShieldAlert, Clock,
-  CheckCircle2,
+  CheckCircle2, Trophy,
 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
@@ -36,9 +36,9 @@ function parseItem(raw: string) {
 
 // ─── Arc Gauge ────────────────────────────────────────────────────────────────
 
-function ArcGauge({ score }: { score: number }) {
-  const hex = scoreHex(score);
-  const cls = scoreCls(score);
+function ArcGauge({ score, displayScore }: { score: number; displayScore: number }) {
+  const hex = scoreHex(displayScore);
+  const cls = scoreCls(displayScore);
 
   // Arc: 220° sweep centered at bottom, r=70, viewBox 160×120
   const R  = 70;
@@ -54,9 +54,9 @@ function ArcGauge({ score }: { score: number }) {
 
   const start = polar(startAngle);
   const end   = polar(startAngle + sweep);
-  const progEnd = polar(startAngle + (score / 100) * sweep);
+  const progEnd = polar(startAngle + (displayScore / 100) * sweep);
   const largeArc = sweep > 180 ? 1 : 0;
-  const progLarge = (score / 100) * sweep > 180 ? 1 : 0;
+  const progLarge = (displayScore / 100) * sweep > 180 ? 1 : 0;
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: 200, height: 140 }}>
@@ -70,7 +70,7 @@ function ArcGauge({ score }: { score: number }) {
           strokeLinecap="round"
         />
         {/* Progress */}
-        {score > 0 && (
+        {displayScore > 0 && (
           <path
             d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${progLarge} 1 ${progEnd.x} ${progEnd.y}`}
             fill="none"
@@ -95,7 +95,7 @@ function ArcGauge({ score }: { score: number }) {
       {/* Center number */}
       <div className="flex flex-col items-center" style={{ marginTop: 12 }}>
         <div className="flex items-baseline gap-1">
-          <span className={`font-black tabular-nums leading-none ${cls}`} style={{ fontSize: 52 }}>{score}</span>
+          <span className={`font-black tabular-nums leading-none ${cls}`} style={{ fontSize: 52 }}>{displayScore}</span>
           <span className="text-xl font-bold text-white/20">/100</span>
         </div>
       </div>
@@ -171,13 +171,40 @@ function useAudio(r: CoachReport, prev?: number) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function CoachReportCard({ report, previousScore, streak = 0 }: {
-  report: CoachReport; previousScore?: number; streak?: number;
+export function CoachReportCard({ report, previousScore, streak = 0, isPersonalBest = false, streamerTitle }: {
+  report: CoachReport; previousScore?: number; streak?: number; isPersonalBest?: boolean; streamerTitle?: string;
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const tc    = report.streamer_type ? TYPE_CONFIG[report.streamer_type] : null;
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
-  const hex   = scoreHex(report.overall_score);
+
+  const [displayScore, setDisplayScore] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    const target = report.overall_score;
+    const duration = 1600;
+    let startTime: number | null = null;
+    let raf: number;
+
+    function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
+
+    const timeout = setTimeout(() => {
+      function tick(now: number) {
+        if (startTime === null) startTime = now;
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        setDisplayScore(Math.round(easeOutCubic(progress) * target));
+        if (progress < 1) { raf = requestAnimationFrame(tick); }
+        else { setRevealed(true); }
+      }
+      raf = requestAnimationFrame(tick);
+    }, 350);
+
+    return () => { clearTimeout(timeout); cancelAnimationFrame(raf); };
+  }, [report.overall_score]);
+
+  const hex = scoreHex(displayScore);
 
   const energyInfo = {
     label: report.energy_trend === "building" ? "Building Energy" : report.energy_trend === "declining" ? "Declining Energy" : report.energy_trend === "volatile" ? "Volatile Energy" : "Consistent Energy",
@@ -206,6 +233,11 @@ export function CoachReportCard({ report, previousScore, streak = 0 }: {
           <span className="font-extrabold text-sm text-white tracking-wide">Stream Debrief</span>
         </div>
         <div className="flex items-center gap-2">
+          {streamerTitle && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-400/20 text-violet-300">
+              <Trophy size={10} />{streamerTitle}
+            </span>
+          )}
           {streak >= 2 && (
             <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-400/20 text-orange-300">
               <Flame size={10} />{streak} streak
@@ -235,8 +267,18 @@ export function CoachReportCard({ report, previousScore, streak = 0 }: {
           <div className="px-6 pt-6 pb-5">
             {/* Arc gauge centered */}
             <div className="flex justify-center mb-2">
-              <ArcGauge score={report.overall_score} />
+              <ArcGauge score={report.overall_score} displayScore={displayScore} />
             </div>
+
+            {/* Personal best badge */}
+            {revealed && isPersonalBest && (
+              <div className="flex justify-center mb-3 animate-fade-in">
+                <span className="inline-flex items-center gap-2 text-xs font-extrabold px-4 py-2 rounded-full"
+                  style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24", boxShadow: "0 0 20px rgba(251,191,36,0.15)" }}>
+                  <Trophy size={12} />NEW PERSONAL BEST
+                </span>
+              </div>
+            )}
 
             {/* Delta */}
             <div className="flex items-center justify-center mb-5">

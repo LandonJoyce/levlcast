@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.7",
+    date: "2026-04-18",
+    title: "Score Reveal + Titles",
+    items: [
+      { type: "new", text: "Your stream score now counts up from zero when you open a report — the arc and color animate live as the number rises" },
+      { type: "new", text: "Personal best detection — a gold badge flashes when you beat your all-time high score" },
+      { type: "new", text: "Streamer title earned from your last 5 stream average — Fresh Streamer, Rising Talent, Consistent Creator, Crowd Favorite, Elite Entertainer, or LevlCast Legend" },
+    ],
+  },
+  {
     version: "v0.8.6",
     date: "2026-04-18",
     title: "Stream Report Emails",

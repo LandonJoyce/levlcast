@@ -25,7 +25,7 @@ export default async function VodDetailPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: vod }, { data: allClips }, { data: connections }, { data: prevVod }, { data: recentVods }] = await Promise.all([
+  const [{ data: vod }, { data: allClips }, { data: connections }, { data: prevVod }, { data: recentVods }, { data: priorVodsForStats }] = await Promise.all([
     supabase
       .from("vods")
       .select("*, share_token")
@@ -57,6 +57,14 @@ export default async function VodDetailPage({
       .eq("user_id", user!.id)
       .order("stream_date", { ascending: false })
       .limit(20),
+    supabase
+      .from("vods")
+      .select("coach_report")
+      .eq("user_id", user!.id)
+      .eq("status", "ready")
+      .neq("id", id)
+      .order("analyzed_at", { ascending: false })
+      .limit(50),
   ]);
 
   if (!vod) notFound();
@@ -71,6 +79,28 @@ export default async function VodDetailPage({
     if (v.status === "ready") streak++;
     else break;
   }
+
+  // Personal best + streamer title
+  const priorScores = (priorVodsForStats ?? [])
+    .map((v) => (v.coach_report as any)?.overall_score as number)
+    .filter((s) => typeof s === "number" && !isNaN(s));
+
+  const currentScore = coachReport?.overall_score as number | undefined;
+  const allTimeBest = priorScores.length > 0 ? Math.max(...priorScores) : 0;
+  const isPersonalBest = currentScore !== undefined && priorScores.length > 0 && currentScore > allTimeBest;
+
+  const last5 = [currentScore, ...priorScores.slice(0, 4)].filter((s): s is number => s !== undefined);
+  const avg5 = last5.length > 0 ? last5.reduce((a, b) => a + b, 0) / last5.length : 0;
+
+  function getStreamerTitle(avg: number): string {
+    if (avg >= 90) return "LevlCast Legend";
+    if (avg >= 80) return "Elite Entertainer";
+    if (avg >= 70) return "Crowd Favorite";
+    if (avg >= 55) return "Consistent Creator";
+    if (avg >= 40) return "Rising Talent";
+    return "Fresh Streamer";
+  }
+  const streamerTitle = getStreamerTitle(avg5);
 
   const isVodProcessing = vod.status === "transcribing" || vod.status === "analyzing";
 
@@ -147,7 +177,7 @@ export default async function VodDetailPage({
 
           {/* Coach Report */}
           {coachReport ? (
-            <CoachReportCard report={coachReport} previousScore={previousScore} streak={streak} />
+            <CoachReportCard report={coachReport} previousScore={previousScore} streak={streak} isPersonalBest={isPersonalBest} streamerTitle={streamerTitle} />
           ) : (
             <div className="bg-surface border border-border rounded-2xl p-6 text-sm text-muted">
               Coach report not available for this VOD. Re-analyze to generate one.
