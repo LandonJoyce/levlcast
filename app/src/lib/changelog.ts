@@ -20,6 +20,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.6",
+    date: "2026-04-18",
+    title: "Stream Report Emails",
+    items: [
+      { type: "new", text: "Get an email when your stream report is ready — includes your score and top coaching recommendation with a direct link back to the full report" },
+    ],
+  },
+  {
     version: "v0.8.5",
     date: "2026-04-17",
     title: "No Fake Quotes",

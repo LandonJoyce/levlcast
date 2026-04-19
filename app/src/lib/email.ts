@@ -2,6 +2,69 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+export async function sendVodReadyEmail(to: string, name: string, vodId: string, title: string, score: number | undefined, recommendation: string): Promise<void> {
+  const scoreText = score !== undefined ? `${score}/100` : null;
+  const snippet = recommendation.length > 120 ? recommendation.slice(0, 117) + "..." : recommendation;
+  const reportUrl = `https://levlcast.com/dashboard/vods/${vodId}`;
+
+  await resend.emails.send({
+    from: "LevlCast <hello@levlcast.com>",
+    to,
+    subject: scoreText ? `Your stream scored ${scoreText} — report ready` : "Your stream report is ready",
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your stream report is ready</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;">Hey ${name}</p>
+          <h1 style="margin:0 0 8px;font-size:26px;font-weight:800;color:#ffffff;line-height:1.2;">Your stream report is ready.</h1>
+          <p style="margin:0 0 24px;font-size:13px;color:rgba(255,255,255,0.35);">${title}</p>
+
+          ${scoreText ? `
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a22;border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+            <tr>
+              <td>
+                <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Stream Score</p>
+                <p style="margin:0;font-size:36px;font-weight:900;color:#a78bfa;">${scoreText}</p>
+              </td>
+            </tr>
+          </table>` : ""}
+
+          ${snippet ? `<p style="margin:0 0 28px;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.6;border-left:3px solid #7C3AED;padding-left:14px;">${snippet}</p>` : ""}
+
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+            <tr><td style="background:#7C3AED;border-radius:12px;">
+              <a href="${reportUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
+                View Full Report →
+              </a>
+            </td></tr>
+          </table>
+
+        </td></tr>
+
+        <tr><td style="padding-top:24px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">
+            LevlCast · <a href="https://levlcast.com/dashboard/settings" style="color:rgba(255,255,255,0.2);text-decoration:underline;">Unsubscribe</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendActivationEmail(to: string, name: string): Promise<void> {
   await resend.emails.send({
     from: "LevlCast <hello@levlcast.com>",

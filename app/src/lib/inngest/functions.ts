@@ -21,7 +21,7 @@ import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
-import { sendActivationEmail } from "@/lib/email";
+import { sendActivationEmail, sendVodReadyEmail } from "@/lib/email";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -180,6 +180,26 @@ export const analyzeVod = inngest.createFunction(
           body: snippet || "Open LevlCast to see your coach report.",
           data: { vodId },
         });
+      });
+
+      // Send email notification — fire and forget, never block on this
+      await step.run("email-notify", async () => {
+        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+        if (!user?.email) return;
+
+        const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
+        const { data: profile } = await supabase.from("profiles").select("twitch_display_name").eq("id", userId).single();
+        const report = coachReport as { overall_score?: number; recommendation?: string };
+        const name = profile?.twitch_display_name ?? user.email.split("@")[0];
+
+        await sendVodReadyEmail(
+          user.email,
+          name,
+          vodId,
+          vod?.title ?? "Stream",
+          report.overall_score,
+          report.recommendation ?? "",
+        );
       });
 
       return { peaks: peaks.length, segments: segments.length };
