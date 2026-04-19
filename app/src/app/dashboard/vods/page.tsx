@@ -32,20 +32,9 @@ export default async function VodsPage() {
   const pending = vodList.filter((v) => v.status === "pending").length;
   const processing = vodList.filter((v) => v.status === "transcribing" || v.status === "analyzing").length;
 
-  // Weekly challenge — resets Monday 00:00 UTC (epoch is Thursday, so shift +3 days)
-  const CHALLENGES = [
-    { text: "Score 65 or higher this week", threshold: 65 },
-    { text: "Score 70 or higher this week", threshold: 70 },
-    { text: "Score 75 or higher this week", threshold: 75 },
-    { text: "Score 70 or higher this week", threshold: 70 },
-    { text: "Score 75 or higher this week", threshold: 75 },
-    { text: "Score 80 or higher this week", threshold: 80 },
-  ];
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-  const weekIdx = Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS) % CHALLENGES.length;
-  const weekChallenge = CHALLENGES[weekIdx];
 
-  // Week boundary aligned to Monday 00:00 UTC so "this week" matches the challenge reset
+  // Week boundary aligned to Monday 00:00 UTC (epoch is Thursday, so shift +3 days)
   const weekStartMs = Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS) * WEEK_MS - 3 * 24 * 60 * 60 * 1000;
   const weekStartIso = new Date(weekStartMs).toISOString();
   const readyVods = vodList.filter((v) => v.status === "ready");
@@ -54,11 +43,21 @@ export default async function VodsPage() {
     .map((v) => (v.coach_report as any)?.overall_score as number)
     .filter((s) => typeof s === "number");
 
-  const challengeCompleted = thisWeekScores.some((s) => s >= weekChallenge.threshold);
   const lastScore = readyVods[0] ? (readyVods[0].coach_report as any)?.overall_score as number | undefined : undefined;
+
+  // Adaptive next-stream target — smaller jumps at the low end so it feels reachable
   const nextTarget = lastScore !== undefined
-    ? Math.min(lastScore + (lastScore >= 90 ? 1 : lastScore >= 80 ? 3 : lastScore >= 70 ? 5 : 7), 100)
+    ? Math.min(lastScore + (lastScore >= 90 ? 1 : lastScore >= 80 ? 3 : lastScore >= 60 ? 5 : lastScore >= 40 ? 4 : 3), 100)
     : undefined;
+
+  // Adaptive weekly challenge — based on avg of last 3 streams, rounded up to nearest 5, capped 35–85
+  const recentScores = readyVods.slice(0, 3).map((v) => (v.coach_report as any)?.overall_score as number).filter((s) => typeof s === "number");
+  const recentAvg = recentScores.length > 0 ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length : 60;
+  const rawThreshold = Math.ceil((recentAvg + 7) / 5) * 5;
+  const challengeThreshold = Math.min(Math.max(rawThreshold, 35), 85);
+  const weekChallenge = { text: `Score ${challengeThreshold} or higher this week`, threshold: challengeThreshold };
+
+  const challengeCompleted = thisWeekScores.some((s) => s >= weekChallenge.threshold);
 
   // Analysis streak — consecutive ready VODs from most recent (matches streak-nudge logic)
   let analysisStreak = 0;
@@ -67,7 +66,7 @@ export default async function VodsPage() {
     else break;
   }
 
-  // Weekly challenge streak — count consecutive past weeks (including this if completed) where user beat that week's threshold
+  // Weekly challenge streak — consecutive weeks where user beat their adaptive threshold (using current threshold as baseline)
   const nowWeekIdxAbs = Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / WEEK_MS);
   const scoresByWeekAbs = new Map<number, number[]>();
   for (const v of readyVods) {
@@ -80,13 +79,11 @@ export default async function VodsPage() {
     scoresByWeekAbs.get(abs)!.push(score);
   }
   let challengeStreak = 0;
-  // Start from this week if completed, else the previous week
   let cursor = challengeCompleted ? nowWeekIdxAbs : nowWeekIdxAbs - 1;
   while (cursor >= nowWeekIdxAbs - 12) {
     const scores = scoresByWeekAbs.get(cursor);
     if (!scores || scores.length === 0) break;
-    const threshold = CHALLENGES[((cursor % CHALLENGES.length) + CHALLENGES.length) % CHALLENGES.length].threshold;
-    if (!scores.some((s) => s >= threshold)) break;
+    if (!scores.some((s) => s >= challengeThreshold)) break;
     challengeStreak++;
     cursor--;
   }
