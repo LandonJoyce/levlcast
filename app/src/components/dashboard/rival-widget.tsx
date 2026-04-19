@@ -43,8 +43,8 @@ export function RivalWidget({ initial }: { initial: RivalData | null }) {
     setRival(null);
   }
 
-  const myScore = rival?.myScore;
-  const rivalScore = rival?.rivalScore;
+  const myScore = rival?.myScore ?? null;
+  const rivalScore = rival?.rivalScore ?? null;
   const delta = myScore !== null && rivalScore !== null ? myScore - rivalScore : null;
 
   return (
