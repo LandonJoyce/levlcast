@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
+import { OnboardingGuide } from "@/components/dashboard/onboarding-guide";
 import Link from "next/link";
-import { Film, CheckCircle2, Circle, ArrowRight, ChevronRight, TrendingUp, TrendingDown, Trophy, Scissors } from "lucide-react";
+import { Film, ChevronRight, TrendingUp, TrendingDown, Trophy, Scissors } from "lucide-react";
 
 function scoreHex(n: number) { return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171"; }
 function scoreCls(n: number) { return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400"; }
@@ -123,20 +124,14 @@ export default async function DashboardPage() {
       ) : (
         <div className="space-y-5">
 
-          {/* Onboarding checklist */}
+          {/* Onboarding guide */}
           {needsOnboarding && (
-            <div className="rounded-2xl relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.05) 60%, rgba(10,9,20,0) 100%)", border: "1px solid rgba(139,92,246,0.28)", boxShadow: "0 0 30px rgba(139,92,246,0.08) inset" }}>
-              <div className="absolute top-0 left-0 w-32 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.7), transparent)" }} />
-              <div className="px-6 py-5">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1">Getting Started</p>
-                <h2 className="text-lg font-black text-white mb-5 tracking-tight">Your first moves</h2>
-                <div className="space-y-4">
-                  <OnboardingStep done={totalVods > 0} label="Sync your Twitch VODs" detail={totalVods > 0 ? `${totalVods} VOD${totalVods !== 1 ? "s" : ""} synced` : "Import your recent streams from Twitch"} href="/dashboard/vods" cta="Go to VODs" />
-                  <OnboardingStep done={totalAnalyzed > 0} label="Analyze your first stream" detail={totalAnalyzed > 0 ? `${totalAnalyzed} stream${totalAnalyzed !== 1 ? "s" : ""} analyzed` : "Get a coach score and find your best moments"} href="/dashboard/vods" cta="Pick a VOD" />
-                  <OnboardingStep done={totalClips > 0} label="Generate your first clip" detail={totalClips > 0 ? `${totalClips} clip${totalClips !== 1 ? "s" : ""} ready` : "Turn your best moments into shareable clips"} href={latestReady ? `/dashboard/vods/${latestReady.id}` : "/dashboard/vods"} cta="Make a clip" />
-                </div>
-              </div>
-            </div>
+            <OnboardingGuide
+              totalVods={totalVods}
+              totalAnalyzed={totalAnalyzed}
+              totalClips={totalClips}
+              latestReadyId={latestReady?.id ?? null}
+            />
           )}
 
           {/* Latest stream hero */}
@@ -259,25 +254,6 @@ export default async function DashboardPage() {
           </div>
 
         </div>
-      )}
-    </div>
-  );
-}
-
-function OnboardingStep({ done, label, detail, href, cta }: { done: boolean; label: string; detail: string; href: string; cta: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      {done
-        ? <CheckCircle2 size={18} className="text-green-400 flex-shrink-0" style={{ filter: "drop-shadow(0 0 4px rgba(74,222,128,0.4))" }} />
-        : <Circle size={18} className="text-violet-400/50 flex-shrink-0" />}
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-bold ${done ? "text-white/40 line-through" : "text-white"}`}>{label}</p>
-        <p className="text-xs text-white/45 mt-0.5">{detail}</p>
-      </div>
-      {!done && (
-        <Link href={href} className="flex items-center gap-1 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors flex-shrink-0">
-          {cta} <ArrowRight size={12} />
-        </Link>
       )}
     </div>
   );

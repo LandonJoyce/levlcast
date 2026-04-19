@@ -8,6 +8,7 @@ import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
+import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebration";
 import { ArrowLeft, Calendar, Clock, Film, Loader2, Scissors, Sparkles, VolumeX } from "lucide-react";
 
 function scoreColor(score: number) {
@@ -117,10 +118,12 @@ export default async function VodDetailPage({
   );
 
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
+  const isFirstScore = vod.status === "ready" && currentScore !== undefined && (priorVodsForStats?.length ?? 0) === 0;
 
   return (
     <div>
       <VodStatusPoller hasProcessing={isVodProcessing || hasProcessingClip} />
+      {isFirstScore && <FirstScoreCelebration score={currentScore!} />}
 
       {/* Back + Header */}
       <div className="mb-6">
