@@ -40,13 +40,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 overflow-hidden flex-shrink-0">
-            <img
-              src="/logo2.png"
-              alt="LevlCast"
-              style={{ width: "72px", height: "auto", marginLeft: "-5px", marginTop: "-29px" }}
-            />
-          </div>
+          <img src="/logo-icon.png" alt="" className="h-8 w-auto" style={{ maxWidth: "32px", objectFit: "cover", objectPosition: "left center" }} />
           <span className="text-[17px] font-bold tracking-[-0.04em] text-gradient">LevlCast</span>
         </Link>
       </div>
