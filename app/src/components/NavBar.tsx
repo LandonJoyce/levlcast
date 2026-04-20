@@ -18,11 +18,8 @@ export default function NavBar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border">
       <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between gap-6">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-          <div className="overflow-hidden rounded-xl flex-shrink-0" style={{ width: 40, height: 40 }}>
-            <img src="/logo-icon.png" alt="" style={{ width: 104, height: "auto", marginLeft: -8, marginTop: -37 }} />
-          </div>
-          <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
+        <Link href="/" className="text-xl font-extrabold tracking-tight text-gradient flex-shrink-0">
+          LevlCast
         </Link>
 
         {/* Desktop links */}
