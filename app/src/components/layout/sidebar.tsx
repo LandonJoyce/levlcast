@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Film,
-  Scissors,
-  Settings,
+  Video,
+  Wand2,
+  CircleUser,
   LogOut,
   ArrowLeft,
 } from "lucide-react";
@@ -17,9 +17,9 @@ const navGroups = [
     label: null,
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/dashboard/vods", label: "VODs", icon: Film },
-      { href: "/dashboard/clips", label: "Clips", icon: Scissors },
-      { href: "/dashboard/settings", label: "Account", icon: Settings },
+      { href: "/dashboard/vods", label: "VODs", icon: Video },
+      { href: "/dashboard/clips", label: "Clips", icon: Wand2 },
+      { href: "/dashboard/settings", label: "Account", icon: CircleUser },
     ],
   },
 ];
@@ -39,8 +39,11 @@ export function Sidebar({ user }: SidebarProps) {
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#090d15] border-r border-white/[0.06] flex flex-col z-40">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
-        <Link href="/dashboard" className="text-xl font-extrabold text-gradient">
-          LevlCast
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-md bg-accent/20 border border-accent/30 flex items-center justify-center flex-shrink-0">
+            <Wand2 size={12} className="text-accent-light" />
+          </span>
+          <span className="text-[17px] font-bold tracking-[-0.04em] text-gradient">LevlCast</span>
         </Link>
       </div>
 
