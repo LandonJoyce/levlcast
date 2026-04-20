@@ -19,7 +19,9 @@ export default function NavBar() {
       <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-          <img src="/logo-icon.png" alt="" className="h-9 w-auto" style={{ maxWidth: "36px", objectFit: "cover", objectPosition: "left center" }} />
+          <div className="overflow-hidden rounded-xl flex-shrink-0" style={{ width: 40, height: 40 }}>
+            <img src="/logo-icon.png" alt="" style={{ width: 72, height: "auto", marginLeft: -1, marginTop: -19 }} />
+          </div>
           <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
         </Link>
 
