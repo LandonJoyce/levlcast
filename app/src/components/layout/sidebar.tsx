@@ -39,8 +39,17 @@ export function Sidebar({ user }: SidebarProps) {
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#090d15] border-r border-white/[0.06] flex flex-col z-40">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
-        <Link href="/dashboard" className="text-[17px] font-bold tracking-[-0.04em] text-gradient">
-          LevlCast
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div
+            className="w-7 h-7 rounded-[7px] flex-shrink-0"
+            style={{
+              backgroundImage: "url('/logo2.jpg')",
+              backgroundSize: "77px auto",
+              backgroundPosition: "-6px -27px",
+              mixBlendMode: "multiply",
+            }}
+          />
+          <span className="text-[17px] font-bold tracking-[-0.04em] text-gradient">LevlCast</span>
         </Link>
       </div>
 

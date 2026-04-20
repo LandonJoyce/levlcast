@@ -18,8 +18,17 @@ export default function NavBar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border">
       <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between gap-6">
         {/* Logo */}
-        <Link href="/" className="text-xl font-extrabold tracking-tight text-gradient flex-shrink-0">
-          LevlCast
+        <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+          <div
+            className="w-8 h-8 rounded-lg flex-shrink-0"
+            style={{
+              backgroundImage: "url('/logo2.jpg')",
+              backgroundSize: "88px auto",
+              backgroundPosition: "-7px -31px",
+              mixBlendMode: "multiply",
+            }}
+          />
+          <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
         </Link>
 
         {/* Desktop links */}
