@@ -20,7 +20,7 @@ export default function NavBar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 flex-shrink-0">
           <div className="overflow-hidden rounded-xl flex-shrink-0" style={{ width: 40, height: 40 }}>
-            <img src="/logo-icon.png" alt="" style={{ width: 72, height: "auto", marginLeft: -1, marginTop: -19 }} />
+            <img src="/logo-icon.png" alt="" style={{ width: 104, height: "auto", marginLeft: -8, marginTop: -37 }} />
           </div>
           <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
         </Link>
