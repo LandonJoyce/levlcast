@@ -40,7 +40,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <img src="/logo-mark.png" alt="" className="h-7 w-7" />
+          <img src="/logo-mark.png" alt="" className="h-9 w-9" />
           <span className="text-[17px] font-bold tracking-[-0.04em] text-gradient">LevlCast</span>
         </Link>
       </div>
