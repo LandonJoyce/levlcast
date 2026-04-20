@@ -41,12 +41,11 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <div
-            className="w-7 h-7 rounded-[7px] flex-shrink-0"
+            className="w-7 h-7 rounded-[7px] flex-shrink-0 overflow-hidden"
             style={{
               backgroundImage: "url('/logo2.jpg')",
-              backgroundSize: "77px auto",
-              backgroundPosition: "-6px -27px",
-              mixBlendMode: "multiply",
+              backgroundSize: "68px auto",
+              backgroundPosition: "-4px -26px",
             }}
           />
           <span className="text-[17px] font-bold tracking-[-0.04em] text-gradient">LevlCast</span>

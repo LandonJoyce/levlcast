@@ -20,12 +20,11 @@ export default function NavBar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <div
-            className="w-8 h-8 rounded-lg flex-shrink-0"
+            className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
             style={{
               backgroundImage: "url('/logo2.jpg')",
-              backgroundSize: "88px auto",
-              backgroundPosition: "-7px -31px",
-              mixBlendMode: "multiply",
+              backgroundSize: "78px auto",
+              backgroundPosition: "-5px -30px",
             }}
           />
           <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
