@@ -39,11 +39,8 @@ export function Sidebar({ user }: SidebarProps) {
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#090d15] border-r border-white/[0.06] flex flex-col z-40">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-md bg-accent/20 border border-accent/30 flex items-center justify-center flex-shrink-0">
-            <Wand2 size={12} className="text-accent-light" />
-          </span>
-          <span className="text-[17px] font-bold tracking-[-0.04em] text-gradient">LevlCast</span>
+        <Link href="/dashboard" className="text-[17px] font-bold tracking-[-0.04em] text-gradient">
+          LevlCast
         </Link>
       </div>
 
