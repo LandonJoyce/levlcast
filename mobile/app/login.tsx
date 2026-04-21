@@ -6,6 +6,7 @@ import {
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useRouter } from 'expo-router';
+import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
@@ -18,13 +19,16 @@ export default function LoginScreen() {
   async function handleTwitchLogin() {
     setLoading(true);
     try {
-      const redirectUrl = 'https://www.levlcast.com/auth/callback';
+      // Custom scheme redirect — keeps OAuth inside the in-app browser sheet
+      // and returns to the native app. Never loads the public website.
+      const redirectUrl = makeRedirectUri({ scheme: 'levlcast', path: 'auth/callback' });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'twitch',
         options: {
           redirectTo: redirectUrl,
           scopes: 'user:read:email user:read:follows',
+          skipBrowserRedirect: true,
         },
       });
 

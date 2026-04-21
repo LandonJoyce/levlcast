@@ -266,7 +266,7 @@ export const cleanupStuckClips = inngest.createFunction(
 
     await supabase
       .from("clips")
-      .update({ status: "failed" })
+      .update({ status: "failed", failed_reason: "Clip generation timed out after 10 minutes — Twitch VOD may be unavailable or too long to cut." })
       .in("id", stuck.map((c: { id: string }) => c.id));
 
     console.log(`[cleanup] Marked ${stuck.length} stuck clips as failed`);
@@ -343,7 +343,7 @@ export const generateClip = inngest.createFunction(
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       console.error(`[inngest] generate-clip failed for ${clipId}:`, message);
-      await supabase.from("clips").update({ status: "failed" }).eq("id", clipId);
+      await supabase.from("clips").update({ status: "failed", failed_reason: message }).eq("id", clipId);
       throw err;
     }
   }

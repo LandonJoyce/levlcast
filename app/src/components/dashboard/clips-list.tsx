@@ -30,6 +30,7 @@ interface ClipRow {
   peak_category: string;
   duration_seconds: number | null;
   start_time_seconds: number;
+  failed_reason?: string | null;
 }
 
 export function ReadyClipsList({
@@ -118,9 +119,11 @@ export function FailedClipsList({ clips }: { clips: ClipRow[] }) {
       <div className="space-y-3">
         {visible.map((clip) => (
           <div key={clip.id} className="bg-surface border border-red-500/20 rounded-2xl p-5 flex items-center justify-between gap-4">
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="font-semibold text-sm">{clip.title}</p>
-              <p className="text-xs text-red-400 mt-0.5">Generation failed — regenerate or delete.</p>
+              <p className="text-xs text-red-400 mt-0.5">
+                {clip.failed_reason || "Generation failed — regenerate or delete."}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <RegenerateClip

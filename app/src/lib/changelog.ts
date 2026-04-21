@@ -20,6 +20,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.12",
+    date: "2026-04-21",
+    title: "Clip Failure Transparency",
+    items: [
+      { type: "improved", text: "When a clip fails to generate, you now see the actual reason instead of a generic error — makes it clear whether it was a Twitch VOD timeout, a missing segment, or something else" },
+    ],
+  },
+  {
     version: "v0.8.11",
     date: "2026-04-21",
     title: "Clip Generation Fix",

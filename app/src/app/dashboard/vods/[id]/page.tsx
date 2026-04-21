@@ -242,9 +242,11 @@ export default async function VodDetailPage({
               {/* Failed */}
               {failedClips.map((clip) => (
                 <div key={clip.id} className="bg-surface border border-red-500/20 rounded-2xl p-4 flex items-center justify-between gap-3 mb-3">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">{clip.title}</p>
-                    <p className="text-xs text-red-400 mt-0.5">Generation failed — delete and try again.</p>
+                    <p className="text-xs text-red-400 mt-0.5">
+                      {(clip as { failed_reason?: string | null }).failed_reason || "Generation failed — delete and try again."}
+                    </p>
                   </div>
                   <DeleteClip clipId={clip.id} />
                 </div>
