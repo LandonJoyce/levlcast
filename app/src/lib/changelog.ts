@@ -22,9 +22,10 @@ export const changelog: ChangelogEntry[] = [
   {
     version: "v0.8.12",
     date: "2026-04-21",
-    title: "Clip Failure Transparency",
+    title: "Clip Generation Stability",
     items: [
-      { type: "improved", text: "When a clip fails to generate, you now see the actual reason instead of a generic error — makes it clear whether it was a Twitch VOD timeout, a missing segment, or something else" },
+      { type: "fix", text: "Fixed FFmpeg 'Invalid data' failures on clip generation — the cutter now handles stitched-together Twitch VOD segments without choking on timestamp discontinuities" },
+      { type: "improved", text: "When a clip fails to generate, you now see the actual reason instead of a generic error" },
     ],
   },
   {

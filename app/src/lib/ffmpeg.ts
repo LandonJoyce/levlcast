@@ -85,17 +85,17 @@ export async function cutClip(
   try {
     const duration = safeEnd - safeStart;
 
-    // Two-pass seeking: fast seek to 3s before clip start, then accurate seek
-    // within decoded frames. This ensures the output starts on a keyframe so
-    // video and audio are in sync from the first frame.
-    const preSeek = Math.max(0, safeStart - 3);
-    const fineSeek = safeStart - preSeek;
-
+    // Input is a concatenated MPEG-TS of several Twitch VOD segments, which
+    // often have PTS discontinuities between segments. Two-pass seeking
+    // (`-ss` before `-i`) hits those and throws "Invalid data found when
+    // processing input". Slow-seek AFTER `-i` + PTS regen handles it cleanly.
+    // Decode overhead is tiny because the TS file only spans ~30-60s.
     const cmd = [
       `"${ffmpegPath}"`,
-      `-ss ${preSeek}`,
+      `-fflags +genpts+igndts`,
+      `-err_detect ignore_err`,
       `-i "${inputFilePath}"`,
-      `-ss ${fineSeek}`,
+      `-ss ${safeStart}`,
       `-t ${duration}`,
       `-c:v libx264`,
       `-profile:v main`,
@@ -105,12 +105,10 @@ export async function cutClip(
       `-pix_fmt yuv420p`,
       `-c:a aac`,
       `-b:a 128k`,
-      // Resample audio to stay locked to video PTS — fixes "audio plays before
-      // video moves" on MPEG-TS input where audio/video packets are misaligned.
+      // Lock audio to video PTS so audio doesn't play before video moves.
       `-af aresample=async=1:first_pts=0`,
-      // Reset both stream timestamps to 0 after the seek so the mp4 container
-      // has a clean edit list — prevents browser players from showing a frozen
-      // first frame while audio plays.
+      // Clean edit list in the mp4 container — prevents browser players from
+      // showing a frozen first frame while audio plays.
       `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
       `-y`,
