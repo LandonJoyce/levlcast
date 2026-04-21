@@ -28,24 +28,37 @@ const FFMPEG_DOWNLOAD_URL =
   "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.0/ffmpeg-linux-x64";
 
 async function getFFmpegPath(): Promise<string> {
-  if (process.platform !== "linux") {
+  // Try the npm package first — works on local dev and sometimes on Vercel
+  // if the binary wasn't stripped from the deployment bundle.
+  try {
     const ffmpegStatic = require("ffmpeg-static");
-    return ffmpegStatic;
+    if (ffmpegStatic) {
+      await access(ffmpegStatic);
+      return ffmpegStatic;
+    }
+  } catch {
+    // Binary not accessible via npm package — fall through to manual download
   }
 
-  try {
-    await access(FFMPEG_TMP_PATH);
-    return FFMPEG_TMP_PATH;
-  } catch {
-    console.log("[ffmpeg] Downloading ffmpeg binary...");
-    const res = await fetch(FFMPEG_DOWNLOAD_URL);
-    if (!res.ok) throw new Error(`Failed to download ffmpeg: ${res.status}`);
-    const buffer = Buffer.from(await res.arrayBuffer());
-    await writeFile(FFMPEG_TMP_PATH, buffer);
-    await chmod(FFMPEG_TMP_PATH, 0o755);
-    console.log("[ffmpeg] ffmpeg binary ready");
-    return FFMPEG_TMP_PATH;
+  // On Linux (Vercel): Vercel strips large binaries from the bundle, so we
+  // cache the binary in /tmp across warm invocations and download on cold starts.
+  if (process.platform === "linux") {
+    try {
+      await access(FFMPEG_TMP_PATH);
+      return FFMPEG_TMP_PATH;
+    } catch {
+      console.log("[ffmpeg] Downloading ffmpeg binary to /tmp...");
+      const res = await fetch(FFMPEG_DOWNLOAD_URL);
+      if (!res.ok) throw new Error(`Failed to download ffmpeg binary: ${res.status} ${res.statusText}`);
+      const buffer = Buffer.from(await res.arrayBuffer());
+      await writeFile(FFMPEG_TMP_PATH, buffer);
+      await chmod(FFMPEG_TMP_PATH, 0o755);
+      console.log("[ffmpeg] ffmpeg binary ready at /tmp/ffmpeg");
+      return FFMPEG_TMP_PATH;
+    }
   }
+
+  throw new Error("ffmpeg binary not found — install ffmpeg-static or ensure ffmpeg is on PATH");
 }
 
 /**

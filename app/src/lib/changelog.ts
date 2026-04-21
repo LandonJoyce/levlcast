@@ -20,6 +20,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.11",
+    date: "2026-04-21",
+    title: "Clip Generation Fix",
+    items: [
+      { type: "fix", text: "Clip generation now reliably completes — fixed a timeout issue that caused clips to silently fail on cold starts" },
+    ],
+  },
+  {
     version: "v0.8.10",
     date: "2026-04-18",
     title: "Streaks, Rivals Polish & Animated Wrapped",
