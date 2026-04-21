@@ -105,6 +105,13 @@ export async function cutClip(
       `-pix_fmt yuv420p`,
       `-c:a aac`,
       `-b:a 128k`,
+      // Resample audio to stay locked to video PTS — fixes "audio plays before
+      // video moves" on MPEG-TS input where audio/video packets are misaligned.
+      `-af aresample=async=1:first_pts=0`,
+      // Reset both stream timestamps to 0 after the seek so the mp4 container
+      // has a clean edit list — prevents browser players from showing a frozen
+      // first frame while audio plays.
+      `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
       `-y`,
       `"${outputPath}"`,

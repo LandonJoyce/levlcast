@@ -326,7 +326,7 @@ Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
     "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
     "reason": "<2-3 sentences: what is the arc, what emotional beats anchor it, why a stranger would care. No quoted dialogue.>",
     "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue.>",
-    "caption": "<TikTok/Shorts caption under 150 chars — conversational tone, 3-4 relevant hashtags. Describes the moment. Never a quote.>"
+    "caption": "<TikTok/Shorts caption under 150 chars — conversational tone, 3-4 relevant hashtags. Describes the moment. Never a quote. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title — never guess the game from transcript context. Use #gaming, #Twitch, #PVP, #clutch, etc. instead of a game name you are not certain of.>"
   }
 ]
 
