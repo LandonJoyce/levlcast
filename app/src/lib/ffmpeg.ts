@@ -122,7 +122,15 @@ export async function cutClip(
     } catch (err: any) {
       console.error("[ffmpeg] Command failed:", cmd);
       console.error("[ffmpeg] stderr:", err.stderr);
-      throw new Error(`FFmpeg failed: ${err.stderr?.slice(0, 300) || err.message}`);
+      // The real error is always at the END of stderr (the banner/config fills
+      // the first ~500 chars). Grab the last non-empty lines that look like errors.
+      const stderr: string = err.stderr || "";
+      const lines = stderr.split("\n").map((l) => l.trim()).filter(Boolean);
+      const errorLines = lines.filter((l) =>
+        /error|invalid|fail|not found|unable|no such|denied|corrupt/i.test(l)
+      );
+      const tail = (errorLines.length > 0 ? errorLines : lines).slice(-3).join(" | ");
+      throw new Error(`FFmpeg failed: ${tail.slice(0, 400) || err.message}`);
     }
 
     const clipBuffer = await readFile(outputPath);
