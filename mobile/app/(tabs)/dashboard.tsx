@@ -166,22 +166,6 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Weekly Digest */}
-      {digest?.locked
-        ? <LockedCard title="Weekly Digest" description="Every Monday your manager sends a full week recap — streams, clips, follower growth, and your action plan." onUpgrade={() => router.push('/subscribe')} />
-        : digest?.latest && <WeeklyDigestCard data={digest.latest} expanded={digestExpanded} onToggle={() => setDigestExpanded(!digestExpanded)} />}
-
-      {/* Streamer Health */}
-      {burnout?.locked
-        ? <LockedCard title="Burnout Monitoring" description="Your manager tracks energy, frequency, and health signals weekly to keep you streaming without burning out." onUpgrade={() => router.push('/subscribe')} />
-        : burnout?.latest && <BurnoutHealthCard data={burnout} expanded={burnoutExpanded} onToggle={() => setBurnoutExpanded(!burnoutExpanded)} />}
-
-      {/* Content Performance */}
-      {contentReport?.latest && <ContentPerformanceCard data={contentReport.latest} expanded={contentExpanded} onToggle={() => setContentExpanded(!contentExpanded)} />}
-
-      {/* Collab Finder */}
-      <CollabFinderCard collab={collab} expanded={collabExpanded} onToggle={() => setCollabExpanded(!collabExpanded)} />
-
       {/* Stats grid */}
       <View style={styles.grid}>
         <StatCard label="VODs Synced" value={stats.vods} />
@@ -196,9 +180,9 @@ export default function DashboardScreen() {
         <Text style={styles.actionTitle}>View VODs</Text>
         <Text style={styles.actionSub}>Sync and analyze your recent streams</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/analytics')}>
-        <Text style={styles.actionTitle}>Growth Analytics</Text>
-        <Text style={styles.actionSub}>See what's driving your follower growth</Text>
+      <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/clips')}>
+        <Text style={styles.actionTitle}>View Clips</Text>
+        <Text style={styles.actionSub}>Generate and manage your best moments</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -123,7 +123,7 @@ export default function VodsScreen() {
         refreshControl={<RefreshControl refreshing={syncing} onRefresh={loadVods} tintColor={colors.accentLight} />}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.title}>VODs</Text>
               <Text style={styles.sub}>Analyze your streams for coaching reports.</Text>
             </View>
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   list: { padding: 20, paddingBottom: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12 },
   title: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
   sub: { fontSize: 13, color: colors.muted, marginTop: 2 },
   syncBtn: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },

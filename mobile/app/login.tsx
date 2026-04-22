@@ -6,11 +6,12 @@ import {
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useRouter } from 'expo-router';
-import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
 WebBrowser.maybeCompleteAuthSession();
+
+const REDIRECT_URL = 'levlcast://auth/callback';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
@@ -19,33 +20,34 @@ export default function LoginScreen() {
   async function handleTwitchLogin() {
     setLoading(true);
     try {
-      // Custom scheme redirect — keeps OAuth inside the in-app browser sheet
-      // and returns to the native app. Never loads the public website.
-      const redirectUrl = makeRedirectUri({ scheme: 'levlcast', path: 'auth/callback' });
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'twitch',
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: REDIRECT_URL,
           scopes: 'user:read:email user:read:follows',
           skipBrowserRedirect: true,
         },
       });
 
       if (error) throw error;
-      if (!data.url) throw new Error('No auth URL');
+      if (!data.url) throw new Error('No auth URL returned');
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_URL);
 
       if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const code = url.searchParams.get('code');
+        // Parse code from custom scheme URL manually (URL constructor may not
+        // handle custom schemes on all RN versions)
+        const match = result.url.match(/[?&]code=([^&]+)/);
+        const code = match?.[1];
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (!exchangeError) {
-            router.replace('/(tabs)/dashboard');
-          }
+          if (exchangeError) throw exchangeError;
+          router.replace('/(tabs)/dashboard');
+        } else {
+          throw new Error('No code in callback URL');
         }
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        // User closed the browser — not an error
       }
     } catch (e: any) {
       Alert.alert('Login failed', e.message);
