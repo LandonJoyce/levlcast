@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Film,
   Scissors,
-  TrendingUp,
   Settings,
 } from "lucide-react";
 
@@ -19,7 +18,6 @@ const tabs = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/dashboard/vods", label: "VODs", icon: Film },
   { href: "/dashboard/clips", label: "Clips", icon: Scissors },
-  { href: "/dashboard/grow", label: "Grow", icon: TrendingUp },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

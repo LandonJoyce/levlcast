@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { colors } from '@/lib/colors';
-import { LayoutDashboard, Film, BarChart3, Settings } from 'lucide-react-native';
+import { LayoutDashboard, Film, Scissors, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -38,10 +38,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="clips"
         options={{
-          title: 'Analytics',
-          tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
+          title: 'Clips',
+          tabBarIcon: ({ color, size }) => <Scissors color={color} size={size} />,
         }}
       />
       <Tabs.Screen
