@@ -1,20 +1,3 @@
-/**
- * lib/ffmpeg.ts — video clip cutting using FFmpeg.
- *
- * WHAT IT DOES:
- *   cutClip(vodUrl, start, end) downloads the relevant portion of a Twitch VOD
- *   as an MP4, cuts it to the exact start/end times, and returns the file as a Buffer.
- *
- * PLATFORM DIFFERENCES:
- *   - macOS / Windows (local dev): uses ffmpeg-static npm package (bundled binary)
- *   - Linux / Vercel (production): downloads a static ffmpeg binary to /tmp on first use
- *     and reuses it for subsequent calls within the same function invocation.
- *
- * WHY /tmp ON VERCEL:
- *   Vercel serverless functions are read-only except for /tmp.
- *   The binary download only happens once per cold start (~2-3 seconds).
- */
-
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeFile, unlink, readFile, mkdtemp, access, chmod } from "fs/promises";
@@ -28,8 +11,6 @@ const FFMPEG_DOWNLOAD_URL =
   "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.0/ffmpeg-linux-x64";
 
 async function getFFmpegPath(): Promise<string> {
-  // Try the npm package first — works on local dev and sometimes on Vercel
-  // if the binary wasn't stripped from the deployment bundle.
   try {
     const ffmpegStatic = require("ffmpeg-static");
     if (ffmpegStatic) {
@@ -40,8 +21,6 @@ async function getFFmpegPath(): Promise<string> {
     // Binary not accessible via npm package — fall through to manual download
   }
 
-  // On Linux (Vercel): Vercel strips large binaries from the bundle, so we
-  // cache the binary in /tmp across warm invocations and download on cold starts.
   if (process.platform === "linux") {
     try {
       await access(FFMPEG_TMP_PATH);
@@ -61,41 +40,80 @@ async function getFFmpegPath(): Promise<string> {
   throw new Error("ffmpeg binary not found — install ffmpeg-static or ensure ffmpeg is on PATH");
 }
 
+function ffmpegError(err: any): Error {
+  const stderr: string = err.stderr || "";
+  const lines = stderr.split("\n").map((l: string) => l.trim()).filter(Boolean);
+  // Errors appear at the end; progress lines (frame=, fps=) are noise.
+  const meaningful = lines.filter((l) =>
+    /error|invalid|fail|not found|unable|no such|denied|corrupt|empty/i.test(l) &&
+    !/frame=|fps=|bitrate=|speed=|size=/i.test(l)
+  );
+  const tail = (meaningful.length > 0 ? meaningful : lines).slice(-4).join(" | ");
+  return new Error(`FFmpeg failed: ${tail.slice(0, 500) || err.message}`);
+}
+
 /**
- * Cut a clip from a video file at the specified timestamps.
- * Accepts a file path instead of a buffer to avoid OOM on large VODs.
- * Returns the clip as a Buffer (mp4 format).
+ * Cut a clip from a concatenated MPEG-TS Twitch VOD file.
+ *
+ * Twitch VOD segments are broadcast TS with 33-bit PTS counters that start
+ * at an arbitrary offset (e.g. 3 hours into a stream = PTS ~972000000).
+ * Concatenating segments from different positions can cause PTS jumps that
+ * confuse FFmpeg's seeking logic and produce the "time=-577014:32:22.77"
+ * negative timestamp bug.
+ *
+ * Fix: two-stage encode.
+ *   Pass 1 — remux the raw TS to a clean intermediate TS, resetting all
+ *             timestamps to 0 with `-reset_timestamps 1`. Fast (-c copy).
+ *   Pass 2 — seek + re-encode from the clean intermediate into an MP4.
+ *             Timestamps are now 0-based so `-ss` works reliably.
  */
 export async function cutClip(
   inputFilePath: string,
   startSeconds: number,
   endSeconds: number
 ): Promise<Buffer> {
-  // Validate inputs — negative or inverted times cause silent FFmpeg failures
   const safeStart = Math.max(0, startSeconds);
   const safeEnd = endSeconds;
   if (safeEnd <= safeStart) throw new Error(`Invalid clip bounds: start=${safeStart} end=${safeEnd}`);
   if (safeEnd - safeStart < 2) throw new Error(`Clip too short: ${safeEnd - safeStart}s`);
 
   const ffmpegPath = await getFFmpegPath();
+  const duration = safeEnd - safeStart;
 
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
+  const normalizedPath = join(tempDir, "normalized.ts");
   const outputPath = join(tempDir, "clip.mp4");
 
   try {
-    const duration = safeEnd - safeStart;
-
-    // Input is a concatenated MPEG-TS of several Twitch VOD segments, which
-    // often have PTS discontinuities between segments. Two-pass seeking
-    // (`-ss` before `-i`) hits those and throws "Invalid data found when
-    // processing input". Slow-seek AFTER `-i` + PTS regen handles it cleanly.
-    // Decode overhead is tiny because the TS file only spans ~30-60s.
-    const cmd = [
+    // Pass 1: reset PTS/DTS to 0-based so subsequent seek is reliable.
+    // -fflags +genpts+igndts handles packets missing PTS or with bad DTS.
+    const pass1 = [
       `"${ffmpegPath}"`,
       `-fflags +genpts+igndts`,
       `-err_detect ignore_err`,
       `-i "${inputFilePath}"`,
-      `-ss ${safeStart}`,
+      `-c copy`,
+      `-reset_timestamps 1`,
+      `-y`,
+      `"${normalizedPath}"`,
+    ].join(" ");
+
+    try {
+      await execAsync(pass1, { timeout: 60000 });
+    } catch (err: any) {
+      console.error("[ffmpeg] Pass 1 failed:", err.stderr?.slice(-300));
+      throw ffmpegError(err);
+    }
+
+    // Pass 2: two-pass seek on clean timestamps, then re-encode to MP4.
+    const preSeek = Math.max(0, safeStart - 3);
+    const fineSeek = safeStart - preSeek;
+
+    const pass2 = [
+      `"${ffmpegPath}"`,
+      `-ss ${preSeek}`,
+      `-i "${normalizedPath}"`,
+      `-ss ${fineSeek}`,
       `-t ${duration}`,
       `-c:v libx264`,
       `-profile:v main`,
@@ -105,10 +123,7 @@ export async function cutClip(
       `-pix_fmt yuv420p`,
       `-c:a aac`,
       `-b:a 128k`,
-      // Lock audio to video PTS so audio doesn't play before video moves.
       `-af aresample=async=1:first_pts=0`,
-      // Clean edit list in the mp4 container — prevents browser players from
-      // showing a frozen first frame while audio plays.
       `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
       `-y`,
@@ -116,24 +131,16 @@ export async function cutClip(
     ].join(" ");
 
     try {
-      await execAsync(cmd, { timeout: 120000 });
+      await execAsync(pass2, { timeout: 120000 });
     } catch (err: any) {
-      console.error("[ffmpeg] Command failed:", cmd);
-      console.error("[ffmpeg] stderr:", err.stderr);
-      // The real error is always at the END of stderr (the banner/config fills
-      // the first ~500 chars). Grab the last non-empty lines that look like errors.
-      const stderr: string = err.stderr || "";
-      const lines = stderr.split("\n").map((l) => l.trim()).filter(Boolean);
-      const errorLines = lines.filter((l) =>
-        /error|invalid|fail|not found|unable|no such|denied|corrupt/i.test(l)
-      );
-      const tail = (errorLines.length > 0 ? errorLines : lines).slice(-3).join(" | ");
-      throw new Error(`FFmpeg failed: ${tail.slice(0, 400) || err.message}`);
+      console.error("[ffmpeg] Pass 2 failed:", err.stderr?.slice(-300));
+      throw ffmpegError(err);
     }
 
     const clipBuffer = await readFile(outputPath);
     return clipBuffer;
   } finally {
+    await unlink(normalizedPath).catch(() => {});
     await unlink(outputPath).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");
