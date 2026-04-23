@@ -7,18 +7,23 @@ import FaqSection from "@/components/FaqSection";
 const steps = [
   {
     num: "01",
-    label: "Connect Twitch",
-    desc: "Sign in with Twitch. Your VODs sync automatically. Nothing to upload, nothing to configure.",
+    label: "Stream on Twitch",
+    desc: "Just go live like normal. No setup, no overlays, no changes to how you stream.",
   },
   {
     num: "02",
-    label: "Get Your Score",
-    desc: "Hit analyze on any VOD. Your AI coach scores every moment — energy, retention, best clips — in minutes.",
+    label: "Sync Your VOD",
+    desc: "After your stream, open LevlCast and hit Sync. Your VOD appears instantly — one tap to analyze.",
   },
   {
     num: "03",
-    label: "Clip and Post",
-    desc: "Your best moments get clipped automatically. Post to YouTube Shorts in one tap.",
+    label: "Review Your Report",
+    desc: "Your AI coach scores the stream 0–100. You get exact timestamps, what worked, what didn't, and one priority to fix.",
+  },
+  {
+    num: "04",
+    label: "Improve Next Stream",
+    desc: "Take your one goal into your next session. Analyze again. Watch your score climb over time.",
   },
 ];
 
@@ -214,7 +219,7 @@ export default function LandingPage() {
             Get managed forever.
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             {steps.map((step) => (
               <div key={step.num} className="card p-7 hover:border-accent/25 transition-colors group">
                 <span className="text-4xl font-black text-white/[0.06] leading-none block mb-5">{step.num}</span>
