@@ -81,7 +81,7 @@ export function ReadyClipsList({
                 <p className="text-xs text-muted leading-relaxed line-clamp-3">{clip.caption_text}</p>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-auto">
-                <DownloadClip url={clip.video_url} title={clip.title} />
+                <DownloadClip clipId={clip.id} />
                 <CopyCaption caption={clip.caption_text} />
                 <PostToYouTube
                   clipId={clip.id}

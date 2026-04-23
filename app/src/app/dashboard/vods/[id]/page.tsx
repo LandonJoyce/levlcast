@@ -271,7 +271,7 @@ export default async function VodDetailPage({
                         <p className="text-xs text-muted line-clamp-3">{clip.caption_text}</p>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <DownloadClip url={clip.video_url} title={clip.title} />
+                        <DownloadClip clipId={clip.id} />
                         <CopyCaption caption={clip.caption_text} />
                         <PostToYouTube clipId={clip.id} isConnected={isYouTubeConnected} />
                         <DeleteClip clipId={clip.id} />

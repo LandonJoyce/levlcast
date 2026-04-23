@@ -117,6 +117,7 @@ export async function POST(request: Request) {
       description: peak.reason,
       start_time_seconds: Math.round(peak.start),
       end_time_seconds: Math.round(peak.end),
+      duration_seconds: Math.round(peak.end - peak.start),
       caption_text: peak.caption,
       peak_score: peak.score,
       peak_category: peak.category,
@@ -130,18 +131,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create clip record" }, { status: 500 });
   }
 
-  // Fire background job — Inngest handles the download, FFmpeg, and upload
-  await inngest.send({
-    name: "clip/generate",
-    data: {
-      clipId: clipRecord.id,
-      vodId: vod.id,
-      twitchVodId: vod.twitch_vod_id,
-      userId: user.id,
-      peakIndex: idx,
-      peak,
-    },
-  });
+  // Fire background job — Inngest handles the download, FFmpeg, and upload.
+  // Wrap in try/catch so a failed send doesn't leave the clip stuck in "processing".
+  try {
+    await inngest.send({
+      name: "clip/generate",
+      data: {
+        clipId: clipRecord.id,
+        vodId: vod.id,
+        twitchVodId: vod.twitch_vod_id,
+        userId: user.id,
+        peakIndex: idx,
+        peak,
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to queue clip job";
+    await admin.from("clips").update({
+      status: "failed",
+      failed_reason: `Could not queue clip generation: ${message}`,
+    }).eq("id", clipRecord.id);
+    return NextResponse.json({ error: "Failed to queue clip generation" }, { status: 500 });
+  }
 
   return NextResponse.json({ clipId: clipRecord.id, queued: true });
 }

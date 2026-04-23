@@ -36,11 +36,14 @@ export function CopyCaption({ caption }: { caption: string }) {
   );
 }
 
-export function DownloadClip({ url, title }: { url: string; title: string }) {
+export function DownloadClip({ clipId }: { clipId: string; url?: string; title?: string }) {
+  // Route through our API so the browser honors Content-Disposition: attachment.
+  // A direct <a href={R2_URL} download> does NOT trigger a download for
+  // cross-origin URLs — browsers ignore the download attribute and just open
+  // the video in a new tab.
   return (
     <a
-      href={url}
-      download={`${title}.mp4`}
+      href={`/api/clips/${clipId}/download`}
       className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
     >
       <Download size={12} />
