@@ -134,10 +134,19 @@ export default function ClipsScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+
+      // Soft-delete the old failed clip first so it doesn't clutter the list
+      // alongside the new processing one. Matches the web regenerate flow.
+      const delRes = await fetch(`${APP_URL}/api/clips/${clipId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!delRes.ok) { Alert.alert('Error', 'Could not clear old clip'); return; }
+
       const res = await fetch(`${APP_URL}/api/clips/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ clipId, vodId, startSeconds }),
+        body: JSON.stringify({ vodId, startSeconds }),
       });
       const json = await res.json();
       if (!res.ok) { Alert.alert('Error', json.error || 'Failed'); return; }

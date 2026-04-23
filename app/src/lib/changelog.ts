@@ -20,6 +20,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.13",
+    date: "2026-04-23",
+    title: "Clips: Downloads, Duration, and Reliability",
+    items: [
+      { type: "fix", text: "Clip download button now actually downloads the file instead of opening the video in a new tab" },
+      { type: "fix", text: "Clip generation now correctly handles Twitch VODs with large timestamp offsets — the cutter no longer produces zero-frame outputs on long streams" },
+      { type: "improved", text: "Clip cards now show the real clip duration instead of an em dash" },
+      { type: "improved", text: "Regenerating a failed clip on mobile now clears the old one instead of leaving it on the list" },
+      { type: "improved", text: "Clip generation has more headroom — longer VODs no longer time out mid-cut" },
+    ],
+  },
+  {
     version: "v0.8.12",
     date: "2026-04-21",
     title: "Clip Generation Stability",
