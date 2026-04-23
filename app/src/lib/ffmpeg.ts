@@ -55,17 +55,17 @@ function ffmpegError(err: any): Error {
 /**
  * Cut a clip from a concatenated MPEG-TS Twitch VOD file.
  *
- * Twitch VOD segments are broadcast TS with 33-bit PTS counters that start
- * at an arbitrary offset (e.g. 3 hours into a stream = PTS ~972000000).
- * Concatenating segments from different positions can cause PTS jumps that
- * confuse FFmpeg's seeking logic and produce the "time=-577014:32:22.77"
- * negative timestamp bug.
+ * Twitch VOD segments use 33-bit PTS counters starting at an arbitrary large
+ * offset (e.g. 3h into a stream = ~972,000,000 in 90kHz units). When FFmpeg
+ * re-encodes with these timestamps it produces time=-577014:32:22.77 and 0
+ * output frames because the PTS values overflow or confuse the muxer.
  *
- * Fix: two-stage encode.
- *   Pass 1 — remux the raw TS to a clean intermediate TS, resetting all
- *             timestamps to 0 with `-reset_timestamps 1`. Fast (-c copy).
- *   Pass 2 — seek + re-encode from the clean intermediate into an MP4.
- *             Timestamps are now 0-based so `-ss` works reliably.
+ * Fix: single-pass encode with setpts=PTS-STARTPTS + asetpts=PTS-STARTPTS.
+ * These filters reset presentation timestamps to 0 from the first decoded
+ * frame, regardless of what the input PTS values are. No intermediate file
+ * needed. -ss is placed AFTER -i (slow seek) so FFmpeg decodes from the start
+ * of the input — reliable since our downloaded segments only cover the clip
+ * window so adjustedStart is always small (0-30s).
  */
 export async function cutClip(
   inputFilePath: string,
@@ -81,43 +81,15 @@ export async function cutClip(
   const duration = safeEnd - safeStart;
 
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
-  // MP4 intermediate: TS→MP4 remux forces timestamp normalization far more
-  // reliably than TS→TS, which preserves the original PCR/PTS offsets even
-  // when -reset_timestamps 1 is set. This is the root fix for the
-  // time=-577014:32:22.77 PTS rollover bug from Twitch broadcast segments.
-  const normalizedPath = join(tempDir, "normalized.mp4");
   const outputPath = join(tempDir, "clip.mp4");
 
   try {
-    // Pass 1: remux TS → MP4 with timestamp reset.
-    // -fflags +genpts+igndts handles packets missing PTS or with bad DTS.
-    const pass1 = [
+    const cmd = [
       `"${ffmpegPath}"`,
       `-fflags +genpts+igndts`,
       `-err_detect ignore_err`,
       `-i "${inputFilePath}"`,
-      `-c copy`,
-      `-reset_timestamps 1`,
-      `-y`,
-      `"${normalizedPath}"`,
-    ].join(" ");
-
-    try {
-      await execAsync(pass1, { timeout: 60000 });
-    } catch (err: any) {
-      console.error("[ffmpeg] Pass 1 failed:", err.stderr?.slice(-300));
-      throw ffmpegError(err);
-    }
-
-    // Pass 2: two-pass seek on clean timestamps, then re-encode to MP4.
-    const preSeek = Math.max(0, safeStart - 3);
-    const fineSeek = safeStart - preSeek;
-
-    const pass2 = [
-      `"${ffmpegPath}"`,
-      `-ss ${preSeek}`,
-      `-i "${normalizedPath}"`,
-      `-ss ${fineSeek}`,
+      `-ss ${safeStart}`,
       `-t ${duration}`,
       `-c:v libx264`,
       `-profile:v main`,
@@ -127,7 +99,8 @@ export async function cutClip(
       `-pix_fmt yuv420p`,
       `-c:a aac`,
       `-b:a 128k`,
-      `-af aresample=async=1:first_pts=0`,
+      `-vf setpts=PTS-STARTPTS`,
+      `-af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
       `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
       `-y`,
@@ -135,16 +108,15 @@ export async function cutClip(
     ].join(" ");
 
     try {
-      await execAsync(pass2, { timeout: 120000 });
+      await execAsync(cmd, { timeout: 180000 });
     } catch (err: any) {
-      console.error("[ffmpeg] Pass 2 failed:", err.stderr?.slice(-300));
+      console.error("[ffmpeg] encode failed:", err.stderr?.slice(-500));
       throw ffmpegError(err);
     }
 
     const clipBuffer = await readFile(outputPath);
     return clipBuffer;
   } finally {
-    await unlink(normalizedPath).catch(() => {});
     await unlink(outputPath).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");
