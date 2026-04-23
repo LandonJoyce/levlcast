@@ -247,14 +247,14 @@ export const cleanupStuckVods = inngest.createFunction(
   }
 );
 
-// Runs every 10 minutes — marks any clip stuck in "processing" for >10 min as failed.
-// 10 min gives enough headroom for cold-start ffmpeg download + segment download + encode.
+// Runs every 10 minutes — marks any clip stuck in "processing" for >20 min as failed.
+// 20 min gives headroom for segment download + two FFmpeg passes on long VODs.
 export const cleanupStuckClips = inngest.createFunction(
   { id: "cleanup-stuck-clips" },
   { cron: "*/10 * * * *" },
   async () => {
     const supabase = createAdminClient();
-    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const cutoff = new Date(Date.now() - 20 * 60 * 1000).toISOString();
 
     const { data: stuck } = await supabase
       .from("clips")
@@ -278,7 +278,7 @@ export const generateClip = inngest.createFunction(
   {
     id: "generate-clip",
     retries: 1,
-    timeouts: { finish: "5m" },
+    timeouts: { finish: "15m" },
     concurrency: {
       limit: 1, // one clip at a time per user — prevents memory overload
       key: "event.data.userId",
