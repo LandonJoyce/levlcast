@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
+import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -55,6 +56,15 @@ export async function POST(request: Request) {
     const supabase = await createClientFromRequest(request);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Collab matching uses Claude Sonnet + Twitch API calls — Pro gated.
+    const usage = await getUserUsage(user.id, supabase);
+    if (usage.plan !== "pro") {
+      return NextResponse.json(
+        { error: "Collab matching is a Pro feature.", upgrade: true },
+        { status: 403 }
+      );
+    }
 
     // 5 refreshes per hour per user — prevents Anthropic/Twitch cost abuse
     if (!rateLimit(`collab-refresh:${user.id}`, 5, 60 * 60 * 1000)) {

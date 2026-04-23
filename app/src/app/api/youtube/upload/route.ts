@@ -1,11 +1,22 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { uploadToYouTube, refreshYouTubeToken } from "@/lib/youtube";
+import { getUserUsage } from "@/lib/limits";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // YouTube Shorts posting is a Pro feature. Enforce server-side so the
+  // paywall can't be bypassed by calling this endpoint directly.
+  const usage = await getUserUsage(user.id, supabase);
+  if (usage.plan !== "pro") {
+    return NextResponse.json(
+      { error: "YouTube posting is a Pro feature. Upgrade to post clips directly.", upgrade: true },
+      { status: 403 }
+    );
+  }
 
   const { clipId } = await req.json();
   if (!clipId) return NextResponse.json({ error: "Missing clipId" }, { status: 400 });

@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { uploadToTikTok, refreshTikTokToken } from "@/lib/tiktok";
+import { getUserUsage } from "@/lib/limits";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -11,6 +12,15 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // TikTok posting is a Pro feature. Gate server-side.
+  const usage = await getUserUsage(user.id, supabase);
+  if (usage.plan !== "pro") {
+    return NextResponse.json(
+      { error: "TikTok posting is a Pro feature. Upgrade to post clips directly.", upgrade: true },
+      { status: 403 }
+    );
+  }
 
   const body = uploadSchema.safeParse(await req.json());
   if (!body.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });

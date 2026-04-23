@@ -49,16 +49,11 @@ export default function SubscribeScreen() {
     const success = await purchasePro(activePkg);
 
     if (success) {
-      // Immediately update the local Supabase profile so the UI reflects Pro right away
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
-        }
-      } catch {
-        // Non-fatal — backend sync below will cover it
-      }
-      // Sync the verified purchase to our backend
+      // Sync the verified purchase to our backend — this is what actually
+      // grants Pro on profiles.plan (via service_role). We used to do an
+      // optimistic client-side update first, but a DB trigger now blocks
+      // client-initiated subscription column changes to close a paywall
+      // bypass, so the backend call is the single source of truth.
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {

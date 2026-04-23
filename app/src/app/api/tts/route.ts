@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -16,6 +17,15 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Voice readouts are a Pro feature — each call costs OpenAI money.
+  const usage = await getUserUsage(user.id, supabase);
+  if (usage.plan !== "pro") {
+    return NextResponse.json(
+      { error: "Voice coach is a Pro feature.", upgrade: true },
+      { status: 403 }
+    );
+  }
 
   // 20 TTS generations per hour per user — prevents OpenAI cost abuse
   if (!rateLimit(`tts:${user.id}`, 20, 60 * 60 * 1000)) {
