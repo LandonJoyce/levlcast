@@ -11,10 +11,9 @@ import { PurchasesPackage } from 'react-native-purchases';
 
 const FEATURES = [
   '20 VOD analyses per month',
+  '20 clips per month',
   'Full AI coaching every stream',
-  'Unlimited clip generation',
-  'Content performance analytics',
-  'Collab matching',
+  'YouTube Shorts posting',
   'Priority processing',
 ];
 

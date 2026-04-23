@@ -67,7 +67,7 @@ const proFeatures = [
   "20 VOD analyses per month",
   "20 clips per month",
   "YouTube Shorts posting",
-  "Title generator",
+  "Priority processing",
   "Everything in Free",
 ];
 
