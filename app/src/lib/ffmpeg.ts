@@ -81,11 +81,15 @@ export async function cutClip(
   const duration = safeEnd - safeStart;
 
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
-  const normalizedPath = join(tempDir, "normalized.ts");
+  // MP4 intermediate: TS→MP4 remux forces timestamp normalization far more
+  // reliably than TS→TS, which preserves the original PCR/PTS offsets even
+  // when -reset_timestamps 1 is set. This is the root fix for the
+  // time=-577014:32:22.77 PTS rollover bug from Twitch broadcast segments.
+  const normalizedPath = join(tempDir, "normalized.mp4");
   const outputPath = join(tempDir, "clip.mp4");
 
   try {
-    // Pass 1: reset PTS/DTS to 0-based so subsequent seek is reliable.
+    // Pass 1: remux TS → MP4 with timestamp reset.
     // -fflags +genpts+igndts handles packets missing PTS or with bad DTS.
     const pass1 = [
       `"${ffmpegPath}"`,
