@@ -107,7 +107,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Clip already being generated" }, { status: 409 });
   }
 
-  // Insert a "processing" record immediately so the UI shows the clip in progress
+  // Insert a "processing" record immediately so the UI shows the clip in progress.
+  // Note: duration_seconds is a GENERATED column in Postgres (auto-computed from
+  // end_time_seconds - start_time_seconds), so we must NOT include it here.
+  // Postgres rejects any insert that writes to a generated column.
   const { data: clipRecord, error: insertError } = await admin
     .from("clips")
     .insert({
@@ -117,7 +120,6 @@ export async function POST(request: Request) {
       description: peak.reason,
       start_time_seconds: Math.round(peak.start),
       end_time_seconds: Math.round(peak.end),
-      duration_seconds: Math.round(peak.end - peak.start),
       caption_text: peak.caption,
       peak_score: peak.score,
       peak_category: peak.category,
@@ -128,6 +130,7 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError || !clipRecord) {
+    console.error(`[clips/generate] Insert failed for user ${user.id} vod ${vodId}:`, insertError);
     return NextResponse.json({ error: "Failed to create clip record" }, { status: 500 });
   }
 
