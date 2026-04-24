@@ -301,7 +301,7 @@ export const cleanupStuckClips = inngest.createFunction(
 
     await supabase
       .from("clips")
-      .update({ status: "failed", failed_reason: "Clip generation timed out after 10 minutes — Twitch VOD may be unavailable or too long to cut." })
+      .update({ status: "failed", failed_reason: "Clip generation stalled — Twitch's CDN may be slow for this VOD. Hit Regenerate to try again." })
       .in("id", stuck.map((c: { id: string }) => c.id));
 
     console.log(`[cleanup] Marked ${stuck.length} stuck clips as failed`);

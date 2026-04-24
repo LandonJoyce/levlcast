@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.15",
+    date: "2026-04-24",
+    title: "Faster, More Reliable Clip Generation",
+    items: [
+      { type: "improved", text: "Clip generation now downloads Twitch VOD segments in parallel — typically 3–5x faster, especially for longer clips" },
+      { type: "fix", text: "Transient Twitch CDN hiccups now retry automatically instead of producing a broken clip or timing out" },
+      { type: "improved", text: "Clearer error message when a clip fails — tells you to regenerate instead of making you guess" },
+    ],
+  },
+  {
     version: "v0.8.14",
     date: "2026-04-24",
     title: "New Marketing Pages",

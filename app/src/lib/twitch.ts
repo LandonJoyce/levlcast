@@ -520,33 +520,73 @@ export async function downloadTwitchVodVideo(
     try { await rmdir(tempDir); } catch {}
   };
 
-  try {
-    for (const segUrl of needed) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      try {
-        const segRes = await fetch(segUrl, { signal: controller.signal });
-        if (!segRes.ok) continue;
-        const buf = Buffer.from(await segRes.arrayBuffer());
-        await new Promise<void>((resolve, reject) => {
-          writeStream.write(buf, (err) => (err ? reject(err) : resolve()));
-        });
-      } catch (err: any) {
-        if (err.name === "AbortError") {
-          console.warn(`[twitch] Video segment timeout, skipping: ${segUrl}`);
-          continue;
-        }
-        throw err;
-      } finally {
-        clearTimeout(timeout);
+  // Fetch one segment with a single retry on transient failure / timeout.
+  // Returns null if both attempts fail — caller decides whether a single
+  // missing segment is fatal.
+  async function fetchSegment(url: string, attempt = 1): Promise<Buffer | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) {
+        if (attempt === 1) return fetchSegment(url, 2);
+        return null;
       }
+      return Buffer.from(await res.arrayBuffer());
+    } catch (err: any) {
+      if (attempt === 1) {
+        console.warn(`[twitch] Segment retry after ${err.name === "AbortError" ? "timeout" : "error"}: ${url}`);
+        return fetchSegment(url, 2);
+      }
+      console.warn(`[twitch] Segment failed after retry (${err.name === "AbortError" ? "timeout" : err.message}): ${url}`);
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  try {
+    // Parallel download with concurrency limit so we don't hammer Twitch CDN
+    // while still cutting total wall time from N×20s sequential to ~max(segment).
+    // Results MUST preserve input order — TS segments concatenate into one
+    // contiguous stream and reordering breaks FFmpeg decoding.
+    const CONCURRENCY = 5;
+    const buffers: (Buffer | null)[] = new Array(needed.length).fill(null);
+    let next = 0;
+
+    async function worker() {
+      while (true) {
+        const i = next++;
+        if (i >= needed.length) return;
+        buffers[i] = await fetchSegment(needed[i]);
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+
+    const missing = buffers.filter((b) => b === null).length;
+    if (missing > 0) {
+      const missingPct = (missing / buffers.length) * 100;
+      console.warn(`[twitch] ${missing}/${buffers.length} segments missing (${missingPct.toFixed(0)}%)`);
+      // More than 20% missing = output would be unwatchable. Fail loudly.
+      if (missingPct > 20) {
+        throw new Error(`Twitch CDN returned ${missing} of ${buffers.length} segments — VOD may be partially unavailable, try again in a few minutes`);
+      }
+    }
+
+    // Write buffers to disk in original segment order.
+    for (const buf of buffers) {
+      if (!buf) continue;
+      await new Promise<void>((resolve, reject) => {
+        writeStream.write(buf, (err) => (err ? reject(err) : resolve()));
+      });
     }
 
     await new Promise<void>((resolve, reject) => {
       writeStream.end((err: any) => (err ? reject(err) : resolve()));
     });
 
-    console.log(`[twitch] Video segments written to disk: ${filePath}`);
+    console.log(`[twitch] Video segments written to disk: ${filePath} (${buffers.length - missing}/${buffers.length} ok)`);
     return { filePath, segmentStartSeconds, cleanup };
   } catch (err) {
     writeStream.destroy();
