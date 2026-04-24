@@ -99,7 +99,7 @@ export default async function DashboardPage() {
     : "Reset time — here's what to fix.";
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       {isEmpty && <WelcomeModal name={displayName} />}
 
       {/* Greeting */}
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
       ) : (
         <div className="space-y-5">
 
-          {/* Onboarding guide */}
+          {/* Onboarding guide — full width */}
           {needsOnboarding && (
             <OnboardingGuide
               totalVods={totalVods}
@@ -134,123 +134,127 @@ export default async function DashboardPage() {
             />
           )}
 
-          {/* Latest stream hero */}
-          {latestScore !== null && latestReady && (
-            <Link href={`/dashboard/vods/${latestReady.id}`} className="block rounded-2xl relative overflow-hidden group transition-all hover:-translate-y-px" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${latestHex}15 0%, rgba(10,9,20,0) 70%), rgba(10,9,20,0.98)`, border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-px" style={{ background: `linear-gradient(90deg, transparent, ${latestHex}60, transparent)` }} />
-              <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 sm:gap-8 items-center px-6 py-6">
-                <div className="flex justify-center sm:justify-start">
-                  <ArcGauge score={latestScore} size={170} />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">Latest Stream</p>
-                    <ChevronRight size={14} className="text-violet-400/40 group-hover:text-violet-300 group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-tight truncate">{headline}</h2>
+          {/* Wide layout: hero left, recent streams right */}
+          <div className={readyVods.length > 1 ? "xl:grid xl:grid-cols-[1fr_340px] xl:gap-5 space-y-5 xl:space-y-0" : ""}>
 
-                  {streamerTitle && (
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", color: "#facc15" }}>
-                          <Trophy size={9} />{streamerTitle}
-                        </span>
-                        {nextTier && (
-                          <span className="text-[10px] text-white/30 font-semibold">
-                            {Math.round(avg5 * 10) / 10} / {nextTier.min} avg → <span className="text-white/50">{nextTier.title}</span>
-                          </span>
-                        )}
+            {/* Left: latest stream hero + quick actions */}
+            <div className="space-y-5">
+              {latestScore !== null && latestReady && (
+                <Link href={`/dashboard/vods/${latestReady.id}`} className="block rounded-2xl relative overflow-hidden group transition-all hover:-translate-y-px" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${latestHex}15 0%, rgba(10,9,20,0) 70%), rgba(10,9,20,0.98)`, border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-px" style={{ background: `linear-gradient(90deg, transparent, ${latestHex}60, transparent)` }} />
+                  <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 sm:gap-8 items-center px-6 py-6">
+                    <div className="flex justify-center sm:justify-start">
+                      <ArcGauge score={latestScore} size={170} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">Latest Stream</p>
+                        <ChevronRight size={14} className="text-violet-400/40 group-hover:text-violet-300 group-hover:translate-x-0.5 transition-all" />
                       </div>
-                      {nextTier && (
-                        <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden w-full">
-                          <div className="h-full rounded-full" style={{ width: `${rankProgress * 100}%`, background: "linear-gradient(90deg, #facc15, #fb923c)", boxShadow: "0 0 6px rgba(250,204,21,0.4)" }} />
+                      <h2 className="text-xl sm:text-2xl font-black text-white mb-1 tracking-tight leading-tight truncate">{headline}</h2>
+
+                      {streamerTitle && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", color: "#facc15" }}>
+                              <Trophy size={9} />{streamerTitle}
+                            </span>
+                            {nextTier && (
+                              <span className="text-[10px] text-white/30 font-semibold">
+                                {Math.round(avg5 * 10) / 10} / {nextTier.min} avg → <span className="text-white/50">{nextTier.title}</span>
+                              </span>
+                            )}
+                          </div>
+                          {nextTier && (
+                            <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden w-full">
+                              <div className="h-full rounded-full" style={{ width: `${rankProgress * 100}%`, background: "linear-gradient(90deg, #facc15, #fb923c)", boxShadow: "0 0 6px rgba(250,204,21,0.4)" }} />
+                            </div>
+                          )}
+                          {!nextTier && <p className="text-[10px] text-yellow-400/60 font-semibold">You&apos;ve hit the top rank.</p>}
                         </div>
                       )}
-                      {!nextTier && <p className="text-[10px] text-yellow-400/60 font-semibold">You&apos;ve hit the top rank.</p>}
+
+                      <p className="text-sm font-semibold text-white/80 truncate mb-1">{latestReady.title}</p>
+                      <p className="text-xs text-white/40 mb-4">{new Date(latestReady.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {delta !== null && delta !== 0 && (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border" style={{ background: delta > 0 ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)", borderColor: delta > 0 ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)", color: delta > 0 ? "#4ade80" : "#f87171" }}>
+                            {delta > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                            {delta > 0 ? `+${delta}` : delta} vs previous
+                          </span>
+                        )}
+                        {unclipped > 0 && (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-violet-400/25 bg-violet-500/10 text-violet-300">
+                            {unclipped} moment{unclipped !== 1 ? "s" : ""} to clip
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/55">
+                          View full report
+                        </span>
+                      </div>
                     </div>
-                  )}
-
-                  <p className="text-sm font-semibold text-white/80 truncate mb-1">{latestReady.title}</p>
-                  <p className="text-xs text-white/40 mb-4">{new Date(latestReady.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {delta !== null && delta !== 0 && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border" style={{ background: delta > 0 ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)", borderColor: delta > 0 ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)", color: delta > 0 ? "#4ade80" : "#f87171" }}>
-                        {delta > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                        {delta > 0 ? `+${delta}` : delta} vs previous
-                      </span>
-                    )}
-                    {unclipped > 0 && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-violet-400/25 bg-violet-500/10 text-violet-300">
-                        {unclipped} moment{unclipped !== 1 ? "s" : ""} to clip
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/55">
-                      View full report
-                    </span>
                   </div>
-                </div>
-              </div>
-            </Link>
-          )}
+                </Link>
+              )}
 
-          {/* Recent streams */}
-          {readyVods.length > 1 && (
-            <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <p className="text-sm font-bold text-white">Recent Streams</p>
-                <Link href="/dashboard/vods" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
-                  See all <ChevronRight size={12} />
+              {/* Quick actions */}
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/dashboard/vods" className="rounded-2xl p-5 flex items-center gap-3 group hover:-translate-y-px transition-all" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <Film size={18} className="text-violet-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white">VODs</p>
+                    <p className="text-xs text-white/40">{totalAnalyzed} analyzed</p>
+                  </div>
+                  <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 ml-auto transition-all" />
+                </Link>
+                <Link href="/dashboard/clips" className="rounded-2xl p-5 flex items-center gap-3 group hover:-translate-y-px transition-all" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <Scissors size={18} className="text-violet-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white">Clips</p>
+                    <p className="text-xs text-white/40">{totalClips} ready{unclipped > 0 ? ` · ${unclipped} to make` : ""}</p>
+                  </div>
+                  <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 ml-auto transition-all" />
                 </Link>
               </div>
-              <div className="divide-y divide-white/[0.04]">
-                {readyVods.slice(1, 5).map((vod) => {
-                  const score = (vod.coach_report as any)?.overall_score as number | undefined;
-                  const peaks = (vod.peak_data as any[])?.length || 0;
-                  const rowHex = score === undefined ? "#4b5563" : scoreHex(score);
-                  return (
-                    <Link key={vod.id} href={`/dashboard/vods/${vod.id}`} className="flex items-stretch group hover:bg-white/[0.02] transition-colors">
-                      <div className="w-[3px] flex-shrink-0" style={{ background: rowHex, opacity: 0.8 }} />
-                      <div className="flex items-center gap-4 px-5 py-3.5 flex-1 min-w-0">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">{vod.title}</p>
-                          <p className="text-xs text-white/40 mt-0.5">{new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {peaks} moment{peaks !== 1 ? "s" : ""}</p>
-                        </div>
-                        {score !== undefined && (
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <div className="w-16 h-1 rounded-full bg-white/[0.05] overflow-hidden hidden sm:block">
-                              <div className="h-full rounded-full" style={{ width: `${score}%`, background: rowHex, boxShadow: `0 0 6px ${rowHex}55` }} />
-                            </div>
-                            <span className={`text-xl font-black tabular-nums leading-none ${scoreCls(score)}`}>{score}</span>
-                            <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 transition-all" />
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
             </div>
-          )}
 
-          {/* Quick actions */}
-          <div className="grid grid-cols-2 gap-3">
-            <Link href="/dashboard/vods" className="rounded-2xl p-5 flex items-center gap-3 group hover:-translate-y-px transition-all" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <Film size={18} className="text-violet-400 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-white">VODs</p>
-                <p className="text-xs text-white/40">{totalAnalyzed} analyzed</p>
+            {/* Right: recent streams */}
+            {readyVods.length > 1 && (
+              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <p className="text-sm font-bold text-white">Recent Streams</p>
+                  <Link href="/dashboard/vods" className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
+                    See all <ChevronRight size={12} />
+                  </Link>
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                  {readyVods.slice(1, 6).map((vod) => {
+                    const score = (vod.coach_report as any)?.overall_score as number | undefined;
+                    const peaks = (vod.peak_data as any[])?.length || 0;
+                    const rowHex = score === undefined ? "#4b5563" : scoreHex(score);
+                    return (
+                      <Link key={vod.id} href={`/dashboard/vods/${vod.id}`} className="flex items-stretch group hover:bg-white/[0.02] transition-colors">
+                        <div className="w-[3px] flex-shrink-0" style={{ background: rowHex, opacity: 0.8 }} />
+                        <div className="flex items-center gap-4 px-5 py-3.5 flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">{vod.title}</p>
+                            <p className="text-xs text-white/40 mt-0.5">{new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {peaks} moment{peaks !== 1 ? "s" : ""}</p>
+                          </div>
+                          {score !== undefined && (
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <span className={`text-xl font-black tabular-nums leading-none ${scoreCls(score)}`}>{score}</span>
+                              <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 transition-all" />
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-              <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 ml-auto transition-all" />
-            </Link>
-            <Link href="/dashboard/clips" className="rounded-2xl p-5 flex items-center gap-3 group hover:-translate-y-px transition-all" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <Scissors size={18} className="text-violet-400 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-white">Clips</p>
-                <p className="text-xs text-white/40">{totalClips} ready{unclipped > 0 ? ` · ${unclipped} to make` : ""}</p>
-              </div>
-              <ChevronRight size={13} className="text-white/20 group-hover:text-white/50 ml-auto transition-all" />
-            </Link>
+            )}
+
           </div>
 
         </div>
