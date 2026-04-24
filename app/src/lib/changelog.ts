@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.14",
+    date: "2026-04-24",
+    title: "New Marketing Pages",
+    items: [
+      { type: "new", text: "Launched dedicated pages for the VOD Analyzer, Clip Generator, and AI Stream Coach — each with deep explanations of what the tool does" },
+      { type: "new", text: "Added a 'How to Grow on Twitch in 2026' guide with the honest version of what actually works" },
+      { type: "improved", text: "Footer now links to every tool page so you can find what you need from anywhere on the site" },
+    ],
+  },
+  {
     version: "v0.8.13",
     date: "2026-04-23",
     title: "Clips: Downloads, Duration, and Reliability",

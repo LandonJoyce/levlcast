@@ -442,6 +442,15 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
+              <p className="text-xs font-medium text-muted mb-4">Tools</p>
+              <ul className="space-y-3 text-sm">
+                <li><Link href="/twitch-vod-analyzer" className="text-muted hover:text-white transition-colors">VOD Analyzer</Link></li>
+                <li><Link href="/twitch-clip-generator" className="text-muted hover:text-white transition-colors">Clip Generator</Link></li>
+                <li><Link href="/twitch-stream-coach" className="text-muted hover:text-white transition-colors">Stream Coach</Link></li>
+                <li><Link href="/how-to-grow-on-twitch" className="text-muted hover:text-white transition-colors">How to Grow on Twitch</Link></li>
+              </ul>
+            </div>
+            <div>
               <p className="text-xs font-medium text-muted mb-4">Product</p>
               <ul className="space-y-3 text-sm">
                 <li><a href="#how-it-works" className="text-muted hover:text-white transition-colors">How It Works</a></li>
@@ -455,11 +464,6 @@ export default function LandingPage() {
               <ul className="space-y-3 text-sm">
                 <li><Link href="/terms" className="text-muted hover:text-white transition-colors">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="text-muted hover:text-white transition-colors">Privacy Policy</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted mb-4">Contact</p>
-              <ul className="space-y-3 text-sm">
                 <li>
                   <a href="mailto:support@levlcast.com" className="text-muted hover:text-white transition-colors">
                     support@levlcast.com
