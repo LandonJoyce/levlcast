@@ -3,7 +3,7 @@ import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { formatDuration } from "@/lib/utils";
-import { Film, ChevronRight, Sparkles, Target, Trophy, Flame, Zap } from "lucide-react";
+import { Film, ChevronRight, Sparkles } from "lucide-react";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import Link from "next/link";
 
@@ -103,7 +103,6 @@ export default async function VodsPage() {
         <div className="flex items-center gap-3">
           {analysisStreak >= 2 && (
             <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full" style={{ background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.3)", color: "#fb923c" }}>
-              <Zap size={11} />
               <span className="tabular-nums">{analysisStreak}</span>
               <span className="font-semibold uppercase tracking-wider text-[10px] opacity-80">Streak</span>
             </div>
@@ -204,9 +203,6 @@ export default async function VodsPage() {
               >
                 <div className="absolute top-0 left-0 w-24 h-px" style={{ background: challengeCompleted ? "linear-gradient(90deg, rgba(74,222,128,0.6), transparent)" : "linear-gradient(90deg, rgba(139,92,246,0.6), transparent)" }} />
                 <div className="flex items-center gap-2 mb-2">
-                  {challengeCompleted
-                    ? <Trophy size={11} className="text-green-400" />
-                    : <Flame size={11} className="text-violet-400" />}
                   <span className={`text-[10px] font-extrabold uppercase tracking-widest ${challengeCompleted ? "text-green-400" : "text-violet-400"}`}>
                     Weekly Challenge
                   </span>
@@ -221,8 +217,7 @@ export default async function VodsPage() {
                   <p className="text-xs text-white/35 mt-1.5">Best this week: <span className="text-white/60 font-semibold">{Math.max(...thisWeekScores)}/100</span></p>
                 )}
                 {challengeStreak >= 2 && (
-                  <p className="text-xs mt-1.5 inline-flex items-center gap-1 text-orange-400/90">
-                    <Flame size={11} />
+                  <p className="text-xs mt-1.5 text-orange-400/90">
                     <span className="font-semibold">{challengeStreak} weeks in a row</span>
                   </p>
                 )}
@@ -236,7 +231,6 @@ export default async function VodsPage() {
                 >
                   <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(250,204,21,0.5), transparent)" }} />
                   <div className="flex items-center gap-2 mb-2">
-                    <Target size={11} className="text-yellow-400" />
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">Next Stream Target</span>
                   </div>
                   <div className="flex items-baseline gap-1.5">
