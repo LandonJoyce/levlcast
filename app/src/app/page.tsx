@@ -3,11 +3,6 @@ import { Check } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import FaqSection from "@/components/FaqSection";
 
-// Public share URL for the landing page "See a Live Report" button.
-// TODO: swap in an actual share URL from your best VOD — generate one in
-// Dashboard → VODs → pick the report → click Share, then paste the full URL here.
-const SAMPLE_REPORT_URL = "/share/SAMPLE_TOKEN";
-
 /* ─── How It Works steps ─── */
 const steps = [
   {
@@ -112,7 +107,7 @@ export default function LandingPage() {
               </p>
 
               {/* CTA */}
-              <div className="flex flex-col sm:flex-row items-start gap-3 mb-4">
+              <div className="flex flex-col sm:flex-row items-start gap-4 mb-4">
                 <Link
                   href="/auth/login"
                   className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-7 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:scale-[0.97]"
@@ -122,24 +117,29 @@ export default function LandingPage() {
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </span>
                 </Link>
-                <Link
-                  href={SAMPLE_REPORT_URL}
-                  className="inline-flex items-center gap-2 border border-white/15 hover:border-white/30 text-white/80 hover:text-white font-semibold px-6 py-4 rounded-full transition-all duration-300"
-                >
-                  See a Live Report
-                </Link>
               </div>
               <p className="text-xs text-muted">Free to start. No credit card required.</p>
             </div>
 
-            {/* Right — real screenshot */}
+            {/* Right — product demo video (falls back to static image) */}
             <div className="md:col-span-6 lg:col-span-7 md:translate-y-4">
               <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
-                <img
-                  src="/screenshots/hero-report.png"
-                  alt="AI coach report showing a stream score with priorities, missions and silence gaps"
-                  className="w-full h-auto"
-                />
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  poster="/screenshots/hero-report.png"
+                  className="w-full h-auto block"
+                >
+                  <source src="/demo/hero-demo.mp4" type="video/mp4" />
+                  {/* Fallback for browsers that don't load the video */}
+                  <img
+                    src="/screenshots/hero-report.png"
+                    alt="AI coach report showing a stream score with priorities, missions and silence gaps"
+                    className="w-full h-auto"
+                  />
+                </video>
               </div>
             </div>
           </div>
