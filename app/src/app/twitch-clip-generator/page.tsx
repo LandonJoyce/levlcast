@@ -155,8 +155,8 @@ export default function ClipGeneratorPage() {
               <div className="md:col-span-6 lg:col-span-6 md:translate-y-4">
                 <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
                   <img
-                    src="/screenshots/image15.png"
-                    alt="LevlCast Twitch clip generator showing ranked moments ready to clip"
+                    src="/screenshots/image16.png"
+                    alt="LevlCast VOD library with moment counts and one-tap Coach Report access"
                     className="w-full h-auto"
                   />
                 </div>
