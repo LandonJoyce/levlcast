@@ -73,12 +73,12 @@ export default function Image() {
             fontSize: 26,
             color: "#9CA3AF",
             textAlign: "center",
-            maxWidth: 700,
+            maxWidth: 800,
             lineHeight: 1.4,
           }}
         >
-          AI coaching, burnout detection, content strategy, collab matching,
-          and a weekly game plan for your stream.
+          AI coach that reviews your Twitch VODs and tells you specifically
+          what to fix — dead air, weak openings, low-energy moments.
         </div>
 
         {/* Badge */}

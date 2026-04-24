@@ -44,6 +44,14 @@ export const metadata: Metadata = {
     description:
       "AI coach that reviews your Twitch VODs and tells you specifically what to fix — dead air, slow openings, weak engagement. Real feedback, real growth.",
     siteName: "LevlCast",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "LevlCast — Your Personal Stream Manager",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -51,6 +59,7 @@ export const metadata: Metadata = {
     description:
       "AI coach that reviews your Twitch VODs and tells you specifically what to fix. Real feedback, real growth.",
     site: "@levlcast",
+    images: ["/opengraph-image"],
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -75,7 +84,7 @@ const structuredData = {
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Web, iOS",
   description:
-    "Your personal streaming manager — AI coaching, burnout detection, content strategy, collab matching, clip generation, and a weekly game plan for Twitch streamers.",
+    "AI stream coach that reviews your Twitch VODs, scores every moment, and tells you specifically what to fix. Auto-generate clips from your best moments and post to YouTube Shorts.",
   url: "https://www.levlcast.com",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
