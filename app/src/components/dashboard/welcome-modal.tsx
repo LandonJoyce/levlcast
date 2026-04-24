@@ -98,7 +98,7 @@ export default function WelcomeModal({ name }: { name: string }) {
           </div>
 
           {/* 3-step strip */}
-          <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="grid grid-cols-3 gap-2 mb-4">
             {STEPS.map((s, i) => (
               <div
                 key={i}
@@ -115,6 +115,13 @@ export default function WelcomeModal({ name }: { name: string }) {
                 <p className="text-[9px] text-white/30 mt-0.5 font-semibold">{s.time}</p>
               </div>
             ))}
+          </div>
+
+          {/* Habit anchor — turn LevlCast into an every-stream reflex */}
+          <div className="mb-6 rounded-xl px-3.5 py-3 text-center" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.18)" }}>
+            <p className="text-[11px] text-white/70 leading-relaxed">
+              <span className="text-violet-300 font-bold">After every stream</span>, sync LevlCast. Watch your score climb stream by stream.
+            </p>
           </div>
 
           {/* CTA */}

@@ -162,7 +162,11 @@ export const analyzeVod = inngest.createFunction(
         ]);
       });
 
-      // Send push notification — fire and forget, never block on this
+      // Send push notification — fire and forget, never block on this.
+      // Prefers "your score improved by N" framing when this stream beat the
+      // prior stream, since progress messaging pulls people back way more
+      // reliably than a bare "your report is ready". Falls through to a
+      // standard priority-recommendation snippet otherwise.
       await step.run("notify", async () => {
         const { data: profile } = await supabase
           .from("profiles")
@@ -175,8 +179,39 @@ export const analyzeVod = inngest.createFunction(
         const priority = report.recommendation ?? "";
         const snippet = priority.length > 80 ? priority.slice(0, 77) + "..." : priority;
 
+        // Look up the most recent prior ready stream (excluding this one) so
+        // we can compute a delta. Null-safe — first-ever stream just uses the
+        // default title.
+        let priorScore: number | null = null;
+        if (score !== undefined) {
+          const { data: prior } = await supabase
+            .from("vods")
+            .select("coach_report")
+            .eq("user_id", userId)
+            .eq("status", "ready")
+            .neq("id", vodId)
+            .not("coach_report", "is", null)
+            .order("analyzed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const priorReport = prior?.coach_report as { overall_score?: number } | null;
+          priorScore = priorReport?.overall_score ?? null;
+        }
+
+        let title: string;
+        if (score !== undefined && priorScore !== null && score > priorScore) {
+          const delta = score - priorScore;
+          title = `Your score climbed ${delta > 0 ? "+" : ""}${delta} — now ${score}/100`;
+        } else if (score !== undefined && priorScore !== null && score < priorScore) {
+          title = `New stream graded: ${score}/100`;
+        } else if (score !== undefined) {
+          title = `Stream graded: ${score}/100`;
+        } else {
+          title = "Your stream report is ready";
+        }
+
         await sendPush(profile?.expo_push_token, {
-          title: score !== undefined ? `Stream graded: ${score}/100` : "Your stream report is ready",
+          title,
           body: snippet || "Open LevlCast to see your coach report.",
           data: { vodId },
         });
