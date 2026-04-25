@@ -153,7 +153,7 @@ Previously removed and not coming back: `/dashboard/analytics`, `/dashboard/grow
 - **DNS**: Cloudflare (SPF/DMARC locked down 2026-04-15)
 
 ## App Store Status
-- **iOS: LIVE** on the App Store at v1.0.1 — approved 2026-04-16
+- **iOS: LIVE** on the App Store at v1.0.2 — originally approved 2026-04-16
 - Pending mobile 1.0.3 update with subscribe-screen feature list fix and clip-regenerate cleanup (already in main, waiting on next EAS build)
 - Demo account for Apple review: `levlcast8@gmail.com` / `LevlCast123` / Twitch `levlcasttest` — must stay on Pro so all features are testable
 - Android: not yet submitted
