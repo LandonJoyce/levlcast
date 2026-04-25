@@ -222,6 +222,19 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
     cls:   report.cold_open.score === "strong" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.cold_open.score === "average" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
   } : null;
 
+  const closingInfo = report.closing ? {
+    label: report.closing.score === "strong" ? "Strong Close" : report.closing.score === "average" ? "Mixed Close" : "Weak Close",
+    cls:   report.closing.score === "strong" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.closing.score === "average" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
+  } : null;
+
+  const antiPatternLabels: Record<string, string> = {
+    viewer_count_apology: "Apologized for viewer count",
+    follow_begging: "Asked for follows off-hype",
+    lurker_shaming: "Called chat dead",
+    pre_stream_drain: "Low-energy opening",
+    self_defeat: "Self-deprecation",
+  };
+
   const gaps = report.dead_zones ?? [];
 
   return (
@@ -303,6 +316,11 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
                   {coldInfo.label}
                 </span>
               )}
+              {closingInfo && (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${closingInfo.cls}`}>
+                  {closingInfo.label}
+                </span>
+              )}
             </div>
 
             {/* Divider */}
@@ -336,10 +354,37 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
           </div>
         )}
 
+        {/* Shareable win */}
+        {report.shareable_win && (
+          <div
+            className="rounded-xl p-4 flex items-start gap-3"
+            style={{
+              background: "linear-gradient(135deg, rgba(250,204,21,0.08) 0%, rgba(234,179,8,0.03) 60%, rgba(10,9,20,0) 100%)",
+              border: "1px solid rgba(250,204,21,0.22)",
+            }}
+          >
+            <Trophy size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400 mb-1.5">Worth Sharing</p>
+              <p className="text-sm font-bold text-yellow-200 mb-1 leading-tight">{report.shareable_win.stat}</p>
+              <p className="text-xs text-white/50 leading-relaxed">{report.shareable_win.context}</p>
+            </div>
+          </div>
+        )}
+
         {/* Cold open note */}
         {report.cold_open?.note && (
           <div className="pl-4 border-l-2 border-white/[0.08]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Opening</p>
             <p className="text-sm text-white/38 leading-relaxed">{report.cold_open.note}</p>
+          </div>
+        )}
+
+        {/* Closing note */}
+        {report.closing?.note && (
+          <div className="pl-4 border-l-2 border-white/[0.08]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Closing</p>
+            <p className="text-sm text-white/38 leading-relaxed">{report.closing.note}</p>
           </div>
         )}
 
@@ -441,6 +486,29 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
                   );
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Anti-patterns ── */}
+        {(report.anti_patterns ?? []).length > 0 && (
+          <div className="rounded-xl overflow-hidden" style={{ background: "rgba(248,113,113,0.03)", border: "1px solid rgba(248,113,113,0.18)" }}>
+            <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(248,113,113,0.1)", background: "rgba(248,113,113,0.05)" }}>
+              <ShieldAlert size={12} className="text-red-400" />
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-400">Watch For This</span>
+              <span className="ml-auto text-[10px] text-red-400/50">{(report.anti_patterns ?? []).length} flagged</span>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {(report.anti_patterns ?? []).map((ap, i) => (
+                <div key={i} className="px-4 py-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-bold text-red-300 leading-tight">{antiPatternLabels[ap.type] ?? ap.type}</p>
+                    <span className="text-xs font-mono text-white/20 flex-shrink-0">{ap.time}</span>
+                  </div>
+                  <p className="text-xs text-white/55 italic leading-relaxed">&ldquo;{ap.quote}&rdquo;</p>
+                  <p className="text-xs text-white/40 leading-relaxed">{ap.note}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
