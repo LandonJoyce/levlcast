@@ -20,24 +20,9 @@ const config: Config = {
         muted: "#9CA3AF",
         border: "rgba(255, 255, 255, 0.08)",
         "border-accent": "rgba(168, 85, 247, 0.25)",
-
-        // ─── New landing palette (midnight + cyan + lime) ───
-        "bg-deep": "#06080F",
-        "bg-card": "#0C111B",
-        "bg-card-2": "#0F1521",
-        "border-soft": "rgba(255, 255, 255, 0.06)",
-        "border-cyan": "rgba(34, 211, 238, 0.25)",
-        "border-lime": "rgba(163, 230, 53, 0.25)",
-        "ink-cyan": "#22D3EE",
-        "ink-cyan-soft": "rgba(34, 211, 238, 0.7)",
-        "ink-lime": "#A3E635",
-        "ink-lime-soft": "rgba(163, 230, 53, 0.7)",
-        "ink-amber": "#FBBF24",
-        "ink-rose": "#FB7185",
       },
       fontFamily: {
         sans: ["DM Sans", "system-ui", "sans-serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       borderRadius: {
         xl: "14px",
