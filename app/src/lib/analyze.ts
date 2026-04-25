@@ -477,6 +477,26 @@ export interface CoachReport {
   next_stream_goals: string[];
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
+  // Closing score — mirrors cold_open for how the stream ended. Optional
+  // because historical reports predate this field.
+  closing?: { score: "strong" | "weak" | "average"; note: string };
+  // Detected growth-killing behaviors in the transcript — each MUST include
+  // a real quote from the transcript as proof. Empty array is preferred over
+  // false positives.
+  anti_patterns?: Array<{
+    time: string;
+    type:
+      | "viewer_count_apology"
+      | "follow_begging"
+      | "lurker_shaming"
+      | "pre_stream_drain"
+      | "self_defeat";
+    quote: string;
+    note: string;
+  }>;
+  // One screenshot-worthy stat or observation from this stream. Something the
+  // streamer would feel good sharing on Twitter/Discord.
+  shareable_win?: { stat: string; context: string };
   dead_zones?: Array<{ time: string; duration: number }>;
   // 2-4 sentence narrative summary of what this stream was about — shown before scores
   stream_story?: string;
@@ -1019,6 +1039,15 @@ NO QUOTES ANYWHERE — GLOBAL RULE: Do not reconstruct or quote what the streame
 - Recommendation: Lead with the insight, not a timestamp. 1-2 sentences. The single biggest lever. No quoted words.
 - Goals: concrete actions tied to specific problems from this stream. Not "engage more with chat."
 - Cold open: evaluate from when the streamer STARTS actively engaging, not from the stream's timestamp 0. Settling in (reading chat, audio check, BRB screen, intro music, sipping coffee) is NOT a cold open problem — it's normal stream behavior. Score "strong" if they came in with clear energy and a hook once they started; "average" if they warmed up naturally into the stream; "weak" ONLY if they took more than 8 minutes to actually engage, opened with visibly negative/flat energy once engaged, or ignored active chat during the opening. Silence before they started engaging is never "weak". Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
+- Closing: score the last 5 minutes. Normal sign-off behavior (saying bye, thanking viewers, shouting out subs, hyping next stream) is NOT a closing problem. Score "strong" if they ended with energy, gratitude, and a clear next-stream hook; "average" if they wrapped up naturally; "weak" ONLY if they ended mid-content without warning, ended on visibly negative energy, complained about the stream as they ended, or trailed off silently. Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
+- Anti-patterns: scan the transcript for these 5 specific growth-killing behaviors and flag ONLY if you can produce an exact verbatim quote. Empty array is the correct output when none apply. DO NOT flag ambient negativity or interpretation — the quote must literally match the pattern's meaning.
+  * viewer_count_apology: streamer apologizes for low viewers. Example quotes: "sorry it's just us today", "small crew today as usual", "I know it's just a few of you"
+  * follow_begging: asks for follows/subs outside of a hype moment, or repeatedly. Example: "drop a follow if you're watching" said during low-energy section
+  * lurker_shaming: complains about chat being quiet. Example: "chat is so dead today", "y'all are lurking hard", "why aren't you talking"
+  * pre_stream_drain: low-energy negativity about streaming itself near the opening. Example: "I don't really want to be here", "I'm too tired for this", "why am I even streaming today"
+  * self_defeat: self-deprecating statements about the streamer's own ability/growth. Example: "I'm not a good streamer", "I'll never grow", "nobody watches me anyway"
+  Rules: every anti_patterns entry MUST include the exact verbatim quote from the transcript (not paraphrased, not reconstructed). If you cannot produce a real quote, do not flag. The quote field is the evidence — if it's wrong, the whole report loses trust. Note: 1 sentence of context (why it hurts, what was happening).
+- Shareable win: one screenshot-worthy stat or observation the streamer would feel good sharing. Pull from real numbers (commentary density hit X wpm during Y, peak moment scored X/10, energy sustained above baseline for Z minutes) or one genuinely impressive moment described specifically. Must be real and verifiable from the data shown — no inflation. stat = the headline (under 80 chars). context = 1 sentence explaining it.
 - score_breakdown: honest sub-scores 0-100 for energy, engagement, consistency, content.
 - momentum_crash: describe the stretch, what was happening, what should have happened instead. No quoted words.
 - trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent".
@@ -1041,6 +1070,17 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   "cold_open": {
     "score": "<strong | average | weak>",
     "note": "<1 sentence about exactly what happened in the first 5 minutes>"
+  },
+  "closing": {
+    "score": "<strong | average | weak>",
+    "note": "<1 sentence about how the stream ended>"
+  },
+  "anti_patterns": [
+    { "time": "<MM:SS>", "type": "<viewer_count_apology | follow_begging | lurker_shaming | pre_stream_drain | self_defeat>", "quote": "<exact verbatim phrase from the transcript>", "note": "<1 sentence of context>" }
+  ],
+  "shareable_win": {
+    "stat": "<headline, under 80 chars — a real quotable stat or observation>",
+    "context": "<1 sentence explaining why it's impressive>"
   },
   "strengths": [
     "**Label** — specific moment + how to do more of it. Max 20 words.",

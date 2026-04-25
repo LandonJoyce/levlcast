@@ -20,6 +20,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.8.16",
+    date: "2026-04-24",
+    title: "Sharper Coach Reports",
+    items: [
+      { type: "new", text: "Closing score — the coach now grades how the stream ended, not just how it opened" },
+      { type: "new", text: "Anti-patterns detection — flags specific growth-killing phrases if you actually said them (viewer-count apologies, follow begging, self-deprecation). Every flag quotes the exact moment so you can verify" },
+      { type: "new", text: "Shareable win — every report now surfaces one screenshot-worthy stat from your stream" },
+      { type: "improved", text: "Cold-open scoring no longer penalizes the first 3–5 minutes of normal warm-up time" },
+    ],
+  },
+  {
     version: "v0.8.15",
     date: "2026-04-24",
     title: "Faster, More Reliable Clip Generation",
