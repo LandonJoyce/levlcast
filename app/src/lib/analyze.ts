@@ -903,7 +903,7 @@ IMPORTANT: This transcript has been pre-filtered using speaker diarization to in
 SILENCE CONTEXT — read this before judging dead air:
 Dead air gaps in the transcript CAN mean the streamer was silent, BUT they can also mean:
 - The streamer was watching content (a video, movie, short film, YouTube video) — silence during watch-alongs is NORMAL and expected. No one wants the streamer talking over every second of a video.
-- The streamer had intro music/BRB screen playing while setting up — the first 1-3 minutes of silence is almost always setup time, not a cold open problem.
+- The streamer had intro music/BRB screen playing while setting up — the first 3-5 minutes of a stream are setup time. Do NOT score this as a cold open problem. Reading chat, adjusting audio, warming up, sipping coffee before going into the bit is normal stream behavior. Judge the opening only from the moment the streamer is actively engaging.
 - The streamer was in an intense gameplay moment where focus silence is natural (clutch plays, boss fights, tense situations).
 - The game itself has cinematic cutscenes the streamer is watching.
 
@@ -1018,7 +1018,7 @@ NO QUOTES ANYWHERE — GLOBAL RULE: Do not reconstruct or quote what the streame
 - Best moment: describe what the streamer DID and why it worked — actions and energy, not reconstructed words.
 - Recommendation: Lead with the insight, not a timestamp. 1-2 sentences. The single biggest lever. No quoted words.
 - Goals: concrete actions tied to specific problems from this stream. Not "engage more with chat."
-- Cold open: score the first 5 minutes. Note: 1 sentence describing what HAPPENED (energy level, presence, setup) — no reconstructed quotes from those minutes. Many streamers have 1-3 min of intro/setup — judge from when they actually start speaking.
+- Cold open: evaluate from when the streamer STARTS actively engaging, not from the stream's timestamp 0. Settling in (reading chat, audio check, BRB screen, intro music, sipping coffee) is NOT a cold open problem — it's normal stream behavior. Score "strong" if they came in with clear energy and a hook once they started; "average" if they warmed up naturally into the stream; "weak" ONLY if they took more than 8 minutes to actually engage, opened with visibly negative/flat energy once engaged, or ignored active chat during the opening. Silence before they started engaging is never "weak". Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
 - score_breakdown: honest sub-scores 0-100 for energy, engagement, consistency, content.
 - momentum_crash: describe the stretch, what was happening, what should have happened instead. No quoted words.
 - trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent".
