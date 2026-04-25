@@ -20,6 +20,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.9.0",
+    date: "2026-04-24",
+    title: "New Landing Page",
+    items: [
+      { type: "new", text: "Brand-new landing page — built around how streamers actually think about their stream, not generic SaaS marketing" },
+      { type: "new", text: "Live product previews on the landing — see your score card, coach report, trend chart, and clip list before you sign up" },
+      { type: "new", text: "Six-rank ladder visualized: Fresh Streamer → Rising Talent → Consistent Creator → Crowd Favorite → Elite Entertainer → LevlCast Legend" },
+      { type: "improved", text: "Pricing page redesigned — clearer Free vs Pro comparison" },
+    ],
+  },
+  {
     version: "v0.8.16",
     date: "2026-04-24",
     title: "Sharper Coach Reports",
