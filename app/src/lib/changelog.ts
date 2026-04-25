@@ -20,6 +20,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.9.0",
+    date: "2026-04-25",
+    title: "New Landing + Dashboard Redesign",
+    items: [
+      { type: "new", text: "Brand-new landing page with editorial layout, founding member tag, App Store card, and live coach-report mock" },
+      { type: "new", text: "Brand-new dashboard shell — sidebar with rank, plan-aware upgrade card, breadcrumb topbar" },
+      { type: "improved", text: "Dashboard home redesigned around your latest stream — score ring with reveal animation, next-session goal, score-over-time chart, recent streams table" },
+      { type: "improved", text: "VODs page redesigned with quota meter, filter tabs, and cleaner status states" },
+      { type: "improved", text: "Clips page redesigned with filter tabs, ready/posted/pending grouping, and a 4-up grid of vertical cards" },
+      { type: "improved", text: "Account page rebuilt — profile, plan with quotas, real-only connections (Twitch + YouTube)" },
+      { type: "new", text: "Free tier now shows a partial coach report — score, streamer type, stream story, and one strength visible. Priority fix, missions, anti-patterns, and best moment unlock with Pro" },
+    ],
+  },
+  {
     version: "v0.8.16",
     date: "2026-04-24",
     title: "Sharper Coach Reports",

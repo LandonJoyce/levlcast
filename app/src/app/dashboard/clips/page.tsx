@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatDuration } from "@/lib/utils";
-import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { ReadyClipsList, FailedClipsList } from "@/components/dashboard/clips-list";
-import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { Scissors, Sparkles, Clock, Film, Loader2, Link2 } from "lucide-react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
+import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
+import { scoreColorVar } from "@/components/dashboard/DashScoreRing";
 
 interface Peak {
   title: string;
@@ -16,239 +15,275 @@ interface Peak {
   caption: string;
 }
 
+function formatTimestamp(seconds: number | null): string {
+  if (!seconds) return "0:00";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+}
 
-function categoryStyle(category: string) {
-  switch (category) {
-    case "hype":      return "bg-purple-500/10 text-purple-400";
-    case "funny":     return "bg-yellow-500/10 text-yellow-400";
-    case "emotional": return "bg-red-500/10 text-red-400";
-    case "educational": return "bg-blue-500/10 text-blue-400";
-    default:          return "bg-white/5 text-muted";
+function categoryLabel(c: string): string {
+  if (c === "funny") return "COMEDY";
+  return c.toUpperCase();
+}
+
+function categoryChipClass(c: string): string {
+  switch (c) {
+    case "hype":        return "m"; // magenta
+    case "funny":       return "w"; // warn (yellow)
+    case "emotional":   return "r"; // danger (red)
+    case "educational": return "b"; // blue
+    default:            return "";
   }
 }
 
-function scoreColor(score: number) {
-  if (score >= 0.7) return "text-green-400";
-  if (score >= 0.4) return "text-yellow-400";
-  return "text-muted";
-}
+const Icons = {
+  Plus: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  ),
+  Play: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <path d="M7 5l12 7-12 7V5z" fill="currentColor"/>
+    </svg>
+  ),
+  YT: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+      <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M10 9l5 3-5 3V9z" fill="currentColor"/>
+    </svg>
+  ),
+  Arrow: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+};
 
-export default async function ClipsPage() {
+export default async function ClipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const params = await searchParams;
+  const tab = params.tab && ["all", "ready", "posted", "pending"].includes(params.tab) ? params.tab : "all";
+
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
 
-  // Get generated clips (ready) and in-progress ones (processing) so we can
-  // correctly track which peaks are already claimed and avoid showing them as available
   const { data: allClips } = await supabase
     .from("clips")
     .select("*")
-    .eq("user_id", user!.id)
+    .eq("user_id", user.id)
     .in("status", ["ready", "processing", "failed", "deleted"])
     .order("created_at", { ascending: false });
 
-  const clips = (allClips || []).filter((c) => c.status === "ready");
-  const processingClips = (allClips || []).filter((c) => c.status === "processing");
-  const failedClips = (allClips || []).filter((c) => c.status === "failed");
+  const clips = (allClips ?? []).filter((c) => c.status === "ready");
+  const processingClips = (allClips ?? []).filter((c) => c.status === "processing");
   const hasProcessing = processingClips.length > 0;
 
-  // Get social connections
   const { data: connections } = await supabase
     .from("social_connections")
     .select("platform")
-    .eq("user_id", user!.id);
-
+    .eq("user_id", user.id);
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
-  // Get existing social posts for these clips
-  const clipIds = (clips || []).map((c) => c.id);
+
+  const clipIds = clips.map((c) => c.id);
   const { data: socialPosts } = clipIds.length > 0
-    ? await supabase.from("social_posts").select("clip_id, platform, platform_url, platform_video_id").eq("user_id", user!.id).in("clip_id", clipIds)
+    ? await supabase.from("social_posts").select("clip_id, platform, platform_url, platform_video_id").eq("user_id", user.id).in("clip_id", clipIds)
     : { data: [] };
 
-  const ytPostMap = new Map((socialPosts || []).filter((p) => p.platform === "youtube").map((p) => [p.clip_id, p.platform_url]));
-  const ttPostMap = new Map((socialPosts || []).filter((p) => p.platform === "tiktok").map((p) => [p.clip_id, p.platform_video_id]));
+  const ytPostMap = new Map(
+    (socialPosts ?? []).filter((p) => p.platform === "youtube").map((p) => [p.clip_id, p.platform_url])
+  );
+  const totalPosted = ytPostMap.size;
 
-  // Get analyzed VODs with peaks (for ungenerated peaks)
+  // Ungenerated peaks (moments detected but no clip yet)
   const { data: vods } = await supabase
     .from("vods")
-    .select("id, title, twitch_vod_id, thumbnail_url, peak_data, duration_seconds")
-    .eq("user_id", user!.id)
+    .select("id, title, peak_data, duration_seconds")
+    .eq("user_id", user.id)
     .eq("status", "ready")
     .not("peak_data", "is", null)
     .order("stream_date", { ascending: false });
 
-  // Only "ready" and "processing" clips block a peak from being re-generated.
-  // "deleted" and "failed" should free the peak up so users can regenerate.
   const generatedKeys = new Set(
-    (allClips || [])
+    (allClips ?? [])
       .filter((c) => c.status === "ready" || c.status === "processing")
       .map((c) => `${c.vod_id}-${c.start_time_seconds}`)
   );
-
-  const ungeneratedPeaks: (Peak & { vodTitle: string; vodId: string; vodThumbnail: string; peakIndex: number })[] = [];
-
-  for (const vod of vods || []) {
-    const peaks = (vod.peak_data as Peak[]) || [];
+  const ungeneratedPeaks: (Peak & { vodTitle: string; vodId: string; peakIndex: number })[] = [];
+  for (const vod of vods ?? []) {
+    const peaks = (vod.peak_data as Peak[]) ?? [];
     for (let pi = 0; pi < peaks.length; pi++) {
       const key = `${vod.id}-${Math.round(peaks[pi].start)}`;
       if (!generatedKeys.has(key)) {
-        ungeneratedPeaks.push({
-          ...peaks[pi],
-          vodTitle: vod.title,
-          vodId: vod.id,
-          vodThumbnail: vod.thumbnail_url,
-          peakIndex: pi,
-        });
+        ungeneratedPeaks.push({ ...peaks[pi], vodTitle: vod.title, vodId: vod.id, peakIndex: pi });
       }
     }
   }
-
   ungeneratedPeaks.sort((a, b) => b.score - a.score);
 
-  const hasContent = (clips?.length || 0) > 0 || ungeneratedPeaks.length > 0 || failedClips.length > 0 || processingClips.length > 0;
+  // Filter
+  let filteredReady = clips;
+  let showPending = false;
+  if (tab === "ready") {
+    filteredReady = clips.filter((c) => !ytPostMap.has(c.id));
+  } else if (tab === "posted") {
+    filteredReady = clips.filter((c) => ytPostMap.has(c.id));
+  } else if (tab === "pending") {
+    filteredReady = [];
+    showPending = true;
+  }
+  const showReadyAndPending = tab === "all";
+
+  const totalCounts = {
+    all: clips.length + ungeneratedPeaks.length,
+    ready: clips.filter((c) => !ytPostMap.has(c.id)).length,
+    posted: totalPosted,
+    pending: ungeneratedPeaks.length,
+  };
+
+  const TAB_ITEMS: Array<[string, string, number]> = [
+    ["all", "All", totalCounts.all],
+    ["ready", "Ready", totalCounts.ready],
+    ["posted", "Posted", totalCounts.posted],
+    ["pending", "Pending", totalCounts.pending],
+  ];
+
+  const hasAnything = clips.length > 0 || ungeneratedPeaks.length > 0;
 
   return (
-    <div>
+    <>
       <VodStatusPoller hasProcessing={hasProcessing} />
 
-      <div className="mb-8">
-        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Clip moments</span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Clips</h1>
-        <p className="text-sm text-muted">
-          Your best moments, ready to post.
-        </p>
+      {/* Header */}
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div className="page-head">
+          <span className="page-eyebrow">§ 03 · Highlights</span>
+          <h1 className="page-title">Clips</h1>
+          <p className="page-sub">Auto-detected moments, ready to clip and post.</p>
+        </div>
+        <div className="row gap-md">
+          {totalPosted > 0 && (
+            <span className="rank-chip rising"><Icons.YT /> {totalPosted} posted to YouTube</span>
+          )}
+        </div>
       </div>
 
-      {/* Nudge to connect social if no connections and there are clips */}
-      {hasContent && !isYouTubeConnected && (connections?.length ?? 0) === 0 && (
-        <div className="flex items-center justify-between gap-4 bg-accent/[0.06] border border-accent/20 rounded-xl px-4 py-3 mb-6">
-          <div className="flex items-center gap-2.5">
-            <Link2 size={14} className="text-accent-light flex-shrink-0" />
-            <p className="text-sm text-white/80">Connect YouTube or TikTok to post your clips directly.</p>
+      {/* Connect YouTube nudge */}
+      {hasAnything && !isYouTubeConnected && (
+        <div className="card" style={{ borderColor: "color-mix(in oklab, var(--blue) 30%, var(--line))" }}>
+          <div className="row card-pad-sm" style={{ justifyContent: "space-between", gap: 16 }}>
+            <div className="row gap-sm">
+              <span className="mono-label" style={{ color: "var(--blue)" }}>Connect YouTube</span>
+              <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>to post Shorts directly from your clips.</span>
+            </div>
+            <Link href="/dashboard/connections" className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }}>
+              Connect <Icons.Arrow />
+            </Link>
           </div>
-          <Link
-            href="/dashboard/connections"
-            className="text-xs font-semibold text-accent-light hover:opacity-80 transition-opacity flex-shrink-0"
-          >
-            Connect →
-          </Link>
         </div>
       )}
 
-      {!hasContent ? (
-        <div className="bg-surface border border-border rounded-2xl p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-5">
-            <Scissors size={24} className="text-accent-light" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">No clips yet</h2>
-          <p className="text-sm text-muted max-w-md mx-auto mb-6">
-            Analyze a VOD to detect peak moments. Each peak becomes a potential clip.
+      {!hasAnything ? (
+        <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+          <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>
+            No clip moments yet. Analyze a stream from <Link href="/dashboard/vods" style={{ color: "var(--blue)" }}>VODs</Link> and your best moments will appear here.
           </p>
-          <Link
-            href="/dashboard/vods"
-            className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-5 py-2.5 rounded-xl transition-opacity text-sm"
-          >
-            <Film size={15} />
-            Go to VODs
-          </Link>
         </div>
       ) : (
         <>
-          {/* Processing clips */}
-          {hasProcessing && (
-            <div className="mb-8">
-              <h2 className="text-sm font-bold text-white/60 mb-4">
-                Generating ({processingClips.length})
-              </h2>
-              <div className="space-y-3">
-                {processingClips.map((clip) => (
-                  <div key={clip.id} className="bg-surface border border-border rounded-2xl p-5 flex items-center gap-4">
-                    <Loader2 size={18} className="animate-spin text-accent-light flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold text-sm">{clip.title}</p>
-                      <p className="text-xs text-muted mt-0.5">Processing in background — this page will update automatically.</p>
+          {/* Filter tabs */}
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <div className="tabs">
+              {TAB_ITEMS.map(([k, l, c]) => (
+                <Link key={k} href={`/dashboard/clips${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
+                  {l} · {c}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Ready clips grid */}
+          {filteredReady.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+              {filteredReady.map((c) => {
+                const ytUrl = ytPostMap.get(c.id);
+                const score = Math.round(((c.score as number | null) ?? 0) * 100);
+                return (
+                  <div key={c.id} className="clip-card">
+                    <div className="clip-thumb">
+                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
+                      <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="play"><Icons.Play /></a>
+                      <span className="score" style={{ color: scoreColorVar(score) }}>
+                        {score}<span style={{ opacity: 0.6, fontSize: 9 }}>/100</span>
+                      </span>
+                    </div>
+                    <div className="clip-meta">
+                      <b>{(c.title as string) || "Clip"}</b>
+                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
+                    </div>
+                    <div style={{ padding: "0 12px 12px" }}>
+                      {ytUrl ? (
+                        <a href={ytUrl} target="_blank" rel="noopener noreferrer" className="chip g" style={{ width: "100%", justifyContent: "center" }}>
+                          <Icons.YT /> View on YouTube
+                        </a>
+                      ) : isYouTubeConnected ? (
+                        <Link href={`/dashboard/clips#${c.id}`} className="btn btn-blue" style={{ width: "100%", padding: "7px 0", fontSize: 12, justifyContent: "center" }}>
+                          Post to YouTube <Icons.Arrow />
+                        </Link>
+                      ) : (
+                        <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ width: "100%", padding: "7px 0", fontSize: 12, justifyContent: "center" }}>
+                          Open clip <Icons.Play />
+                        </a>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
 
-          <FailedClipsList clips={failedClips} />
-
-          <ReadyClipsList
-            clips={clips}
-            isYouTubeConnected={isYouTubeConnected}
-            ytPostMap={Object.fromEntries(ytPostMap)}
-          />
-
-          {/* Ungenerated peaks */}
-          {ungeneratedPeaks.length > 0 && (
-            <div>
-              <h2 className="text-base font-bold text-white mb-4">
-                Detected Peaks <span className="text-sm font-medium text-muted">({ungeneratedPeaks.length})</span>
-              </h2>
-              <div className="space-y-3">
-                {ungeneratedPeaks.map((peak, i) => (
-                  <div
-                    key={`${peak.vodId}-${peak.start}-${i}`}
-                    className="bg-surface border border-border rounded-2xl p-5 surface-hover"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="relative flex-shrink-0 w-32 aspect-video rounded-lg overflow-hidden bg-bg">
-                        {peak.vodThumbnail ? (
-                          <img
-                            src={peak.vodThumbnail}
-                            alt={peak.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Film size={16} className="text-muted" />
-                          </div>
-                        )}
+          {/* Ungenerated peaks (Pending) */}
+          {(showPending || (showReadyAndPending && ungeneratedPeaks.length > 0)) && (
+            <>
+              {showReadyAndPending && filteredReady.length > 0 && (
+                <div className="row" style={{ alignItems: "center", gap: 14, marginTop: 8 }}>
+                  <span className="mono-label">Pending — moments to clip</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+                </div>
+              )}
+              {ungeneratedPeaks.length === 0 && showPending ? (
+                <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+                  <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No pending moments — all detected clips have been generated.</p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                  {ungeneratedPeaks.map((p, idx) => (
+                    <div key={`${p.vodId}-${p.peakIndex}-${idx}`} className="clip-card">
+                      <div className="clip-thumb">
+                        <span className="ts">{formatTimestamp(p.start)}</span>
+                        <span className="play"><Icons.Plus /></span>
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <h3 className="font-bold text-sm">{peak.title}</h3>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <Sparkles size={13} className={scoreColor(peak.score)} />
-                            <span className={`text-sm font-bold ${scoreColor(peak.score)}`}>
-                              {Math.round(peak.score * 100)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-muted mb-3">{peak.reason}</p>
-
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${categoryStyle(peak.category)}`}>
-                            {peak.category}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-xs text-muted">
-                            <Clock size={11} />
-                            {formatDuration(Math.round(peak.start))} - {formatDuration(Math.round(peak.end))}
-                          </span>
-                          <span className="text-xs text-muted">
-                            {formatDuration(Math.round(peak.end - peak.start))} clip
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted/50">from: {peak.vodTitle}</p>
-                          <GenerateClipButton vodId={peak.vodId} peakIndex={peak.peakIndex} hasProcessing={hasProcessing} />
-                        </div>
+                      <div className="clip-meta">
+                        <b>{p.title}</b>
+                        <span>{categoryLabel(p.category)} · {p.vodTitle}</span>
+                      </div>
+                      <div style={{ padding: "0 12px 12px" }}>
+                        <GenerateClipButton vodId={p.vodId} peakIndex={p.peakIndex} hasProcessing={hasProcessing} />
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

@@ -26,7 +26,7 @@ export default async function VodDetailPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: vod }, { data: allClips }, { data: connections }, { data: prevVod }, { data: recentVods }, { data: priorVodsForStats }] = await Promise.all([
+  const [{ data: vod }, { data: allClips }, { data: connections }, { data: prevVod }, { data: recentVods }, { data: priorVodsForStats }, { data: profileForPlan }] = await Promise.all([
     supabase
       .from("vods")
       .select("*, share_token")
@@ -66,7 +66,17 @@ export default async function VodDetailPage({
       .neq("id", id)
       .order("analyzed_at", { ascending: false })
       .limit(50),
+    supabase
+      .from("profiles")
+      .select("plan, subscription_expires_at")
+      .eq("id", user!.id)
+      .single(),
   ]);
+
+  const isPro =
+    profileForPlan?.plan === "pro" &&
+    !!profileForPlan.subscription_expires_at &&
+    new Date(profileForPlan.subscription_expires_at) > new Date();
 
   if (!vod) notFound();
 
@@ -180,7 +190,7 @@ export default async function VodDetailPage({
 
           {/* Coach Report */}
           {coachReport ? (
-            <CoachReportCard report={coachReport} previousScore={previousScore} streak={streak} isPersonalBest={isPersonalBest} streamerTitle={streamerTitle} />
+            <CoachReportCard report={coachReport} previousScore={previousScore} streak={streak} isPersonalBest={isPersonalBest} streamerTitle={streamerTitle} isPro={isPro} />
           ) : (
             <div className="bg-surface border border-border rounded-2xl p-6 text-sm text-muted">
               Coach report not available for this VOD. Re-analyze to generate one.

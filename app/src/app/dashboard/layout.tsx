@@ -1,12 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Sidebar } from "@/components/layout/sidebar";
-import { MobileNav } from "@/components/layout/mobile-nav";
+import DashSidebar from "@/components/dashboard/DashSidebar";
+import DashTopbar from "@/components/dashboard/DashTopbar";
 
 /**
- * Dashboard layout — sidebar on desktop, bottom tabs on mobile.
- * Fetches the user profile for the nav display.
+ * Dashboard layout — new dash-shell (sidebar + topbar + content grid).
+ * Fetches user profile, plan, and badge counts for the sidebar.
  */
 export default async function DashboardLayout({
   children,
@@ -15,19 +14,28 @@ export default async function DashboardLayout({
 }) {
   const supabase = await createClient();
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  // Get profile data
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, twitch_avatar_url, twitch_login")
+    .select("twitch_display_name, twitch_avatar_url, twitch_login, plan, subscription_expires_at")
     .eq("id", user.id)
     .single();
+
+  // Counts for sidebar badges
+  const [{ count: vodCount }, { count: clipCount }] = await Promise.all([
+    supabase
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "ready"),
+    supabase
+      .from("clips")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "ready"),
+  ]);
 
   const userData = {
     display_name: profile?.twitch_display_name || "Streamer",
@@ -35,44 +43,27 @@ export default async function DashboardLayout({
     login: profile?.twitch_login || "",
   };
 
+  const isPro =
+    profile?.plan === "pro" &&
+    !!profile.subscription_expires_at &&
+    new Date(profile.subscription_expires_at) > new Date();
+
   return (
-    <div className="min-h-screen bg-bg relative">
-      {/* Subtle ambient glow */}
-      <div className="fixed inset-0 dashboard-glow pointer-events-none z-0" />
-      {/* Desktop sidebar */}
-      <div className="hidden lg:block relative z-[2]">
-        <Sidebar user={userData} />
+    <div className="dash">
+      <div className="dash-shell">
+        <DashSidebar
+          user={userData}
+          vodCount={vodCount ?? 0}
+          clipCount={clipCount ?? 0}
+          isPro={isPro}
+        />
+        <main className="main">
+          <DashTopbar />
+          <div className="content">
+            {children}
+          </div>
+        </main>
       </div>
-
-      {/* Mobile top bar */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 glass border-b border-border safe-top">
-        <div className="h-14 flex items-center justify-between px-5">
-          <Link href="/" className="text-lg font-extrabold text-gradient">
-            LevlCast
-          </Link>
-          {userData.avatar_url ? (
-            <img
-              src={userData.avatar_url}
-              alt={userData.display_name}
-              className="w-7 h-7 rounded-full"
-            />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent-light">
-              {userData.display_name?.[0] || "?"}
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="lg:pl-[240px] pt-14 lg:pt-0 pb-20 lg:pb-0 relative z-[1]">
-        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
-          {children}
-        </div>
-      </main>
-
-      {/* Mobile bottom tabs */}
-      <MobileNav />
     </div>
   );
 }

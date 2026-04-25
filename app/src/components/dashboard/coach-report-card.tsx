@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Link from "next/link";
 import {
   TrendingUp, TrendingDown, Minus, Activity, AlertCircle,
   Target, Gamepad2, MessageCircle, Map, Shuffle, BookOpen,
   Volume2, VolumeX, Pause, Play, Loader2, Flame, ShieldAlert, Clock,
-  CheckCircle2, Trophy,
+  CheckCircle2, Trophy, Lock,
 } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
@@ -171,8 +172,35 @@ function useAudio(r: CoachReport, prev?: number) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function CoachReportCard({ report, previousScore, streak = 0, isPersonalBest = false, streamerTitle }: {
-  report: CoachReport; previousScore?: number; streak?: number; isPersonalBest?: boolean; streamerTitle?: string;
+// LockedSection — soft-blur teaser shown to Free users in place of gated coach-report sections.
+// Single CTA per section (not per item).
+function LockedSection({ label, height = 120 }: { label: string; height?: number }) {
+  return (
+    <div className="rounded-xl overflow-hidden relative" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div style={{ minHeight: height, padding: "20px 22px", filter: "blur(6px)", opacity: 0.55, pointerEvents: "none" }}>
+        <p className="text-xs font-mono uppercase tracking-widest text-white/40 mb-2">{label}</p>
+        <p className="text-sm text-white/60 leading-relaxed">
+          Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+        </p>
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center" style={{ background: "linear-gradient(180deg, rgba(10,9,20,0.55) 0%, rgba(10,9,20,0.85) 100%)" }}>
+        <div className="flex items-center gap-2">
+          <Lock size={14} className="text-violet-300" />
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-300">{label}</span>
+        </div>
+        <p className="text-sm text-white/70 font-medium leading-snug max-w-[36ch]">
+          Pro unlocks the full report — every fix, every mission, every flagged moment.
+        </p>
+        <Link href="/dashboard/settings" className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg" style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd" }}>
+          Unlock with Pro
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export function CoachReportCard({ report, previousScore, streak = 0, isPersonalBest = false, streamerTitle, isPro = true }: {
+  report: CoachReport; previousScore?: number; streak?: number; isPersonalBest?: boolean; streamerTitle?: string; isPro?: boolean;
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const tc    = report.streamer_type ? TYPE_CONFIG[report.streamer_type] : null;
@@ -354,25 +382,29 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
           </div>
         )}
 
-        {/* Shareable win */}
-        {report.shareable_win && (
-          <div
-            className="rounded-xl p-4 flex items-start gap-3"
-            style={{
-              background: "linear-gradient(135deg, rgba(250,204,21,0.08) 0%, rgba(234,179,8,0.03) 60%, rgba(10,9,20,0) 100%)",
-              border: "1px solid rgba(250,204,21,0.22)",
-            }}
-          >
-            <Trophy size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400 mb-1.5">Worth Sharing</p>
-              <p className="text-sm font-bold text-yellow-200 mb-1 leading-tight">{report.shareable_win.stat}</p>
-              <p className="text-xs text-white/50 leading-relaxed">{report.shareable_win.context}</p>
+        {/* Shareable win — GATED for Free */}
+        {isPro ? (
+          report.shareable_win && (
+            <div
+              className="rounded-xl p-4 flex items-start gap-3"
+              style={{
+                background: "linear-gradient(135deg, rgba(250,204,21,0.08) 0%, rgba(234,179,8,0.03) 60%, rgba(10,9,20,0) 100%)",
+                border: "1px solid rgba(250,204,21,0.22)",
+              }}
+            >
+              <Trophy size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400 mb-1.5">Worth Sharing</p>
+                <p className="text-sm font-bold text-yellow-200 mb-1 leading-tight">{report.shareable_win.stat}</p>
+                <p className="text-xs text-white/50 leading-relaxed">{report.shareable_win.context}</p>
+              </div>
             </div>
-          </div>
+          )
+        ) : (
+          report.shareable_win && <LockedSection label="Worth Sharing" height={90} />
         )}
 
-        {/* Cold open note */}
+        {/* Cold open note — always visible */}
         {report.cold_open?.note && (
           <div className="pl-4 border-l-2 border-white/[0.08]">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Opening</p>
@@ -380,76 +412,87 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
           </div>
         )}
 
-        {/* Closing note */}
-        {report.closing?.note && (
+        {/* Closing note — Pro only */}
+        {isPro && report.closing?.note && (
           <div className="pl-4 border-l-2 border-white/[0.08]">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Closing</p>
             <p className="text-sm text-white/38 leading-relaxed">{report.closing.note}</p>
           </div>
         )}
 
-        {/* ── #1 Priority ── */}
-        <div
-          className="rounded-xl p-5 relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.06) 60%, rgba(10,9,20,0) 100%)",
-            border: "1px solid rgba(139,92,246,0.28)",
-            boxShadow: "0 0 30px rgba(139,92,246,0.08) inset",
-          }}
-        >
-          <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.5), transparent)" }} />
-          <div className="flex items-center gap-2.5 mb-3">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">#1 Priority</span>
-          </div>
-          <p className="text-[15px] leading-relaxed text-white/90 font-medium">{report.recommendation}</p>
-        </div>
-
-        {/* ── Score breakdown ── */}
-        {report.score_breakdown && (
-          <div className="grid grid-cols-4 gap-2.5">
-            {(["energy", "engagement", "consistency", "content"] as const).map((k) => {
-              const v   = report.score_breakdown![k];
-              const c   = scoreHex(v);
-              const cls = scoreCls(v);
-              const pct = v;
-              return (
-                <div key={k} className="rounded-xl px-3 py-3 text-center" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className={`text-2xl font-extrabold leading-none mb-2 ${cls}`}>{v}</div>
-                  <div className="h-1 rounded-full mb-1.5 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: c }} />
-                  </div>
-                  <div className="text-[9px] text-white/25 capitalize tracking-wide">{k}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ── Best Moment ── */}
-        {report.best_moment && (
+        {/* ── #1 Priority ── GATED for Free */}
+        {isPro ? (
           <div
-            className="rounded-xl px-4 py-4 flex items-start gap-4"
-            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `2px solid rgba(139,92,246,0.5)` }}
+            className="rounded-xl p-5 relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.06) 60%, rgba(10,9,20,0) 100%)",
+              border: "1px solid rgba(139,92,246,0.28)",
+              boxShadow: "0 0 30px rgba(139,92,246,0.08) inset",
+            }}
           >
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1.5">Best Moment</p>
-              <p className="text-sm text-white/70 leading-relaxed">{report.best_moment.description}</p>
+            <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.5), transparent)" }} />
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">#1 Priority</span>
             </div>
-            <span className="text-sm font-mono font-bold flex-shrink-0 pt-0.5" style={{ color: "rgba(139,92,246,0.6)" }}>{report.best_moment.time}</span>
+            <p className="text-[15px] leading-relaxed text-white/90 font-medium">{report.recommendation}</p>
           </div>
+        ) : (
+          <LockedSection label="#1 Priority Fix" height={120} />
         )}
 
-        {/* ── What Worked / Fix for Next ── */}
+        {/* ── Score breakdown ── GATED for Free */}
+        {isPro
+          ? report.score_breakdown && (
+              <div className="grid grid-cols-4 gap-2.5">
+                {(["energy", "engagement", "consistency", "content"] as const).map((k) => {
+                  const v   = report.score_breakdown![k];
+                  const c   = scoreHex(v);
+                  const cls = scoreCls(v);
+                  const pct = v;
+                  return (
+                    <div key={k} className="rounded-xl px-3 py-3 text-center" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className={`text-2xl font-extrabold leading-none mb-2 ${cls}`}>{v}</div>
+                      <div className="h-1 rounded-full mb-1.5 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: c }} />
+                      </div>
+                      <div className="text-[9px] text-white/25 capitalize tracking-wide">{k}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          : report.score_breakdown && <LockedSection label="Score Breakdown" height={110} />
+        }
+
+        {/* ── Best Moment ── GATED for Free */}
+        {isPro
+          ? report.best_moment && (
+              <div
+                className="rounded-xl px-4 py-4 flex items-start gap-4"
+                style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `2px solid rgba(139,92,246,0.5)` }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1.5">Best Moment</p>
+                  <p className="text-sm text-white/70 leading-relaxed">{report.best_moment.description}</p>
+                </div>
+                <span className="text-sm font-mono font-bold flex-shrink-0 pt-0.5" style={{ color: "rgba(139,92,246,0.6)" }}>{report.best_moment.time}</span>
+              </div>
+            )
+          : report.best_moment && <LockedSection label="Best Moment" height={100} />
+        }
+
+        {/* ── What Worked / Fix for Next ──
+            Free: 1 strength visible (validation), improvements LOCKED */}
         {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
           <div className="grid grid-cols-2 gap-3">
-            {/* What Worked */}
+            {/* What Worked — Free sees only the first strength */}
             <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(74,222,128,0.12)" }}>
               <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(74,222,128,0.08)", background: "rgba(74,222,128,0.05)" }}>
                 <CheckCircle2 size={12} className="text-green-400" />
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-green-400">What Worked</span>
               </div>
               <div className="divide-y divide-white/[0.04]">
-                {(report.strengths ?? []).map((s, i) => {
+                {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => {
                   const { label, body, ts, recurring } = parseItem(s);
                   return (
                     <div key={i} className="px-4 py-3 space-y-1">
@@ -462,79 +505,96 @@ export function CoachReportCard({ report, previousScore, streak = 0, isPersonalB
                     </div>
                   );
                 })}
+                {!isPro && (report.strengths ?? []).length > 1 && (
+                  <div className="px-4 py-3 text-center">
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/25">+{(report.strengths ?? []).length - 1} more — Pro</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Fix for Next */}
-            <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(250,204,21,0.12)" }}>
-              <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(250,204,21,0.08)", background: "rgba(250,204,21,0.04)" }}>
-                <AlertCircle size={12} className="text-yellow-400" />
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">Fix for Next</span>
-              </div>
-              <div className="divide-y divide-white/[0.04]">
-                {(report.improvements ?? []).map((s, i) => {
-                  const { label, body, ts, recurring } = parseItem(s);
-                  return (
-                    <div key={i} className="px-4 py-3 space-y-1">
-                      {recurring && <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full">Recurring</span>}
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-bold text-yellow-400 leading-tight">{label || body}</p>
-                        {ts && <span className="text-xs font-mono text-white/20 flex-shrink-0">{ts}</span>}
+            {/* Fix for Next — GATED for Free */}
+            {isPro ? (
+              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(250,204,21,0.12)" }}>
+                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(250,204,21,0.08)", background: "rgba(250,204,21,0.04)" }}>
+                  <AlertCircle size={12} className="text-yellow-400" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">Fix for Next</span>
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                  {(report.improvements ?? []).map((s, i) => {
+                    const { label, body, ts, recurring } = parseItem(s);
+                    return (
+                      <div key={i} className="px-4 py-3 space-y-1">
+                        {recurring && <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full">Recurring</span>}
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-bold text-yellow-400 leading-tight">{label || body}</p>
+                          {ts && <span className="text-xs font-mono text-white/20 flex-shrink-0">{ts}</span>}
+                        </div>
+                        {label && <p className="text-xs text-white/45 leading-relaxed">{body}</p>}
                       </div>
-                      {label && <p className="text-xs text-white/45 leading-relaxed">{body}</p>}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <LockedSection label="Fix For Next" height={140} />
+            )}
           </div>
         )}
 
-        {/* ── Anti-patterns ── */}
-        {(report.anti_patterns ?? []).length > 0 && (
-          <div className="rounded-xl overflow-hidden" style={{ background: "rgba(248,113,113,0.03)", border: "1px solid rgba(248,113,113,0.18)" }}>
-            <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(248,113,113,0.1)", background: "rgba(248,113,113,0.05)" }}>
-              <ShieldAlert size={12} className="text-red-400" />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-400">Watch For This</span>
-              <span className="ml-auto text-[10px] text-red-400/50">{(report.anti_patterns ?? []).length} flagged</span>
-            </div>
-            <div className="divide-y divide-white/[0.04]">
-              {(report.anti_patterns ?? []).map((ap, i) => (
-                <div key={i} className="px-4 py-3 space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-bold text-red-300 leading-tight">{antiPatternLabels[ap.type] ?? ap.type}</p>
-                    <span className="text-xs font-mono text-white/20 flex-shrink-0">{ap.time}</span>
-                  </div>
-                  <p className="text-xs text-white/55 italic leading-relaxed">&ldquo;{ap.quote}&rdquo;</p>
-                  <p className="text-xs text-white/40 leading-relaxed">{ap.note}</p>
+        {/* ── Anti-patterns ── GATED for Free (always show callout when Free, even if anti_patterns empty, so Pro upsell stays consistent) */}
+        {isPro
+          ? (report.anti_patterns ?? []).length > 0 && (
+              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(248,113,113,0.03)", border: "1px solid rgba(248,113,113,0.18)" }}>
+                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(248,113,113,0.1)", background: "rgba(248,113,113,0.05)" }}>
+                  <ShieldAlert size={12} className="text-red-400" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-400">Watch For This</span>
+                  <span className="ml-auto text-[10px] text-red-400/50">{(report.anti_patterns ?? []).length} flagged</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <div className="divide-y divide-white/[0.04]">
+                  {(report.anti_patterns ?? []).map((ap, i) => (
+                    <div key={i} className="px-4 py-3 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-bold text-red-300 leading-tight">{antiPatternLabels[ap.type] ?? ap.type}</p>
+                        <span className="text-xs font-mono text-white/20 flex-shrink-0">{ap.time}</span>
+                      </div>
+                      <p className="text-xs text-white/55 italic leading-relaxed">&ldquo;{ap.quote}&rdquo;</p>
+                      <p className="text-xs text-white/40 leading-relaxed">{ap.note}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          : (report.anti_patterns ?? []).length > 0 && (
+              <LockedSection label={`Watch For This · ${(report.anti_patterns ?? []).length} flagged`} height={100} />
+            )
+        }
 
-        {/* ── Your Missions ── */}
-        {(report.next_stream_goals ?? []).length > 0 && (
-          <div className="rounded-xl px-5 py-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Target size={13} className="text-accent-light" />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent-light">Your Missions</span>
-            </div>
-            <div className="space-y-3">
-              {(report.next_stream_goals ?? []).map((goal, i) => (
-                <div key={i} className="flex items-start gap-3.5">
-                  <div
-                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
-                    style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.22)", color: "rgba(167,139,250,0.8)" }}
-                  >
-                    {i + 1}
-                  </div>
-                  <span className="text-sm text-white/68 leading-relaxed flex-1">{goal}</span>
+        {/* ── Your Missions ── GATED for Free */}
+        {isPro
+          ? (report.next_stream_goals ?? []).length > 0 && (
+              <div className="rounded-xl px-5 py-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Target size={13} className="text-accent-light" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent-light">Your Missions</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <div className="space-y-3">
+                  {(report.next_stream_goals ?? []).map((goal, i) => (
+                    <div key={i} className="flex items-start gap-3.5">
+                      <div
+                        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
+                        style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.22)", color: "rgba(167,139,250,0.8)" }}
+                      >
+                        {i + 1}
+                      </div>
+                      <span className="text-sm text-white/68 leading-relaxed flex-1">{goal}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          : (report.next_stream_goals ?? []).length > 0 && <LockedSection label="Your Missions · 3 next-stream goals" height={140} />
+        }
 
         {/* ── Silence Gaps ── */}
         {gaps.length > 0 && (

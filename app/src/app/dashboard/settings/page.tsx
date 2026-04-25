@@ -2,7 +2,28 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserUsage, FREE_LIMITS, PRO_LIMITS } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
-import { Youtube, Music, CheckCircle, AlertCircle } from "lucide-react";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+
+const Icons = {
+  Twitch: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <path d="M4 5l2-3h14v12l-5 5h-4l-3 3H6v-3H2V8l2-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+      <path d="M11 8v5M16 8v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  ),
+  YT: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M10 9l5 3-5 3V9z" fill="currentColor"/>
+    </svg>
+  ),
+  Spark: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+      <path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  ),
+};
 
 export default async function SettingsPage({
   searchParams,
@@ -11,111 +32,148 @@ export default async function SettingsPage({
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
   const params = await searchParams;
 
   const [{ data: profile }, { data: subscription }, { data: connections }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user!.id).single(),
-    supabase.from("subscriptions").select("status, subscription_expires_at").eq("user_id", user!.id).maybeSingle(),
-    supabase.from("social_connections").select("platform").eq("user_id", user!.id),
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase.from("subscriptions").select("status, subscription_expires_at, provider").eq("user_id", user.id).maybeSingle(),
+    supabase.from("social_connections").select("platform, account_name").eq("user_id", user.id),
   ]);
 
-  const usage = await getUserUsage(user!.id, supabase);
+  const usage = await getUserUsage(user.id, supabase);
   const limits = usage.plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
-  const isYouTubeConnected = connections?.some((c) => c.platform === "youtube");
+  const ytConn = connections?.find((c) => c.platform === "youtube");
+  const isYouTubeConnected = !!ytConn;
 
   return (
-    <div>
-      <div className="mb-8">
-        <span className="inline-flex items-center bg-white/[0.04] border border-white/[0.08] text-muted/70 text-[11px] font-medium px-3 py-1 rounded-full mb-3 block w-fit">Your account</span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Account</h1>
-        <p className="text-sm text-muted">Manage your plan and connected accounts.</p>
+    <>
+      {/* Header */}
+      <div className="page-head">
+        <span className="page-eyebrow">§ 04 · Account</span>
+        <h1 className="page-title">Account</h1>
+        <p className="page-sub">Profile, plan, and connected services.</p>
       </div>
 
-      {(params.success === "youtube") && (
-        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-3 rounded-xl mb-6">
-          <CheckCircle size={16} />YouTube connected successfully!
+      {/* Success / error banners */}
+      {params.success === "youtube" && (
+        <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--green) 40%, var(--line))", background: "color-mix(in oklab, var(--green-soft) 30%, var(--surface))" }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: "var(--green)" }}>YouTube connected successfully.</p>
         </div>
       )}
       {params.error && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
-          <AlertCircle size={16} />
-          {params.error === "oauth_failed" ? "Connection failed. Please try again." : "Something went wrong."}
+        <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--danger) 40%, var(--line))", background: "color-mix(in oklab, var(--danger-soft) 30%, var(--surface))" }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: "var(--danger)" }}>
+            {params.error === "oauth_failed" ? "Connection failed. Please try again." : "Something went wrong."}
+          </p>
         </div>
       )}
 
-      {/* Profile */}
-      <div className="rounded-2xl p-6 mb-4" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-4">Profile</p>
-        <div className="flex items-center gap-4">
+      {/* Profile card */}
+      <div className="card card-pad">
+        <div className="row gap-lg" style={{ alignItems: "flex-start" }}>
           {profile?.twitch_avatar_url ? (
-            <img src={profile.twitch_avatar_url} alt={profile.twitch_display_name} className="w-12 h-12 rounded-full" />
+            <img
+              src={profile.twitch_avatar_url}
+              alt={profile.twitch_display_name}
+              style={{ width: 72, height: 72, borderRadius: "50%", flexShrink: 0, border: "1px solid var(--line)", objectFit: "cover" }}
+            />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center text-lg font-bold text-accent-light">
-              {profile?.twitch_display_name?.[0] || "?"}
-            </div>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, oklch(0.55 0.16 130), oklch(0.65 0.14 90))", flexShrink: 0 }} />
           )}
-          <div>
-            <p className="font-bold">{profile?.twitch_display_name || "—"}</p>
-            <p className="text-sm text-muted">@{profile?.twitch_login || "—"}</p>
+          <div className="col" style={{ flex: 1, gap: 6 }}>
+            <div className="row gap-sm">
+              <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", margin: 0, color: "var(--ink)" }}>
+                {profile?.twitch_display_name || "Streamer"}
+              </h2>
+              <span className={`rank-chip ${usage.plan === "pro" ? "elite" : "fresh"}`}>
+                <Icons.Spark /> {usage.plan === "pro" ? "Pro" : "Free"}
+              </span>
+            </div>
+            <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
+              @{profile?.twitch_login || "—"}{profile?.twitch_login && ` · twitch.tv/${profile.twitch_login}`}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Subscription */}
-      <SubscriptionSection
-        plan={usage.plan}
-        analysesUsed={usage.analyses_this_month}
-        analysesLimit={limits.analyses_per_month}
-        clipsUsed={usage.clips_this_month}
-        clipsLimit={limits.clips_per_month}
-        hasPaypalSubscription={!!profile?.paypal_subscription_id}
-        subscriptionExpiresAt={subscription?.subscription_expires_at ?? profile?.subscription_expires_at ?? null}
-        subscriptionStatus={subscription?.status ?? null}
-      />
+      {/* Plan + Connections grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {/* Plan card — wraps existing SubscriptionSection */}
+        <div className="card bordered accent-blue">
+          <div className="card-head">
+            <h3>Plan</h3>
+            <span className={`rank-chip ${usage.plan === "pro" ? "elite" : "rising"}`} style={{ textTransform: "none", letterSpacing: 0 }}>
+              {usage.plan === "pro" ? "PRO" : "FREE"}
+            </span>
+          </div>
+          <div style={{ padding: "18px 22px 22px" }}>
+            <SubscriptionSection
+              plan={usage.plan}
+              analysesUsed={usage.analyses_this_month}
+              analysesLimit={limits.analyses_per_month}
+              clipsUsed={usage.clips_this_month}
+              clipsLimit={limits.clips_per_month}
+              hasPaypalSubscription={subscription?.provider === "paypal"}
+              subscriptionExpiresAt={subscription?.subscription_expires_at ?? null}
+              subscriptionStatus={subscription?.status ?? null}
+            />
+          </div>
+        </div>
 
-      {/* Connections */}
-      <div className="rounded-2xl p-6 mt-4" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-4">Connected Accounts</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center">
-                <Youtube size={18} className="text-red-400" />
+        {/* Connections card — Twitch + YouTube only */}
+        <div className="card">
+          <div className="card-head">
+            <h3>Connections</h3>
+            <span className="label-mono">{1 + (isYouTubeConnected ? 1 : 0)} of 2</span>
+          </div>
+          <div>
+            {/* Twitch — always connected if user logged in */}
+            <div className="row" style={{ padding: "14px 22px", borderBottom: "1px solid var(--line)", gap: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", color: "var(--magenta)" }}>
+                <Icons.Twitch />
               </div>
-              <div className="flex-1">
-                <p className="font-bold text-sm">YouTube</p>
-                <p className="text-xs text-muted">Post clips as YouTube Shorts</p>
+              <div className="col" style={{ flex: 1, gap: 2 }}>
+                <b style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>Twitch</b>
+                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                  twitch.tv/{profile?.twitch_login || "—"} · auto-import on
+                </span>
               </div>
-              {isYouTubeConnected && (
-                <span className="text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded-full">Connected</span>
+              <span className="chip g"><span className="d" /> connected</span>
+            </div>
+
+            {/* YouTube — connect/connected */}
+            <div className="row" style={{ padding: "14px 22px", gap: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", color: "var(--danger)" }}>
+                <Icons.YT />
+              </div>
+              <div className="col" style={{ flex: 1, gap: 2 }}>
+                <b style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>YouTube</b>
+                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                  {isYouTubeConnected ? `${ytConn.account_name || "Connected"} · publishing Shorts` : "Post Smart Clips directly to Shorts"}
+                </span>
+              </div>
+              {isYouTubeConnected ? (
+                <span className="chip g"><span className="d" /> connected</span>
+              ) : (
+                <Link href="/dashboard/connections" className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }}>
+                  Connect
+                </Link>
               )}
             </div>
-            <a href="/api/auth/youtube" className="block w-full text-center bg-red-500 hover:opacity-85 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-opacity">
-              {isYouTubeConnected ? "Reconnect YouTube" : "Connect YouTube"}
-            </a>
-          </div>
-
-          <div className="rounded-xl p-4 opacity-50" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center">
-                <Music size={18} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-sm">TikTok</p>
-                <p className="text-xs text-muted">Auto-post clips to TikTok</p>
-              </div>
-              <span className="text-xs font-semibold text-muted bg-white/5 px-2 py-1 rounded-full">Soon</span>
-            </div>
-            <div className="block w-full text-center bg-white/5 text-muted font-semibold px-4 py-2 rounded-xl text-sm cursor-not-allowed">
-              Coming Soon
-            </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-4">
-        <DeleteAccountSection />
+      {/* Delete account */}
+      <div className="card">
+        <div className="card-head">
+          <h3>Danger zone</h3>
+        </div>
+        <div className="card-pad">
+          <DeleteAccountSection />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

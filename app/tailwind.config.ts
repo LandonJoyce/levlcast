@@ -22,7 +22,9 @@ const config: Config = {
         "border-accent": "rgba(168, 85, 247, 0.25)",
       },
       fontFamily: {
-        sans: ["DM Sans", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist)", "DM Sans", "system-ui", "sans-serif"],
+        geist: ["var(--font-geist)", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       borderRadius: {
         xl: "14px",
