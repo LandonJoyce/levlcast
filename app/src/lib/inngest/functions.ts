@@ -10,7 +10,7 @@
  *   sendActivationNudge  — cron (hourly): email users who signed up 24h ago but never analyzed
  */
 
-import { inngest } from "./client";
+import { inngest, NonRetriableError } from "inngest";
 import { streamTwitchVodAudio, downloadTwitchVodVideo } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
@@ -347,14 +347,18 @@ export const generateClip = inngest.createFunction(
       // causes silent failures where the clip appears "completed" but stays processing.
       await step.run("generate-and-upload", async () => {
         console.log(`[clip] Downloading segments for "${peak.title}" (${peak.start}s - ${peak.end}s)`);
-        const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end);
+        // NonRetriableError bypasses Inngest's step-level retry backoff — CDN failures
+        // are not improved by waiting, so fail immediately and let the catch block run.
+        const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end)
+          .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
         let buffer: Buffer;
         try {
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
           console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
+          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd)
+            .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
           console.log(`[clip] Cut complete: ${buffer.length} bytes`);
         } finally {
           await download.cleanup();
@@ -362,14 +366,15 @@ export const generateClip = inngest.createFunction(
 
         const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
 
-        const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4");
+        const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4")
+          .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
         const { error: updateError } = await supabase.from("clips").update({
           video_url: publicUrl,
           status: "ready",
         }).eq("id", clipId);
 
-        if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
+        if (updateError) throw new NonRetriableError(`DB update failed: ${updateError.message}`);
 
         console.log(`[clip] Saved: "${peak.title}" → ${publicUrl}`);
       });
