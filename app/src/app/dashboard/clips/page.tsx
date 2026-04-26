@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { PostToYouTube, DownloadClip, RegenerateClip, ClipCardWrapper } from "@/components/dashboard/clip-actions";
+import { PostToYouTube, DownloadClip, RegenerateClip } from "@/components/dashboard/clip-actions";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { scoreColorVar } from "@/lib/score-utils";
 
@@ -248,36 +248,32 @@ export default async function ClipsPage({
                 const ytUrl = ytPostMap.get(c.id);
                 const score = Math.round(((c.score as number | null) ?? 0) * 100);
                 return (
-                  <ClipCardWrapper key={c.id} clipId={c.id}>
-                    {() => (
-                      <div className="clip-card">
-                        <div className="clip-thumb">
-                          {c.video_url && (
-                            <video
-                              src={c.video_url as string}
-                              preload="metadata"
-                              muted
-                              playsInline
-                              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                          )}
-                          <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
-                          <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="play"><Icons.Play /></a>
-                          <span className="score" style={{ color: scoreColorVar(score) }}>
-                            {score}<span style={{ opacity: 0.6, fontSize: 9 }}>/100</span>
-                          </span>
-                        </div>
-                        <div className="clip-meta">
-                          <b>{(c.title as string) || "Clip"}</b>
-                          <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
-                        </div>
-                        <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                          <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
-                          <DownloadClip clipId={c.id} />
-                        </div>
-                      </div>
-                    )}
-                  </ClipCardWrapper>
+                  <div key={c.id} className="clip-card">
+                    <div className="clip-thumb">
+                      {c.video_url && (
+                        <video
+                          src={c.video_url as string}
+                          preload="metadata"
+                          muted
+                          playsInline
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      )}
+                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
+                      <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="play"><Icons.Play /></a>
+                      <span className="score" style={{ color: scoreColorVar(score) }}>
+                        {score}<span style={{ opacity: 0.6, fontSize: 9 }}>/100</span>
+                      </span>
+                    </div>
+                    <div className="clip-meta">
+                      <b>{(c.title as string) || "Clip"}</b>
+                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
+                    </div>
+                    <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+                      <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
+                      <DownloadClip clipId={c.id} />
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -292,30 +288,25 @@ export default async function ClipsPage({
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
                 {failedClips.map((c) => (
-                  <ClipCardWrapper key={c.id} clipId={c.id}>
-                    {(onDeleted) => (
-                      <div className="clip-card">
-                        <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--danger) 8%, var(--surface))" }}>
-                          <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
-                          <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-                            <span className="mono" style={{ fontSize: 11, color: "var(--danger)", letterSpacing: ".06em" }}>failed</span>
-                          </span>
-                        </div>
-                        <div className="clip-meta">
-                          <b>{(c.title as string) || "Clip"}</b>
-                          <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
-                        </div>
-                        <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                          <RegenerateClip
-                            clipId={c.id}
-                            vodId={c.vod_id as string}
-                            startSeconds={c.start_time_seconds as number}
-                            onRegenerated={onDeleted}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </ClipCardWrapper>
+                  <div key={c.id} className="clip-card">
+                    <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--danger) 8%, var(--surface))" }}>
+                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
+                      <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+                        <span className="mono" style={{ fontSize: 11, color: "var(--danger)", letterSpacing: ".06em" }}>failed</span>
+                      </span>
+                    </div>
+                    <div className="clip-meta">
+                      <b>{(c.title as string) || "Clip"}</b>
+                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
+                    </div>
+                    <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+                      <RegenerateClip
+                        clipId={c.id}
+                        vodId={c.vod_id as string}
+                        startSeconds={c.start_time_seconds as number}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </>

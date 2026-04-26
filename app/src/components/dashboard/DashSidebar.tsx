@@ -101,7 +101,6 @@ export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSi
   return (
     <aside className="sb">
       <div className="sb-logo">
-        <span className="mark"><Icons.Logo /></span>
         <span>LevlCast</span>
       </div>
       <div className="sb-section">Workspace</div>
