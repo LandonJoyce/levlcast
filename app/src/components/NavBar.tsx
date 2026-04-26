@@ -5,77 +5,79 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 
 const navLinks = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
 export default function NavBar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border">
-      <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between gap-6">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-          <img src="/logo-mark.png" alt="" className="h-11 w-11" />
-          <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
+    <div className="nav-wrap">
+      <div className="container nav">
+        <Link href="/" className="logo">
+          <span className="logo-mark"></span>
+          <span>LevlCast</span>
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+        <nav className="nav-links nav-desktop">
           {navLinks.map((l) => (
-            <a key={l.label} href={l.href} className="hover:text-white transition-colors">
+            <Link key={l.label} href={l.href}>
               {l.label}
-            </a>
+            </Link>
           ))}
-        </div>
+        </nav>
 
-        {/* Desktop CTAs */}
-        <div className="hidden md:flex items-center gap-3">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/auth/login" className="nav-cta nav-desktop">
+            Get Started Free
+          </Link>
+          <button
+            className="nav-mobile-toggle"
+            style={{ background: "transparent", border: 0, padding: 8, color: "var(--ink-2)", cursor: "pointer" }}
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="nav-mobile-menu" style={{ borderTop: "1px solid var(--line)", padding: "16px 32px", flexDirection: "column", gap: 14, background: "color-mix(in oklab, var(--bg) 95%, transparent)", display: "flex" }}>
+          {navLinks.map((l) => (
+            <Link
+              key={l.label}
+              href={l.href}
+              style={{ fontSize: 14, color: "var(--ink-2)", padding: "4px 0" }}
+              onClick={() => setOpen(false)}
+            >
+              {l.label}
+            </Link>
+          ))}
           <Link
             href="/auth/login"
-            className="btn-accent text-sm px-5 py-2.5"
+            className="nav-cta"
+            style={{ marginTop: 8, justifyContent: "center" }}
+            onClick={() => setOpen(false)}
           >
             Get Started Free
           </Link>
         </div>
-
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden p-2 text-muted hover:text-white transition-colors"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* Mobile dropdown */}
-      {open && (
-        <div className="md:hidden glass border-t border-border px-6 py-5 flex flex-col gap-4">
-          {navLinks.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              className="text-sm font-medium text-muted hover:text-white transition-colors py-1"
-              onClick={() => setOpen(false)}
-            >
-              {l.label}
-            </a>
-          ))}
-          <div className="border-t border-border pt-4">
-            <Link
-              href="/auth/login"
-              className="btn-accent text-sm text-center py-3 block"
-              onClick={() => setOpen(false)}
-            >
-              Get Started Free
-            </Link>
-          </div>
-        </div>
       )}
-    </nav>
+
+      <style>{`
+        .nav-desktop { display: none; }
+        .nav-mobile-toggle { display: inline-flex; align-items: center; }
+        @media (min-width: 768px) {
+          .nav-desktop { display: inline-flex; align-items: center; }
+          .nav-links.nav-desktop { display: flex; }
+          .nav-mobile-toggle { display: none; }
+          .nav-mobile-menu { display: none !important; }
+        }
+      `}</style>
+    </div>
   );
 }
