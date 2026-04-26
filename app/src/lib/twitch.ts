@@ -405,13 +405,18 @@ export async function downloadTwitchVodVideo(
   startSeconds: number,
   endSeconds: number
 ): Promise<VodDownloadResult> {
-  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  const appToken = await getAppAccessToken();
+  const clientId = process.env.TWITCH_CLIENT_ID!;
 
-  // Step 1: Get playback access token (10s timeout)
-  const gqlCtrl = withTimeout(10000);
+  // Step 1: Get playback access token (15s timeout)
+  const gqlCtrl = withTimeout(15000);
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
-    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+    headers: {
+      "Client-Id": clientId,
+      "Authorization": `Bearer ${appToken}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       operationName: "PlaybackAccessToken",
       query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
@@ -537,7 +542,7 @@ export async function downloadTwitchVodVideo(
   // missing segment is fatal.
   async function fetchSegment(url: string, attempt = 1): Promise<Buffer | null> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) {
@@ -616,11 +621,16 @@ export function streamTwitchVodAudio(vodId: string): PassThrough {
   const passThrough = new PassThrough();
 
   (async () => {
-    const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+    const appToken = await getAppAccessToken();
+    const clientId = process.env.TWITCH_CLIENT_ID!;
 
     const gqlRes = await fetch("https://gql.twitch.tv/gql", {
       method: "POST",
-      headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+      headers: {
+        "Client-Id": clientId,
+        "Authorization": `Bearer ${appToken}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         operationName: "PlaybackAccessToken",
         query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
