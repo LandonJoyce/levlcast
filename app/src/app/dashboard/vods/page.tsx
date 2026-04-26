@@ -70,7 +70,7 @@ export default async function VodsPage({
 
   const { data: vods } = await supabase
     .from("vods")
-    .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report")
+    .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report, thumbnail_url")
     .eq("user_id", user.id)
     .order("stream_date", { ascending: false });
 
@@ -198,6 +198,14 @@ export default async function VodsPage({
                     display: "block",
                   }}
                 >
+                  {v.thumbnail_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={(v.thumbnail_url as string).replace("%{width}", "320").replace("%{height}", "180")}
+                      alt=""
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  )}
                   <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "rgba(255,255,255,.6)" }}>
                     <Icons.Play />
                   </div>

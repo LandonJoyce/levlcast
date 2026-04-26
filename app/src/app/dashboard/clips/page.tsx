@@ -217,6 +217,15 @@ export default async function ClipsPage({
                 return (
                   <div key={c.id} className="clip-card">
                     <div className="clip-thumb">
+                      {c.video_url && (
+                        <video
+                          src={c.video_url as string}
+                          preload="metadata"
+                          muted
+                          playsInline
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      )}
                       <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
                       <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="play"><Icons.Play /></a>
                       <span className="score" style={{ color: scoreColorVar(score) }}>

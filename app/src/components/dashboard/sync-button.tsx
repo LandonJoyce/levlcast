@@ -36,17 +36,18 @@ export function SyncButton() {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="row gap-md">
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="inline-flex items-center gap-2 bg-accent hover:opacity-85 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-px text-sm"
+        className="btn btn-blue"
+        style={{ opacity: syncing ? 0.6 : 1 }}
       >
-        <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
+        <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
         {syncing ? "Syncing..." : "Sync VODs"}
       </button>
       {result && (
-        <span className="text-sm text-muted animate-fade-in">{result}</span>
+        <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>{result}</span>
       )}
     </div>
   );
