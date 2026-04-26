@@ -719,7 +719,7 @@
 
 /* hero */
 .landing-v2 .hero { padding: 100px 0 120px; position: relative; overflow: hidden; }
-.landing-v2 .hero-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px; align-items: center; }
+.landing-v2 .hero-grid { display: flex; flex-direction: column; align-items: center; gap: 48px; text-align: center; }
 .landing-v2 .hero h1 .accent { color: var(--blue); font-style: italic; font-weight: 500; }
 .landing-v2 .hero h1 .accent-2 { color: var(--green); font-style: italic; font-weight: 500; }
 .landing-v2 .hero-sub { color: var(--ink-2); font-size: 18px; line-height: 1.6; max-width: 52ch; margin-top: 28px; }

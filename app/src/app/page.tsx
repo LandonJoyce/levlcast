@@ -392,61 +392,64 @@ export default function LandingPage() {
         <div className="container">
           <div className="hero-grid">
             <div>
-              <div className="founders-tag">
-                <div className="ft-counter">
-                  <span className="ft-num">$9.99</span>
-                  <span className="ft-spots">per month</span>
+              {/* Text block — centered */}
+              <div style={{ maxWidth: 680 }}>
+                <div className="founders-tag" style={{ justifyContent: "center" }}>
+                  <div className="ft-counter">
+                    <span className="ft-num">$9.99</span>
+                    <span className="ft-spots">per month</span>
+                  </div>
+                  <div className="ft-text">
+                    <div className="ft-label">Founding Member pricing</div>
+                    <div className="ft-sub">Locked in for life · No card</div>
+                  </div>
+                  <div className="ft-bar"><span style={{ width: "100%" }}></span></div>
                 </div>
-                <div className="ft-text">
-                  <div className="ft-label">Founding Member pricing</div>
-                  <div className="ft-sub">Locked in for life · No card</div>
+                <h1 style={{ marginTop: 26 }}>
+                  Your Personal<br/>
+                  <span className="accent">Stream</span> <span className="accent-2">Manager.</span>
+                </h1>
+                <p className="hero-sub" style={{ maxWidth: 560, margin: "0 auto 28px" }}>
+                  LevlCast watches your VODs and tells you — specifically — what to fix.
+                  The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live.
+                  Real coaching on your actual stream, so every session makes you sharper.
+                </p>
+                <div className="hero-cta-row" style={{ justifyContent: "center" }}>
+                  <Link href="/auth/login" className="btn btn-primary">
+                    Get Your First Report Free <ArrowIcon/>
+                  </Link>
+                  <a href="#how-it-works" className="btn btn-ghost">How it works</a>
                 </div>
-                <div className="ft-bar"><span style={{ width: "100%" }}></span></div>
+                <div className="hero-foot">— Free to start · No credit card required · Cancel anytime</div>
+                <div className="hero-stats" style={{ justifyContent: "center" }}>
+                  <div className="hero-stat">
+                    <div className="v blue">0–100</div>
+                    <div className="k">Score every stream</div>
+                  </div>
+                  <div className="hero-stat">
+                    <div className="v green">~5 min</div>
+                    <div className="k">Average analysis</div>
+                  </div>
+                  <div className="hero-stat">
+                    <div className="v">1 goal</div>
+                    <div className="k">Per session, focused</div>
+                  </div>
+                </div>
               </div>
-              <h1 style={{ marginTop: 26 }}>
-                Your Personal<br/>
-                <span className="accent">Stream</span> <span className="accent-2">Manager.</span>
-              </h1>
-              <p className="hero-sub">
-                LevlCast watches your VODs and tells you — specifically — what to fix.
-                The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live.
-                Real coaching on your actual stream, so every session makes you sharper.
-              </p>
-              <div className="hero-cta-row">
-                <Link href="/auth/login" className="btn btn-primary">
-                  Get Your First Report Free <ArrowIcon/>
-                </Link>
-                <a href="#how-it-works" className="btn btn-ghost">How it works</a>
-              </div>
-              <div className="hero-foot">— Free to start · No credit card required · Cancel anytime</div>
 
-              <div className="hero-stats">
-                <div className="hero-stat">
-                  <div className="v blue">0–100</div>
-                  <div className="k">Score every stream</div>
-                </div>
-                <div className="hero-stat">
-                  <div className="v green">~5 min</div>
-                  <div className="k">Average analysis</div>
-                </div>
-                <div className="hero-stat">
-                  <div className="v">1 goal</div>
-                  <div className="k">Per session, focused</div>
-                </div>
+              {/* Full-width video */}
+              <div style={{ width: "100%", borderRadius: 16, boxShadow: "0 0 0 1px rgba(255,255,255,0.1), 0 40px 100px -20px rgba(0,0,0,0.9)", background: "#000", lineHeight: 0, overflow: "hidden" }}>
+                <video
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  style={{ width: "100%", display: "block" }}
+                >
+                  <source src="/demo/LEVLCASTHEROAGAIN.mp4" type="video/mp4" />
+                  <source src="/demo/Levlcastherovideo.mov" type="video/quicktime" />
+                </video>
               </div>
-            </div>
-            <div style={{ borderRadius: 16, boxShadow: "0 0 0 1px rgba(255,255,255,0.1), 0 30px 80px -20px rgba(0,0,0,0.8)", background: "#000", lineHeight: 0, overflow: "hidden", width: "100%" }}>
-              <video
-                autoPlay
-                muted
-                loop
-                playsInline
-                style={{ width: "100%", display: "block" }}
-              >
-                <source src="/demo/LEVLCASTHEROAGAIN.mp4" type="video/mp4" />
-                <source src="/demo/Levlcastherovideo.mov" type="video/quicktime" />
-              </video>
-            </div>
           </div>
         </div>
       </section>
