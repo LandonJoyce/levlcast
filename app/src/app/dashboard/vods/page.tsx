@@ -70,7 +70,7 @@ export default async function VodsPage({
 
   const { data: vods } = await supabase
     .from("vods")
-    .select("id, twitch_id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report")
+    .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report")
     .eq("user_id", user.id)
     .order("stream_date", { ascending: false });
 

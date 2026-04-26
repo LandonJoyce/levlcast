@@ -43,10 +43,11 @@ export default async function DashboardLayout({
     login: profile?.twitch_login || "",
   };
 
+  // Pro = profile.plan is "pro" AND subscription has NOT explicitly expired.
+  // null subscription_expires_at means "no expiry" (e.g. iOS RevenueCat) → still Pro.
   const isPro =
     profile?.plan === "pro" &&
-    !!profile.subscription_expires_at &&
-    new Date(profile.subscription_expires_at) > new Date();
+    !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
 
   return (
     <div className="dash">

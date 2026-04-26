@@ -75,8 +75,7 @@ export default async function VodDetailPage({
 
   const isPro =
     profileForPlan?.plan === "pro" &&
-    !!profileForPlan.subscription_expires_at &&
-    new Date(profileForPlan.subscription_expires_at) > new Date();
+    !(profileForPlan.subscription_expires_at && new Date(profileForPlan.subscription_expires_at) < new Date());
 
   if (!vod) notFound();
 

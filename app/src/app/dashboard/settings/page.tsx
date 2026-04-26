@@ -37,14 +37,13 @@ export default async function SettingsPage({
 
   const [{ data: profile }, { data: subscription }, { data: connections }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
-    supabase.from("subscriptions").select("status, subscription_expires_at, provider").eq("user_id", user.id).maybeSingle(),
-    supabase.from("social_connections").select("platform, account_name").eq("user_id", user.id),
+    supabase.from("subscriptions").select("status, subscription_expires_at").eq("user_id", user.id).maybeSingle(),
+    supabase.from("social_connections").select("platform").eq("user_id", user.id),
   ]);
 
   const usage = await getUserUsage(user.id, supabase);
   const limits = usage.plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
-  const ytConn = connections?.find((c) => c.platform === "youtube");
-  const isYouTubeConnected = !!ytConn;
+  const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
 
   return (
     <>
@@ -114,8 +113,8 @@ export default async function SettingsPage({
               analysesLimit={limits.analyses_per_month}
               clipsUsed={usage.clips_this_month}
               clipsLimit={limits.clips_per_month}
-              hasPaypalSubscription={subscription?.provider === "paypal"}
-              subscriptionExpiresAt={subscription?.subscription_expires_at ?? null}
+              hasPaypalSubscription={!!profile?.paypal_subscription_id}
+              subscriptionExpiresAt={subscription?.subscription_expires_at ?? profile?.subscription_expires_at ?? null}
               subscriptionStatus={subscription?.status ?? null}
             />
           </div>
@@ -150,7 +149,7 @@ export default async function SettingsPage({
               <div className="col" style={{ flex: 1, gap: 2 }}>
                 <b style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>YouTube</b>
                 <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  {isYouTubeConnected ? `${ytConn.account_name || "Connected"} · publishing Shorts` : "Post Smart Clips directly to Shorts"}
+                  {isYouTubeConnected ? "Publishing Shorts directly from clips" : "Post Smart Clips directly to Shorts"}
                 </span>
               </div>
               {isYouTubeConnected ? (
@@ -165,14 +164,9 @@ export default async function SettingsPage({
         </div>
       </div>
 
-      {/* Delete account */}
-      <div className="card">
-        <div className="card-head">
-          <h3>Danger zone</h3>
-        </div>
-        <div className="card-pad">
-          <DeleteAccountSection />
-        </div>
+      {/* Delete account — bare, no danger-zone framing */}
+      <div style={{ marginTop: 12 }}>
+        <DeleteAccountSection />
       </div>
     </>
   );

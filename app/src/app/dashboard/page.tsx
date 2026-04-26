@@ -74,13 +74,12 @@ export default async function DashboardPage() {
 
   const isPro =
     profile?.plan === "pro" &&
-    !!profile.subscription_expires_at &&
-    new Date(profile.subscription_expires_at) > new Date();
+    !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
 
   // Latest analyzed VODs — most recent first, up to 12 for trend
   const { data: recentVods } = await supabase
     .from("vods")
-    .select("id, twitch_id, title, duration_seconds, analyzed_at, coach_report, created_at, peak_data")
+    .select("id, title, duration_seconds, analyzed_at, coach_report, created_at, peak_data")
     .eq("user_id", user.id)
     .eq("status", "ready")
     .order("analyzed_at", { ascending: false, nullsFirst: false })
