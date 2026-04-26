@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const admin = createAdminClient();
   const { data: clip } = await admin
     .from("clips")
-    .select("id, title, video_url, status")
+    .select("id, title, video_url, status, caption_text")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -67,7 +67,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const arrayBuffer = await videoRes.arrayBuffer();
     await writeFile(inputPath, Buffer.from(arrayBuffer));
 
-    const outputBuffer = await exportClipVertical(inputPath, layout);
+    const captionText = (clip.caption_text as string | null) ?? undefined;
+    const outputBuffer = await exportClipVertical(inputPath, layout, captionText);
 
     const safeName = ((clip.title as string) || "clip")
       .replace(/[^a-z0-9\-_ ]/gi, "")

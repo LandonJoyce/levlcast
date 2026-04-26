@@ -281,7 +281,7 @@ export function ClipExportModal({
             Beta — facecam detection is estimated
           </div>
           <div style={{ fontSize: 12, color: "#6F7C95", lineHeight: 1.5 }}>
-            The crop assumes a typical streamer layout (webcam in the corner). If your webcam is in a different spot, the cut may be off. Captions overlay coming in a future update.
+            The crop assumes a typical streamer layout (webcam in the corner). If your webcam is in a different spot, the cut may be off. Caption text from your clip moment is burned in automatically.
           </div>
         </div>
 
