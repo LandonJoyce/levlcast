@@ -435,7 +435,16 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <HeroMock/>
+            <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 30px 80px -30px rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.07)", background: "#000", lineHeight: 0 }}>
+              <video
+                src="/demo/Levlcastherovideo.mov"
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{ width: "100%", display: "block", borderRadius: 16 }}
+              />
+            </div>
           </div>
         </div>
       </section>
