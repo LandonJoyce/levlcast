@@ -46,6 +46,9 @@ export default function ClipsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
+  const [ytPostMap, setYtPostMap] = useState<Map<string, string>>(new Map());
+  const [postingYT, setPostingYT] = useState<string | null>(null);
   const router = useRouter();
 
   const loadData = useCallback(async () => {
@@ -53,7 +56,7 @@ export default function ClipsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
 
-      const [clipsRes, vodsRes] = await Promise.all([
+      const [clipsRes, vodsRes, connectionsRes] = await Promise.all([
         supabase.from('clips').select('*').eq('user_id', user.id)
           .in('status', ['ready', 'processing', 'failed'])
           .order('created_at', { ascending: false }),
@@ -61,12 +64,28 @@ export default function ClipsScreen() {
           .eq('user_id', user.id).eq('status', 'ready')
           .not('peak_data', 'is', null)
           .order('stream_date', { ascending: false }),
+        supabase.from('social_connections').select('platform').eq('user_id', user.id),
       ]);
 
       const all = clipsRes.data || [];
-      setReadyClips(all.filter((c) => c.status === 'ready'));
+      const ready = all.filter((c) => c.status === 'ready');
+      setReadyClips(ready);
       setProcessingClips(all.filter((c) => c.status === 'processing'));
       setFailedClips(all.filter((c) => c.status === 'failed'));
+
+      const ytConnected = (connectionsRes.data || []).some((c: any) => c.platform === 'youtube');
+      setIsYouTubeConnected(ytConnected);
+
+      if (ready.length > 0) {
+        const postsRes = await supabase.from('social_posts')
+          .select('clip_id, platform_url')
+          .eq('user_id', user.id)
+          .eq('platform', 'youtube')
+          .in('clip_id', ready.map((c: any) => c.id));
+        const map = new Map<string, string>();
+        (postsRes.data || []).forEach((p: any) => map.set(p.clip_id, p.platform_url));
+        setYtPostMap(map);
+      }
 
       // Build ungenerated peaks
       const generatedKeys = new Set(
@@ -175,6 +194,32 @@ export default function ClipsScreen() {
     ]);
   }
 
+  async function postToYouTube(clipId: string) {
+    setPostingYT(clipId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${APP_URL}/api/youtube/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ clipId }),
+      });
+      const json = await res.json();
+      if (!res.ok) { Alert.alert('Upload failed', json.error || 'Could not post to YouTube'); return; }
+      if (json.url) {
+        setYtPostMap(prev => new Map(prev).set(clipId, json.url));
+        Alert.alert('Posted!', 'Your clip is now live on YouTube.', [
+          { text: 'View', onPress: () => Linking.openURL(json.url) },
+          { text: 'OK' },
+        ]);
+      }
+    } catch {
+      Alert.alert('Error', 'Network error — try again');
+    } finally {
+      setPostingYT(null);
+    }
+  }
+
   if (loading) {
     return <View style={styles.center}><ActivityIndicator color={colors.accentLight} /></View>;
   }
@@ -253,25 +298,43 @@ export default function ClipsScreen() {
           {readyClips.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Ready ({readyClips.length})</Text>
-              {readyClips.map((clip) => (
-                <View key={clip.id} style={styles.readyCard}>
-                  <Text style={styles.clipTitle}>{clip.title}</Text>
-                  {clip.caption_text ? (
-                    <Text style={styles.captionPreview} numberOfLines={2}>{clip.caption_text}</Text>
-                  ) : null}
-                  <View style={styles.readyActions}>
-                    <TouchableOpacity
-                      style={styles.watchBtn}
-                      onPress={() => clip.video_url && Linking.openURL(clip.video_url)}
-                    >
-                      <Text style={styles.watchBtnText}>Watch</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteClip(clip.id)}>
-                      <Text style={styles.deleteBtnText}>Delete</Text>
-                    </TouchableOpacity>
+              {readyClips.map((clip) => {
+                const ytUrl = ytPostMap.get(clip.id);
+                return (
+                  <View key={clip.id} style={styles.readyCard}>
+                    <Text style={styles.clipTitle}>{clip.title}</Text>
+                    {clip.caption_text ? (
+                      <Text style={styles.captionPreview} numberOfLines={2}>{clip.caption_text}</Text>
+                    ) : null}
+                    <View style={styles.readyActions}>
+                      <TouchableOpacity
+                        style={styles.watchBtn}
+                        onPress={() => clip.video_url && Linking.openURL(clip.video_url)}
+                      >
+                        <Text style={styles.watchBtnText}>Watch</Text>
+                      </TouchableOpacity>
+                      {ytUrl ? (
+                        <TouchableOpacity style={styles.ytPostedBtn} onPress={() => Linking.openURL(ytUrl)}>
+                          <Text style={styles.ytPostedBtnText}>On YouTube</Text>
+                        </TouchableOpacity>
+                      ) : isYouTubeConnected ? (
+                        <TouchableOpacity
+                          style={[styles.ytBtn, postingYT === clip.id && { opacity: 0.5 }]}
+                          onPress={() => postToYouTube(clip.id)}
+                          disabled={postingYT === clip.id}
+                        >
+                          {postingYT === clip.id
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : <Text style={styles.ytBtnText}>Post to YT</Text>}
+                        </TouchableOpacity>
+                      ) : null}
+                      <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteClip(clip.id)}>
+                        <Text style={styles.deleteBtnText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
 
@@ -365,6 +428,10 @@ const styles = StyleSheet.create({
   captionPreview: { fontSize: 12, color: colors.muted, marginTop: 6, lineHeight: 17 },
   watchBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
   watchBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  ytBtn: { backgroundColor: 'rgba(239,68,68,0.85)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
+  ytBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  ytPostedBtn: { backgroundColor: 'rgba(74,222,128,0.12)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' },
+  ytPostedBtnText: { color: colors.green, fontSize: 12, fontWeight: '700' },
   regenBtn: { backgroundColor: 'rgba(124,58,237,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', minWidth: 60 },
   regenBtnText: { color: colors.accentLight, fontSize: 12, fontWeight: '700' },
   deleteBtn: { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', minWidth: 60 },

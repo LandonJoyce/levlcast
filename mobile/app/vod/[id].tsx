@@ -110,6 +110,19 @@ function BoldLeadText({ text, bulletColor }: { text: string; bulletColor: string
   );
 }
 
+function LockedCard({ label, onUpgrade }: { label: string; onUpgrade: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onUpgrade}
+      style={{ backgroundColor: 'rgba(124,58,237,0.07)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', padding: 18, marginBottom: 14, alignItems: 'center', gap: 6 }}
+      activeOpacity={0.8}
+    >
+      <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(124,58,237,0.7)', letterSpacing: 1, textTransform: 'uppercase' }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>Unlock with Pro →</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function VodDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -117,6 +130,7 @@ export default function VodDetailScreen() {
   const [previousScore, setPreviousScore] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
   const [clips, setClips] = useState<Clip[]>([]);
+  const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -129,7 +143,7 @@ export default function VodDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace('/login'); return; }
 
-    const [vodRes, prevRes, streakRes, clipsRes] = await Promise.all([
+    const [vodRes, prevRes, streakRes, clipsRes, profileRes] = await Promise.all([
       supabase.from('vods')
         .select('id, title, stream_date, status, coach_report, peak_data, failed_reason')
         .eq('id', id).single(),
@@ -144,9 +158,15 @@ export default function VodDetailScreen() {
         .select('id, title, status, video_url, caption_text, peak_score, start_time_seconds')
         .eq('vod_id', id).eq('user_id', user.id)
         .order('created_at', { ascending: false }),
+      supabase.from('profiles').select('plan, subscription_expires_at').eq('id', user.id).single(),
     ]);
 
     setVod(vodRes.data as Vod);
+
+    const profile = profileRes.data;
+    const proActive = profile?.plan === 'pro' &&
+      !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
+    setIsPro(proActive);
 
     const prevScore = (prevRes.data?.coach_report as any)?.overall_score;
     setPreviousScore(typeof prevScore === 'number' ? prevScore : null);
@@ -364,11 +384,15 @@ export default function VodDetailScreen() {
             </View>
           </View>
 
-          {/* #1 Priority */}
-          <View style={styles.priorityCard}>
-            <Text style={styles.priorityLabel}>#1 PRIORITY</Text>
-            <Text style={styles.priorityText}>{report.recommendation}</Text>
-          </View>
+          {/* #1 Priority — GATED */}
+          {isPro ? (
+            <View style={styles.priorityCard}>
+              <Text style={styles.priorityLabel}>#1 PRIORITY</Text>
+              <Text style={styles.priorityText}>{report.recommendation}</Text>
+            </View>
+          ) : (
+            <LockedCard label="#1 Priority Fix" onUpgrade={() => router.push('/subscribe')} />
+          )}
 
           {/* Clips */}
           {clips.length > 0 && (
@@ -398,50 +422,68 @@ export default function VodDetailScreen() {
             </View>
           )}
 
-          {/* What Worked / Fix for Next Stream */}
+          {/* What Worked — 1 strength free, rest locked */}
           <View style={styles.section}>
             <View style={styles.workedCard}>
               <Text style={styles.sectionLabel}>WHAT WORKED</Text>
-              {(report.strengths ?? []).map((s, i) => (
+              {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => (
                 <View key={i} style={styles.bulletRow}>
                   <Text style={[styles.bullet, { color: colors.green }]}>✓</Text>
                   <BoldLeadText text={s} bulletColor={colors.green} />
                 </View>
               ))}
+              {!isPro && (report.strengths ?? []).length > 1 && (
+                <TouchableOpacity onPress={() => router.push('/subscribe')} style={{ marginTop: 4 }}>
+                  <Text style={{ fontSize: 12, color: 'rgba(124,58,237,0.7)', fontWeight: '600' }}>+{(report.strengths ?? []).length - 1} more — Unlock with Pro →</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.fixCard}>
-              <Text style={styles.sectionLabel}>FIX FOR NEXT STREAM</Text>
-              {(report.improvements ?? []).map((s, i) => (
-                <View key={i} style={styles.bulletRow}>
-                  <Text style={[styles.bullet, { color: colors.yellow }]}>→</Text>
-                  <BoldLeadText text={s} bulletColor={colors.yellow} />
-                </View>
-              ))}
-            </View>
+            {/* Fix for Next Stream — GATED */}
+            {isPro ? (
+              <View style={styles.fixCard}>
+                <Text style={styles.sectionLabel}>FIX FOR NEXT STREAM</Text>
+                {(report.improvements ?? []).map((s, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <Text style={[styles.bullet, { color: colors.yellow }]}>→</Text>
+                    <BoldLeadText text={s} bulletColor={colors.yellow} />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <LockedCard label="Fix For Next Stream" onUpgrade={() => router.push('/subscribe')} />
+            )}
           </View>
 
-          {/* Your Missions */}
-          {(report.next_stream_goals ?? []).length > 0 && (
-            <View style={styles.missionsCard}>
-              <Text style={styles.sectionLabel}>YOUR MISSIONS</Text>
-              {(report.next_stream_goals ?? []).map((goal, i) => (
-                <View key={i} style={styles.goalRow}>
-                  <View style={styles.goalNumber}>
-                    <Text style={styles.goalNumberText}>{i + 1}</Text>
+          {/* Your Missions — GATED */}
+          {isPro ? (
+            (report.next_stream_goals ?? []).length > 0 && (
+              <View style={styles.missionsCard}>
+                <Text style={styles.sectionLabel}>YOUR MISSIONS</Text>
+                {(report.next_stream_goals ?? []).map((goal, i) => (
+                  <View key={i} style={styles.goalRow}>
+                    <View style={styles.goalNumber}>
+                      <Text style={styles.goalNumberText}>{i + 1}</Text>
+                    </View>
+                    <Text style={styles.goalText}>{goal}</Text>
                   </View>
-                  <Text style={styles.goalText}>{goal}</Text>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            )
+          ) : (
+            <LockedCard label="Your Missions · 3 next-stream goals" onUpgrade={() => router.push('/subscribe')} />
           )}
 
-          {/* Best Moment */}
-          {report.best_moment && (
-            <View style={styles.bestMomentCard}>
-              <Text style={styles.sectionLabel}>BEST MOMENT</Text>
-              <Text style={styles.bestMomentTime}>{report.best_moment.time}</Text>
-              <Text style={styles.bestMomentDesc}>{report.best_moment.description}</Text>
-            </View>
+          {/* Best Moment — GATED */}
+          {isPro ? (
+            report.best_moment && (
+              <View style={styles.bestMomentCard}>
+                <Text style={styles.sectionLabel}>BEST MOMENT</Text>
+                <Text style={styles.bestMomentTime}>{report.best_moment.time}</Text>
+                <Text style={styles.bestMomentDesc}>{report.best_moment.description}</Text>
+              </View>
+            )
+          ) : (
+            <LockedCard label="Best Moment" onUpgrade={() => router.push('/subscribe')} />
           )}
 
           {/* Cold Open */}
