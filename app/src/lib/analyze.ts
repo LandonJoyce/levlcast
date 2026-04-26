@@ -932,7 +932,15 @@ Only flag silence as a real problem when the streamer SHOULD have been talking b
 STREAM INFO:
 - Title: "${vodTitle}"
 - Duration: ${totalMinutes} minutes
-- Commentary density: ${commentaryDensity} wpm (when actively speaking — target 140-170 wpm for engaging delivery; below 110 wpm = flat)
+- Commentary density: ${commentaryDensity} wpm (when actively speaking)
+
+WPM TARGETS BY STREAMER TYPE — apply the range matching what you identify in Step 1:
+- gaming:       120–160 wpm is normal; below 100 wpm = flat delivery
+- just_chatting: 145–185 wpm is normal; below 120 wpm = flat delivery
+- irl:           100–145 wpm is normal; below 80 wpm = flat delivery
+- variety:       120–160 wpm is normal; below 100 wpm = flat delivery
+- educational:   95–135 wpm is normal; below 80 wpm = flat delivery
+(Commentary WPM measures active speech only — silence during gameplay or watchalongs does not count against this.)
 - Overall stream pace (incl. gaps): ~${overallWPM} wpm
 - Dead air: ${deadAirSummary}
 
@@ -1017,7 +1025,7 @@ The goal isn't just reading chat — it's making individual chatters feel like t
 
 DEAD AIR RULE: If dead air already appears as a strength (rare) or improvement, do NOT mention it again elsewhere. Repeating the same dimension in multiple fields is lazy coaching.
 
-SCORING — be honest, most streams land 50-70:
+SCORING — calibrate honestly to what you actually observed. Do not compress scores into a default range. If the stream earns an 80, score it 80. If it earns a 45, score it 45:
 - 85-100: Rare. High energy throughout, strong personality, opinionated delivery, great chat chemistry, multiple clip-worthy moments.
 - 70-84: Solid. Clear strengths and 2-3 obvious fixes. Usually has opinions and some storytelling.
 - 55-69: Average. Watchable but forgettable. Missing opinions, transitions, or chat depth.
@@ -1027,6 +1035,8 @@ SCORING — be honest, most streams land 50-70:
 OUTPUT RULES:
 
 NO QUOTES ANYWHERE — GLOBAL RULE: Do not reconstruct or quote what the streamer said word-for-word in any field. Not in cold_open, not in strengths, not in improvements, not in stream_story, not anywhere. You only see transcript samples — you will get words wrong and wrong words destroy the report's credibility. Describe what happened using timestamps and actions only. "At 3:12 the streamer had a rage outburst" — not "the streamer said 'holy shit I can't believe that'." This rule overrides everything else.
+
+SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries is the one place exact transcript text is required. Pull the phrase verbatim from the transcript you were shown. If it does not appear in the transcript samples provided to you, do not flag the anti-pattern. Do not reconstruct from memory or paraphrase — the quote must be exactly as it appeared in the transcript. This exception applies ONLY to anti_patterns.quote and nowhere else.
 
 - stream_story: 2 sentences max. What this stream was about and the one defining moment. No scores, no advice, no quoted words. If the title doesn't explicitly name a game, do not name one.
 - community_note: 1 sentence. What this community wants and whether they got it. No quoted words.
