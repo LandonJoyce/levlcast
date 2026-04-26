@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { PostToYouTube, DownloadClip } from "@/components/dashboard/clip-actions";
+import { ExportClipButton } from "@/components/dashboard/clip-export-modal";
 import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { scoreColorVar } from "@/lib/score-utils";
+import { getUserUsage } from "@/lib/limits";
 
 interface Peak {
   title: string;
@@ -88,11 +90,12 @@ export default async function ClipsPage({
   const failedClips = (allClips ?? []).filter((c) => c.status === "failed");
   const hasProcessing = processingClips.length > 0;
 
-  const { data: connections } = await supabase
-    .from("social_connections")
-    .select("platform")
-    .eq("user_id", user.id);
+  const [{ data: connections }, usage] = await Promise.all([
+    supabase.from("social_connections").select("platform").eq("user_id", user.id),
+    getUserUsage(user.id, supabase),
+  ]);
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
+  const isPro = usage.plan === "pro";
 
   const clipIds = clips.map((c) => c.id);
   const { data: socialPosts } = clipIds.length > 0
@@ -272,7 +275,10 @@ export default async function ClipsPage({
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
-                      <DownloadClip clipId={c.id} />
+                      {isPro
+                        ? <ExportClipButton clipId={c.id} clipTitle={(c.title as string) || "Clip"} />
+                        : <DownloadClip clipId={c.id} />
+                      }
                     </div>
                   </div>
                 );
