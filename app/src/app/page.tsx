@@ -435,15 +435,17 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 30px 80px -30px rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.07)", background: "#000", lineHeight: 0 }}>
+            <div style={{ borderRadius: 16, boxShadow: "0 0 0 1px rgba(255,255,255,0.1), 0 30px 80px -20px rgba(0,0,0,0.8)", background: "#000", lineHeight: 0, overflow: "hidden", width: "100%", maxWidth: 720, marginLeft: "auto" }}>
               <video
-                src="/demo/Levlcastherovideo.mov"
                 autoPlay
                 muted
                 loop
                 playsInline
-                style={{ width: "100%", display: "block", borderRadius: 16 }}
-              />
+                style={{ width: "100%", display: "block" }}
+              >
+                <source src="/demo/Levlcastherovideo.mov" type="video/mp4" />
+                <source src="/demo/Levlcastherovideo.mov" type="video/quicktime" />
+              </video>
             </div>
           </div>
         </div>
