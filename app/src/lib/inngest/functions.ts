@@ -282,14 +282,14 @@ export const cleanupStuckVods = inngest.createFunction(
   }
 );
 
-// Runs every 10 minutes — marks any clip stuck in "processing" for >20 min as failed.
-// 20 min gives headroom for segment download + two FFmpeg passes on long VODs.
+// Runs every 10 minutes — marks any clip stuck in "processing" for >30 min as failed.
+// 30 min gives headroom beyond Inngest's 15m job limit + Vercel cold starts.
 export const cleanupStuckClips = inngest.createFunction(
   { id: "cleanup-stuck-clips" },
   { cron: "*/10 * * * *" },
   async () => {
     const supabase = createAdminClient();
-    const cutoff = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
     const { data: stuck } = await supabase
       .from("clips")
