@@ -141,7 +141,7 @@ export default async function ClipsPage({
   const showReadyAndPending = tab === "all";
 
   const totalCounts = {
-    all: clips.length + ungeneratedPeaks.length,
+    all: clips.length + processingClips.length + ungeneratedPeaks.length,
     ready: clips.filter((c) => !ytPostMap.has(c.id)).length,
     posted: totalPosted,
     pending: ungeneratedPeaks.length,
@@ -154,7 +154,7 @@ export default async function ClipsPage({
     ["pending", "Pending", totalCounts.pending],
   ];
 
-  const hasAnything = clips.length > 0 || ungeneratedPeaks.length > 0;
+  const hasAnything = clips.length > 0 || processingClips.length > 0 || ungeneratedPeaks.length > 0;
 
   return (
     <>
@@ -207,6 +207,37 @@ export default async function ClipsPage({
               ))}
             </div>
           </div>
+
+          {/* Generating clips */}
+          {(tab === "all" || tab === "ready") && processingClips.length > 0 && (
+            <>
+              {filteredReady.length > 0 && (
+                <div className="row" style={{ alignItems: "center", gap: 14 }}>
+                  <span className="mono-label" style={{ color: "var(--blue)" }}>Generating now</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+                </div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                {processingClips.map((c) => (
+                  <div key={c.id} className="clip-card">
+                    <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--blue) 8%, var(--surface))" }}>
+                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
+                      <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+                        <span className="mono" style={{ fontSize: 11, color: "var(--blue)", letterSpacing: ".06em" }}>generating…</span>
+                      </span>
+                    </div>
+                    <div className="clip-meta">
+                      <b>{(c.title as string) || "Clip"}</b>
+                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
+                    </div>
+                    <div style={{ padding: "0 12px 12px" }}>
+                      <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Processing…</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Ready clips grid */}
           {filteredReady.length > 0 && (
