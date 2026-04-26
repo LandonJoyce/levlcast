@@ -533,25 +533,25 @@ export async function downloadTwitchVodVideo(
     try { await rmdir(tempDir); } catch {}
   };
 
-  // Fetch one segment with a single retry on transient failure / timeout.
-  // Returns null if both attempts fail — caller decides whether a single
-  // missing segment is fatal.
+  // Fetch one segment with up to 3 attempts on transient failure / timeout.
+  // 12s timeout per attempt keeps total worst-case per segment to ~36s.
+  // Returns null if all attempts fail — caller decides whether missing segments are fatal.
   async function fetchSegment(url: string, attempt = 1): Promise<Buffer | null> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
     try {
       const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) {
-        if (attempt === 1) return fetchSegment(url, 2);
+        if (attempt < 3) return fetchSegment(url, attempt + 1);
         return null;
       }
       return Buffer.from(await res.arrayBuffer());
     } catch (err: any) {
-      if (attempt === 1) {
-        console.warn(`[twitch] Segment retry after ${err.name === "AbortError" ? "timeout" : "error"}: ${url}`);
-        return fetchSegment(url, 2);
+      if (attempt < 3) {
+        console.warn(`[twitch] Segment attempt ${attempt} failed (${err.name === "AbortError" ? "timeout" : err.message}), retrying: ${url}`);
+        return fetchSegment(url, attempt + 1);
       }
-      console.warn(`[twitch] Segment failed after retry (${err.name === "AbortError" ? "timeout" : err.message}): ${url}`);
+      console.warn(`[twitch] Segment failed after ${attempt} attempts (${err.name === "AbortError" ? "timeout" : err.message}): ${url}`);
       return null;
     } finally {
       clearTimeout(timeout);
@@ -563,7 +563,7 @@ export async function downloadTwitchVodVideo(
     // while still cutting total wall time from N×20s sequential to ~max(segment).
     // Results MUST preserve input order — TS segments concatenate into one
     // contiguous stream and reordering breaks FFmpeg decoding.
-    const CONCURRENCY = 5;
+    const CONCURRENCY = 8;
     const buffers: (Buffer | null)[] = new Array(needed.length).fill(null);
     let next = 0;
 

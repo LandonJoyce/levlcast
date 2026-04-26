@@ -312,7 +312,7 @@ export const cleanupStuckClips = inngest.createFunction(
 export const generateClip = inngest.createFunction(
   {
     id: "generate-clip",
-    retries: 1,
+    retries: 0,
     timeouts: { finish: "15m" },
     concurrency: {
       limit: 1, // one clip at a time per user — prevents memory overload
