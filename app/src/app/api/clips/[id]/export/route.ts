@@ -68,7 +68,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     await writeFile(inputPath, Buffer.from(arrayBuffer));
 
     const captionText = (clip.caption_text as string | null) ?? undefined;
-    const outputBuffer = await exportClipVertical(inputPath, layout, captionText);
+
+    let outputBuffer: Buffer;
+    try {
+      outputBuffer = await exportClipVertical(inputPath, layout, captionText);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[export] FFmpeg failed for clip ${id} layout ${layout}:`, msg);
+      return NextResponse.json({ error: msg.slice(0, 300) }, { status: 500 });
+    }
 
     const safeName = ((clip.title as string) || "clip")
       .replace(/[^a-z0-9\-_ ]/gi, "")
