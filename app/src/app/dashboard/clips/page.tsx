@@ -220,7 +220,7 @@ export default async function ClipsPage({
                   <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
                 </div>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
                 {processingClips.map((c) => (
                   <div key={c.id} className="clip-card">
                     <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--blue) 8%, var(--surface))" }}>
@@ -244,7 +244,7 @@ export default async function ClipsPage({
 
           {/* Ready clips grid */}
           {filteredReady.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
               {filteredReady.map((c) => {
                 const ytUrl = ytPostMap.get(c.id);
                 const score = Math.round(((c.score as number | null) ?? 0) * 100);
@@ -287,7 +287,7 @@ export default async function ClipsPage({
                 <span className="mono-label" style={{ color: "var(--danger)" }}>Failed — tap to retry</span>
                 <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
                 {failedClips.map((c) => (
                   <FailedClipCard
                     key={c.id}
@@ -317,7 +317,7 @@ export default async function ClipsPage({
                   <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No pending moments — all detected clips have been generated.</p>
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
                   {ungeneratedPeaks.map((p, idx) => (
                     <div key={`${p.vodId}-${p.peakIndex}-${idx}`} className="clip-card">
                       <div className="clip-thumb">
