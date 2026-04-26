@@ -391,7 +391,6 @@ export default function LandingPage() {
         <div className="hero-bg" aria-hidden="true"></div>
         <div className="container">
           <div className="hero-grid">
-            <div>
               {/* Text block — centered */}
               <div style={{ maxWidth: 680 }}>
                 <div className="founders-tag" style={{ justifyContent: "center" }}>
