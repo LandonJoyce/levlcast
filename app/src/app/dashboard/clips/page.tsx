@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { PostToYouTube, DownloadClip, RegenerateClip } from "@/components/dashboard/clip-actions";
+import { PostToYouTube, DownloadClip } from "@/components/dashboard/clip-actions";
+import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { scoreColorVar } from "@/lib/score-utils";
 
@@ -288,25 +289,15 @@ export default async function ClipsPage({
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
                 {failedClips.map((c) => (
-                  <div key={c.id} className="clip-card">
-                    <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--danger) 8%, var(--surface))" }}>
-                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
-                      <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-                        <span className="mono" style={{ fontSize: 11, color: "var(--danger)", letterSpacing: ".06em" }}>failed</span>
-                      </span>
-                    </div>
-                    <div className="clip-meta">
-                      <b>{(c.title as string) || "Clip"}</b>
-                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
-                    </div>
-                    <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                      <RegenerateClip
-                        clipId={c.id}
-                        vodId={c.vod_id as string}
-                        startSeconds={c.start_time_seconds as number}
-                      />
-                    </div>
-                  </div>
+                  <FailedClipCard
+                    key={c.id}
+                    clipId={c.id}
+                    vodId={c.vod_id as string}
+                    startSeconds={c.start_time_seconds as number}
+                    title={(c.title as string) || "Clip"}
+                    category={(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}
+                    timestamp={formatTimestamp(c.start_time_seconds as number | null)}
+                  />
                 ))}
               </div>
             </>
