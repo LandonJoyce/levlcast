@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { scoreColorVar } from "@/components/dashboard/DashScoreRing";
+import { scoreColorVar } from "@/lib/score-utils";
 
 interface Peak {
   title: string;

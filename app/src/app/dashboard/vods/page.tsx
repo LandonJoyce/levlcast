@@ -5,7 +5,7 @@ import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { getUserUsage } from "@/lib/limits";
-import { scoreColorVar } from "@/components/dashboard/DashScoreRing";
+import { scoreColorVar } from "@/lib/score-utils";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";

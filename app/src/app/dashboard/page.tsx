@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import DashScoreRing, { scoreColorVar, rankFor } from "@/components/dashboard/DashScoreRing";
+import DashScoreRing from "@/components/dashboard/DashScoreRing";
+import { scoreColorVar, rankFor } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 
 // ─── helpers ─────────────────────────────────────────────
