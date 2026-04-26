@@ -178,6 +178,7 @@ export function ClipExportModal({
 }) {
   const [layout, setLayout] = useState<StreamLayout>("cam_br");
   const [downloading, setDownloading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Load saved preference
   useEffect(() => {
@@ -192,9 +193,27 @@ export function ClipExportModal({
 
   async function handleExport() {
     setDownloading(true);
-    // For now: download original clip. FFmpeg crop + captions processing added next.
-    window.location.href = `/api/clips/${clipId}/download`;
-    setTimeout(() => setDownloading(false), 2000);
+    setExportError(null);
+    try {
+      const res = await fetch(`/api/clips/${clipId}/export?layout=${layout}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as any).error || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${clipTitle.replace(/[^a-z0-9\-_ ]/gi, "").trim() || "clip"}-vertical.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed. Try again.");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -218,8 +237,13 @@ export function ClipExportModal({
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
           <div>
-            <div style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.2em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 6 }}>
-              Export Clip
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.2em", textTransform: "uppercase", color: "#6F7C95" }}>
+                Export Clip
+              </div>
+              <span style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.12em", textTransform: "uppercase", padding: "2px 7px", borderRadius: 999, border: "1px solid rgba(251,191,36,0.4)", background: "rgba(251,191,36,0.08)", color: "rgb(251,191,36)", fontWeight: 700 }}>
+                Beta
+              </span>
             </div>
             <h2 style={{ fontSize: 20, fontWeight: 600, color: "#ECF1FA", margin: 0, lineHeight: 1.2 }}>
               {clipTitle}
@@ -251,15 +275,22 @@ export function ClipExportModal({
           ))}
         </div>
 
-        {/* Coming soon note */}
-        <div style={{ padding: "12px 16px", borderRadius: 8, background: "rgba(34,211,238,0.05)", border: "1px solid rgba(34,211,238,0.15)", marginBottom: 20 }}>
-          <div style={{ fontSize: 12, color: "#22D3EE", fontWeight: 600, marginBottom: 4 }}>
-            Auto-crop + Captions — Coming Soon
+        {/* Beta notice */}
+        <div style={{ padding: "12px 16px", borderRadius: 8, background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.2)", marginBottom: exportError ? 12 : 20 }}>
+          <div style={{ fontSize: 12, color: "rgb(251,191,36)", fontWeight: 600, marginBottom: 4 }}>
+            Beta — facecam detection is estimated
           </div>
           <div style={{ fontSize: 12, color: "#6F7C95", lineHeight: 1.5 }}>
-            Your layout preference is saved. The next update will auto-crop your clip to 9:16 and burn in editable captions before export.
+            The crop assumes a typical streamer layout (webcam in the corner). If your webcam is in a different spot, the cut may be off. Captions overlay coming in a future update.
           </div>
         </div>
+
+        {/* Export error */}
+        {exportError && (
+          <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", marginBottom: 20, fontSize: 12, color: "#F87171" }}>
+            {exportError}
+          </div>
+        )}
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -270,7 +301,7 @@ export function ClipExportModal({
             onClick={handleExport}
             disabled={downloading}
             style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: "#22D3EE", color: "#001318", fontSize: 13, fontWeight: 700, cursor: downloading ? "not-allowed" : "pointer", opacity: downloading ? 0.7 : 1 }}>
-            {downloading ? "Downloading…" : "Download Clip"}
+            {downloading ? "Processing…" : "Export Vertical"}
           </button>
         </div>
       </div>
@@ -290,6 +321,9 @@ export function ExportClipButton({ clipId, clipTitle }: { clipId: string; clipTi
         style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(34,211,238,0.35)", background: "rgba(34,211,238,0.08)", color: "#22D3EE", cursor: "pointer", width: "100%", justifyContent: "center" }}
       >
         Export for TikTok / Shorts
+        <span style={{ fontSize: 9, fontFamily: "monospace", letterSpacing: "0.1em", padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(251,191,36,0.5)", background: "rgba(251,191,36,0.08)", color: "rgb(251,191,36)", fontWeight: 700, textTransform: "uppercase" }}>
+          Beta
+        </span>
       </button>
       {open && (
         <ClipExportModal

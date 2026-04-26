@@ -4,6 +4,120 @@ import { writeFile, unlink, readFile, mkdtemp, access, chmod } from "fs/promises
 import { join } from "path";
 import { tmpdir } from "os";
 
+export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
+
+/**
+ * Re-encode an MP4 clip into 1080×1920 (9:16) vertical format.
+ *
+ * Layout options:
+ *   no_cam  — center-crop gameplay to fill the full frame
+ *   cam_br  — gameplay top 62%, facecam bottom-right 38%
+ *   cam_bl  — gameplay top 62%, facecam bottom-left 38%
+ *   cam_tr  — facecam top-right 38%, gameplay bottom 62%
+ *   cam_tl  — facecam top-left 38%, gameplay bottom 62%
+ *
+ * Cam crops assume a 1280×720 (or wider 16:9) source with the webcam
+ * in the bottom-right or top-right corner (typical streamer layout).
+ * The cam segment is cropped from the corner at 25% width × 25% height,
+ * then scaled to fill its 1080×730 (38%) slot.
+ *
+ * Output is H.264 / AAC, ready for TikTok / YouTube Shorts / Reels.
+ */
+export async function exportClipVertical(
+  inputFilePath: string,
+  layout: StreamLayout
+): Promise<Buffer> {
+  const ffmpegPath = await getFFmpegPath();
+
+  const tempDir = await mkdtemp(join(tmpdir(), "levlcast-export-"));
+  const outputPath = join(tempDir, "export.mp4");
+
+  // Final frame dimensions
+  const W = 1080;
+  const H = 1920;
+  const gameH = Math.round(H * 0.62);  // 1190 px
+  const camH  = H - gameH;             // 730 px
+
+  // Per-layout filtergraph
+  const vf = buildVerticalFilter(layout, W, H, gameH, camH);
+
+  try {
+    const cmd = [
+      `"${ffmpegPath}"`,
+      `-fflags +genpts+igndts`,
+      `-err_detect ignore_err`,
+      `-i "${inputFilePath}"`,
+      `-vf "${vf}"`,
+      `-af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
+      `-c:v libx264`,
+      `-profile:v main`,
+      `-level 4.0`,
+      `-preset fast`,
+      `-crf 23`,
+      `-pix_fmt yuv420p`,
+      `-c:a aac`,
+      `-b:a 128k`,
+      `-avoid_negative_ts make_zero`,
+      `-movflags +faststart`,
+      `-y`,
+      `"${outputPath}"`,
+    ].join(" ");
+
+    try {
+      await execAsync(cmd, { timeout: 180000 });
+    } catch (err: any) {
+      console.error("[ffmpeg] export failed:", err.stderr?.slice(-500));
+      throw ffmpegError(err);
+    }
+
+    return await readFile(outputPath);
+  } finally {
+    await unlink(outputPath).catch(() => {});
+    try {
+      const { rmdir } = await import("fs/promises");
+      await rmdir(tempDir);
+    } catch {}
+  }
+}
+
+function buildVerticalFilter(
+  layout: StreamLayout,
+  W: number,
+  H: number,
+  gameH: number,
+  camH: number
+): string {
+  // Center-crop 16:9 source to 9:16 for the game panel
+  const gameCrop = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${gameH},setpts=PTS-STARTPTS`;
+
+  if (layout === "no_cam") {
+    // Center-crop 16:9 → 9:16, scale to full frame in one shot
+    return `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS`;
+  }
+
+  // Cam corner crops (25% w × 25% h of source, from respective corner)
+  const camCorners: Record<string, string> = {
+    cam_br: `iw*0.75:ih*0.75:iw*0.75:ih*0.75`, // x=75%, y=75%
+    cam_bl: `iw*0.25:ih*0.75:0:ih*0.75`,        // x=0%,  y=75%
+    cam_tr: `iw*0.25:ih*0.25:iw*0.75:0`,         // x=75%, y=0%
+    cam_tl: `iw*0.25:ih*0.25:0:0`,               // x=0%,  y=0%
+  };
+
+  const corner = camCorners[layout];
+  // crop=w:h:x:y  then scale to fill cam slot width, pad/crop height
+  const camCrop = `crop=${corner},scale=${W}:-2,crop=${W}:${camH}:0:(ih-${camH})/2,setpts=PTS-STARTPTS`;
+
+  const isTop = layout === "cam_tr" || layout === "cam_tl";
+
+  if (isTop) {
+    // cam on top, game on bottom
+    return `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2`;
+  } else {
+    // game on top, cam on bottom
+    return `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2`;
+  }
+}
+
 const execAsync = promisify(exec);
 
 const FFMPEG_TMP_PATH = "/tmp/ffmpeg";
