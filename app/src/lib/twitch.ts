@@ -394,6 +394,12 @@ function parseM3U8Segments(playlistText: string, baseUrl: string): { url: string
  * Selects the lowest available video quality (360p or 480p) to keep file sizes
  * small while still capturing actual video frames.
  */
+function withTimeout(ms: number): AbortController {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl;
+}
+
 export async function downloadTwitchVodVideo(
   vodId: string,
   startSeconds: number,
@@ -401,7 +407,8 @@ export async function downloadTwitchVodVideo(
 ): Promise<VodDownloadResult> {
   const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
-  // Step 1: Get playback access token
+  // Step 1: Get playback access token (10s timeout)
+  const gqlCtrl = withTimeout(10000);
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
     headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
@@ -415,14 +422,15 @@ export async function downloadTwitchVodVideo(
       }`,
       variables: { vodID: vodId, playerType: "site" },
     }),
-  });
+    signal: gqlCtrl.signal,
+  }).catch((err) => { throw new Error(`Twitch GQL token fetch timed out or failed: ${err.message}`); });
 
   if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) throw new Error("Could not get video playback token from Twitch GQL");
 
-  // Step 2: Get M3U8 master playlist
+  // Step 2: Get M3U8 master playlist (10s timeout)
   const usherParams = new URLSearchParams({
     allow_source: "true",
     allow_audio_only: "true",
@@ -433,7 +441,9 @@ export async function downloadTwitchVodVideo(
     token: token.value,
   });
 
-  const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
+  const masterCtrl = withTimeout(10000);
+  const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`, { signal: masterCtrl.signal })
+    .catch((err) => { throw new Error(`Twitch master playlist fetch timed out: ${err.message}`); });
   if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
   const masterText = await masterRes.text();
   const masterLines = masterText.split("\n");
@@ -470,8 +480,10 @@ export async function downloadTwitchVodVideo(
 
   console.log(`[twitch] Using video quality for clip: ${qualities.find((q) => q.url === streamUrl)?.label}`);
 
-  // Step 4: Parse sub-playlist with actual EXTINF durations for accurate seeking
-  const subRes = await fetch(streamUrl);
+  // Step 4: Parse sub-playlist with actual EXTINF durations for accurate seeking (10s timeout)
+  const subCtrl = withTimeout(10000);
+  const subRes = await fetch(streamUrl, { signal: subCtrl.signal })
+    .catch((err) => { throw new Error(`Twitch sub-playlist fetch timed out: ${err.message}`); });
   if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
   const subText = await subRes.text();
   const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
