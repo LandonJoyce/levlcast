@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { scoreColorVar } from "@/lib/score-utils";
 export { scoreColorVar, scoreColorHex, rankFor } from "@/lib/score-utils";
 export type { RankInfo } from "@/lib/score-utils";
 
