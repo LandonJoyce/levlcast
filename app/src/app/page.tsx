@@ -62,7 +62,7 @@ const AppleIcon = () => (
   </svg>
 );
 
-/* ─── Arc Gauge — mirrors the real ArcGauge in coach-report-card.tsx ─── */
+/* ─── Arc Gauge — kept for any remaining callers ─── */
 function ArcGauge({ score, size = 180 }: { score: number; size?: number }) {
   const R = 70;
   const cx = 80;
@@ -101,223 +101,237 @@ function ArcGauge({ score, size = 180 }: { score: number; size?: number }) {
   );
 }
 
-/* ─── Pill helpers (matches real coach-report-card.tsx pills) ─── */
-function Pill({ tone, children }: { tone: "green" | "yellow" | "red" | "neutral"; children: React.ReactNode }) {
-  const cls = {
-    green:   { bg: "rgba(74,222,128,0.10)",  bd: "rgba(74,222,128,0.22)",  fg: "#86efac" },
-    yellow:  { bg: "rgba(250,204,21,0.10)",  bd: "rgba(250,204,21,0.22)",  fg: "#fde68a" },
-    red:     { bg: "rgba(248,113,113,0.10)", bd: "rgba(248,113,113,0.22)", fg: "#fca5a5" },
-    neutral: { bg: "rgba(255,255,255,0.04)", bd: "rgba(255,255,255,0.10)", fg: "rgba(255,255,255,0.55)" },
-  }[tone];
+/* ─── Static circular dial for landing page mocks ─── */
+function StaticDial({ score, size = 200 }: { score: number; size?: number }) {
+  const color = score >= 66 ? "#A3E635" : score >= 33 ? "#F59E0B" : "#F87171";
+  const rest = 100 - score;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 999, background: cls.bg, border: `1px solid ${cls.bd}`, color: cls.fg }}>
-      {children}
-    </span>
-  );
-}
-
-/* ─── Hero mock — compact "Stream Debrief" matching the real card ─── */
-function HeroMock() {
-  return (
-    <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 30px 80px -30px rgba(0,0,0,0.7)" }}>
-      {/* Header strip */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)" }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: "0.01em" }}>Stream Debrief</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "rgba(139,92,246,0.10)", border: "1px solid rgba(167,139,250,0.22)", color: "#c4b5fd" }}>
-          ★ Consistent Creator
-        </span>
-      </div>
-
-      {/* Score hero */}
-      <div style={{ padding: "20px 18px 16px", position: "relative", background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(250,204,21,0.06) 0%, transparent 70%)" }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <ArcGauge score={67} size={170} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4, marginBottom: 14 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#4ade80" }}>▲ +8 from last stream</span>
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
-          <Pill tone="green">Building Energy</Pill>
-          <Pill tone="green">Low Retention Risk</Pill>
-          <Pill tone="green">Strong Open</Pill>
-          <Pill tone="yellow">Mixed Close</Pill>
-        </div>
-      </div>
-
-      {/* Stream story */}
-      <div style={{ padding: "0 18px 14px" }}>
-        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.5)", fontStyle: "italic", lineHeight: 1.5, margin: 0 }}>
-          Three solid hours on Elden Ring, anchored by a clean Malenia clear at 2:55. You opened hot, dipped at the 1:40 mark when chat went quiet, then recovered.
-        </p>
-      </div>
-
-      {/* #1 Priority callout */}
-      <div style={{ margin: "0 18px 18px", padding: "14px 16px", borderRadius: 12, background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.06) 60%, rgba(10,9,20,0) 100%)", border: "1px solid rgba(139,92,246,0.28)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 9, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.18em", textTransform: "uppercase" }}>#1 Priority</span>
-        </div>
-        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", fontWeight: 500, lineHeight: 1.45, margin: 0 }}>
-          Lead the room when chat goes quiet — your job is to set the tempo, not match it. Narrate every clutch attempt out loud.
-        </p>
+    <div style={{ position: "relative", width: size, height: size, margin: "0 auto" }}>
+      <svg viewBox="0 0 200 200" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
+        <g transform="translate(100 100)">
+          <line x1="0" y1="-92" x2="0" y2="-84" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="92" y1="0" x2="84" y2="0" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="0" y1="92" x2="0" y2="84" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="-92" y1="0" x2="-84" y2="0" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="65.05" y1="-65.05" x2="60.81" y2="-60.81" stroke="#4D5876" strokeWidth="1" opacity="0.6" />
+          <line x1="65.05" y1="65.05" x2="60.81" y2="60.81" stroke="#4D5876" strokeWidth="1" opacity="0.6" />
+          <line x1="-65.05" y1="65.05" x2="-60.81" y2="60.81" stroke="#4D5876" strokeWidth="1" opacity="0.6" />
+          <line x1="-65.05" y1="-65.05" x2="-60.81" y2="-60.81" stroke="#4D5876" strokeWidth="1" opacity="0.6" />
+        </g>
+        <circle cx="100" cy="100" r="86" transform="rotate(-90 100 100)" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" strokeDasharray="4 5" strokeLinecap="round" pathLength={100} />
+        <circle cx="100" cy="100" r="86" transform="rotate(-90 100 100)" fill="none" stroke={color} strokeWidth="3" strokeDasharray="7 5" strokeLinecap="round" pathLength={100} strokeDashoffset={rest} style={{ filter: `drop-shadow(0 0 8px ${color}60)` }} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color }}>
+        <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: Math.round(size * 0.46), lineHeight: 1, letterSpacing: "-0.06em" }}>{score}</span>
+        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.12em", marginTop: -4 }}>/ 100</span>
       </div>
     </div>
   );
 }
 
-/* ─── Big report visual (used in §04) — full Stream Debrief layout ─── */
-function ReportVisual() {
+/* ─── Hero mock — compact editorial style matching new coach-report-card ─── */
+function HeroMock() {
   return (
-    <div style={{ borderRadius: 22, overflow: "hidden", background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 40px 80px -40px rgba(0,0,0,0.6)" }}>
-      {/* Header strip */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)" }}>
-        <span style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.01em" }}>Stream Debrief</span>
-        <div style={{ display: "flex", gap: 6 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: "rgba(139,92,246,0.10)", border: "1px solid rgba(167,139,250,0.22)", color: "#c4b5fd" }}>★ Consistent Creator</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: "rgba(249,115,22,0.10)", border: "1px solid rgba(251,146,60,0.22)", color: "#fdba74" }}>🔥 4 streak</span>
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "#0C111C", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 30px 80px -30px rgba(0,0,0,0.7)", backgroundImage: "radial-gradient(700px 400px at 80% -60px, rgba(34,211,238,0.06), transparent 60%)", fontFamily: "system-ui, sans-serif", color: "#ECF1FA", WebkitFontSmoothing: "antialiased" }}>
+      {/* Masthead */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: "16px 20px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 3 }}>Stream Debrief</div>
+          <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 22, lineHeight: 1, color: "#ECF1FA" }}>Gaming <em style={{ fontStyle: "italic", color: "#22D3EE" }}>Coaching</em></div>
         </div>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", border: "1px solid rgba(34,211,238,0.32)", borderRadius: 4, background: "rgba(34,211,238,0.06)", color: "#22D3EE", fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }}>
+          ◆ Consistent Creator
+        </span>
       </div>
 
-      <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 18 }}>
-        {/* Score hero card */}
-        <div style={{ borderRadius: 18, overflow: "hidden", position: "relative", padding: "20px 24px 18px", background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(250,204,21,0.08) 0%, transparent 70%), rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
-            <ArcGauge score={67} size={200} />
+      {/* Dial + story */}
+      <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 16, padding: "16px 20px" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 8, textAlign: "left" }}>Score</div>
+          <StaticDial score={67} size={160} />
+          <div style={{ marginTop: 8, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 15, color: "#A3E635", fontStyle: "italic" }}>↗ +8 from last</div>
+          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
+            {[["Building Energy","#A3E635","rgba(163,230,53,0.4)"],["Strong Open","#A3E635","rgba(163,230,53,0.4)"],["Low Risk","#A3E635","rgba(163,230,53,0.4)"]].map(([l,c,b]) => (
+              <span key={l} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 7px", borderRadius: 999, fontSize: 10, border: `1px solid ${b}`, color: c }}>
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{l}
+              </span>
+            ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 16 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#4ade80" }}>▲ +8 from last stream</span>
+        </div>
+        <div>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 8 }}>— The Story</div>
+          <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 15, lineHeight: 1.45, color: "#ECF1FA", margin: "0 0 14px" }}>
+            Three solid hours on Elden Ring. You opened hot, dipped at 1:40 when chat went quiet, then recovered for your sharpest closing stretch of the week.
+          </p>
+          {/* #1 Fix row */}
+          <div style={{ paddingLeft: 12, borderLeft: "2px solid #F87171", marginTop: 10 }}>
+            <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, letterSpacing: "0.28em", textTransform: "uppercase", color: "#F87171", marginBottom: 4 }}>
+              <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 16, color: "#F87171", marginRight: 6 }}>ii.</span>The #1 Fix
+            </div>
+            <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 14, lineHeight: 1.5, color: "#ECF1FA", margin: 0 }}>
+              Narrate every clutch attempt out loud — set the tempo, don't match it.
+            </p>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-            <Pill tone="green">Building Energy</Pill>
-            <Pill tone="green">Low Retention Risk</Pill>
-            <Pill tone="green">Strong Open</Pill>
-            <Pill tone="yellow">Mixed Close</Pill>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Full report visual (used in §04) — editorial style matching new coach-report-card ─── */
+function ReportVisual() {
+  const serif = '"Instrument Serif", Georgia, serif';
+  const mono  = '"JetBrains Mono", monospace';
+  const ink   = "#ECF1FA";
+  const ink2  = "#A6B3C9";
+  const ink3  = "#6F7C95";
+  const ink4  = "#4D5876";
+  const line  = "rgba(255,255,255,0.07)";
+  const line2 = "rgba(255,255,255,0.12)";
+  const lime  = "#A3E635";
+  const amber = "#F59E0B";
+  const rose  = "#F87171";
+  const cyan  = "#22D3EE";
+
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "#0C111C", border: `1px solid ${line}`, boxShadow: "0 40px 80px -40px rgba(0,0,0,0.6)", color: ink, WebkitFontSmoothing: "antialiased", backgroundImage: "radial-gradient(900px 500px at 80% -100px, rgba(34,211,238,0.06), transparent 60%)" }}>
+      <div style={{ padding: "28px 24px 40px" }}>
+
+        {/* Masthead */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, paddingBottom: 14, borderBottom: `1px solid ${line}`, marginBottom: 24, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: ink3, marginBottom: 3 }}>Stream Debrief</div>
+            <div style={{ fontFamily: serif, fontSize: 28, lineHeight: 1, color: ink }}>Gaming <em style={{ fontStyle: "italic", color: cyan }}>Coaching</em></div>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ padding: "3px 8px", border: `1px solid rgba(34,211,238,0.32)`, borderRadius: 4, background: "rgba(34,211,238,0.06)", color: cyan, fontSize: 10, fontFamily: mono }}>◆ Consistent Creator</span>
+            <span style={{ padding: "3px 8px", border: `1px solid rgba(245,158,11,0.32)`, borderRadius: 4, background: "rgba(245,158,11,0.06)", color: amber, fontSize: 10, fontFamily: mono }}>▲ 4-stream streak</span>
           </div>
         </div>
 
-        {/* Stream story */}
-        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", fontStyle: "italic", lineHeight: 1.6, margin: "0 4px" }}>
-          Three solid hours on Elden Ring, anchored by a clean Malenia clear at 2:55. You opened hot, dipped at the 1:40 mark when chat went quiet, then recovered for one of your sharpest closing stretches of the week.
-        </p>
-
-        {/* Shareable Win */}
-        <div style={{ borderRadius: 14, padding: 16, display: "flex", alignItems: "flex-start", gap: 12, background: "linear-gradient(135deg, rgba(250,204,21,0.08) 0%, rgba(234,179,8,0.03) 60%, transparent 100%)", border: "1px solid rgba(250,204,21,0.22)" }}>
-          <span style={{ fontSize: 18, lineHeight: 1, marginTop: 2 }}>🏆</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 9.5, fontWeight: 800, color: "#fbbf24", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6, margin: 0 }}>Worth Sharing</p>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#fde68a", lineHeight: 1.3, margin: "4px 0 4px" }}>Commentary density hit 165 wpm in your clutch section</p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, margin: 0 }}>Elite-tier delivery during the Malenia phase 2 attempt — your sharpest stretch of the week.</p>
+        {/* Hero: dial + story */}
+        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 32, alignItems: "start", marginBottom: 28 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 10, textAlign: "left" }}>Performance Score</div>
+            <StaticDial score={67} size={220} />
+            <div style={{ marginTop: 12, fontFamily: serif, fontSize: 17, color: lime, fontStyle: "italic" }}>↗ +8 from last stream</div>
+            <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center" }}>
+              {([["Building Energy", lime, "rgba(163,230,53,0.4)"], ["Low Risk", lime, "rgba(163,230,53,0.4)"], ["Strong Open", lime, "rgba(163,230,53,0.4)"], ["Mixed Close", amber, "rgba(245,158,11,0.4)"]] as [string,string,string][]).map(([l, c, b]) => (
+                <span key={l} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999, fontSize: 10, border: `1px solid ${b}`, color: c }}>
+                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{l}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{ paddingTop: 4 }}>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 20, height: 1, background: ink4, display: "inline-block" }} />The Story of This Stream
+            </div>
+            <p style={{ fontFamily: serif, fontSize: 18, lineHeight: 1.45, color: ink, margin: "0 0 20px" }}>
+              Three solid hours on Elden Ring, anchored by a clean Malenia clear at 2:55. You opened hot, dipped at the 1:40 mark when chat went quiet, then recovered for one of your sharpest closing stretches of the week.
+            </p>
           </div>
         </div>
 
-        {/* Opening + Closing notes */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div style={{ paddingLeft: 14, borderLeft: "2px solid rgba(255,255,255,0.08)" }}>
-            <p style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4, margin: 0 }}>Opening</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.55, margin: "4px 0 0" }}>Came in with energy and a clear hook within the first 90 seconds. Strong start.</p>
+        {/* Opening row */}
+        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 20, padding: "16px 0", borderBottom: `1px dashed ${line2}` }}>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3 }}>
+            <span style={{ fontFamily: serif, color: cyan, fontSize: 22, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>i.</span>Opening
           </div>
-          <div style={{ paddingLeft: 14, borderLeft: "2px solid rgba(255,255,255,0.08)" }}>
-            <p style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4, margin: 0 }}>Closing</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.55, margin: "4px 0 0" }}>Best content arrived in the final 5 minutes — front-load that next time.</p>
-          </div>
+          <p style={{ fontFamily: serif, fontSize: 16, lineHeight: 1.5, color: ink, margin: 0 }}>Came in with energy and a clear hook within the first 90 seconds. Strong start — energy held through the early grind.</p>
         </div>
 
-        {/* #1 Priority */}
-        <div style={{ borderRadius: 14, padding: 18, position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.06) 60%, transparent 100%)", border: "1px solid rgba(139,92,246,0.28)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.18em", textTransform: "uppercase" }}>#1 Priority</span>
+        {/* #1 Fix row */}
+        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 20, padding: "16px 20px 16px 16px", margin: "0 -16px", borderBottom: `1px dashed ${line2}`, borderLeft: `2px solid ${rose}`, background: "linear-gradient(180deg, rgba(248,113,113,0.04), transparent 80%)" }}>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: rose }}>
+            <span style={{ fontFamily: serif, color: rose, fontSize: 22, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>ii.</span>The #1 Fix
           </div>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.92)", fontWeight: 500, lineHeight: 1.5, margin: 0 }}>
+          <p style={{ fontFamily: serif, fontSize: 16, lineHeight: 1.5, color: ink, margin: 0 }}>
             Lead the room when chat goes quiet — your job is to set the tempo, not match it. Narrate every clutch attempt out loud.
           </p>
         </div>
 
-        {/* Sub-score breakdown */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-          {[
-            { k: "energy",      v: 74, c: "#4ade80" },
-            { k: "engagement",  v: 61, c: "#facc15" },
-            { k: "consistency", v: 70, c: "#4ade80" },
-            { k: "content",     v: 63, c: "#facc15" },
-          ].map(s => (
-            <div key={s.k} style={{ borderRadius: 12, padding: "12px 12px 10px", textAlign: "center", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1, color: s.c, marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>{s.v}</div>
-              <div style={{ height: 3, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden", marginBottom: 6 }}>
-                <div style={{ height: "100%", width: `${s.v}%`, background: s.c, borderRadius: 99 }} />
+        {/* Sub-scores */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", margin: "28px 0 24px", borderTop: `1px solid ${line}`, borderBottom: `1px solid ${line}`, padding: "16px 0" }}>
+          {([["energy", 74, lime], ["engagement", 61, amber], ["consistency", 70, lime], ["content", 63, amber]] as [string, number, string][]).map(([k, v, c], i, arr) => (
+            <div key={k} style={{ padding: i === 0 ? "0 16px 0 0" : i === arr.length - 1 ? "0 0 0 16px" : "0 16px", borderRight: i < arr.length - 1 ? `1px solid ${line}` : "none" }}>
+              <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 6 }}>{k}</div>
+              <div style={{ fontFamily: serif, fontSize: 38, lineHeight: 0.9, letterSpacing: "-0.04em", marginBottom: 7, color: c }}>
+                {v}<span style={{ fontFamily: mono, fontSize: 10, color: ink4, letterSpacing: "0.1em" }}>/100</span>
               </div>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", textTransform: "capitalize", letterSpacing: "0.04em" }}>{s.k}</div>
+              <div style={{ height: 4, borderRadius: 3, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${v}%`, background: c, borderRadius: 3 }} />
+              </div>
             </div>
           ))}
         </div>
 
         {/* Best Moment */}
-        <div style={{ borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 14, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: "2px solid rgba(139,92,246,0.5)" }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 9.5, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4, margin: 0 }}>Best Moment</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, margin: "4px 0 0" }}>The Malenia phase 2 clear — clean execution, voice never cracked, and the reaction at the end was completely unscripted. That&apos;s the clip of the night.</p>
+        <div style={{ margin: "0 0 24px", padding: "18px 0 18px 24px", position: "relative", borderLeft: `2px solid ${lime}` }}>
+          <div style={{ position: "absolute", left: 12, top: 2, fontFamily: serif, fontSize: 64, lineHeight: 1, color: lime, opacity: 0.35, fontStyle: "italic", userSelect: "none" }}>"</div>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: lime, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+            Best Moment <span style={{ color: ink3, marginLeft: "auto", fontSize: 11, textTransform: "none", letterSpacing: "0.06em" }}>2:55:31</span>
           </div>
-          <span style={{ fontSize: 13, fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, color: "rgba(139,92,246,0.6)", flexShrink: 0 }}>2:55:31</span>
+          <p style={{ fontFamily: serif, fontSize: 16, lineHeight: 1.5, color: ink, margin: 0 }}>
+            The Malenia phase 2 clear — clean execution, voice never cracked, and the reaction at the end was completely unscripted. That&apos;s the clip of the night.
+          </p>
         </div>
 
-        {/* What Worked / Fix for Next */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div style={{ borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(74,222,128,0.12)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "1px solid rgba(74,222,128,0.08)", background: "rgba(74,222,128,0.05)" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#4ade80", letterSpacing: "0.18em", textTransform: "uppercase" }}>✓ What Worked</span>
-            </div>
-            <div>
-              {[
-                { l: "Clutch Read",   b: "Mechanical breakdown of stun trap interaction.", t: "2:11" },
-                { l: "Energy Open",   b: "First 10 minutes were full-presence.",            t: "0:08" },
-              ].map((s) => (
-                <div key={s.l} style={{ padding: "10px 14px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: "#86efac", lineHeight: 1.3, margin: 0 }}>{s.l}</p>
-                    <span style={{ fontSize: 10, fontFamily: "var(--font-geist-mono), monospace", color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>{s.t}</span>
-                  </div>
-                  <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginTop: 2, margin: "2px 0 0" }}>{s.b}</p>
+        {/* What worked / Fix */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 36, marginBottom: 28, position: "relative" }}>
+          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: line, transform: "translateX(-50%)" }} />
+          <div>
+            <div style={{ fontFamily: serif, fontSize: 22, marginBottom: 4, color: ink }}>What <em style={{ fontStyle: "italic", color: lime }}>worked.</em></div>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Keep doing these</div>
+            {[["01", "Clutch Read", "Mechanical breakdown of the stun trap interaction at 2:11 — exactly what viewers want to learn.", "2:11"], ["02", "Energy Open", "First 10 minutes were full-presence and set the tone for the whole session.", "0:08"]].map(([n, l, b, t]) => (
+              <div key={n} style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 14, color: ink4 }}>{n}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: lime, flex: 1 }}>{l}</span>
+                  <span style={{ fontFamily: mono, fontSize: 10, color: ink3 }}>{t}</span>
                 </div>
-              ))}
-            </div>
+                <p style={{ fontSize: 13, color: ink2, lineHeight: 1.6, paddingLeft: 28, margin: 0 }}>{b}</p>
+              </div>
+            ))}
           </div>
-          <div style={{ borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(250,204,21,0.12)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "1px solid rgba(250,204,21,0.08)", background: "rgba(250,204,21,0.04)" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#facc15", letterSpacing: "0.18em", textTransform: "uppercase" }}>! Fix For Next</span>
-            </div>
-            <div>
-              {[
-                { l: "Silent Grind",   b: "84% of stream was silent during active match.", t: "1:42" },
-                { l: "No Take",        b: "Recognized opponents but never gave a take.",    t: "2:25" },
-              ].map((s) => (
-                <div key={s.l} style={{ padding: "10px 14px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: "#fde68a", lineHeight: 1.3, margin: 0 }}>{s.l}</p>
-                    <span style={{ fontSize: 10, fontFamily: "var(--font-geist-mono), monospace", color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>{s.t}</span>
-                  </div>
-                  <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginTop: 2, margin: "2px 0 0" }}>{s.b}</p>
+          <div>
+            <div style={{ fontFamily: serif, fontSize: 22, marginBottom: 4, color: ink }}>What to <em style={{ fontStyle: "italic", color: amber }}>fix.</em></div>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Change these next time</div>
+            {[["01", "Silent Grind", "84% of the stream was silent during active match — chat had nothing to react to.", "1:42"], ["02", "No Take", "Recognized opponents but never gave a strong opinion — give viewers something to agree or argue with.", "2:25"]].map(([n, l, b, t]) => (
+              <div key={n} style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 14, color: ink4 }}>{n}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: amber, flex: 1 }}>{l}</span>
+                  <span style={{ fontFamily: mono, fontSize: 10, color: ink3 }}>{t}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Your Missions */}
-        <div style={{ borderRadius: 12, padding: "16px 20px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.18em", textTransform: "uppercase" }}>◎ Your Missions</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {[
-              "Narrate every clutch attempt out loud — set the tempo, don't match it.",
-              "Open with one specific take per match — who they remind you of, what makes them dangerous.",
-              "Front-load your tactical breakdowns — best content shouldn't arrive at the sign-off.",
-            ].map((g, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, marginTop: 1, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.22)", color: "rgba(167,139,250,0.8)" }}>{i + 1}</div>
-                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.68)", lineHeight: 1.55, flex: 1 }}>{g}</span>
+                <p style={{ fontSize: 13, color: ink2, lineHeight: 1.6, paddingLeft: 28, margin: 0 }}>{b}</p>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Missions */}
+        <div style={{ paddingTop: 20, borderTop: `1px solid ${line}` }}>
+          <div style={{ fontFamily: serif, fontSize: 22, marginBottom: 4, color: ink }}>Missions for <em style={{ fontStyle: "italic", color: cyan }}>next stream.</em></div>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Click to mark as committed</div>
+          {(["Narrate every clutch attempt out loud — set the tempo, don't match it.", "Open with one specific take per match — who they remind you of, what makes them dangerous.", "Front-load your tactical breakdowns — best content shouldn't arrive at the sign-off."] as string[]).map((g, i, arr) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "40px 1fr 24px", gap: 10, alignItems: "start", padding: "11px 0", borderBottom: i < arr.length - 1 ? `1px dashed ${line2}` : "none" }}>
+              <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 26, color: cyan, letterSpacing: "-0.03em", lineHeight: 0.9 }}>{["i.", "ii.", "iii."][i]}</span>
+              <p style={{ fontFamily: serif, fontSize: 15, lineHeight: 1.45, color: ink, margin: 0 }}>{g}</p>
+              <div style={{ width: 20, height: 20, border: `1.5px solid ${ink4}`, borderRadius: 4, marginTop: 2 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Signoff */}
+        <div style={{ marginTop: 32, paddingTop: 18, borderTop: `1px solid ${line}`, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 15, color: ink2, lineHeight: 1.5, margin: 0 }}>Read once.<br />Stream once.<br /><strong style={{ color: ink, fontWeight: 400 }}>See you next time.</strong></p>
+            <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 24, color: ink2, letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-3px)", lineHeight: 1, marginTop: 10, display: "inline-block" }}>— LevlCast</p>
+          </div>
+          <div style={{ textAlign: "right", fontFamily: mono, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: ink4, lineHeight: 1.8 }}>Coach Report<br />Stream Debrief</div>
+        </div>
+
       </div>
     </div>
   );
@@ -359,6 +373,11 @@ const faqItems = [
 export default function LandingPage() {
   return (
     <div className="landing-v2">
+      {/* Fonts for coach report mocks */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       {/* Urgency bar */}
       <div className="urgency-bar">
         <span className="pulse"></span>
