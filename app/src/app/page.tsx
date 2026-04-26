@@ -435,7 +435,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div style={{ borderRadius: 16, boxShadow: "0 0 0 1px rgba(255,255,255,0.1), 0 30px 80px -20px rgba(0,0,0,0.8)", background: "#000", lineHeight: 0, overflow: "hidden", width: "100%", maxWidth: 720, marginLeft: "auto" }}>
+            <div style={{ borderRadius: 16, boxShadow: "0 0 0 1px rgba(255,255,255,0.1), 0 30px 80px -20px rgba(0,0,0,0.8)", background: "#000", lineHeight: 0, overflow: "hidden", width: "100%" }}>
               <video
                 autoPlay
                 muted
