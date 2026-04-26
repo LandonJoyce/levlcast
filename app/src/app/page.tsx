@@ -393,18 +393,7 @@ export default function LandingPage() {
           <div className="hero-grid">
               {/* Text block — centered */}
               <div style={{ maxWidth: 680 }}>
-                <div className="founders-tag" style={{ justifyContent: "center" }}>
-                  <div className="ft-counter">
-                    <span className="ft-num">$9.99</span>
-                    <span className="ft-spots">per month</span>
-                  </div>
-                  <div className="ft-text">
-                    <div className="ft-label">Founding Member pricing</div>
-                    <div className="ft-sub">Locked in for life · No card</div>
-                  </div>
-                  <div className="ft-bar"><span style={{ width: "100%" }}></span></div>
-                </div>
-                <h1 style={{ marginTop: 26 }}>
+                <h1 style={{ marginTop: 0 }}>
                   Your Personal<br/>
                   <span className="accent">Stream</span> <span className="accent-2">Manager.</span>
                 </h1>
