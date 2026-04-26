@@ -19,7 +19,6 @@ export default function NavBar() {
       <div className="max-w-[1080px] mx-auto px-6 h-16 flex items-center justify-between gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-          <img src="/logo-mark.png" alt="" className="h-11 w-11" />
           <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
         </Link>
 

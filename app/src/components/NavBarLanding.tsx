@@ -18,7 +18,6 @@ export default function NavBarLanding() {
     <div className="nav-wrap">
       <div className="container nav">
         <Link href="/" className="logo">
-          <span className="logo-mark"></span>
           <span>LevlCast</span>
         </Link>
 

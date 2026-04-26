@@ -7,7 +7,6 @@ export default function FooterLanding() {
         <div className="foot">
           <div>
             <Link href="/" className="logo" style={{ marginBottom: 14 }}>
-              <span className="logo-mark"></span>
               <span>LevlCast</span>
             </Link>
             <p style={{ maxWidth: 320, fontSize: 14, color: "var(--ink-3)", marginTop: 10 }}>
