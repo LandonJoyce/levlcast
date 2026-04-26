@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Scissors, Loader2, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UpgradeModal } from "./upgrade-modal";
 
@@ -24,28 +23,19 @@ export function GenerateClipButton({
   async function handleGenerate() {
     setGenerating(true);
     setError(null);
-
     try {
       const res = await fetch("/api/clips/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vodId, peakIndex }),
       });
-
       const json = await res.json();
-
       if (res.status === 403 && json.upgrade) {
         setUpgradeReason(json.message ?? "Upgrade to Pro to continue.");
         setUpgradeOpen(true);
         return;
       }
-
-      if (!res.ok) {
-        setError(json.error || "Failed");
-        return;
-      }
-
-      // Clip is now queued as a background job — refresh to show "processing" state
+      if (!res.ok) { setError(json.error || "Failed"); return; }
       setDone(true);
       router.refresh();
     } catch {
@@ -56,46 +46,25 @@ export function GenerateClipButton({
   }
 
   if (done) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-accent-light font-medium">
-        <Loader2 size={13} className="animate-spin" />
-        Processing — check back in a minute
-      </span>
-    );
+    return <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Queued — generating…</span>;
   }
 
-  if (hasProcessing && !generating && !done) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted cursor-not-allowed opacity-60">
-        <Loader2 size={13} className="animate-spin" />
-        Wait for current clip to finish
-      </span>
-    );
+  if (hasProcessing && !generating) {
+    return <span className="chip" style={{ width: "100%", justifyContent: "center", opacity: 0.5 }}>Wait for current clip</span>;
   }
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="inline-flex items-center gap-1.5 bg-accent hover:opacity-85 disabled:opacity-50 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all duration-300 hover:-translate-y-px"
-        >
-          {generating ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <Scissors size={13} />
-          )}
-          {generating ? "Queuing..." : "Generate Clip"}
-        </button>
-        {error && <span className="text-xs text-red-400">{error}</span>}
-      </div>
-
-      <UpgradeModal
-        isOpen={upgradeOpen}
-        onClose={() => setUpgradeOpen(false)}
-        reason={upgradeReason}
-      />
+      <button
+        onClick={handleGenerate}
+        disabled={generating}
+        className="btn btn-blue"
+        style={{ width: "100%", padding: "7px 0", fontSize: 12, justifyContent: "center", opacity: generating ? 0.6 : 1 }}
+      >
+        {generating ? "Queuing…" : "Generate Clip"}
+      </button>
+      {error && <span className="mono" style={{ fontSize: 11, color: "var(--danger)", marginTop: 4, display: "block" }}>{error}</span>}
+      <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={upgradeReason} />
     </>
   );
 }
