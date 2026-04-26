@@ -194,6 +194,14 @@ const TYPE_LABELS: Record<string, string> = {
   gaming: "Gaming", just_chatting: "Just Chatting", irl: "IRL", variety: "Variety", educational: "Educational",
 };
 
+const ANTI_PATTERN_LABELS: Record<string, string> = {
+  viewer_count_apology: "Viewer Count Apology",
+  follow_begging: "Follow Begging",
+  lurker_shaming: "Lurker Shaming",
+  pre_stream_drain: "Pre-Stream Drain",
+  self_defeat: "Self-Defeat Talk",
+};
+
 const ROMAN = ["i.", "ii.", "iii.", "iv.", "v."];
 
 export function CoachReportCard({
@@ -438,8 +446,28 @@ export function CoachReportCard({
                   Score: {report.overall_score}/100
                 </p>
               )}
+              {report.community_note && (
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 15, lineHeight: 1.55, color: "#A6B3C9", marginTop: 16, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.1)" }}>
+                  {report.community_note}
+                </p>
+              )}
             </div>
           </section>
+
+          {/* ── SHAREABLE WIN ── */}
+          {report.shareable_win && (
+            <div style={{ margin: "0 0 28px", padding: "20px 24px", borderRadius: 10, background: "linear-gradient(135deg, rgba(163,230,53,0.07), rgba(163,230,53,0.02))", border: "1px solid rgba(163,230,53,0.22)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.36em", textTransform: "uppercase", color: "#A3E635", marginBottom: 10 }}>
+                Win of the Session
+              </div>
+              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.1, color: "#ECF1FA", letterSpacing: "-0.01em", marginBottom: 8 }}>
+                {report.shareable_win.stat}
+              </div>
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.5, margin: 0 }}>
+                {report.shareable_win.context}
+              </p>
+            </div>
+          )}
 
           {/* ── OPENING ── */}
           {report.cold_open?.note && (
@@ -454,11 +482,24 @@ export function CoachReportCard({
             </div>
           )}
 
+          {/* ── CLOSING ── */}
+          {report.closing?.note && (
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 0", borderBottom: "1px dashed rgba(255,255,255,0.12)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", paddingTop: 4 }}>
+                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#22D3EE", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>ii.</span>
+                Closing
+              </div>
+              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
+                {report.closing.note}
+              </div>
+            </div>
+          )}
+
           {/* ── #1 PRIORITY ── GATED */}
           {isPro ? (
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 20px 20px 18px", margin: "0 -20px", borderBottom: "1px dashed rgba(255,255,255,0.12)", borderLeft: "2px solid #F87171", background: "linear-gradient(180deg, rgba(248,113,113,0.04), transparent 80%)" }}>
               <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#F87171", paddingTop: 4 }}>
-                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#F87171", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>ii.</span>
+                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#F87171", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>iii.</span>
                 The #1 Fix
               </div>
               <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
@@ -585,6 +626,31 @@ export function CoachReportCard({
                   <LockedSection label="Fix For Next" height={140} />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── GROWTH KILLERS ── */}
+          {isPro && (report.anti_patterns ?? []).length > 0 && (
+            <div style={{ margin: "0 0 36px", padding: "22px 24px", borderRadius: 10, background: "rgba(248,113,113,0.04)", border: "1px solid rgba(248,113,113,0.18)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.36em", textTransform: "uppercase", color: "#F87171", marginBottom: 20 }}>
+                Growth Killers Flagged
+              </div>
+              {(report.anti_patterns ?? []).map((ap, i, arr) => (
+                <div key={i} style={{ paddingBottom: i < arr.length - 1 ? 20 : 0, marginBottom: i < arr.length - 1 ? 20 : 0, borderBottom: i < arr.length - 1 ? "1px dashed rgba(248,113,113,0.18)" : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, color: "#F87171", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      {ANTI_PATTERN_LABELS[ap.type] ?? ap.type}
+                    </span>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95" }}>{ap.time}</span>
+                  </div>
+                  <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "rgba(248,113,113,0.75)", lineHeight: 1.55, margin: "0 0 10px", padding: "8px 14px", background: "rgba(248,113,113,0.07)", borderRadius: 6, borderLeft: "2px solid rgba(248,113,113,0.45)" }}>
+                    &ldquo;{ap.quote}&rdquo;
+                  </p>
+                  <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.55, margin: 0 }}>
+                    {ap.note}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 

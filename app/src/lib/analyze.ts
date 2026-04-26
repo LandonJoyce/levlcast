@@ -789,6 +789,26 @@ function buildWeightedTranscriptSamples(
     });
   }
 
+  // Also include the 1 best-energy middle block so Claude can write
+  // credible, specific strengths — not just problem-zone observations.
+  const worstBlockStarts = new Set(worstBlocks.map((b) => b.startSec));
+  const bestBlock = [...middleBlocks]
+    .filter((b) => !worstBlockStarts.has(b.startSec))
+    .sort((a, b) => b.avgWpm - a.avgWpm)[0];
+
+  if (bestBlock) {
+    const blockSegs = segments
+      .filter((s) => s.start >= bestBlock.startSec && s.start < bestBlock.startSec + BLOCK_SEC)
+      .slice(0, BLOCK_LINES);
+    if (blockSegs.length > 0) {
+      const wpm = calcWPM(blockSegs);
+      sections.push({
+        label: `PEAK ENERGY at ${formatTime(bestBlock.startSec)} (${wpm} wpm) — the stream's best stretch`,
+        text: blockSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+      });
+    }
+  }
+
   // If no middle blocks found (very short gap between opening and closing), add even middle
   if (worstBlocks.length === 0) {
     const midStart = Math.floor(segments.length * 0.4);
@@ -1042,10 +1062,10 @@ SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries
 - community_note: 1 sentence. What this community wants and whether they got it. No quoted words.
 - NEVER give generic advice. Every sentence must reference a specific timestamp or observable thing from this stream.
 - Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
-- Strengths: **2-3 word label** — what happened at MM:SS and how to replicate it. HARD LIMIT: 15 words. No quotes ever.
+- Strengths: **2-3 word label** — name the exact moment at MM:SS, what the streamer did, and the specific behavior to repeat next stream. Limit: 30 words. Be precise — vague praise like "good energy" is useless. No quotes ever.
 - Improvements: **2-3 word label** — what the problem was at MM:SS and the one-line fix. HARD LIMIT: 20 words. No quotes ever. If recurring, prefix with "RECURRING: ".
 - Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe". Storytelling: "No Callback", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
-- Best moment: describe what the streamer DID and why it worked — actions and energy, not reconstructed words.
+- Best moment: write this like a coach reviewing game tape — (1) what was building before this moment that set it up, (2) the exact thing the streamer did at that second and why it landed, (3) how to engineer this intentionally on the next stream. 3 sentences. Actions and energy only — no reconstructed words.
 - Recommendation: Lead with the insight, not a timestamp. 1-2 sentences. The single biggest lever. No quoted words.
 - Goals: concrete actions tied to specific problems from this stream. Not "engage more with chat."
 - Cold open: evaluate from when the streamer STARTS actively engaging, not from the stream's timestamp 0. Settling in (reading chat, audio check, BRB screen, intro music, sipping coffee) is NOT a cold open problem — it's normal stream behavior. Score "strong" if they came in with clear energy and a hook once they started; "average" if they warmed up naturally into the stream; "weak" ONLY if they took more than 8 minutes to actually engage, opened with visibly negative/flat energy once engaged, or ignored active chat during the opening. Silence before they started engaging is never "weak". Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
@@ -1104,7 +1124,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   ],
   "best_moment": {
     "time": "<MM:SS>",
-    "description": "<2 sentences: the actual story of what happened and exactly why it worked>"
+    "description": "<3 sentences: (1) what was building before this moment, (2) the exact thing the streamer did and why it landed, (3) how to engineer this on purpose next stream. No reconstructed words.>"
   },
   "recommendation": "<1-2 sentences. Reference this specific stream. Most impactful change. No buildup.>",
   "next_stream_goals": [
