@@ -74,7 +74,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .slice(0, 80)
       .trim() || "clip";
 
-    return new Response(outputBuffer, {
+    return new Response(new Uint8Array(outputBuffer), {
       headers: {
         "Content-Type": "video/mp4",
         "Content-Disposition": `attachment; filename="${safeName}-vertical.mp4"`,
