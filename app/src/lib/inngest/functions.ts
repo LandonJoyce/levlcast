@@ -10,7 +10,8 @@
  *   sendActivationNudge  — cron (hourly): email users who signed up 24h ago but never analyzed
  */
 
-import { inngest, NonRetriableError } from "inngest";
+import { NonRetriableError } from "inngest";
+import { inngest } from "./client";
 import { streamTwitchVodAudio, downloadTwitchVodVideo } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";

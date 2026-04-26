@@ -1,12 +1,12 @@
 /**
  * POST /api/clips/generate
  *
- * Validates the request, creates a "processing" clip record, then fires an
- * Inngest background job to do the actual work (download → FFmpeg → upload).
- * Returns immediately — the clip appears on the dashboard when Inngest finishes.
+ * Validates the request, creates a "processing" clip record, then runs the
+ * actual work (download → FFmpeg → upload) in the background using waitUntil.
+ * Returns immediately — no Inngest, no queue, no step retry backoff.
  *
  * RESPONSES:
- *   200 { clipId }                              — job queued
+ *   200 { clipId }                              — work started
  *   400 { error }                               — missing/invalid input
  *   401                                         — not authenticated
  *   403 { error, upgrade: true }                — clip limit hit
@@ -14,11 +14,16 @@
  *   409 { error }                               — clip already being generated
  */
 
+import { waitUntil } from "@vercel/functions";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
-import { inngest } from "@/lib/inngest/client";
 import { rateLimit } from "@/lib/rate-limit";
+import { downloadTwitchVodVideo } from "@/lib/twitch";
+import { cutClip } from "@/lib/ffmpeg";
+import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
+
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -43,7 +48,6 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  // Accept either peakIndex (normal flow) or startSeconds (regenerate from clip card)
   const { vodId, peakIndex, startSeconds } = body;
 
   if (!vodId || typeof vodId !== "string" || (peakIndex === undefined && startSeconds === undefined)) {
@@ -71,7 +75,6 @@ export async function POST(request: Request) {
   let peak: typeof peaks[0] | undefined;
 
   if (startSeconds !== undefined) {
-    // Regenerate path: match peak by start time (±3s tolerance)
     const target = Number(startSeconds);
     idx = peaks.findIndex((p) => Math.abs(p.start - target) <= 3);
     peak = idx >= 0 ? peaks[idx] : undefined;
@@ -85,7 +88,6 @@ export async function POST(request: Request) {
 
   if (!peak || idx < 0) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
 
-  // Validate peak timestamps — bad AI output could produce negatives or inverted times
   if (typeof peak.start !== "number" || typeof peak.end !== "number" ||
       peak.start < 0 || peak.end <= peak.start || peak.end - peak.start < 2) {
     return NextResponse.json({ error: "Peak has invalid timestamps" }, { status: 400 });
@@ -107,10 +109,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Clip already being generated" }, { status: 409 });
   }
 
-  // Insert a "processing" record immediately so the UI shows the clip in progress.
-  // Note: duration_seconds is a GENERATED column in Postgres (auto-computed from
-  // end_time_seconds - start_time_seconds), so we must NOT include it here.
-  // Postgres rejects any insert that writes to a generated column.
   const { data: clipRecord, error: insertError } = await admin
     .from("clips")
     .insert({
@@ -134,28 +132,71 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create clip record" }, { status: 500 });
   }
 
-  // Fire background job — Inngest handles the download, FFmpeg, and upload.
-  // Wrap in try/catch so a failed send doesn't leave the clip stuck in "processing".
+  // Run the actual work in the background — Vercel keeps this invocation alive
+  // until the promise resolves (up to maxDuration = 300s). Response is returned
+  // to the client immediately; the clip status updates in the DB when done.
+  waitUntil(runClipGeneration({
+    clipId: clipRecord.id,
+    twitchVodId: vod.twitch_vod_id,
+    userId: user.id,
+    vodId: vod.id,
+    peakIndex: idx,
+    peak,
+  }));
+
+  return NextResponse.json({ clipId: clipRecord.id });
+}
+
+async function runClipGeneration({
+  clipId,
+  twitchVodId,
+  userId,
+  vodId,
+  peakIndex,
+  peak,
+}: {
+  clipId: string;
+  twitchVodId: string;
+  userId: string;
+  vodId: string;
+  peakIndex: number;
+  peak: { title: string; start: number; end: number; score: number; category: string; reason: string; caption: string };
+}) {
+  const admin = createAdminClient();
+
   try {
-    await inngest.send({
-      name: "clip/generate",
-      data: {
-        clipId: clipRecord.id,
-        vodId: vod.id,
-        twitchVodId: vod.twitch_vod_id,
-        userId: user.id,
-        peakIndex: idx,
-        peak,
-      },
-    });
+    console.log(`[clip] Starting generation for "${peak.title}" (${peak.start}s–${peak.end}s)`);
+
+    const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end);
+
+    let buffer: Buffer;
+    try {
+      const adjustedStart = peak.start - download.segmentStartSeconds;
+      const adjustedEnd = peak.end - download.segmentStartSeconds;
+      console.log(`[clip] Cutting ${adjustedStart}s–${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
+      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
+      console.log(`[clip] Cut complete: ${buffer.length} bytes`);
+    } finally {
+      await download.cleanup();
+    }
+
+    const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
+    const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4");
+
+    const { error: updateError } = await admin.from("clips").update({
+      video_url: publicUrl,
+      status: "ready",
+    }).eq("id", clipId);
+
+    if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
+
+    console.log(`[clip] Done: "${peak.title}" → ${publicUrl}`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to queue clip job";
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`[clip] Failed for ${clipId}:`, message);
     await admin.from("clips").update({
       status: "failed",
-      failed_reason: `Could not queue clip generation: ${message}`,
-    }).eq("id", clipRecord.id);
-    return NextResponse.json({ error: "Failed to queue clip generation" }, { status: 500 });
+      failed_reason: message,
+    }).eq("id", clipId);
   }
-
-  return NextResponse.json({ clipId: clipRecord.id, queued: true });
 }
