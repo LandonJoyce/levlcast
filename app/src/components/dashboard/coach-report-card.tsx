@@ -2,106 +2,42 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import {
-  TrendingUp, TrendingDown, Minus, Activity, AlertCircle,
-  Target, Gamepad2, MessageCircle, Map, Shuffle, BookOpen,
-  Volume2, VolumeX, Pause, Play, Loader2, Flame, ShieldAlert, Clock,
-  CheckCircle2, Trophy, Lock,
-} from "lucide-react";
+import { Lock } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
-  gaming:        { label: "Gaming",        icon: <Gamepad2 size={11} />      },
-  just_chatting: { label: "Just Chatting", icon: <MessageCircle size={11} /> },
-  irl:           { label: "IRL",           icon: <Map size={11} />           },
-  variety:       { label: "Variety",       icon: <Shuffle size={11} />       },
-  educational:   { label: "Educational",   icon: <BookOpen size={11} />      },
-};
-
-function scoreHex(n: number) { return n >= 75 ? "#4ade80" : n >= 50 ? "#facc15" : "#f87171"; }
-function scoreCls(n: number) { return n >= 75 ? "text-green-400" : n >= 50 ? "text-yellow-400" : "text-red-400"; }
+function scoreColor(n: number) {
+  return n >= 66 ? "#A3E635" : n >= 33 ? "#F59E0B" : "#F87171";
+}
 
 function parseItem(raw: string) {
   const recurring = /^RECURRING:\s*/i.test(raw);
-  const cleaned   = raw.replace(/^RECURRING:\s*/i, "");
+  const cleaned = raw.replace(/^RECURRING:\s*/i, "");
   const m = cleaned.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
   if (!m) return { label: "", body: cleaned, ts: null, recurring };
   let body = m[2].trim();
   const tsM = body.match(/\s+at\s+(\d{1,2}:\d{2})\.?\s*$/i);
-  const ts   = tsM ? tsM[1] : null;
+  const ts = tsM ? tsM[1] : null;
   if (tsM) body = body.slice(0, tsM.index!).trim().replace(/\.$/, "");
   return { label: m[1], body, ts, recurring };
 }
 
-// ─── Arc Gauge ────────────────────────────────────────────────────────────────
+function parseTimeSecs(t: string): number {
+  const parts = t.split(":").map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+}
 
-function ArcGauge({ score, displayScore }: { score: number; displayScore: number }) {
-  const hex = scoreHex(displayScore);
-  const cls = scoreCls(displayScore);
+function fmtDur(s: number) {
+  if (s >= 60) return `${Math.floor(s / 60)}m${s % 60 > 0 ? ` ${s % 60}s` : ""}`;
+  return `${s}s`;
+}
 
-  // Arc: 220° sweep centered at bottom, r=70, viewBox 160×120
-  const R  = 70;
-  const cx = 80;
-  const cy = 90;
-  const startAngle = -200; // degrees from 3 o'clock (right)
-  const sweep      = 220;
-
-  function polar(angle: number, r: number = R) {
-    const rad = (angle * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-
-  const start = polar(startAngle);
-  const end   = polar(startAngle + sweep);
-  const progEnd = polar(startAngle + (displayScore / 100) * sweep);
-  const largeArc = sweep > 180 ? 1 : 0;
-  const progLarge = (displayScore / 100) * sweep > 180 ? 1 : 0;
-
-  return (
-    <div className="relative flex items-center justify-center" style={{ width: 200, height: 140 }}>
-      <svg width="200" height="140" viewBox="0 0 160 120" className="absolute inset-0">
-        {/* Track */}
-        <path
-          d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${largeArc} 1 ${end.x} ${end.y}`}
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-        {/* Progress */}
-        {displayScore > 0 && (
-          <path
-            d={`M ${start.x} ${start.y} A ${R} ${R} 0 ${progLarge} 1 ${progEnd.x} ${progEnd.y}`}
-            fill="none"
-            stroke={hex}
-            strokeWidth="6"
-            strokeLinecap="round"
-            style={{ filter: `drop-shadow(0 0 6px ${hex})` }}
-          />
-        )}
-        {/* Tick marks at 25/50/75 */}
-        {[25, 50, 75].map((v) => {
-          const a = startAngle + (v / 100) * sweep;
-          const inner = polar(a, R - 10);
-          const outer = polar(a, R - 4);
-          return (
-            <line key={v} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
-              stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />
-          );
-        })}
-      </svg>
-
-      {/* Center number */}
-      <div className="flex flex-col items-center" style={{ marginTop: 12 }}>
-        <div className="flex items-baseline gap-1">
-          <span className={`font-black tabular-nums leading-none ${cls}`} style={{ fontSize: 52 }}>{displayScore}</span>
-          <span className="text-xl font-bold text-white/20">/100</span>
-        </div>
-      </div>
-    </div>
-  );
+function fmtTimestamp(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
@@ -110,7 +46,8 @@ function buildScript(r: CoachReport, prev?: number) {
   const p = [`Stream score: ${r.overall_score} out of 100.`];
   if (prev !== undefined) {
     const d = r.overall_score - prev;
-    if (d > 0) p.push(`Up ${d} from last stream.`); else if (d < 0) p.push(`Down ${Math.abs(d)} from last stream.`);
+    if (d > 0) p.push(`Up ${d} from last stream.`);
+    else if (d < 0) p.push(`Down ${Math.abs(d)} from last stream.`);
   }
   p.push(`Number one priority. ${r.recommendation}`);
   (r.next_stream_goals ?? []).forEach((g, i) => p.push(`Mission ${i + 1}. ${g}`));
@@ -120,10 +57,10 @@ function buildScript(r: CoachReport, prev?: number) {
 type PS = "idle" | "loading" | "playing" | "paused";
 
 function useAudio(r: CoachReport, prev?: number) {
-  const [ps, setPs]  = useState<PS>("idle");
-  const audioRef     = useRef<HTMLAudioElement | null>(null);
-  const blobRef      = useRef<string | null>(null);
-  const speechRef    = useRef(false);
+  const [ps, setPs] = useState<PS>("idle");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const blobRef = useRef<string | null>(null);
+  const speechRef = useRef(false);
 
   useEffect(() => () => {
     audioRef.current?.pause();
@@ -133,8 +70,8 @@ function useAudio(r: CoachReport, prev?: number) {
 
   const play = useCallback(async () => {
     if (ps === "paused" && speechRef.current) { window.speechSynthesis?.resume(); setPs("playing"); return; }
-    if (ps === "paused" && audioRef.current)  { audioRef.current.play(); setPs("playing"); return; }
-    if (blobRef.current && audioRef.current)  { audioRef.current.currentTime = 0; audioRef.current.play(); setPs("playing"); return; }
+    if (ps === "paused" && audioRef.current) { audioRef.current.play(); setPs("playing"); return; }
+    if (blobRef.current && audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play(); setPs("playing"); return; }
     setPs("loading");
     try {
       const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: buildScript(r, prev) }) });
@@ -161,6 +98,7 @@ function useAudio(r: CoachReport, prev?: number) {
     if (speechRef.current) window.speechSynthesis?.pause(); else audioRef.current?.pause();
     setPs("paused");
   }, []);
+
   const stop = useCallback(() => {
     if (speechRef.current) { window.speechSynthesis?.cancel(); speechRef.current = false; }
     else if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
@@ -170,28 +108,22 @@ function useAudio(r: CoachReport, prev?: number) {
   return { ps, play, pause, stop };
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Locked Section ───────────────────────────────────────────────────────────
 
-// LockedSection — soft-blur teaser shown to Free users in place of gated coach-report sections.
-// Single CTA per section (not per item).
 function LockedSection({ label, height = 120 }: { label: string; height?: number }) {
   return (
-    <div className="rounded-xl overflow-hidden relative" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <div style={{ minHeight: height, padding: "20px 22px", filter: "blur(6px)", opacity: 0.55, pointerEvents: "none" }}>
-        <p className="text-xs font-mono uppercase tracking-widest text-white/40 mb-2">{label}</p>
-        <p className="text-sm text-white/60 leading-relaxed">
-          Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        </p>
+    <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div style={{ minHeight: height, padding: "18px 20px", filter: "blur(5px)", opacity: 0.4, pointerEvents: "none" }}>
+        <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, textTransform: "uppercase", letterSpacing: "0.28em", color: "#6F7C95", marginBottom: 8 }}>{label}</p>
+        <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, color: "#A6B3C9", lineHeight: 1.5 }}>Detailed coaching insight available. Includes specific timestamps and actionable guidance.</p>
       </div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center" style={{ background: "linear-gradient(180deg, rgba(10,9,20,0.55) 0%, rgba(10,9,20,0.85) 100%)" }}>
-        <div className="flex items-center gap-2">
-          <Lock size={14} className="text-violet-300" />
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-300">{label}</span>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: "0 20px", textAlign: "center", background: "linear-gradient(180deg, rgba(10,9,20,0.5) 0%, rgba(10,9,20,0.88) 100%)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <Lock size={12} style={{ color: "#a78bfa" }} />
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#a78bfa" }}>{label}</span>
         </div>
-        <p className="text-sm text-white/70 font-medium leading-snug max-w-[36ch]">
-          Pro unlocks the full report — every fix, every mission, every flagged moment.
-        </p>
-        <Link href="/dashboard/settings" className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg" style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd" }}>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.5, maxWidth: "34ch" }}>Pro unlocks the full report — every fix, every mission, every flagged moment.</p>
+        <Link href="/dashboard/settings" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 8, background: "rgba(139,92,246,0.18)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd", textDecoration: "none" }}>
           Unlock with Pro
         </Link>
       </div>
@@ -199,438 +131,614 @@ function LockedSection({ label, height = 120 }: { label: string; height?: number
   );
 }
 
-export function CoachReportCard({ report, previousScore, streak = 0, isPersonalBest = false, streamerTitle, isPro = true }: {
-  report: CoachReport; previousScore?: number; streak?: number; isPersonalBest?: boolean; streamerTitle?: string; isPro?: boolean;
+// ─── Circular Dial ────────────────────────────────────────────────────────────
+
+function CircularDial({ score, displayScore, draw }: { score: number; displayScore: number; draw: boolean }) {
+  const color = scoreColor(displayScore);
+  const rest = 100 - score;
+  return (
+    <div
+      className={`cr2-dial${draw ? " draw" : ""}`}
+      style={{ "--ring-rest": rest, "--ring-color": color } as React.CSSProperties}
+    >
+      <svg viewBox="0 0 200 200" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
+        <defs>
+          <filter id="cr2-wobble" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" />
+            <feDisplacementMap in="SourceGraphic" scale="1.6" />
+          </filter>
+        </defs>
+        <g transform="translate(100 100)">
+          <line x1="0" y1="-92" x2="0" y2="-84" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="65.05" y1="-65.05" x2="60.81" y2="-60.81" stroke="#4D5876" strokeWidth="1" opacity="0.7" />
+          <line x1="92" y1="0" x2="84" y2="0" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="65.05" y1="65.05" x2="60.81" y2="60.81" stroke="#4D5876" strokeWidth="1" opacity="0.7" />
+          <line x1="0" y1="92" x2="0" y2="84" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="-65.05" y1="65.05" x2="-60.81" y2="60.81" stroke="#4D5876" strokeWidth="1" opacity="0.7" />
+          <line x1="-92" y1="0" x2="-84" y2="0" stroke="#4D5876" strokeWidth="1.5" opacity="0.9" />
+          <line x1="-65.05" y1="-65.05" x2="-60.81" y2="-60.81" stroke="#4D5876" strokeWidth="1" opacity="0.7" />
+        </g>
+        <circle
+          cx="100" cy="100" r="86"
+          transform="rotate(-90 100 100)"
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth="1.5"
+          strokeDasharray="4 5"
+          strokeLinecap="round"
+          pathLength={100}
+        />
+        <circle
+          className="cr2-ring-fill"
+          cx="100" cy="100" r="86"
+          transform="rotate(-90 100 100)"
+          fill="none"
+          strokeWidth="3"
+          strokeDasharray="7 5"
+          strokeLinecap="round"
+          pathLength={100}
+          filter="url(#cr2-wobble)"
+        />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: '"Instrument Serif", Georgia, serif', color }}>
+        <span style={{ fontSize: 108, lineHeight: 1, letterSpacing: "-0.06em", fontVariantNumeric: "tabular-nums", transform: "translateY(-4px)" }}>{displayScore}</span>
+        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#6F7C95", letterSpacing: "0.12em", marginTop: -8 }}>/ 100</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+const TYPE_LABELS: Record<string, string> = {
+  gaming: "Gaming", just_chatting: "Just Chatting", irl: "IRL", variety: "Variety", educational: "Educational",
+};
+
+const ROMAN = ["i.", "ii.", "iii.", "iv.", "v."];
+
+export function CoachReportCard({
+  report, previousScore, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds,
+}: {
+  report: CoachReport;
+  previousScore?: number;
+  streak?: number;
+  isPersonalBest?: boolean;
+  streamerTitle?: string;
+  isPro?: boolean;
+  streamDurationSeconds?: number;
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
-  const tc    = report.streamer_type ? TYPE_CONFIG[report.streamer_type] : null;
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
 
   const [displayScore, setDisplayScore] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [draw, setDraw] = useState(false);
+  const [checked, setChecked] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const target = report.overall_score;
-    const duration = 1600;
-    let startTime: number | null = null;
+    const duration = 1800;
+    let start: number | null = null;
     let raf: number;
-
-    function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
-
+    function ease(t: number) { return 1 - Math.pow(1 - t, 3); }
     const timeout = setTimeout(() => {
+      setDraw(true);
       function tick(now: number) {
-        if (startTime === null) startTime = now;
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        setDisplayScore(Math.round(easeOutCubic(progress) * target));
-        if (progress < 1) { raf = requestAnimationFrame(tick); }
-        else { setRevealed(true); }
+        if (!start) start = now;
+        const t = Math.min(1, (now - start) / duration);
+        setDisplayScore(Math.round(ease(t) * target));
+        if (t < 1) raf = requestAnimationFrame(tick);
       }
       raf = requestAnimationFrame(tick);
-    }, 350);
-
+    }, 200);
     return () => { clearTimeout(timeout); cancelAnimationFrame(raf); };
   }, [report.overall_score]);
 
-  const hex = scoreHex(displayScore);
-
-  const energyInfo = {
-    label: report.energy_trend === "building" ? "Building Energy" : report.energy_trend === "declining" ? "Declining Energy" : report.energy_trend === "volatile" ? "Volatile Energy" : "Consistent Energy",
-    cls:   report.energy_trend === "building" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.energy_trend === "declining" ? "bg-red-500/10 border-red-500/20 text-red-300" : report.energy_trend === "volatile" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-white/[0.05] border-white/10 text-white/40",
-    icon:  report.energy_trend === "building" ? <TrendingUp size={11} /> : report.energy_trend === "declining" ? <TrendingDown size={11} /> : report.energy_trend === "volatile" ? <Activity size={11} /> : <Minus size={11} />,
-  };
-
-  const retInfo = {
-    label: `${report.viewer_retention_risk === "low" ? "Low" : report.viewer_retention_risk === "medium" ? "Medium" : "High"} Retention Risk`,
-    cls:   report.viewer_retention_risk === "low" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.viewer_retention_risk === "medium" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
-  };
-
-  const coldInfo = report.cold_open ? {
-    label: report.cold_open.score === "strong" ? "Strong Open" : report.cold_open.score === "average" ? "Slow Start" : "Cold Open",
-    cls:   report.cold_open.score === "strong" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.cold_open.score === "average" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
-  } : null;
-
-  const closingInfo = report.closing ? {
-    label: report.closing.score === "strong" ? "Strong Close" : report.closing.score === "average" ? "Mixed Close" : "Weak Close",
-    cls:   report.closing.score === "strong" ? "bg-green-500/10 border-green-500/20 text-green-300" : report.closing.score === "average" ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-300" : "bg-red-500/10 border-red-500/20 text-red-300",
-  } : null;
-
-  const antiPatternLabels: Record<string, string> = {
-    viewer_count_apology: "Apologized for viewer count",
-    follow_begging: "Asked for follows off-hype",
-    lurker_shaming: "Called chat dead",
-    pre_stream_drain: "Low-energy opening",
-    self_defeat: "Self-deprecation",
-  };
-
   const gaps = report.dead_zones ?? [];
+  const totalSecs = streamDurationSeconds ??
+    (gaps.length > 0 ? Math.max(...gaps.map(g => parseTimeSecs(g.time) + g.duration)) * 1.25 : 0);
+
+  const energyLabel =
+    report.energy_trend === "building" ? "Building Energy"
+    : report.energy_trend === "declining" ? "Declining Energy"
+    : report.energy_trend === "volatile" ? "Volatile Energy"
+    : "Consistent Energy";
+
+  const retLabel = `${report.viewer_retention_risk === "high" ? "High" : report.viewer_retention_risk === "medium" ? "Medium" : "Low"} Retention Risk`;
+
+  const coldLabel = report.cold_open
+    ? report.cold_open.score === "strong" ? "Strong Open"
+      : report.cold_open.score === "average" ? "Slow Start"
+      : "Cold Open"
+    : null;
+
+  function pillColor(val: string, good: string, bad: string) {
+    if (val === good) return { border: "rgba(163,230,53,0.4)", color: "#A3E635" };
+    if (val === bad) return { border: "rgba(248,113,113,0.4)", color: "#F87171" };
+    return { border: "rgba(245,158,11,0.4)", color: "#F59E0B" };
+  }
+
+  const energyPill = pillColor(report.energy_trend, "building", "declining");
+  const retPill = pillColor(report.viewer_retention_risk, "low", "high");
+  const coldPill = report.cold_open ? pillColor(report.cold_open.score, "strong", "weak") : null;
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,9,20,0.98)", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)" }}>
-        <div className="flex items-center gap-2.5">
-          <span className="font-extrabold text-sm text-white tracking-wide">Stream Debrief</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {streamerTitle && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-400/20 text-violet-300">
-              <Trophy size={10} />{streamerTitle}
-            </span>
-          )}
-          {streak >= 2 && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-400/20 text-orange-300">
-              <Flame size={10} />{streak} streak
-            </span>
-          )}
-          {tc && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border text-white/45" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.09)" }}>
-              {tc.icon}{tc.label}
-            </span>
-          )}
-        </div>
-      </div>
+      <style>{`
+        .cr2-dial {
+          position: relative; width: 240px; height: 240px; margin: 0 auto;
+        }
+        .cr2-ring-fill {
+          stroke: var(--ring-color, #A3E635);
+          stroke-dashoffset: 100;
+          transition: stroke 600ms ease;
+        }
+        .cr2-dial.draw .cr2-ring-fill {
+          animation: cr2-draw 1800ms cubic-bezier(.2,.7,.2,1) 200ms forwards;
+        }
+        @keyframes cr2-draw {
+          from { stroke-dashoffset: 100; }
+          to { stroke-dashoffset: var(--ring-rest, 72); }
+        }
+        .cr2-ruler {
+          margin: 28px 0; text-align: center;
+          color: #4D5876; font-family: "JetBrains Mono", monospace;
+          font-size: 10px; letter-spacing: 0.4em;
+          position: relative; text-transform: uppercase;
+        }
+        .cr2-ruler::before, .cr2-ruler::after {
+          content: ""; position: absolute; top: 50%;
+          width: calc(50% - 56px); height: 1px; background: rgba(255,255,255,0.07);
+        }
+        .cr2-ruler::before { left: 0; }
+        .cr2-ruler::after { right: 0; }
+        .cr2-tl-gap {
+          position: absolute; top: 0; bottom: 0;
+          background: repeating-linear-gradient(135deg, rgba(248,113,113,0.18) 0, rgba(248,113,113,0.18) 6px, transparent 6px, transparent 11px);
+          border-left: 1px dashed rgba(248,113,113,0.7);
+          border-right: 1px dashed rgba(248,113,113,0.7);
+        }
+        .cr2-tl-gap.hot {
+          background: repeating-linear-gradient(135deg, rgba(245,158,11,0.32) 0, rgba(245,158,11,0.32) 6px, transparent 6px, transparent 11px);
+          border-color: #F59E0B;
+        }
+        .cr2-check {
+          width: 22px; height: 22px; border: 1.5px solid #4D5876; border-radius: 4px;
+          cursor: pointer; transition: all .15s ease; flex-shrink: 0;
+          position: relative; background: transparent; appearance: none; -webkit-appearance: none;
+        }
+        .cr2-check.done {
+          background: #22D3EE; border-color: #22D3EE;
+          box-shadow: 0 0 12px rgba(34,211,238,0.5);
+        }
+        .cr2-check.done::after {
+          content: "✓"; position: absolute; inset: 0;
+          display: grid; place-items: center;
+          color: #001318; font-size: 13px; font-weight: 700;
+        }
+        @media (max-width: 640px) {
+          .cr2-hero { grid-template-columns: 1fr !important; }
+          .cr2-dial { width: 200px !important; height: 200px !important; }
+          .cr2-subs { grid-template-columns: repeat(2, 1fr) !important; }
+          .cr2-two { grid-template-columns: 1fr !important; }
+          .cr2-two-divider { display: none !important; }
+        }
+      `}</style>
 
-      <div className="px-6 py-6 space-y-5">
+      <div style={{
+        background: "#0C111C",
+        borderRadius: 16,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.07)",
+        color: "#ECF1FA",
+        WebkitFontSmoothing: "antialiased",
+        backgroundImage: "radial-gradient(900px 500px at 80% -100px, rgba(34,211,238,0.06), transparent 60%), radial-gradient(700px 400px at 0% 30%, rgba(163,230,53,0.03), transparent 60%)",
+      }}>
+        <div style={{ padding: "32px 28px 48px" }}>
 
-        {/* ── Score hero card ── */}
-        <div
-          className="rounded-2xl overflow-hidden relative"
-          style={{
-            background: `radial-gradient(ellipse 70% 60% at 50% 0%, ${hex}18 0%, rgba(10,9,20,0) 70%), rgba(255,255,255,0.025)`,
-            border: "1px solid rgba(255,255,255,0.07)",
-          }}
-        >
-          {/* Subtle top glow line */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-px" style={{ background: `linear-gradient(90deg, transparent, ${hex}60, transparent)` }} />
-
-          <div className="px-6 pt-6 pb-5">
-            {/* Arc gauge centered */}
-            <div className="flex justify-center mb-2">
-              <ArcGauge score={report.overall_score} displayScore={displayScore} />
-            </div>
-
-            {/* Personal best badge */}
-            {revealed && isPersonalBest && (
-              <div className="flex justify-center mb-3 animate-fade-in">
-                <span className="inline-flex items-center gap-2 text-xs font-extrabold px-4 py-2 rounded-full"
-                  style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24", boxShadow: "0 0 20px rgba(251,191,36,0.15)" }}>
-                  <Trophy size={12} />NEW PERSONAL BEST
-                </span>
+          {/* ── MASTHEAD ── */}
+          <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 28, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 4 }}>
+                Stream Debrief
               </div>
-            )}
-
-            {/* Delta */}
-            <div className="flex items-center justify-center mb-5">
-              {delta !== null ? (
-                <span className={`flex items-center gap-1.5 text-sm font-semibold ${delta > 0 ? "text-green-400" : delta < 0 ? "text-red-400" : "text-white/30"}`}>
-                  {delta > 0 ? <TrendingUp size={13} /> : delta < 0 ? <TrendingDown size={13} /> : <Minus size={13} />}
-                  {delta > 0 ? `+${delta}` : delta} from last stream
-                </span>
-              ) : <span className="text-sm text-white/20">First report</span>}
+              <h1 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 34, lineHeight: 1.05, letterSpacing: "-0.01em", color: "#ECF1FA", margin: 0 }}>
+                {report.streamer_type ? TYPE_LABELS[report.streamer_type] ?? "Stream" : "Stream"}{" "}
+                <em style={{ fontStyle: "italic", color: "#22D3EE" }}>Coaching</em>
+              </h1>
             </div>
-
-            {/* Pills centered */}
-            <div className="flex flex-wrap justify-center gap-2 mb-4">
-              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${energyInfo.cls}`}>
-                {energyInfo.icon}{energyInfo.label}
-              </span>
-              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${retInfo.cls}`}>
-                <ShieldAlert size={11} />{retInfo.label}
-              </span>
-              {coldInfo && (
-                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${coldInfo.cls}`}>
-                  {coldInfo.label}
-                </span>
-              )}
-              {closingInfo && (
-                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${closingInfo.cls}`}>
-                  {closingInfo.label}
-                </span>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-white/[0.05] pt-4 flex items-center justify-between">
-              <p className="text-xs text-white/25 font-medium">Performance Score</p>
-              {/* Quick Listen */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {streamerTitle && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 9px", border: "1px solid rgba(34,211,238,0.32)", borderRadius: 4, background: "rgba(34,211,238,0.06)", color: "#22D3EE", fontSize: 11, fontFamily: '"JetBrains Mono", monospace' }}>
+                    ◆ {streamerTitle}
+                  </span>
+                )}
+                {streak >= 2 && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 9px", border: "1px solid rgba(245,158,11,0.32)", borderRadius: 4, background: "rgba(245,158,11,0.06)", color: "#F59E0B", fontSize: 11, fontFamily: '"JetBrains Mono", monospace' }}>
+                    ▲ {streak}-stream streak
+                  </span>
+                )}
+              </div>
+              {/* Audio */}
               <div>
                 {ps === "idle" && (
-                  <button onClick={play} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl text-white/35 hover:text-white/75 transition-colors" style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
-                    <Volume2 size={12} />Quick Listen
+                  <button onClick={play} style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.1em", color: "#6F7C95", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, padding: "3px 10px", cursor: "pointer" }}>
+                    ▶ Quick Listen
                   </button>
                 )}
-                {ps === "loading" && <span className="flex items-center gap-1.5 text-xs text-white/25"><Loader2 size={12} className="animate-spin" />Loading...</span>}
+                {ps === "loading" && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95" }}>Loading…</span>}
                 {(ps === "playing" || ps === "paused") && (
-                  <div className="flex items-center gap-1">
-                    <button onClick={ps === "playing" ? pause : play} className="p-1.5 rounded-xl text-white/50 hover:text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
-                      {ps === "playing" ? <Pause size={12} /> : <Play size={12} />}
+                  <span style={{ display: "inline-flex", gap: 4 }}>
+                    <button onClick={ps === "playing" ? pause : play} style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, padding: "3px 8px", cursor: "pointer" }}>
+                      {ps === "playing" ? "⏸" : "▶"}
                     </button>
-                    <button onClick={stop} className="p-1.5 text-white/20 hover:text-red-400 transition-colors"><VolumeX size={12} /></button>
-                  </div>
+                    <button onClick={stop} style={{ fontSize: 10, color: "#4D5876", background: "transparent", border: "none", cursor: "pointer" }}>✕</button>
+                  </span>
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </header>
 
-        {/* Stream story */}
-        {report.stream_story && (
-          <div className="px-1">
-            <p className="text-sm text-white/50 leading-relaxed italic">{report.stream_story}</p>
-          </div>
-        )}
+          {/* ── HERO: DIAL + STORY ── */}
+          <section className="cr2-hero" style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 40, alignItems: "start", marginBottom: 32 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 14, textAlign: "left" }}>
+                Performance Score
+              </div>
+              <CircularDial score={report.overall_score} displayScore={displayScore} draw={draw} />
+              {/* Delta */}
+              <div style={{
+                marginTop: 16, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 20,
+                color: delta !== null && delta > 0 ? "#A3E635" : delta !== null && delta < 0 ? "#F87171" : "#6F7C95",
+                fontStyle: "italic", display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                opacity: draw ? 1 : 0, transform: draw ? "translateY(0)" : "translateY(4px)",
+                transition: "opacity 500ms ease 1.5s, transform 500ms ease 1.5s",
+              }}>
+                {delta !== null
+                  ? <>{delta > 0 ? "↗" : delta < 0 ? "↘" : "→"} {delta > 0 ? `+${delta}` : delta} from last stream</>
+                  : <span style={{ fontSize: 13, color: "#4D5876" }}>First report</span>
+                }
+              </div>
+              {/* Pills */}
+              <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999, fontSize: 11, border: `1px solid ${energyPill.border}`, color: energyPill.color, fontFamily: "system-ui, sans-serif" }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{energyLabel}
+                </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999, fontSize: 11, border: `1px solid ${retPill.border}`, color: retPill.color, fontFamily: "system-ui, sans-serif" }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{retLabel}
+                </span>
+                {coldLabel && coldPill && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999, fontSize: 11, border: `1px solid ${coldPill.border}`, color: coldPill.color, fontFamily: "system-ui, sans-serif" }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{coldLabel}
+                  </span>
+                )}
+              </div>
+              {isPersonalBest && draw && (
+                <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 7, padding: "4px 12px", borderRadius: 999, background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24", fontSize: 10, fontFamily: '"JetBrains Mono", monospace', letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                  ★ New Personal Best
+                </div>
+              )}
+            </div>
 
-        {/* Shareable win — GATED for Free */}
-        {isPro ? (
-          report.shareable_win && (
-            <div
-              className="rounded-xl p-4 flex items-start gap-3"
-              style={{
-                background: "linear-gradient(135deg, rgba(250,204,21,0.08) 0%, rgba(234,179,8,0.03) 60%, rgba(10,9,20,0) 100%)",
-                border: "1px solid rgba(250,204,21,0.22)",
-              }}
-            >
-              <Trophy size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400 mb-1.5">Worth Sharing</p>
-                <p className="text-sm font-bold text-yellow-200 mb-1 leading-tight">{report.shareable_win.stat}</p>
-                <p className="text-xs text-white/50 leading-relaxed">{report.shareable_win.context}</p>
+            <div style={{ paddingTop: 6 }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 24, height: 1, background: "#4D5876", display: "inline-block" }} />
+                The Story of This Stream
+              </div>
+              {report.stream_story ? (
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 21, lineHeight: 1.45, color: "#ECF1FA", letterSpacing: "-0.005em" }}>
+                  {report.stream_story}
+                </p>
+              ) : (
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 21, lineHeight: 1.45, color: "#A6B3C9", fontStyle: "italic" }}>
+                  Score: {report.overall_score}/100
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* ── OPENING ── */}
+          {report.cold_open?.note && (
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 0", borderBottom: "1px dashed rgba(255,255,255,0.12)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", paddingTop: 4 }}>
+                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#22D3EE", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>i.</span>
+                Opening
+              </div>
+              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
+                {report.cold_open.note}
               </div>
             </div>
-          )
-        ) : (
-          report.shareable_win && <LockedSection label="Worth Sharing" height={90} />
-        )}
+          )}
 
-        {/* Cold open note — always visible */}
-        {report.cold_open?.note && (
-          <div className="pl-4 border-l-2 border-white/[0.08]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Opening</p>
-            <p className="text-sm text-white/38 leading-relaxed">{report.cold_open.note}</p>
-          </div>
-        )}
-
-        {/* Closing note — Pro only */}
-        {isPro && report.closing?.note && (
-          <div className="pl-4 border-l-2 border-white/[0.08]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Closing</p>
-            <p className="text-sm text-white/38 leading-relaxed">{report.closing.note}</p>
-          </div>
-        )}
-
-        {/* ── #1 Priority ── GATED for Free */}
-        {isPro ? (
-          <div
-            className="rounded-xl p-5 relative overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(109,40,217,0.06) 60%, rgba(10,9,20,0) 100%)",
-              border: "1px solid rgba(139,92,246,0.28)",
-              boxShadow: "0 0 30px rgba(139,92,246,0.08) inset",
-            }}
-          >
-            <div className="absolute top-0 left-0 w-24 h-px" style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.5), transparent)" }} />
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400">#1 Priority</span>
+          {/* ── #1 PRIORITY ── GATED */}
+          {isPro ? (
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 20px 20px 18px", margin: "0 -20px", borderBottom: "1px dashed rgba(255,255,255,0.12)", borderLeft: "2px solid #F87171", background: "linear-gradient(180deg, rgba(248,113,113,0.04), transparent 80%)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#F87171", paddingTop: 4 }}>
+                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#F87171", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>ii.</span>
+                The #1 Fix
+              </div>
+              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
+                {report.recommendation}
+              </div>
             </div>
-            <p className="text-[15px] leading-relaxed text-white/90 font-medium">{report.recommendation}</p>
-          </div>
-        ) : (
-          <LockedSection label="#1 Priority Fix" height={120} />
-        )}
+          ) : (
+            <div style={{ marginTop: 8 }}>
+              <LockedSection label="#1 Priority Fix" height={110} />
+            </div>
+          )}
 
-        {/* ── Score breakdown ── GATED for Free */}
-        {isPro
-          ? report.score_breakdown && (
-              <div className="grid grid-cols-4 gap-2.5">
-                {(["energy", "engagement", "consistency", "content"] as const).map((k) => {
-                  const v   = report.score_breakdown![k];
-                  const c   = scoreHex(v);
-                  const cls = scoreCls(v);
-                  const pct = v;
+          {/* ── SUB-SCORES ── GATED */}
+          {report.score_breakdown && (
+            isPro ? (
+              <div className="cr2-subs" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", margin: "32px 0 28px", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "18px 0" }}>
+                {(["energy", "engagement", "consistency", "content"] as const).map((k, i, arr) => {
+                  const v = report.score_breakdown![k];
+                  const c = scoreColor(v);
                   return (
-                    <div key={k} className="rounded-xl px-3 py-3 text-center" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className={`text-2xl font-extrabold leading-none mb-2 ${cls}`}>{v}</div>
-                      <div className="h-1 rounded-full mb-1.5 overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: c }} />
+                    <div key={k} style={{ padding: i === 0 ? "0 18px 0 0" : i === arr.length - 1 ? "0 0 0 18px" : "0 18px", borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 8 }}>{k}</div>
+                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 46, lineHeight: 0.9, letterSpacing: "-0.04em", marginBottom: 8, display: "flex", alignItems: "baseline", gap: 5, color: c }}>
+                        {v}<span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#4D5876", letterSpacing: "0.1em" }}>/100</span>
                       </div>
-                      <div className="text-[9px] text-white/25 capitalize tracking-wide">{k}</div>
+                      <div style={{ width: "100%", height: 5, borderRadius: 3, background: "rgba(255,255,255,0.05)", overflow: "hidden", marginBottom: 7 }}>
+                        <div style={{ height: "100%", width: `${v}%`, borderRadius: 3, background: c }} />
+                      </div>
+                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#A6B3C9", lineHeight: 1.4 }}>
+                        {k === "energy"
+                          ? report.energy_trend === "volatile" ? "Volatile, spiky output." : report.energy_trend === "building" ? "Energy built through stream." : report.energy_trend === "declining" ? "Energy dropped off." : "Consistent energy level."
+                          : k === "engagement" ? "Chat interaction rate."
+                          : k === "consistency" ? "Sustained quality score."
+                          : "Content originality."}
+                      </div>
                     </div>
                   );
                 })}
               </div>
+            ) : (
+              <div style={{ margin: "28px 0" }}>
+                <LockedSection label="Score Breakdown" height={110} />
+              </div>
             )
-          : report.score_breakdown && <LockedSection label="Score Breakdown" height={110} />
-        }
+          )}
 
-        {/* ── Best Moment ── GATED for Free */}
-        {isPro
-          ? report.best_moment && (
-              <div
-                className="rounded-xl px-4 py-4 flex items-start gap-4"
-                style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `2px solid rgba(139,92,246,0.5)` }}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1.5">Best Moment</p>
-                  <p className="text-sm text-white/70 leading-relaxed">{report.best_moment.description}</p>
+          {/* ── BEST MOMENT ── GATED */}
+          {report.best_moment && (
+            isPro ? (
+              <div style={{ margin: "28px 0", padding: "22px 0 22px 28px", position: "relative", borderLeft: "2px solid #A3E635" }}>
+                <div style={{ position: "absolute", left: 14, top: 2, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 80, lineHeight: 1, color: "#A3E635", opacity: 0.35, fontStyle: "italic", userSelect: "none" }}>"</div>
+                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#A3E635", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                  Best Moment
+                  <span style={{ color: "#6F7C95", marginLeft: "auto", fontSize: 12, textTransform: "none", letterSpacing: "0.06em" }}>{report.best_moment.time}</span>
                 </div>
-                <span className="text-sm font-mono font-bold flex-shrink-0 pt-0.5" style={{ color: "rgba(139,92,246,0.6)" }}>{report.best_moment.time}</span>
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 19, lineHeight: 1.5, color: "#ECF1FA" }}>
+                  {report.best_moment.description}
+                </p>
+              </div>
+            ) : (
+              <div style={{ margin: "28px 0" }}>
+                <LockedSection label="Best Moment" height={100} />
               </div>
             )
-          : report.best_moment && <LockedSection label="Best Moment" height={100} />
-        }
+          )}
 
-        {/* ── What Worked / Fix for Next ──
-            Free: 1 strength visible (validation), improvements LOCKED */}
-        {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
-          <div className="grid grid-cols-2 gap-3">
-            {/* What Worked — Free sees only the first strength */}
-            <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(74,222,128,0.12)" }}>
-              <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(74,222,128,0.08)", background: "rgba(74,222,128,0.05)" }}>
-                <CheckCircle2 size={12} className="text-green-400" />
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-green-400">What Worked</span>
-              </div>
-              <div className="divide-y divide-white/[0.04]">
+          <div className="cr2-ruler">coaching</div>
+
+          {/* ── WHAT WORKED / FIX FOR NEXT ── */}
+          {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
+            <div className="cr2-two" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, marginBottom: 36, position: "relative" }}>
+              <div className="cr2-two-divider" style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.07)", transform: "translateX(-50%)" }} />
+
+              {/* What Worked */}
+              <div>
+                <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
+                  What <em style={{ fontStyle: "italic", color: "#A3E635" }}>worked.</em>
+                </h2>
+                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 20 }}>Keep doing these</div>
                 {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => {
-                  const { label, body, ts, recurring } = parseItem(s);
+                  const { label, body, ts } = parseItem(s);
                   return (
-                    <div key={i} className="px-4 py-3 space-y-1">
-                      {recurring && <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full">Recurring</span>}
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-bold text-green-400 leading-tight">{label || body}</p>
-                        {ts && <span className="text-xs font-mono text-white/20 flex-shrink-0">{ts}</span>}
+                    <div key={i} style={{ marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 5, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 16, color: "#4D5876", minWidth: 22 }}>0{i + 1}</span>
+                        <span style={{ fontWeight: 600, fontSize: 15, color: "#A3E635", flex: 1, lineHeight: 1.3 }}>{label || body}</span>
+                        {ts && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#6F7C95", whiteSpace: "nowrap" }}>{ts}</span>}
                       </div>
-                      {label && <p className="text-xs text-white/45 leading-relaxed">{body}</p>}
+                      {label && <p style={{ fontSize: 14, color: "#A6B3C9", lineHeight: 1.65, paddingLeft: 32 }}>{body}</p>}
                     </div>
                   );
                 })}
                 {!isPro && (report.strengths ?? []).length > 1 && (
-                  <div className="px-4 py-3 text-center">
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/25">+{(report.strengths ?? []).length - 1} more — Pro</p>
-                  </div>
+                  <p style={{ fontSize: 11, fontFamily: '"JetBrains Mono", monospace', color: "#4D5876", paddingLeft: 32 }}>+{(report.strengths ?? []).length - 1} more — Pro</p>
                 )}
               </div>
-            </div>
 
-            {/* Fix for Next — GATED for Free */}
-            {isPro ? (
-              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(250,204,21,0.12)" }}>
-                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(250,204,21,0.08)", background: "rgba(250,204,21,0.04)" }}>
-                  <AlertCircle size={12} className="text-yellow-400" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">Fix for Next</span>
-                </div>
-                <div className="divide-y divide-white/[0.04]">
+              {/* Fix for Next */}
+              {isPro ? (
+                <div>
+                  <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
+                    What to <em style={{ fontStyle: "italic", color: "#F59E0B" }}>fix.</em>
+                  </h2>
+                  <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 20 }}>Change these next time</div>
                   {(report.improvements ?? []).map((s, i) => {
-                    const { label, body, ts, recurring } = parseItem(s);
+                    const { label, body, ts } = parseItem(s);
                     return (
-                      <div key={i} className="px-4 py-3 space-y-1">
-                        {recurring && <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-orange-400 bg-orange-400/10 border border-orange-400/20 px-1.5 py-0.5 rounded-full">Recurring</span>}
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-bold text-yellow-400 leading-tight">{label || body}</p>
-                          {ts && <span className="text-xs font-mono text-white/20 flex-shrink-0">{ts}</span>}
+                      <div key={i} style={{ marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 5, flexWrap: "wrap" }}>
+                          <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 16, color: "#4D5876", minWidth: 22 }}>0{i + 1}</span>
+                          <span style={{ fontWeight: 600, fontSize: 15, color: "#F59E0B", flex: 1, lineHeight: 1.3 }}>{label || body}</span>
+                          {ts && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#6F7C95", whiteSpace: "nowrap" }}>{ts}</span>}
                         </div>
-                        {label && <p className="text-xs text-white/45 leading-relaxed">{body}</p>}
+                        {label && <p style={{ fontSize: 14, color: "#A6B3C9", lineHeight: 1.65, paddingLeft: 32 }}>{body}</p>}
                       </div>
                     );
                   })}
                 </div>
+              ) : (
+                <div>
+                  <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 20, color: "#ECF1FA" }}>
+                    What to <em style={{ fontStyle: "italic", color: "#F59E0B" }}>fix.</em>
+                  </h2>
+                  <LockedSection label="Fix For Next" height={140} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── MISSIONS ── GATED */}
+          {(report.next_stream_goals ?? []).length > 0 && (
+            isPro ? (
+              <div style={{ margin: "32px 0 24px", padding: "22px 0 12px", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 28, letterSpacing: "-0.015em", marginBottom: 4, color: "#ECF1FA" }}>
+                  Missions for <em style={{ fontStyle: "italic", color: "#22D3EE" }}>next stream.</em>
+                </h2>
+                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 20 }}>
+                  Click to mark as committed
+                </div>
+                {(report.next_stream_goals ?? []).map((goal, i, arr) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "44px 1fr 28px", gap: 12, alignItems: "start", padding: "13px 0", borderBottom: i < arr.length - 1 ? "1px dashed rgba(255,255,255,0.12)" : "none" }}>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 30, color: "#22D3EE", letterSpacing: "-0.03em", lineHeight: 0.9 }}>
+                      {ROMAN[i] ?? `${i + 1}.`}
+                    </div>
+                    <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, lineHeight: 1.45, color: checked.has(i) ? "#6F7C95" : "#ECF1FA" }}>
+                      {goal}
+                    </p>
+                    <button
+                      className={`cr2-check${checked.has(i) ? " done" : ""}`}
+                      onClick={() => setChecked(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s; })}
+                      aria-label={`Mark mission ${i + 1} as done`}
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
-              <LockedSection label="Fix For Next" height={140} />
-            )}
-          </div>
-        )}
-
-        {/* ── Anti-patterns ── GATED for Free (always show callout when Free, even if anti_patterns empty, so Pro upsell stays consistent) */}
-        {isPro
-          ? (report.anti_patterns ?? []).length > 0 && (
-              <div className="rounded-xl overflow-hidden" style={{ background: "rgba(248,113,113,0.03)", border: "1px solid rgba(248,113,113,0.18)" }}>
-                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid rgba(248,113,113,0.1)", background: "rgba(248,113,113,0.05)" }}>
-                  <ShieldAlert size={12} className="text-red-400" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-400">Watch For This</span>
-                  <span className="ml-auto text-[10px] text-red-400/50">{(report.anti_patterns ?? []).length} flagged</span>
-                </div>
-                <div className="divide-y divide-white/[0.04]">
-                  {(report.anti_patterns ?? []).map((ap, i) => (
-                    <div key={i} className="px-4 py-3 space-y-1.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-bold text-red-300 leading-tight">{antiPatternLabels[ap.type] ?? ap.type}</p>
-                        <span className="text-xs font-mono text-white/20 flex-shrink-0">{ap.time}</span>
-                      </div>
-                      <p className="text-xs text-white/55 italic leading-relaxed">&ldquo;{ap.quote}&rdquo;</p>
-                      <p className="text-xs text-white/40 leading-relaxed">{ap.note}</p>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ margin: "28px 0" }}>
+                <LockedSection label="Your Missions · 3 next-stream goals" height={140} />
               </div>
             )
-          : (report.anti_patterns ?? []).length > 0 && (
-              <LockedSection label={`Watch For This · ${(report.anti_patterns ?? []).length} flagged`} height={100} />
-            )
-        }
+          )}
 
-        {/* ── Your Missions ── GATED for Free */}
-        {isPro
-          ? (report.next_stream_goals ?? []).length > 0 && (
-              <div className="rounded-xl px-5 py-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Target size={13} className="text-accent-light" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent-light">Your Missions</span>
-                </div>
-                <div className="space-y-3">
-                  {(report.next_stream_goals ?? []).map((goal, i) => (
-                    <div key={i} className="flex items-start gap-3.5">
-                      <div
-                        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
-                        style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.22)", color: "rgba(167,139,250,0.8)" }}
-                      >
-                        {i + 1}
-                      </div>
-                      <span className="text-sm text-white/68 leading-relaxed flex-1">{goal}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* ── SILENCE MAP ── */}
+          {gaps.length > 0 && totalSecs > 0 && (
+            <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: 20, flexWrap: "wrap" }}>
+                <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 28, letterSpacing: "-0.015em", lineHeight: 1, margin: 0, color: "#ECF1FA" }}>
+                  The <em style={{ fontStyle: "italic", color: "#F87171" }}>Silence Map.</em>
+                </h2>
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#6F7C95", textAlign: "right", maxWidth: 240, lineHeight: 1.4, margin: 0 }}>
+                  Where you went quiet — vertical strikes mark moments you showed up.
+                </p>
               </div>
-            )
-          : (report.next_stream_goals ?? []).length > 0 && <LockedSection label="Your Missions · 3 next-stream goals" height={140} />
-        }
 
-        {/* ── Silence Gaps ── */}
-        {gaps.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Clock size={11} className="text-white/20" />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/20">Silence Gaps</span>
-              <span className="ml-auto text-[10px] text-white/15">{gaps.length} detected</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {gaps.map((g, i) => {
-                const s   = g.duration;
-                const dur = s >= 60 ? `${Math.floor(s / 60)}m${s % 60 > 0 ? ` ${s % 60}s` : ""}` : `${s}s`;
-                const bad = s >= 300;
-                const mid = s >= 120;
-                return (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      background: bad ? "rgba(248,113,113,0.07)" : mid ? "rgba(250,204,21,0.07)" : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${bad ? "rgba(248,113,113,0.2)" : mid ? "rgba(250,204,21,0.2)" : "rgba(255,255,255,0.08)"}`,
-                      color: bad ? "#fca5a5" : mid ? "#fde68a" : "rgba(255,255,255,0.4)",
-                    }}
-                  >
-                    <span className="font-mono text-[10px] opacity-70">{g.time}</span>
-                    <span className="w-px h-3 opacity-20" style={{ background: "currentColor" }} />
-                    <span className="font-bold">{dur} gap</span>
+              {/* Timeline */}
+              <div style={{ position: "relative", padding: "52px 0 40px" }}>
+                <div style={{ position: "relative", height: 36, background: "rgba(255,255,255,0.025)", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  {/* Time markers */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
+                    const secs = Math.round(pct * totalSecs);
+                    return (
+                      <div key={i} style={{ position: "absolute", top: -4, bottom: -4, left: `${pct * 100}%`, width: 1, background: i % 2 === 0 ? "#4D5876" : "rgba(255,255,255,0.12)" }}>
+                        <span style={{ position: "absolute", top: "calc(100% + 5px)", left: 0, transform: "translateX(-50%)", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+                          {fmtTimestamp(secs)}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Gaps */}
+                  {gaps.map((g, i) => {
+                    const startPct = (parseTimeSecs(g.time) / totalSecs) * 100;
+                    const widthPct = Math.max((g.duration / totalSecs) * 100, 0.8);
+                    const isHot = g.duration >= 120;
+                    return (
+                      <div key={i} className={`cr2-tl-gap${isHot ? " hot" : ""}`} style={{ left: `${startPct}%`, width: `${widthPct}%` }}>
+                        {isHot && (
+                          <div style={{ position: "absolute", bottom: "calc(100% + 12px)", left: "50%", transform: "translateX(-50%)", textAlign: "center", whiteSpace: "nowrap", pointerEvents: "none" }}>
+                            <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 15, color: "#F59E0B", lineHeight: 1 }}>{fmtDur(g.duration)}</div>
+                            <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.06em", marginTop: 2 }}>{g.time}</div>
+                            <div style={{ width: 1, height: 8, background: "#4D5876", margin: "3px auto 0" }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Best moment marker */}
+                  {report.best_moment && (() => {
+                    const pct = (parseTimeSecs(report.best_moment.time) / totalSecs) * 100;
+                    if (pct < 0 || pct > 100) return null;
+                    return (
+                      <div style={{ position: "absolute", top: -10, bottom: -10, left: `${pct}%`, width: 2, background: "#A3E635", boxShadow: "0 0 6px rgba(163,230,53,0.6)" }}>
+                        <span style={{ position: "absolute", bottom: "calc(100% + 4px)", left: "50%", transform: "translateX(-50%)", fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 12, color: "#A3E635", whiteSpace: "nowrap" }}>
+                          Best moment
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Legend */}
+                <div style={{ marginTop: 26, display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6F7C95" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ display: "inline-block", width: 28, height: 10, background: "repeating-linear-gradient(135deg, rgba(248,113,113,0.18) 0, rgba(248,113,113,0.18) 4px, transparent 4px, transparent 8px)", borderLeft: "1px dashed rgba(248,113,113,0.7)", borderRight: "1px dashed rgba(248,113,113,0.7)" }} />
+                    Silence
                   </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ display: "inline-block", width: 28, height: 10, background: "repeating-linear-gradient(135deg, rgba(245,158,11,0.32) 0, rgba(245,158,11,0.32) 4px, transparent 4px, transparent 8px)", borderLeft: "1px dashed #F59E0B", borderRight: "1px dashed #F59E0B" }} />
+                    Over 2 min
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ display: "inline-block", width: 2, height: 16, background: "#A3E635", boxShadow: "0 0 5px rgba(163,230,53,0.6)" }} />
+                    Best moment
+                  </span>
+                </div>
+              </div>
 
+              {/* Summary stats */}
+              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.12)", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+                <div>
+                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#F87171", marginBottom: 6 }}>
+                    {fmtDur(gaps.reduce((s, g) => s + g.duration, 0))}
+                  </div>
+                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Total silence during active gameplay.</div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#ECF1FA", marginBottom: 6 }}>{gaps.length}</div>
+                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Gaps — longest was {fmtDur(Math.max(...gaps.map(g => g.duration)))}.</div>
+                </div>
+                {report.best_moment && (
+                  <div>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#A3E635", marginBottom: 6 }}>1</div>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Standout moment at {report.best_moment.time}.</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── SIGNOFF ── */}
+          <footer style={{ marginTop: 40, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
+            <div>
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 17, color: "#A6B3C9", lineHeight: 1.5 }}>
+                Read once.<br />
+                Stream once.<br />
+                <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>See you next time.</strong>
+              </p>
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#A6B3C9", letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-4px)", lineHeight: 1, marginTop: 12, display: "inline-block" }}>
+                — LevlCast
+              </p>
+            </div>
+            <div style={{ textAlign: "right", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4D5876", lineHeight: 1.8 }}>
+              Coach Report<br />
+              Stream Debrief
+            </div>
+          </footer>
+
+        </div>
       </div>
-    </div>
+    </>
   );
 }

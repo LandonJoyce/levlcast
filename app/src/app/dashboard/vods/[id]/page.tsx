@@ -223,6 +223,7 @@ export default async function VodDetailPage({
               isPersonalBest={isPersonalBest}
               streamerTitle={streamerTitle}
               isPro={isPro}
+              streamDurationSeconds={vod.duration_seconds ?? undefined}
             />
           ) : (
             <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
