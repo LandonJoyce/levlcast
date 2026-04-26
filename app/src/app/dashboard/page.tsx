@@ -92,25 +92,17 @@ export default async function DashboardPage() {
   const latestRecommendation = (latest?.coach_report as { recommendation?: string } | null)?.recommendation ?? null;
   const latestPeaks = Array.isArray(latest?.peak_data) ? latest.peak_data.length : 0;
 
-  // Clips this month + posted to YouTube
+  // Clips this month
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [{ count: clipsThisMonth }, { count: clipsPosted }] = await Promise.all([
-    supabase
-      .from("clips")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "ready")
-      .gte("created_at", monthStart.toISOString()),
-    supabase
-      .from("social_posts")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("platform", "youtube")
-      .gte("created_at", monthStart.toISOString()),
-  ]);
+  const { count: clipsThisMonth } = await supabase
+    .from("clips")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "ready")
+    .gte("created_at", monthStart.toISOString());
 
   const displayName = profile?.twitch_display_name || "Streamer";
 
@@ -292,7 +284,7 @@ export default async function DashboardPage() {
             <span className="mono-label">Clips this month</span>
             <div className="row" style={{ alignItems: "baseline", gap: 6 }}>
               <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--green)" }}>{clipsThisMonth ?? 0}</span>
-              <span style={{ color: "var(--ink-3)", fontSize: 13 }}>{clipsPosted ?? 0} posted to YT</span>
+              <span style={{ color: "var(--ink-3)", fontSize: 13 }}>this month</span>
             </div>
           </div>
         </div>
