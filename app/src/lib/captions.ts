@@ -177,12 +177,14 @@ export async function buildCaptionFilters(
 ): Promise<CaptionRenderResult> {
   if (cards.length === 0) return { filter: "", textFiles: [] };
 
-  // Scale font with output width — 1080w → ~58px, 720w → ~38px
-  const fontSize = Math.max(28, Math.round(config.videoWidth * 0.054));
-  const borderWidth = Math.max(2, Math.round(fontSize * 0.07));
-  const yPos = Math.round(config.videoHeight * 0.78);
-  // Tiny vertical lift on each new card so the caption "pops" rather than just swapping.
-  const lineSpacing = Math.round(fontSize * 0.15);
+  // Use a fixed pixel font size — scales acceptably across 720p/1080p
+  // sources. Y is expressed relative to actual output height so captions
+  // always sit near the bottom regardless of source resolution.
+  const fontSize = 64;
+  const borderWidth = 5;
+  const lineSpacing = 10;
+  // 8% margin from the bottom of the frame
+  const yExpr = "h-text_h-(h*0.08)";
 
   const parts: string[] = [];
   const textFiles: string[] = [];
@@ -193,11 +195,12 @@ export async function buildCaptionFilters(
     await writeFile(filePath, card.text);
     textFiles.push(filePath);
 
-    // FFmpeg expression escaping inside filter_complex:
-    //   - Commas inside between() must be escaped: \,
-    //   - Paths use forward slashes — no escaping needed
-    //   - Hex color avoids the bordercolor=black@0.85 parser ambiguity
-    const enable = `between(t\\,${card.start.toFixed(3)}\\,${card.end.toFixed(3)})`;
+    // Single-quoted enable value — FFmpeg treats chars inside ''
+    // literally, so the commas inside between() reach the expression
+    // evaluator un-mangled. DO NOT also \-escape the commas; that
+    // produces between(t\,5\,7) which the expr parser silently rejects
+    // (filter renders nothing, no error).
+    const enable = `between(t,${card.start.toFixed(3)},${card.end.toFixed(3)})`;
     parts.push(
       `drawtext=` +
       `textfile=${filePath}:` +
@@ -205,9 +208,9 @@ export async function buildCaptionFilters(
       `fontcolor=white:` +
       `fontsize=${fontSize}:` +
       `borderw=${borderWidth}:` +
-      `bordercolor=0x000000E0:` +
-      `box=1:boxcolor=0x00000040:boxborderw=${Math.round(fontSize * 0.4)}:` +
-      `x=(w-text_w)/2:y=${yPos}:` +
+      `bordercolor=black:` +
+      `box=1:boxcolor=black@0.5:boxborderw=18:` +
+      `x=(w-text_w)/2:y=${yExpr}:` +
       `line_spacing=${lineSpacing}:` +
       `enable='${enable}'`
     );
