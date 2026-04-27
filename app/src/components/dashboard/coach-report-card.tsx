@@ -114,6 +114,67 @@ function useAudio(r: CoachReport, prev?: number) {
   return { ps, play, pause, stop };
 }
 
+// ─── Arc Card (Opening / Closing / #1 Fix as visual tiles) ─────────────────
+
+function ArcCard({
+  index, label, body, accent, scoreLabel, scoreColor, isPriority,
+}: {
+  index: string;
+  label: string;
+  body: string;
+  accent: string;
+  scoreLabel?: string;
+  scoreColor?: string;
+  isPriority?: boolean;
+}) {
+  return (
+    <div style={{
+      position: "relative",
+      padding: "16px 18px 18px",
+      borderRadius: 10,
+      background: isPriority
+        ? "linear-gradient(180deg, rgba(248,113,113,0.06), rgba(248,113,113,0.02))"
+        : "rgba(255,255,255,0.025)",
+      border: `1px solid ${isPriority ? "rgba(248,113,113,0.28)" : "rgba(255,255,255,0.08)"}`,
+      borderLeft: `3px solid ${accent}`,
+    }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{
+            fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic",
+            fontSize: 22, color: accent, lineHeight: 1, letterSpacing: "-0.02em",
+          }}>
+            {index}.
+          </span>
+          <span style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.28em", color: isPriority ? "#F87171" : "#A6B3C9",
+          }}>
+            {label}
+          </span>
+        </div>
+        {scoreLabel && scoreColor && (
+          <span style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: "0.16em",
+            padding: "3px 8px", borderRadius: 999,
+            background: `${scoreColor}1F`,
+            color: scoreColor, border: `1px solid ${scoreColor}50`,
+          }}>
+            {scoreLabel}
+          </span>
+        )}
+      </div>
+      <p style={{
+        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 16,
+        color: "#ECF1FA", lineHeight: 1.5, margin: 0, letterSpacing: "-0.005em",
+      }}>
+        {body}
+      </p>
+    </div>
+  );
+}
+
 // ─── Stat Tile (at-a-glance number with optional progress bar) ──────────
 
 function StatTile({
@@ -723,44 +784,47 @@ export function CoachReportCard({
             </div>
           )}
 
-          {/* ── OPENING ── */}
-          {report.cold_open?.note && (
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 0", borderBottom: "1px dashed rgba(255,255,255,0.12)" }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", paddingTop: 4 }}>
-                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#22D3EE", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>i.</span>
-                Opening
-              </div>
-              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
-                {report.cold_open.note}
-              </div>
+          {/* ── OPENING / CLOSING / #1 FIX ── as a card grid ──
+              Replaces the row-style Roman-numeral list with three visual
+              cards. Opening + Closing get score badges (Strong / Average /
+              Weak); #1 Fix gets a danger accent. Scannable at a glance. */}
+          {(report.cold_open?.note || report.closing?.note || (isPro && report.recommendation)) && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 32px" }}>
+              {report.cold_open?.note && (
+                <ArcCard
+                  index="i"
+                  label="Opening"
+                  scoreLabel={report.cold_open.score === "strong" ? "Strong" : report.cold_open.score === "weak" ? "Weak" : "Average"}
+                  scoreColor={report.cold_open.score === "strong" ? "#A3E635" : report.cold_open.score === "weak" ? "#F87171" : "#F59E0B"}
+                  body={report.cold_open.note}
+                  accent="#22D3EE"
+                />
+              )}
+              {report.closing?.note && (
+                <ArcCard
+                  index="ii"
+                  label="Closing"
+                  scoreLabel={report.closing.score === "strong" ? "Strong" : report.closing.score === "weak" ? "Weak" : "Average"}
+                  scoreColor={report.closing.score === "strong" ? "#A3E635" : report.closing.score === "weak" ? "#F87171" : "#F59E0B"}
+                  body={report.closing.note}
+                  accent="#22D3EE"
+                />
+              )}
+              {isPro && report.recommendation && (
+                <ArcCard
+                  index="iii"
+                  label="The #1 Fix"
+                  body={report.recommendation}
+                  accent="#F87171"
+                  isPriority
+                />
+              )}
             </div>
           )}
 
-          {/* ── CLOSING ── */}
-          {report.closing?.note && (
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 0", borderBottom: "1px dashed rgba(255,255,255,0.12)" }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", paddingTop: 4 }}>
-                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#22D3EE", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>ii.</span>
-                Closing
-              </div>
-              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
-                {report.closing.note}
-              </div>
-            </div>
-          )}
-
-          {/* ── #1 PRIORITY ── GATED */}
-          {isPro ? (
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 24, padding: "20px 20px 20px 18px", margin: "0 -20px", borderBottom: "1px dashed rgba(255,255,255,0.12)", borderLeft: "2px solid #F87171", background: "linear-gradient(180deg, rgba(248,113,113,0.04), transparent 80%)" }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#F87171", paddingTop: 4 }}>
-                <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', color: "#F87171", fontSize: 26, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>iii.</span>
-                The #1 Fix
-              </div>
-              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.55, color: "#ECF1FA" }}>
-                {report.recommendation}
-              </div>
-            </div>
-          ) : (
+          {/* Free-tier #1 Priority placeholder — sits inline where the card
+              grid above would put it for a Pro user, so layout stays balanced. */}
+          {!isPro && (
             <div style={{ marginTop: 8 }}>
               <LockedSection
                 label="#1 Priority Fix"
