@@ -4,9 +4,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Lock } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
 import { computeReportDelta } from "@/lib/report-delta";
+import { isPulseViable } from "@/lib/chat-pulse";
 import { UpgradeModal } from "./upgrade-modal";
 import { LastStreamRecap } from "./last-stream-recap";
 import { ChatPulseCard } from "./chat-pulse-card";
+import { AudienceSnapshotCard } from "./audience-snapshot-card";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -512,9 +514,14 @@ export function CoachReportCard({
           {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
           {recapDelta && <LastStreamRecap delta={recapDelta} />}
 
-          {/* ── CHAT PULSE ── (only when chat replay was fetched) */}
+          {/* ── CHAT PULSE / AUDIENCE SNAPSHOT ──
+              Pulse timeline only when chat is statistically meaningful;
+              otherwise the simpler audience snapshot — no embarrassing
+              empty bars for new streamers. */}
           {chatPulse && chatPulse.length > 0 && (
-            <ChatPulseCard buckets={chatPulse} durationSeconds={streamDurationSeconds} />
+            isPulseViable(chatPulse)
+              ? <ChatPulseCard buckets={chatPulse} durationSeconds={streamDurationSeconds} />
+              : <AudienceSnapshotCard buckets={chatPulse} />
           )}
 
           {/* ── SHAREABLE WIN ── */}

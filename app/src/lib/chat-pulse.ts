@@ -37,6 +37,21 @@ export interface ChatBucket {
 
 const DEFAULT_BUCKET_SEC = 30;
 
+/**
+ * Minimum chat activity required for the pulse to be statistically
+ * meaningful. Below this we don't draw a timeline (looks embarrassing
+ * for new streamers) and we don't feed it into AI prompts (bad signal).
+ *
+ * Threshold rationale:
+ *   - 50 total messages: enough to see at least 2-3 distinct activity windows
+ *   - 0.3 msgs/min: roughly 1 message per 3min — below this every bucket is
+ *     basically empty noise
+ *   - 5 unique chatters: 1-2 viewers is a stream buddy, not an audience
+ */
+const MIN_VIABLE_TOTAL_MESSAGES = 50;
+const MIN_VIABLE_MSGS_PER_MIN = 0.3;
+const MIN_VIABLE_UNIQUE_CHATTERS = 5;
+
 // Pattern bank — case-insensitive substring matches. Order doesn't matter
 // because each message is checked against ALL banks (a message can be both
 // hype AND a sub event etc.).
@@ -260,8 +275,79 @@ function fmtTime(secs: number): string {
  * Returns "" when buckets are absent or empty so callers can splat
  * directly into prompt strings without conditionals.
  */
+/**
+ * Compact "audience" stats for small streamers — shown in place of the
+ * full timeline when chat activity is below threshold. Doesn't pretend
+ * the signal is meaningful; just summarizes what was there.
+ */
+export interface AudienceSnapshot {
+  totalMessages: number;
+  uniqueChatters: number;
+  firstMessageAtSec: number | null;
+  subEvents: number;
+  bitEvents: number;
+  raidEvents: number;
+}
+
+export function buildAudienceSnapshot(buckets: ChatBucket[]): AudienceSnapshot {
+  let totalMessages = 0;
+  let subEvents = 0;
+  let bitEvents = 0;
+  let raidEvents = 0;
+  let firstAt: number | null = null;
+
+  for (const b of buckets) {
+    if (b.count > 0 && firstAt === null) firstAt = b.start;
+    totalMessages += b.count;
+    subEvents += b.subEvents;
+    bitEvents += b.bitEvents;
+    raidEvents += b.raidEvents;
+  }
+
+  // We don't have the message-level user list at this point (only bucket
+  // counts), so unique chatters is approximated from the bucket totals.
+  // The actual unique-user dedupe happened during bucketChat — but each
+  // bucket's uniqueChatters is local. Sum them as an upper bound; the
+  // real count is somewhere between max(uniqueChatters) and the sum.
+  // For UI purposes we use the sum capped sensibly.
+  const uniqueLowerBound = buckets.reduce((m, b) => Math.max(m, b.uniqueChatters), 0);
+
+  return {
+    totalMessages,
+    uniqueChatters: uniqueLowerBound,
+    firstMessageAtSec: firstAt,
+    subEvents,
+    bitEvents,
+    raidEvents,
+  };
+}
+
+/**
+ * Is there enough chat activity to render the full pulse timeline + feed
+ * the AI prompts? Below this we degrade gracefully — show the simpler
+ * Audience Snapshot UI and keep the analysis transcript-only so we don't
+ * make Claude lean on bad signal.
+ */
+export function isPulseViable(buckets: ChatBucket[] | null | undefined): boolean {
+  if (!buckets || buckets.length === 0) return false;
+
+  const totalMessages = buckets.reduce((s, b) => s + b.count, 0);
+  if (totalMessages < MIN_VIABLE_TOTAL_MESSAGES) return false;
+
+  const totalMinutes = (buckets[buckets.length - 1].end - buckets[0].start) / 60;
+  if (totalMinutes <= 0) return false;
+  const msgsPerMin = totalMessages / totalMinutes;
+  if (msgsPerMin < MIN_VIABLE_MSGS_PER_MIN) return false;
+
+  const peakUnique = buckets.reduce((m, b) => Math.max(m, b.uniqueChatters), 0);
+  if (peakUnique < MIN_VIABLE_UNIQUE_CHATTERS) return false;
+
+  return true;
+}
+
 export function formatPulseForPrompt(buckets: ChatBucket[] | null | undefined): string {
   if (!buckets || buckets.length === 0) return "";
+  if (!isPulseViable(buckets)) return "";
 
   const total = buckets.reduce((s, b) => s + b.count, 0);
   if (total === 0) return "";
