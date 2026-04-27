@@ -108,6 +108,7 @@ export default async function VodDetailPage({
   const coachReport = vod.coach_report as any;
   const previousScore = (prevVod?.coach_report as any)?.overall_score as number | undefined;
   const previousReport = (prevVod?.coach_report as any) ?? undefined;
+  const chatPulse = (vod.chat_pulse as any[] | null) ?? null;
 
   let streak = 0;
   for (const v of (recentVods ?? [])) {
@@ -226,6 +227,7 @@ export default async function VodDetailPage({
               streamerTitle={streamerTitle}
               isPro={isPro}
               streamDurationSeconds={vod.duration_seconds ?? undefined}
+              chatPulse={chatPulse}
             />
           ) : (
             <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>

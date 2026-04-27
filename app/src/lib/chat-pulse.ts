@@ -242,3 +242,77 @@ export function summarizePulse(buckets: ChatBucket[], allMessages: ChatMessage[]
     notableMoments: trimmed,
   };
 }
+
+function fmtTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * Render a compact prompt-friendly summary of a chat pulse for Claude.
+ * Used by both peak detection and coach report generation when chat
+ * data is available — gives the model real engagement ground truth
+ * instead of asking it to guess.
+ *
+ * Returns "" when buckets are absent or empty so callers can splat
+ * directly into prompt strings without conditionals.
+ */
+export function formatPulseForPrompt(buckets: ChatBucket[] | null | undefined): string {
+  if (!buckets || buckets.length === 0) return "";
+
+  const total = buckets.reduce((s, b) => s + b.count, 0);
+  if (total === 0) return "";
+
+  const totalLaugh = buckets.reduce((s, b) => s + b.laughCount, 0);
+  const totalHype = buckets.reduce((s, b) => s + b.hypeCount, 0);
+  const totalSad = buckets.reduce((s, b) => s + b.sadCount, 0);
+  const totalSub = buckets.reduce((s, b) => s + b.subEvents, 0);
+  const totalBit = buckets.reduce((s, b) => s + b.bitEvents, 0);
+  const totalRaid = buckets.reduce((s, b) => s + b.raidEvents, 0);
+  const allUsers = new Set<string>(); // can't recover from buckets, omit
+
+  const avg = total / buckets.length;
+
+  // Top 6 chat moments by absolute deviation from the average — these are
+  // the windows worth citing in coaching ("your chat exploded at 47:12")
+  const sorted = [...buckets]
+    .map((b) => ({ b, dev: Math.abs(b.count - avg) }))
+    .sort((a, b) => b.dev - a.dev)
+    .slice(0, 6)
+    .map(({ b }) => b)
+    .sort((a, b) => a.start - b.start);
+
+  const lines: string[] = [];
+  lines.push("━━━ CHAT PULSE (real viewer reaction data) ━━━");
+  lines.push(`Total messages: ${total} across ${buckets.length} ${buckets[0].end - buckets[0].start}s buckets (avg ${avg.toFixed(1)}/bucket)`);
+  if (totalLaugh + totalHype + totalSad > 0) {
+    lines.push(`Reaction breakdown — laughs:${totalLaugh}  hype:${totalHype}  sad/cringe:${totalSad}`);
+  }
+  if (totalSub + totalBit + totalRaid > 0) {
+    lines.push(`Monetary signals — subs:${totalSub}  bits:${totalBit}  raids:${totalRaid}`);
+  }
+  lines.push("");
+  lines.push("Notable windows (chat surged or crashed relative to neighbors):");
+  for (const b of sorted) {
+    const label = [];
+    if (b.laughCount > 0) label.push(`${b.laughCount} laugh`);
+    if (b.hypeCount > 0) label.push(`${b.hypeCount} hype`);
+    if (b.sadCount > 0) label.push(`${b.sadCount} sad`);
+    if (b.subEvents > 0) label.push(`${b.subEvents} subs`);
+    if (b.bitEvents > 0) label.push(`${b.bitEvents} bits`);
+    if (b.raidEvents > 0) label.push("raid");
+    const tail = label.length > 0 ? ` [${label.join(", ")}]` : "";
+    lines.push(`  ${fmtTime(b.start)}-${fmtTime(b.end)}: ${b.count} msgs${tail}`);
+  }
+  lines.push("");
+  lines.push("USE THIS DATA: chat reaction is ground truth for engagement. A moment that looked great in the transcript but had quiet chat did NOT land. A moment with an audio dip but chat surge IS a comedy/reaction beat. Cite specific timestamps from this pulse when explaining strengths or weaknesses.");
+  lines.push("━━━");
+
+  // suppress unused warning — we may want to surface unique chatters here later
+  void allUsers;
+
+  return lines.join("\n");
+}

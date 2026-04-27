@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.10.0",
+    date: "2026-04-27",
+    title: "Chat Pulse — Real Viewer Reaction Data",
+    items: [
+      { type: "new", text: "Coach reports now include a Chat Pulse — a timeline of your viewers' actual reactions: volume, laughs, hype, sad/cringe moments, sub events, bit cheers, and raid arrivals" },
+      { type: "new", text: "Coaching insights now cite real chat behavior alongside transcript signals — moments that looked great in audio but had quiet chat get called out as missed connections; audio dips with chat surges get scored as clip-worthy" },
+      { type: "improved", text: "Clip moment detection now factors in chat reaction — if your chat exploded somewhere, that location is far more likely to make it into your clip moments" },
+    ],
+  },
+  {
     version: "v0.9.3",
     date: "2026-04-27",
     title: "Last Stream Recap",

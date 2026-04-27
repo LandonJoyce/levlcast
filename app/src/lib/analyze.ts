@@ -204,13 +204,15 @@ function buildPeakContextWindows(peaks: Peak[], segments: TranscriptSegment[]): 
  * Analyze a transcript with Claude to find peak/viral moments.
  * Returns scored peaks with clip boundaries, captions, and scroll-stopping hooks.
  */
-function buildPeakDetectionPrompt(vodTitle: string, transcript: string): string {
+function buildPeakDetectionPrompt(vodTitle: string, transcript: string, chatPulse?: string): string {
   return `You are selecting clips from a Twitch VOD transcript for TikTok and YouTube Shorts. Your job is to find moments that will stop someone mid-scroll — someone who has never seen this streamer before and has no loyalty to them.
 
 Stream title: "${vodTitle}"
 
 Timestamped transcript (--- Xs pause --- marks significant silences):
 ${transcript}
+
+${chatPulse ? chatPulse + "\n" : ""}
 
 ━━━ WHAT MAKES A CLIP GO VIRAL ━━━
 
@@ -336,7 +338,8 @@ Return 1-6 clips sorted by score descending. Fewer great clips beats more medioc
 async function runPeakDetection(
   anthropic: Anthropic,
   vodTitle: string,
-  segments: TranscriptSegment[]
+  segments: TranscriptSegment[],
+  chatPulse?: string
 ): Promise<Peak[]> {
   const transcript = buildTranscript(segments);
 
@@ -344,7 +347,7 @@ async function runPeakDetection(
     model: "claude-sonnet-4-6",
     max_tokens: 3000,
     system: `You are a senior clip editor who has spent years cutting Twitch VODs into viral TikToks and YouTube Shorts. You know the difference between a moment that excites the streamer's existing fans and a moment that will stop a complete stranger mid-scroll. You think in terms of clip arcs — setup, build, payoff — and you are ruthless about quality. You would rather return two perfect clips than six mediocre ones. You understand that the first 2-3 seconds of a clip determine everything, and you select boundaries with surgical precision so every clip starts on a hook and ends on a resolution.`,
-    messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript) }],
+    messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript, chatPulse) }],
   }), 3, 1000);
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
@@ -377,7 +380,8 @@ const MIN_PEAK_SCORE = 0.60;
 
 export async function detectPeaks(
   segments: TranscriptSegment[],
-  vodTitle: string
+  vodTitle: string,
+  chatPulse?: string
 ): Promise<Peak[]> {
   const anthropic = new Anthropic();
 
@@ -388,7 +392,7 @@ export async function detectPeaks(
   const vodDuration = segments.length > 0 ? segments[segments.length - 1].end : 0;
 
   if (vodDuration <= CHUNK_SECONDS + 5 * 60) {
-    const peaks = await runPeakDetection(anthropic, vodTitle, segments);
+    const peaks = await runPeakDetection(anthropic, vodTitle, segments, chatPulse);
     return peaks.sort((a, b) => b.score - a.score).slice(0, MAX_PEAKS);
   }
 
@@ -405,7 +409,7 @@ export async function detectPeaks(
   const allPeaks: Peak[] = [];
   for (const chunk of chunks) {
     if (chunk.length === 0) continue;
-    const peaks = await runPeakDetection(anthropic, vodTitle, chunk);
+    const peaks = await runPeakDetection(anthropic, vodTitle, chunk, chatPulse);
     allPeaks.push(...peaks);
   }
 
@@ -832,7 +836,8 @@ export async function generateCoachReport(
   segments: TranscriptSegment[],
   vodTitle: string,
   peaks: Peak[],
-  priorReports?: PriorCoachSummary[]
+  priorReports?: PriorCoachSummary[],
+  chatPulse?: string
 ): Promise<CoachReport | null> {
   const anthropic = new Anthropic();
 
@@ -974,7 +979,7 @@ ${peaksSummary}
 ${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this carefully — this is the raw evidence for what made the best moments work or why moments are missing):
 ${peakContextBlock}` : ""}
 
-STREAM TRANSCRIPT SAMPLES (problem-weighted — opening, closing, and worst-energy zones with wpm labels):
+${chatPulse ? chatPulse + "\n" : ""}STREAM TRANSCRIPT SAMPLES (problem-weighted — opening, closing, and worst-energy zones with wpm labels):
 ${transcriptSamples}
 
 STEP 0 — FIND THE STREAM'S STORY (do this first, before anything else):

@@ -6,6 +6,7 @@ import { CoachReport } from "@/lib/analyze";
 import { computeReportDelta } from "@/lib/report-delta";
 import { UpgradeModal } from "./upgrade-modal";
 import { LastStreamRecap } from "./last-stream-recap";
+import { ChatPulseCard } from "./chat-pulse-card";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -236,8 +237,14 @@ const ANTI_PATTERN_LABELS: Record<string, string> = {
 
 const ROMAN = ["i.", "ii.", "iii.", "iv.", "v."];
 
+interface ChatPulseBucket {
+  start: number; end: number; count: number; uniqueChatters: number;
+  laughCount: number; hypeCount: number; sadCount: number;
+  subEvents: number; bitEvents: number; raidEvents: number; vibe: number;
+}
+
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -247,6 +254,7 @@ export function CoachReportCard({
   streamerTitle?: string;
   isPro?: boolean;
   streamDurationSeconds?: number;
+  chatPulse?: ChatPulseBucket[] | null;
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
@@ -503,6 +511,11 @@ export function CoachReportCard({
 
           {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
           {recapDelta && <LastStreamRecap delta={recapDelta} />}
+
+          {/* ── CHAT PULSE ── (only when chat replay was fetched) */}
+          {chatPulse && chatPulse.length > 0 && (
+            <ChatPulseCard buckets={chatPulse} durationSeconds={streamDurationSeconds} />
+          )}
 
           {/* ── SHAREABLE WIN ── */}
           {report.shareable_win && (

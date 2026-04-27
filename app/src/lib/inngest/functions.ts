@@ -13,7 +13,7 @@
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
 import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
-import { bucketChat } from "@/lib/chat-pulse";
+import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
@@ -159,14 +159,16 @@ export const analyzeVod = inngest.createFunction(
 
       const peaks = await step.run("detect-peaks", async () => {
         await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
-        const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
+        const { data: vod } = await supabase.from("vods").select("title, chat_pulse").eq("id", vodId).single();
         const title = vod?.title || "Stream";
-        return await detectPeaks(filtered, title);
+        const pulseText = formatPulseForPrompt(vod?.chat_pulse as ChatBucket[] | null | undefined);
+        return await detectPeaks(filtered, title, pulseText || undefined);
       });
 
       const coachReport = await step.run("generate-coach-report", async () => {
-        const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
+        const { data: vod } = await supabase.from("vods").select("title, chat_pulse").eq("id", vodId).single();
         const title = vod?.title || "Stream";
+        const pulseText = formatPulseForPrompt(vod?.chat_pulse as ChatBucket[] | null | undefined);
 
         // Last 3 prior reports for longitudinal coaching context
         const { data: priorVods } = await supabase
@@ -192,7 +194,7 @@ export const analyzeVod = inngest.createFunction(
             };
           });
 
-        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined);
+        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined);
         if (!report) {
           throw new Error("Failed to generate coaching report — AI returned invalid response");
         }
