@@ -20,6 +20,7 @@ import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { downloadTwitchVodVideo } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
+import type { CaptionWord } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
 
@@ -169,12 +170,23 @@ async function runClipGeneration({
 
     const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end);
 
+    // Pull word-level timestamps so cutClip can burn TikTok-style captions.
+    const { data: vodRow } = await admin
+      .from("vods")
+      .select("word_timestamps")
+      .eq("id", vodId)
+      .single();
+    const vodWords = (vodRow?.word_timestamps as CaptionWord[] | null) ?? null;
+
     let buffer: Buffer;
     try {
       const adjustedStart = peak.start - download.segmentStartSeconds;
       const adjustedEnd = peak.end - download.segmentStartSeconds;
       console.log(`[clip] Cutting ${adjustedStart}s–${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
+      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
+        vodWords,
+        vodWindow: { start: peak.start, end: peak.end },
+      });
       console.log(`[clip] Cut complete: ${buffer.length} bytes`);
     } finally {
       await download.cleanup();

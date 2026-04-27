@@ -3,6 +3,12 @@ import { promisify } from "util";
 import { writeFile, unlink, readFile, mkdtemp, access, chmod } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import {
+  type CaptionWord,
+  sliceWordsForClip,
+  groupWordsIntoCards,
+  buildCaptionFilters,
+} from "./captions";
 
 export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
 
@@ -31,24 +37,20 @@ async function getCaptionFont(): Promise<string | null> {
 /**
  * Re-encode an MP4 clip into 1080×1920 (9:16) vertical format.
  *
+ * Captions are NOT added here — they are baked into the source clip during
+ * cutClip() so every clip (Free + Pro, downloaded or exported) has them and
+ * we don't pay a second drawtext pass.
+ *
  * Layout options:
  *   no_cam  — center-crop gameplay to fill the full frame
  *   cam_br  — gameplay top 62%, facecam bottom-right 38%
  *   cam_bl  — gameplay top 62%, facecam bottom-left 38%
  *   cam_tr  — facecam top-right 38%, gameplay bottom 62%
  *   cam_tl  — facecam top-left 38%, gameplay bottom 62%
- *
- * Cam crops assume a 1280×720 (or wider 16:9) source with the webcam
- * in the bottom-right or top-right corner (typical streamer layout).
- * The cam segment is cropped from the corner at 25% width × 25% height,
- * then scaled to fill its 1080×730 (38%) slot.
- *
- * Output is H.264 / AAC, ready for TikTok / YouTube Shorts / Reels.
  */
 export async function exportClipVertical(
   inputFilePath: string,
-  layout: StreamLayout,
-  captionText?: string
+  layout: StreamLayout
 ): Promise<Buffer> {
   const ffmpegPath = await getFFmpegPath();
 
@@ -60,22 +62,9 @@ export async function exportClipVertical(
   const gameH = Math.round(H * 0.62);  // 1190 px
   const camH  = H - gameH;             // 730 px
 
-  // Download caption font to /tmp on first use (cached across warm invocations).
-  // Write caption text to a file so drawtext=textfile= reads it directly,
-  // bypassing all shell/filter escaping of special characters.
-  let captionFilePath: string | null = null;
-  let fontPath: string | null = null;
-  if (captionText) {
-    fontPath = await getCaptionFont();
-    if (fontPath) {
-      captionFilePath = join(tempDir, "cap.txt");
-      await writeFile(captionFilePath, wrapCaption(captionText, 28));
-    }
-  }
-
   // Audio is included in the filter_complex so -map "[aout]" is consistent
   // and there's no conflict with a separate -af flag.
-  const filterComplex = buildVerticalFilterComplex(layout, W, H, gameH, camH, captionFilePath, fontPath);
+  const filterComplex = buildVerticalFilterComplex(layout, W, H, gameH, camH);
 
   try {
     const cmd = [
@@ -110,7 +99,6 @@ export async function exportClipVertical(
     return await readFile(outputPath);
   } finally {
     await unlink(outputPath).catch(() => {});
-    if (captionFilePath) await unlink(captionFilePath).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");
       await rmdir(tempDir);
@@ -118,45 +106,20 @@ export async function exportClipVertical(
   }
 }
 
-function wrapCaption(text: string, maxChars: number): string {
-  const words = text.trim().split(/\s+/);
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    if (lines.length >= 3) break;
-    const next = cur ? `${cur} ${w}` : w;
-    if (next.length > maxChars && cur) { lines.push(cur); cur = w; }
-    else cur = next;
-  }
-  if (cur && lines.length < 3) lines.push(cur);
-  return lines.join("\n");
-}
-
 function buildVerticalFilterComplex(
   layout: StreamLayout,
   W: number,
   H: number,
   gameH: number,
-  camH: number,
-  captionFilePath: string | null,
-  fontPath: string | null
+  camH: number
 ): string {
   const audioChain = `[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]`;
   const gameCrop = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${gameH},setpts=PTS-STARTPTS`;
 
-  function captionFilter(gameTop: number): string {
-    if (!captionFilePath || !fontPath) return "";
-    const y = layout === "no_cam"
-      ? Math.round(H * 0.78)
-      : gameTop + Math.round(gameH * 0.78);
-    // textfile= avoids escaping caption text; fontfile= avoids fontconfig
-    return `,drawtext=textfile=${captionFilePath}:fontfile=${fontPath}:fontcolor=white:fontsize=54:borderw=4:bordercolor=black@0.85:x=(w-text_w)/2:y=${y}:line_spacing=10`;
-  }
-
   let videoChain: string;
 
   if (layout === "no_cam") {
-    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS${captionFilter(0)}[vout]`;
+    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS[vout]`;
   } else {
     const camCorners: Record<string, string> = {
       cam_br: `iw*0.75:ih*0.75:iw*0.75:ih*0.75`,
@@ -166,12 +129,11 @@ function buildVerticalFilterComplex(
     };
     const camCrop = `crop=${camCorners[layout]},scale=${W}:-2,crop=${W}:${camH}:0:(ih-${camH})/2,setpts=PTS-STARTPTS`;
     const isTop = layout === "cam_tr" || layout === "cam_tl";
-    const gameTop = isTop ? camH : 0;
 
     if (isTop) {
-      videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2${captionFilter(gameTop)}[vout]`;
+      videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2[vout]`;
     } else {
-      videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2${captionFilter(gameTop)}[vout]`;
+      videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2[vout]`;
     }
   }
 
@@ -226,6 +188,19 @@ function ffmpegError(err: any): Error {
   return new Error(`FFmpeg failed: ${tail.slice(0, 500) || err.message}`);
 }
 
+export interface CutClipOptions {
+  /**
+   * VOD-wide word list from Deepgram. Slice + caption-burn happens internally.
+   * If absent or empty, the clip is encoded with no captions.
+   */
+  vodWords?: CaptionWord[] | null;
+  /**
+   * Absolute VOD timestamps for the clip window. Used to slice vodWords.
+   * If omitted, captions are skipped (we wouldn't know how to align them).
+   */
+  vodWindow?: { start: number; end: number };
+}
+
 /**
  * Cut a clip from a concatenated MPEG-TS Twitch VOD file.
  *
@@ -240,11 +215,15 @@ function ffmpegError(err: any): Error {
  * needed. -ss is placed AFTER -i (slow seek) so FFmpeg decodes from the start
  * of the input — reliable since our downloaded segments only cover the clip
  * window so adjustedStart is always small (0-30s).
+ *
+ * If options.vodWords + options.vodWindow are provided, word-synced captions
+ * are burned into the output in the same encode pass.
  */
 export async function cutClip(
   inputFilePath: string,
   startSeconds: number,
-  endSeconds: number
+  endSeconds: number,
+  options: CutClipOptions = {}
 ): Promise<Buffer> {
   const safeStart = Math.max(0, startSeconds);
   const safeEnd = endSeconds;
@@ -257,8 +236,46 @@ export async function cutClip(
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
   const outputPath = join(tempDir, "clip.mp4");
 
+  // Build the optional caption drawtext chain. We do this BEFORE running
+  // ffmpeg so any filesystem failure throws cleanly; if the font won't
+  // download we just fall back to a no-caption encode rather than failing.
+  let captionFilter = "";
+  let captionFiles: string[] = [];
+  if (options.vodWords?.length && options.vodWindow) {
+    try {
+      const fontPath = await getCaptionFont();
+      if (fontPath) {
+        const sliced = sliceWordsForClip(options.vodWords, options.vodWindow.start, options.vodWindow.end);
+        const cards = groupWordsIntoCards(sliced);
+        if (cards.length > 0) {
+          // Source video resolution drives caption sizing. Most Twitch VODs
+          // are 1920×1080 or 1280×720. We don't know the exact source here
+          // without probing — assume 1280×720 baseline and let drawtext scale
+          // proportionally. Slightly small captions on 1080p > monstrous
+          // captions on 720p.
+          const built = await buildCaptionFilters(cards, {
+            fontPath,
+            videoWidth: 1280,
+            videoHeight: 720,
+            tempDir,
+          });
+          captionFilter = built.filter;
+          captionFiles = built.textFiles;
+          console.log(`[clip] Captions: ${cards.length} cards over ${duration.toFixed(1)}s`);
+        }
+      }
+    } catch (err) {
+      console.warn("[clip] Caption build failed, encoding without captions:", err);
+      captionFilter = "";
+    }
+  }
+
   try {
-    const cmd = [
+    // Captions need a filter_complex chain. With no captions we keep the old
+    // -vf/-af form because it's simpler and well-tested.
+    const useFilterComplex = captionFilter.length > 0;
+
+    const baseArgs = [
       `"${ffmpegPath}"`,
       `-fflags +genpts+igndts`,
       `-err_detect ignore_err`,
@@ -273,13 +290,27 @@ export async function cutClip(
       `-pix_fmt yuv420p`,
       `-c:a aac`,
       `-b:a 128k`,
-      `-vf setpts=PTS-STARTPTS`,
-      `-af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
+    ];
+
+    const filterArgs = useFilterComplex
+      ? [
+          `-filter_complex "[0:v]setpts=PTS-STARTPTS${captionFilter}[vout];[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]"`,
+          `-map "[vout]"`,
+          `-map "[aout]"`,
+        ]
+      : [
+          `-vf setpts=PTS-STARTPTS`,
+          `-af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
+        ];
+
+    const tailArgs = [
       `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
       `-y`,
       `"${outputPath}"`,
-    ].join(" ");
+    ];
+
+    const cmd = [...baseArgs, ...filterArgs, ...tailArgs].join(" ");
 
     try {
       await execAsync(cmd, { timeout: 180000 });
@@ -288,10 +319,10 @@ export async function cutClip(
       throw ffmpegError(err);
     }
 
-    const clipBuffer = await readFile(outputPath);
-    return clipBuffer;
+    return await readFile(outputPath);
   } finally {
     await unlink(outputPath).catch(() => {});
+    for (const f of captionFiles) await unlink(f).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");
       await rmdir(tempDir);

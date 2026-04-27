@@ -16,6 +16,7 @@ import { streamTwitchVodAudio, downloadTwitchVodVideo } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
+import type { CaptionWord } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
@@ -45,7 +46,10 @@ export const analyzeVod = inngest.createFunction(
     const supabase = createAdminClient();
 
     try {
-      // Step 1: Stream audio directly to Deepgram — no disk writes, no disk space issues
+      // Step 1: Stream audio directly to Deepgram — no disk writes, no disk space issues.
+      // Word-level timestamps are persisted to vods.word_timestamps inside this step
+      // (not returned) — keeping them out of inter-step state avoids Inngest's
+      // ~4MB JSON cap, which 30k+ word entries would push against.
       const segments = await step.run("transcribe", async () => {
         const { data: vod } = await supabase
           .from("vods")
@@ -58,9 +62,14 @@ export const analyzeVod = inngest.createFunction(
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
 
         const stream = streamTwitchVodAudio(vod.twitch_vod_id);
-        const result = await transcribePassThrough(stream);
-        if (result.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
-        return result;
+        const { segments, words } = await transcribePassThrough(stream);
+        if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+
+        if (words.length > 0) {
+          await supabase.from("vods").update({ word_timestamps: words }).eq("id", vodId);
+        }
+
+        return segments;
       });
 
       // Step 2: Detect peaks + coach report (filtered to selected range if provided)
@@ -353,13 +362,24 @@ export const generateClip = inngest.createFunction(
         const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end)
           .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
+        // Pull word-level timestamps so cutClip can burn TikTok-style captions.
+        // Missing/empty words → cutClip falls back to a no-caption encode.
+        const { data: vodRow } = await supabase
+          .from("vods")
+          .select("word_timestamps")
+          .eq("id", vodId)
+          .single();
+        const vodWords = (vodRow?.word_timestamps as CaptionWord[] | null) ?? null;
+
         let buffer: Buffer;
         try {
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
           console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd)
-            .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
+          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
+            vodWords,
+            vodWindow: { start: peak.start, end: peak.end },
+          }).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
           console.log(`[clip] Cut complete: ${buffer.length} bytes`);
         } finally {
           await download.cleanup();

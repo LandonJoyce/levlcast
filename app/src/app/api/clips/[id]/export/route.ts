@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const admin = createAdminClient();
   const { data: clip } = await admin
     .from("clips")
-    .select("id, title, video_url, status, caption_text")
+    .select("id, title, video_url, status")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -67,11 +67,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const arrayBuffer = await videoRes.arrayBuffer();
     await writeFile(inputPath, Buffer.from(arrayBuffer));
 
-    const captionText = (clip.caption_text as string | null) ?? undefined;
-
     let outputBuffer: Buffer;
     try {
-      outputBuffer = await exportClipVertical(inputPath, layout, captionText);
+      outputBuffer = await exportClipVertical(inputPath, layout);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[export] FFmpeg failed for clip ${id} layout ${layout}:`, msg);

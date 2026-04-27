@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.9.1",
+    date: "2026-04-26",
+    title: "Word-Synced Captions on Every Clip",
+    items: [
+      { type: "new", text: "Every generated clip now has TikTok-style word-synced captions burned in — Free and Pro, no extra step" },
+      { type: "improved", text: "Captions read what you actually said (from the transcript), grouped 1–3 words at a time, synced to your voice" },
+      { type: "improved", text: "Vertical export no longer re-encodes captions — faster, no quality loss between encode passes" },
+    ],
+  },
+  {
     version: "v0.9.0",
     date: "2026-04-25",
     title: "New Landing + Dashboard Redesign",
