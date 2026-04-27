@@ -104,25 +104,35 @@ export const analyzeVod = inngest.createFunction(
         return segments;
       });
 
-      // Step 2: Detect peaks + coach report (filtered to selected range if provided)
-      const { peaks, coachReport } = await step.run("analyze", async () => {
-        await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
+      // Steps 2 & 3 used to be a single "analyze" step that ran both Claude
+      // calls back-to-back. For long VODs that combined latency exceeded
+      // Vercel's 5-minute per-invocation ceiling and the function got killed
+      // (FUNCTION_INVOCATION_TIMEOUT). Splitting into two steps gives each
+      // Claude call its own 5-minute window and lets Inngest persist peak
+      // results so retries don't re-run detection.
 
+      // Filter once — used by both steps. Closure capture is fine; the array
+      // is small (utterance-level, not word-level) so cross-step state cost
+      // is negligible.
+      const filtered = (startSeconds !== undefined && endSeconds !== undefined)
+        ? segments.filter(s => s.start < endSeconds && s.end > startSeconds)
+        : segments;
+      if (filtered.length === 0) {
+        throw new Error("No speech found in the selected time range — try a wider range");
+      }
+
+      const peaks = await step.run("detect-peaks", async () => {
+        await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
+        const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
+        const title = vod?.title || "Stream";
+        return await detectPeaks(filtered, title);
+      });
+
+      const coachReport = await step.run("generate-coach-report", async () => {
         const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
         const title = vod?.title || "Stream";
 
-        // Filter to selected time range — overlap check so utterances spanning
-        // the boundary are included, not silently dropped
-        const filtered = (startSeconds !== undefined && endSeconds !== undefined)
-          ? segments.filter(s => s.start < endSeconds && s.end > startSeconds)
-          : segments;
-
-        if (filtered.length === 0) {
-          throw new Error("No speech found in the selected time range — try a wider range");
-        }
-
-        // Fetch the last 3 ready coach reports for this user (excluding this VOD)
-        // so the AI can give longitudinal coaching, not just single-session feedback
+        // Last 3 prior reports for longitudinal coaching context
         const { data: priorVods } = await supabase
           .from("vods")
           .select("coach_report, analyzed_at")
@@ -146,12 +156,11 @@ export const analyzeVod = inngest.createFunction(
             };
           });
 
-        const peaks = await detectPeaks(filtered, title);
-        const coachReport = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined);
-        if (!coachReport) {
+        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined);
+        if (!report) {
           throw new Error("Failed to generate coaching report — AI returned invalid response");
         }
-        return { peaks, coachReport };
+        return report;
       });
 
       // Step 4: Save results + record usage
