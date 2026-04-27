@@ -94,7 +94,7 @@ export default async function VodDetailPage({
     supabase.from("social_connections").select("platform").eq("user_id", user!.id),
     supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("stream_date", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("vods").select("status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(20),
-    supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("analyzed_at", { ascending: false }).limit(50),
+    supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("analyzed_at", { ascending: false }).limit(50),
     supabase.from("profiles").select("plan, subscription_expires_at").eq("id", user!.id).single(),
   ]);
 
@@ -122,6 +122,27 @@ export default async function VodDetailPage({
 
   const currentScore = coachReport?.overall_score as number | undefined;
   const allTimeBest = priorScores.length > 0 ? Math.max(...priorScores) : 0;
+
+  // Build the score-trajectory points: last 9 prior + the current stream.
+  // Use stream_date when present (the actual stream date) and fall back to
+  // analyzed_at so VODs without recorded stream_date still chart in order.
+  type PriorRow = { coach_report: { overall_score?: number } | null; stream_date: string | null; analyzed_at: string | null };
+  const priorTrajectoryPoints = (priorVodsForStats as PriorRow[] | null ?? [])
+    .map((v): { score: number; date: string } | null => {
+      const score = v.coach_report?.overall_score;
+      const date = v.stream_date ?? v.analyzed_at;
+      if (typeof score !== "number" || isNaN(score) || !date) return null;
+      return { score, date };
+    })
+    .filter((p): p is { score: number; date: string } => p !== null)
+    .slice(0, 9); // most recent 9 (already analyzed_at DESC from query)
+
+  const trajectory = currentScore !== undefined && (vod.stream_date || vod.analyzed_at)
+    ? [
+        ...priorTrajectoryPoints,
+        { score: currentScore, date: (vod.stream_date as string | null) ?? (vod.analyzed_at as string | null) ?? new Date().toISOString(), current: true },
+      ]
+    : undefined;
   const isPersonalBest = currentScore !== undefined && priorScores.length > 0 && currentScore > allTimeBest;
 
   const last5 = [currentScore, ...priorScores.slice(0, 4)].filter((s): s is number => s !== undefined);
@@ -228,6 +249,7 @@ export default async function VodDetailPage({
               isPro={isPro}
               streamDurationSeconds={vod.duration_seconds ?? undefined}
               chatPulse={chatPulse}
+              trajectory={trajectory}
             />
           ) : (
             <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>

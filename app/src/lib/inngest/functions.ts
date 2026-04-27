@@ -123,11 +123,10 @@ export const analyzeVod = inngest.createFunction(
           if (duration < 60) return { skipped: "too_short" };
 
           const messages = await fetchTwitchVodChat(vodForChat.twitch_vod_id);
-          if (messages.length === 0) {
-            console.log(`[analyze] No chat messages found for VOD ${vodId.slice(0, 8)}`);
-            return { messages: 0 };
-          }
-
+          // Save buckets unconditionally — empty buckets (0 messages, e.g. on
+          // very old VODs Twitch no longer serves chat replay for) let the UI
+          // render the AudienceSnapshot card with \"Quiet stream\" copy
+          // instead of falling through to nothing rendered at all.
           const buckets = bucketChat(messages, duration, 30);
           await supabase.from("vods").update({ chat_pulse: buckets }).eq("id", vodId);
           console.log(`[analyze] Saved chat pulse: ${messages.length} messages → ${buckets.length} buckets`);

@@ -9,6 +9,7 @@ import { UpgradeModal } from "./upgrade-modal";
 import { LastStreamRecap } from "./last-stream-recap";
 import { ChatPulseCard } from "./chat-pulse-card";
 import { AudienceSnapshotCard } from "./audience-snapshot-card";
+import { ScoreTrajectory, type TrajectoryPoint } from "./score-trajectory";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -251,7 +252,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -262,6 +263,7 @@ export function CoachReportCard({
   isPro?: boolean;
   streamDurationSeconds?: number;
   chatPulse?: ChatPulseBucket[] | null;
+  trajectory?: TrajectoryPoint[];
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
@@ -518,6 +520,9 @@ export function CoachReportCard({
 
           {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
           {recapDelta && <LastStreamRecap delta={recapDelta} />}
+
+          {/* ── SCORE TRAJECTORY ── (line chart of last N streams) */}
+          {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
 
           {/* ── CHAT PULSE / AUDIENCE SNAPSHOT ──
               Pulse timeline only when chat is statistically meaningful;
@@ -861,6 +866,33 @@ export function CoachReportCard({
                       </div>
                     );
                   })()}
+
+                  {/* Anti-pattern markers — red dots above the timeline at
+                      flagged moments. Visualizes growth-killers on the same
+                      timeline as silence so users see WHEN the bad behaviors
+                      hit, not just that they happened. */}
+                  {isPro && (report.anti_patterns ?? []).map((ap, i) => {
+                    const secs = parseTimeSecs(ap.time);
+                    const pct = (secs / totalSecs) * 100;
+                    if (pct < 0 || pct > 100) return null;
+                    return (
+                      <div
+                        key={`ap-${i}`}
+                        title={`${ANTI_PATTERN_LABELS[ap.type] ?? ap.type} · ${ap.time}`}
+                        style={{
+                          position: "absolute",
+                          top: -8,
+                          left: `${pct}%`,
+                          width: 8, height: 8,
+                          borderRadius: "50%",
+                          background: "#F87171",
+                          transform: "translateX(-50%)",
+                          border: "2px solid rgba(10,9,20,0.85)",
+                          boxShadow: "0 0 4px rgba(248,113,113,0.6)",
+                        }}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* Legend */}
@@ -877,6 +909,12 @@ export function CoachReportCard({
                     <span style={{ display: "inline-block", width: 2, height: 16, background: "#A3E635", boxShadow: "0 0 5px rgba(163,230,53,0.6)" }} />
                     Best moment
                   </span>
+                  {isPro && (report.anti_patterns ?? []).length > 0 && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#F87171", boxShadow: "0 0 4px rgba(248,113,113,0.6)" }} />
+                      Growth killer flagged
+                    </span>
+                  )}
                 </div>
               </div>
 
