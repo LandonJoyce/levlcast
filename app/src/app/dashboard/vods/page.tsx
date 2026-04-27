@@ -70,7 +70,7 @@ export default async function VodsPage({
 
   const { data: vods } = await supabase
     .from("vods")
-    .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report, thumbnail_url")
+    .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report, thumbnail_url, failed_reason")
     .eq("user_id", user.id)
     .order("stream_date", { ascending: false });
 
@@ -170,7 +170,9 @@ export default async function VodsPage({
           {filtered.map((v, i) => {
             const score = (v.coach_report as { overall_score?: number } | null)?.overall_score ?? null;
             const isProcessing = v.status === "transcribing" || v.status === "analyzing";
-            const showAnalyzeButton = v.status === "pending";
+            // Failed VODs need a retry path too — the API accepts both
+            // pending and failed for analyze.
+            const showAnalyzeButton = v.status === "pending" || v.status === "failed";
 
             return (
               <div
@@ -255,6 +257,24 @@ export default async function VodsPage({
                   <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", letterSpacing: ".04em" }}>
                     {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
                   </span>
+                  {v.status === "failed" && v.failed_reason && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "var(--red, #ef4444)",
+                        lineHeight: 1.4,
+                        marginTop: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                      title={v.failed_reason as string}
+                    >
+                      {v.failed_reason as string}
+                    </span>
+                  )}
                 </div>
 
                 {/* right side — score / progress / analyze */}
