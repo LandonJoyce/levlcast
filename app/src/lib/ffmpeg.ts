@@ -23,28 +23,6 @@ export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
  *
  * Output is H.264 / AAC, ready for TikTok / YouTube Shorts / Reels.
  */
-// Common system font paths — checked in order, first found wins.
-// drawtext requires a font file; if none found, captions are skipped
-// so the export still succeeds without text overlay.
-const SYSTEM_FONT_CANDIDATES = [
-  // Linux (Vercel / Ubuntu / Amazon Linux)
-  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-  "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
-  "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-  "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-  "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
-  // macOS (local dev)
-  "/Library/Fonts/Arial Bold.ttf",
-  "/System/Library/Fonts/Helvetica.ttc",
-];
-
-async function findSystemFont(): Promise<string | null> {
-  for (const p of SYSTEM_FONT_CANDIDATES) {
-    try { await access(p); return p; } catch {}
-  }
-  return null;
-}
-
 export async function exportClipVertical(
   inputFilePath: string,
   layout: StreamLayout,
@@ -60,25 +38,17 @@ export async function exportClipVertical(
   const gameH = Math.round(H * 0.62);  // 1190 px
   const camH  = H - gameH;             // 730 px
 
-  // Write caption to a textfile so drawtext reads it without shell-escaping issues.
-  // Skip if no caption text or no usable system font (export succeeds without captions).
+  // Write captions as an ASS subtitle file. The `subtitles` FFmpeg filter uses
+  // libass which has embedded font fallback — no system font required.
   let captionFilePath: string | null = null;
-  let fontPath: string | null = null;
   if (captionText) {
-    fontPath = await findSystemFont();
-    if (fontPath) {
-      captionFilePath = join(tempDir, "cap.txt");
-      await writeFile(captionFilePath, wrapCaption(captionText, 28));
-    } else {
-      console.log("[ffmpeg] No system font found — exporting without caption overlay");
-    }
+    captionFilePath = join(tempDir, "cap.ass");
+    await writeFile(captionFilePath, buildAssFile(captionText, layout, W, H, gameH, camH));
   }
 
-  // Audio is included in the filter_complex to avoid conflicts between
-  // -filter_complex + explicit -map and a separate -af flag.
-  const filterComplex = buildVerticalFilterComplex(
-    layout, W, H, gameH, camH, captionFilePath, fontPath
-  );
+  // Audio is included in the filter_complex so -map "[aout]" is consistent
+  // and there's no conflict with a separate -af flag.
+  const filterComplex = buildVerticalFilterComplex(layout, W, H, gameH, camH, captionFilePath);
 
   try {
     const cmd = [
@@ -121,22 +91,51 @@ export async function exportClipVertical(
   }
 }
 
-function wrapCaption(text: string, maxChars: number): string {
+// Build an ASS subtitle file for the clip caption.
+// ASS uses libass (embedded in the static FFmpeg binary) which has its own
+// font fallback — no system font installation required on Vercel Lambda.
+//
+// MarginV = distance in pixels from the bottom of the frame to the text.
+// We position captions in the lower third of the game area, accounting for
+// where the game panel sits in the final 1080×1920 frame.
+function buildAssFile(
+  text: string,
+  layout: StreamLayout,
+  W: number,
+  H: number,
+  gameH: number,
+  camH: number
+): string {
+  // Word-wrap to ~28 chars/line, max 3 lines
   const words = text.trim().split(/\s+/);
   const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
+  let cur = "";
+  for (const w of words) {
     if (lines.length >= 3) break;
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > maxChars && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = next;
-    }
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length > 28 && cur) { lines.push(cur); cur = w; }
+    else cur = next;
   }
-  if (current && lines.length < 3) lines.push(current);
-  return lines.join("\n");
+  if (cur && lines.length < 3) lines.push(cur);
+
+  // y position of caption top from frame top
+  const isTop = layout === "cam_tr" || layout === "cam_tl";
+  const gameTop = layout === "no_cam" ? 0 : isTop ? camH : 0;
+  const captionY = gameTop + Math.round(gameH * 0.78);
+  const marginV = H - captionY; // ASS marginV = distance from bottom
+
+  return `[Script Info]
+ScriptType: v4.00+
+PlayResX: ${W}
+PlayResY: ${H}
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,68,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5,0,2,60,60,${marginV},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,9:59:00.00,Default,,0,0,0,,${lines.join("\\N")}`;
 }
 
 function buildVerticalFilterComplex(
@@ -145,25 +144,17 @@ function buildVerticalFilterComplex(
   H: number,
   gameH: number,
   camH: number,
-  captionFilePath: string | null,
-  fontPath: string | null
+  captionFilePath: string | null
 ): string {
-  // Audio chain — always included so -map "[aout]" is valid
   const audioChain = `[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]`;
-
   const gameCrop = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${gameH},setpts=PTS-STARTPTS`;
-
-  function captionFilter(gameTop: number): string {
-    if (!captionFilePath || !fontPath) return "";
-    const y = gameTop + Math.round(gameH * 0.68);
-    return `,drawtext=textfile=${captionFilePath}:fontfile=${fontPath}:fontcolor=white:fontsize=54:borderw=4:bordercolor=black@0.85:x=(w-text_w)/2:y=${y}:line_spacing=10`;
-  }
+  // subtitles filter uses the path directly — Linux /tmp paths have no special chars
+  const subFilter = captionFilePath ? `,subtitles=${captionFilePath}` : "";
 
   let videoChain: string;
 
   if (layout === "no_cam") {
-    const dt = captionFilter(0);
-    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS${dt}[vout]`;
+    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS${subFilter}[vout]`;
   } else {
     const camCorners: Record<string, string> = {
       cam_br: `iw*0.75:ih*0.75:iw*0.75:ih*0.75`,
@@ -173,13 +164,11 @@ function buildVerticalFilterComplex(
     };
     const camCrop = `crop=${camCorners[layout]},scale=${W}:-2,crop=${W}:${camH}:0:(ih-${camH})/2,setpts=PTS-STARTPTS`;
     const isTop = layout === "cam_tr" || layout === "cam_tl";
-    const gameTop = isTop ? camH : 0;
-    const dt = captionFilter(gameTop);
 
     if (isTop) {
-      videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2${dt}[vout]`;
+      videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2${subFilter}[vout]`;
     } else {
-      videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2${dt}[vout]`;
+      videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2${subFilter}[vout]`;
     }
   }
 
