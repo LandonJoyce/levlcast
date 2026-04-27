@@ -84,10 +84,11 @@ export interface CaptionCard {
   end: number;
 }
 
-const MAX_WORDS_PER_CARD = 3;
-const MAX_CARD_DURATION_S = 1.6;
-const NEW_CARD_GAP_S = 0.35;
-const MIN_CARD_DURATION_S = 0.4;
+// Tuned for the TikTok / Reels pace — short bursts, snap fast.
+const MAX_WORDS_PER_CARD = 2;
+const MAX_CARD_DURATION_S = 1.3;
+const NEW_CARD_GAP_S = 0.28;
+const MIN_CARD_DURATION_S = 0.35;
 
 /**
  * Pack words into short cards that look like TikTok auto-captions.
@@ -177,14 +178,20 @@ export async function buildCaptionFilters(
 ): Promise<CaptionRenderResult> {
   if (cards.length === 0) return { filter: "", textFiles: [] };
 
-  // Use a fixed pixel font size — scales acceptably across 720p/1080p
-  // sources. Y is expressed relative to actual output height so captions
-  // always sit near the bottom regardless of source resolution.
-  const fontSize = 64;
-  const borderWidth = 5;
-  const lineSpacing = 10;
-  // 8% margin from the bottom of the frame
-  const yExpr = "h-text_h-(h*0.08)";
+  // Viral-edit caption style:
+  //   - Heavy white sans on a thick black stroke (no box) so it reads
+  //     on bright AND dark backgrounds without a card behind it
+  //   - Soft drop shadow gives depth/separation without the chunky look
+  //     of a solid box
+  //   - Uppercase the text so single words feel weighty (TikTok default)
+  //   - Position at ~70% height — well clear of UI safe areas on
+  //     Shorts/Reels and above the bottom-row UI on TikTok
+  //   - All values are video-height relative so the caption looks the
+  //     same on a 720p clip as a 1080p one
+  const fontSize = 78;
+  const borderWidth = 8;
+  const lineSpacing = Math.round(fontSize * 0.18);
+  const yExpr = "(h*0.70)-(text_h/2)";
 
   const parts: string[] = [];
   const textFiles: string[] = [];
@@ -192,7 +199,8 @@ export async function buildCaptionFilters(
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
     const filePath = join(config.tempDir, `cap-${i}.txt`);
-    await writeFile(filePath, card.text);
+    // Uppercase text — punchier for short bursts. Keep punctuation.
+    await writeFile(filePath, card.text.toUpperCase());
     textFiles.push(filePath);
 
     // Single-quoted enable value — FFmpeg treats chars inside ''
@@ -209,7 +217,7 @@ export async function buildCaptionFilters(
       `fontsize=${fontSize}:` +
       `borderw=${borderWidth}:` +
       `bordercolor=black:` +
-      `box=1:boxcolor=black@0.5:boxborderw=18:` +
+      `shadowcolor=black:shadowx=3:shadowy=4:` +
       `x=(w-text_w)/2:y=${yExpr}:` +
       `line_spacing=${lineSpacing}:` +
       `enable='${enable}'`
