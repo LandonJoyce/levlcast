@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Bundle the caption font with the clip-generation Lambda. The tracer
+  // can't see runtime fs.readFile/path.join references, so we list it
+  // explicitly here.
+  outputFileTracingIncludes: {
+    "/api/clips/generate": ["./src/lib/fonts/Roboto-Bold.ttf"],
+    "/api/clips/[id]/export": ["./src/lib/fonts/Roboto-Bold.ttf"],
+    "/api/inngest": ["./src/lib/fonts/Roboto-Bold.ttf"],
+  },
+
   // Security headers — applied to every response
   async headers() {
     return [

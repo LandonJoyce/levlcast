@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import { writeFile, unlink, readFile, mkdtemp, access, chmod } from "fs/promises";
+import { writeFile, unlink, readFile, mkdtemp, access, chmod, copyFile, stat } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import {
@@ -12,49 +12,30 @@ import {
 
 export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
 
-const CAPTION_FONT_PATH = "/tmp/levlcast-caption-font.ttf";
-
-// Multiple sources tried in order. The previous gh/google/fonts path was
-// returning 403 from jsDelivr — they appear to rate-limit large mirrored
-// repos. The npm-package routes are more reliable and the file is
-// identical (Roboto Bold TTF, ~170KB).
-const CAPTION_FONT_URLS = [
-  "https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Bold.ttf",
-  "https://unpkg.com/roboto-fontface@0.10.0/fonts/roboto/Roboto-Bold.ttf",
-  "https://cdn.jsdelivr.net/npm/@openfonts/roboto_latin@1.44.2/files/roboto-latin-700.ttf",
-];
+// The caption font is bundled with the deployment (see
+// next.config.ts → outputFileTracingIncludes). On Vercel functions live
+// at /var/task/, so the font ends up next to our compiled code. We copy
+// it to /tmp on first use because drawtext on Vercel's read-only fs
+// occasionally has issues opening files outside /tmp.
+const FONT_REPO_PATH = join(process.cwd(), "src/lib/fonts/Roboto-Bold.ttf");
+const FONT_TMP_PATH = "/tmp/levlcast-caption-font.ttf";
 
 async function getCaptionFont(): Promise<string | null> {
   try {
-    await access(CAPTION_FONT_PATH);
-    return CAPTION_FONT_PATH;
+    const s = await stat(FONT_TMP_PATH);
+    if (s.size > 50_000) return FONT_TMP_PATH;
   } catch {}
 
-  for (const url of CAPTION_FONT_URLS) {
-    try {
-      console.log(`[ffmpeg] Downloading caption font from ${new URL(url).host}...`);
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.warn(`[ffmpeg] Font source ${new URL(url).host} returned ${res.status}`);
-        continue;
-      }
-      const bytes = Buffer.from(await res.arrayBuffer());
-      // Sanity check — font files should be at least 50KB. If we got an
-      // HTML error page (~few KB) the download silently "succeeded".
-      if (bytes.length < 50_000) {
-        console.warn(`[ffmpeg] Font from ${new URL(url).host} too small (${bytes.length}b), skipping`);
-        continue;
-      }
-      await writeFile(CAPTION_FONT_PATH, bytes);
-      console.log(`[ffmpeg] Caption font ready (${bytes.length} bytes)`);
-      return CAPTION_FONT_PATH;
-    } catch (err) {
-      console.warn(`[ffmpeg] Font fetch from ${new URL(url).host} failed:`, err);
-    }
+  try {
+    await access(FONT_REPO_PATH);
+    await copyFile(FONT_REPO_PATH, FONT_TMP_PATH);
+    const s = await stat(FONT_TMP_PATH);
+    console.log(`[ffmpeg] Caption font ready (${s.size} bytes, bundled)`);
+    return FONT_TMP_PATH;
+  } catch (err) {
+    console.warn("[ffmpeg] Bundled caption font not found at", FONT_REPO_PATH, "—", err);
+    return null;
   }
-
-  console.warn("[ffmpeg] All caption font sources failed — clip will encode without captions");
-  return null;
 }
 
 /**
