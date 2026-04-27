@@ -114,6 +114,60 @@ function useAudio(r: CoachReport, prev?: number) {
   return { ps, play, pause, stop };
 }
 
+// ─── Stat Tile (at-a-glance number with optional progress bar) ──────────
+
+function StatTile({
+  label, value, sub, color, barPct,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  color: string;
+  barPct?: number;
+}) {
+  return (
+    <div style={{
+      padding: "12px 14px",
+      borderRadius: 8,
+      background: "rgba(255,255,255,0.025)",
+      border: "1px solid rgba(255,255,255,0.07)",
+    }}>
+      <div style={{
+        fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+        textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
+        marginBottom: 6,
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 24, lineHeight: 1,
+        color, letterSpacing: "-0.02em", marginBottom: sub ? 4 : 0,
+      }}>
+        {value}
+      </div>
+      {sub && (
+        <div style={{
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+          color: "#A6B3C9", letterSpacing: "0.04em",
+        }}>
+          {sub}
+        </div>
+      )}
+      {typeof barPct === "number" && (
+        <div style={{
+          marginTop: 8, height: 3, borderRadius: 2,
+          background: "rgba(255,255,255,0.05)", overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${Math.min(100, Math.max(0, barPct))}%`,
+            height: "100%", background: color, borderRadius: 2,
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Insight Card (visual replacement for text-bullet feedback items) ─────
 
 function InsightCard({
@@ -576,6 +630,43 @@ export function CoachReportCard({
               )}
             </div>
           </section>
+
+          {/* ── AT-A-GLANCE STATS STRIP ──
+              Replaces "you have to read 2 paragraphs to know what happened"
+              with visual at-a-glance tiles. All data already in the report. */}
+          {streamDurationSeconds !== undefined && streamDurationSeconds > 0 && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+              gap: 10,
+              margin: "0 0 32px",
+            }}>
+              {(() => {
+                const totalSilenceSec = gaps.reduce((s, g) => s + (g.duration ?? 0), 0);
+                const speakSec = Math.max(0, streamDurationSeconds - totalSilenceSec);
+                const speakPct = Math.round((speakSec / streamDurationSeconds) * 100);
+                const deadPct = Math.round((totalSilenceSec / streamDurationSeconds) * 100);
+                const speakColor = speakPct >= 70 ? "#A3E635" : speakPct >= 40 ? "#F59E0B" : "#F87171";
+                const deadColor = deadPct >= 30 ? "#F87171" : deadPct >= 15 ? "#F59E0B" : "#A3E635";
+
+                const trendArrow = report.energy_trend === "building" ? "↑" : report.energy_trend === "declining" ? "↓" : report.energy_trend === "volatile" ? "↕" : "→";
+                const trendColor = report.energy_trend === "building" ? "#A3E635" : report.energy_trend === "declining" ? "#F87171" : report.energy_trend === "volatile" ? "#F59E0B" : "#A6B3C9";
+                const trendLabel = report.energy_trend === "building" ? "Building" : report.energy_trend === "declining" ? "Declining" : report.energy_trend === "volatile" ? "Volatile" : "Consistent";
+
+                const retLabel = report.viewer_retention_risk === "high" ? "High Risk" : report.viewer_retention_risk === "medium" ? "Medium Risk" : "Low Risk";
+                const retColor = report.viewer_retention_risk === "high" ? "#F87171" : report.viewer_retention_risk === "medium" ? "#F59E0B" : "#A3E635";
+
+                return (
+                  <>
+                    <StatTile label="Speak Time" value={`${speakPct}%`} sub={fmtTimestamp(speakSec)} color={speakColor} barPct={speakPct} />
+                    <StatTile label="Dead Air" value={`${deadPct}%`} sub={fmtTimestamp(totalSilenceSec)} color={deadColor} barPct={deadPct} />
+                    <StatTile label="Energy" value={trendArrow} sub={trendLabel} color={trendColor} />
+                    <StatTile label="Retention" value={retLabel} color={retColor} />
+                  </>
+                );
+              })()}
+            </div>
+          )}
 
           {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
           {recapDelta && <LastStreamRecap delta={recapDelta} />}
