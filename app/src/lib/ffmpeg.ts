@@ -183,13 +183,24 @@ async function getFFmpegPath(): Promise<string> {
 function ffmpegError(err: any): Error {
   const stderr: string = err.stderr || "";
   const lines = stderr.split("\n").map((l: string) => l.trim()).filter(Boolean);
-  // Errors appear at the end; progress lines (frame=, fps=) are noise.
-  const meaningful = lines.filter((l) =>
-    /error|invalid|fail|not found|unable|no such|denied|corrupt|empty/i.test(l) &&
-    !/frame=|fps=|bitrate=|speed=|size=/i.test(l)
+  // Drop the noisy progress lines and the giant Stream/Metadata header
+  // dump that buries real error text. What's left is mostly the actual
+  // failure reason near the end of stderr.
+  const useful = lines.filter((l) =>
+    !/^frame=|^size=|^Stream #|^\s*Metadata:|^\s*encoder\s*:|^\s*handler_name\s*:|^\s*vendor_id\s*:/i.test(l)
   );
-  const tail = (meaningful.length > 0 ? meaningful : lines).slice(-4).join(" | ");
-  return new Error(`FFmpeg failed: ${tail.slice(0, 500) || err.message}`);
+  // Errors usually live in the last 6 useful lines. If that's empty
+  // (FFmpeg sometimes exits non-zero with only progress output for
+  // PTS/discontinuity issues), fall back to a synthesized message.
+  const tail = useful.slice(-6).join(" | ");
+  if (!tail) {
+    // Detect PTS rollover signature so retry advice is useful
+    if (/time=-\d+:\d+:\d+/.test(stderr)) {
+      return new Error("FFmpeg rejected the input timestamps — the source MPEG-TS likely has gaps from missing Twitch segments. Retry the clip; if it persists the VOD is partially unavailable.");
+    }
+    return new Error(`FFmpeg failed without an explicit error: ${err.message}`);
+  }
+  return new Error(`FFmpeg failed: ${tail.slice(0, 600)}`);
 }
 
 export interface CutClipOptions {
@@ -280,16 +291,20 @@ export async function cutClip(
     }
   }
 
-  try {
-    // Captions need a filter_complex chain. With no captions we keep the old
-    // -vf/-af form because it's simpler and well-tested.
-    const useFilterComplex = captionFilter.length > 0;
+  // Two-attempt strategy:
+  //   1. Direct cut from the MPEG-TS — fastest path, works for clean inputs.
+  //   2. If that fails (PTS rollover, discontinuity, "0 frames" output),
+  //      remux input to MP4 first to regenerate clean timestamps, then cut.
+  //      The remux is fast (stream copy) and resolves the most common
+  //      Twitch-VOD timestamp issues.
+  const useFilterComplex = captionFilter.length > 0;
 
+  const buildCutCmd = (input: string): string => {
     const baseArgs = [
       `"${ffmpegPath}"`,
-      `-fflags +genpts+igndts`,
+      `-fflags +genpts+igndts+discardcorrupt`,
       `-err_detect ignore_err`,
-      `-i "${inputFilePath}"`,
+      `-i "${input}"`,
       `-ss ${safeStart}`,
       `-t ${duration}`,
       `-c:v libx264`,
@@ -298,6 +313,7 @@ export async function cutClip(
       `-preset fast`,
       `-crf 23`,
       `-pix_fmt yuv420p`,
+      `-vsync cfr`,
       `-c:a aac`,
       `-b:a 128k`,
     ];
@@ -316,17 +332,55 @@ export async function cutClip(
     const tailArgs = [
       `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
+      `-max_muxing_queue_size 9999`,
       `-y`,
       `"${outputPath}"`,
     ];
 
-    const cmd = [...baseArgs, ...filterArgs, ...tailArgs].join(" ");
+    return [...baseArgs, ...filterArgs, ...tailArgs].join(" ");
+  };
 
+  try {
+    // Attempt 1: direct
     try {
-      await execAsync(cmd, { timeout: 180000 });
+      await execAsync(buildCutCmd(inputFilePath), { timeout: 180000 });
     } catch (err: any) {
-      console.error("[ffmpeg] encode failed:", err.stderr?.slice(-500));
-      throw ffmpegError(err);
+      const stderr: string = err.stderr || "";
+      const isPtsBug = /time=-\d+:\d+:\d+|frame=\s*0\b|Invalid timestamp|non-monotonic/i.test(stderr);
+      if (!isPtsBug) {
+        console.error("[ffmpeg] encode failed (no retry):", stderr.slice(-800));
+        throw ffmpegError(err);
+      }
+
+      // Attempt 2: remux input to a clean MP4, then cut from that.
+      console.warn("[ffmpeg] Direct cut hit PTS issue, retrying via remux fallback");
+      const remuxedPath = join(tempDir, "clean.mp4");
+      const remuxCmd = [
+        `"${ffmpegPath}"`,
+        `-fflags +genpts+igndts+discardcorrupt`,
+        `-err_detect ignore_err`,
+        `-i "${inputFilePath}"`,
+        `-c copy`,
+        `-bsf:a aac_adtstoasc`,
+        `-avoid_negative_ts make_zero`,
+        `-y`,
+        `"${remuxedPath}"`,
+      ].join(" ");
+      try {
+        await execAsync(remuxCmd, { timeout: 60000 });
+      } catch (remuxErr: any) {
+        console.error("[ffmpeg] remux fallback failed:", remuxErr.stderr?.slice(-600));
+        throw ffmpegError(err); // surface the original encode error, not the remux one
+      }
+
+      try {
+        await execAsync(buildCutCmd(remuxedPath), { timeout: 180000 });
+      } catch (retryErr: any) {
+        console.error("[ffmpeg] encode failed after remux:", retryErr.stderr?.slice(-800));
+        throw ffmpegError(retryErr);
+      } finally {
+        await unlink(remuxedPath).catch(() => {});
+      }
     }
 
     return await readFile(outputPath);

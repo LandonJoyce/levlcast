@@ -581,9 +581,13 @@ export async function downloadTwitchVodVideo(
     if (missing > 0) {
       const missingPct = (missing / buffers.length) * 100;
       console.warn(`[twitch] ${missing}/${buffers.length} segments missing (${missingPct.toFixed(0)}%)`);
-      // More than 20% missing = output would be unwatchable. Fail loudly.
-      if (missingPct > 20) {
-        throw new Error(`Twitch CDN returned ${missing} of ${buffers.length} segments — VOD may be partially unavailable, try again in a few minutes`);
+      // Even one missing segment creates an MPEG-TS timestamp gap that
+      // FFmpeg's encoder can't recover from cleanly — produces the
+      // time=-577014:32:22.77 PTS rollover errors and zero-frame outputs.
+      // Tolerate at most 5% missing (effectively 0-1 segments for typical
+      // 7-segment clip windows); above that, fail and let the user retry.
+      if (missingPct > 5) {
+        throw new Error(`Twitch CDN dropped ${missing}/${buffers.length} segments (${missingPct.toFixed(0)}%) — clip would have timestamp gaps that break encoding. Try Regenerate; if it persists, the VOD source is incomplete.`);
       }
     }
 
