@@ -687,22 +687,44 @@ export function streamTwitchVodAudio(vodId: string): PassThrough {
 
     console.log(`[twitch] Streaming ${segmentUrls.length} segments to Deepgram`);
 
-    for (const url of segmentUrls) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      try {
-        const segRes = await fetch(url, { signal: controller.signal });
-        if (!segRes.ok) continue;
-        const buf = Buffer.from(await segRes.arrayBuffer());
-        passThrough.write(buf);
-      } catch (err: any) {
-        if (err.name === "AbortError") {
-          console.warn(`[twitch] Segment timeout, skipping: ${url}`);
-          continue;
+    // Each segment gets 3 attempts with linear backoff. If we exhaust
+    // retries we THROW rather than silently skip — silent skips quietly
+    // shift every subsequent Deepgram word timestamp earlier than the
+    // real audio (each skipped segment = N seconds of accumulated drift),
+    // which manifests as captions appearing before they're spoken in
+    // the rendered clip. Aligned-or-fail beats silently-misaligned.
+    for (let i = 0; i < segmentUrls.length; i++) {
+      const url = segmentUrls[i];
+      let success = false;
+      let lastErr: unknown = null;
+
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        try {
+          const segRes = await fetch(url, { signal: controller.signal });
+          if (!segRes.ok) {
+            lastErr = new Error(`HTTP ${segRes.status}`);
+            continue;
+          }
+          const buf = Buffer.from(await segRes.arrayBuffer());
+          passThrough.write(buf);
+          success = true;
+        } catch (err) {
+          lastErr = err;
+        } finally {
+          clearTimeout(timeout);
         }
-        throw err;
-      } finally {
-        clearTimeout(timeout);
+      }
+
+      if (!success) {
+        const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+        throw new Error(
+          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries — ${msg}. ` +
+          `Skipping it would misalign every subsequent caption timestamp; please retry.`
+        );
       }
     }
 

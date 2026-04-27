@@ -59,7 +59,7 @@ export const analyzeVod = inngest.createFunction(
       const segments = await step.run("transcribe", async () => {
         const { data: vod } = await supabase
           .from("vods")
-          .select("twitch_vod_id, title")
+          .select("twitch_vod_id, title, duration_seconds")
           .eq("id", vodId)
           .eq("user_id", userId)
           .single();
@@ -76,6 +76,26 @@ export const analyzeVod = inngest.createFunction(
         const stream = streamTwitchVodAudio(vod.twitch_vod_id);
         const { segments, words } = await transcribePassThrough(stream, keywords);
         if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+
+        // Caption timing depends on the audio stream covering the full VOD
+        // duration. If Deepgram's last word lands suspiciously early,
+        // the audio HLS likely truncated — every caption from then on
+        // would appear before its audio. Better to fail loud than ship
+        // misaligned captions.
+        const vodDuration = (vod.duration_seconds as number | null) ?? 0;
+        const lastWordEnd = words.length > 0 ? words[words.length - 1].end : 0;
+        if (vodDuration > 120 && lastWordEnd > 0 && lastWordEnd < vodDuration * 0.5) {
+          throw new Error(
+            `Transcript covers only ${Math.round(lastWordEnd)}s of a ${Math.round(vodDuration)}s VOD — ` +
+            `audio stream may have been truncated. Please retry; if it persists, the VOD source is incomplete.`
+          );
+        }
+        if (vodDuration > 0 && lastWordEnd > 0 && lastWordEnd < vodDuration * 0.85) {
+          console.warn(
+            `[analyze] Transcript ends at ${Math.round(lastWordEnd)}s but VOD is ${Math.round(vodDuration)}s ` +
+            `(${Math.round((lastWordEnd / vodDuration) * 100)}% coverage) — captions for late moments may be absent`
+          );
+        }
 
         const update: Record<string, unknown> = { game_category: detection.category };
         if (words.length > 0) update.word_timestamps = words;
