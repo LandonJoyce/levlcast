@@ -738,6 +738,149 @@ export function streamTwitchVodAudio(vodId: string): PassThrough {
   return passThrough;
 }
 
+// ─── Chat Replay ────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  /** Seconds since the start of the VOD when the message was posted */
+  time: number;
+  /** Username (login). Used for unique-chatter counts; not stored long-term. */
+  user: string;
+  /** Plain-text message body (badges/emote metadata stripped) */
+  text: string;
+  /** Twitch internal message ID (used for de-duplication during paging) */
+  id: string;
+}
+
+/**
+ * Fetch the full chat replay for a public VOD via Twitch's internal GQL
+ * (the same endpoint the web player uses for chat replay). Twitch GQL is
+ * undocumented but stable across major chat-archive tools — pagination is
+ * cursor-based and stops when hasNextPage is false.
+ *
+ * Caps at maxMessages (default 50k) to keep memory bounded for very long
+ * VODs. A 4-hour stream typically has 5-15k messages depending on size.
+ *
+ * Returns [] (not throw) on transient failures so caller can keep going
+ * without chat — chat data is best-effort, not load-bearing.
+ */
+export async function fetchTwitchVodChat(
+  vodId: string,
+  options: { maxMessages?: number; signal?: AbortSignal } = {}
+): Promise<ChatMessage[]> {
+  const maxMessages = options.maxMessages ?? 50_000;
+  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
+  const messages: ChatMessage[] = [];
+  let cursor: string | null = null;
+  let pageCount = 0;
+  const MAX_PAGES = 1500; // sanity cap (~150k messages at 100/page)
+
+  while (pageCount < MAX_PAGES) {
+    pageCount++;
+
+    const variables: Record<string, unknown> = { videoID: vodId };
+    if (cursor) {
+      variables.cursor = cursor;
+    } else {
+      variables.contentOffsetSeconds = 0;
+    }
+
+    const body = [{
+      operationName: "VideoCommentsByOffsetOrCursor",
+      variables,
+      extensions: {
+        persistedQuery: {
+          version: 1,
+          // Persisted query hash used by every chat-replay tool that scrapes
+          // Twitch (TwitchDownloader, ChatDownloader, etc.). Stable for years.
+          sha256Hash: "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a",
+        },
+      },
+    }];
+
+    let res: Response;
+    try {
+      res = await fetch("https://gql.twitch.tv/gql", {
+        method: "POST",
+        headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: options.signal,
+      });
+    } catch (err) {
+      console.warn(`[twitch chat] Network error on page ${pageCount}:`, err);
+      break;
+    }
+
+    if (!res.ok) {
+      console.warn(`[twitch chat] GQL ${res.status} on page ${pageCount}`);
+      break;
+    }
+
+    let json: unknown;
+    try {
+      json = await res.json();
+    } catch (err) {
+      console.warn(`[twitch chat] JSON parse failed on page ${pageCount}:`, err);
+      break;
+    }
+
+    type CommentEdge = {
+      cursor: string;
+      node: {
+        id: string;
+        contentOffsetSeconds: number;
+        message?: { fragments?: Array<{ text?: string }> };
+        commenter?: { login?: string; displayName?: string } | null;
+      };
+    };
+    type CommentsPayload = {
+      data?: {
+        video?: {
+          comments?: {
+            edges?: CommentEdge[];
+            pageInfo?: { hasNextPage?: boolean };
+          };
+        };
+      };
+    };
+
+    // Persisted-query response is wrapped in a single-element array
+    const payload = (Array.isArray(json) ? json[0] : json) as CommentsPayload;
+    const comments = payload?.data?.video?.comments;
+    const edges = comments?.edges ?? [];
+    const hasNext = comments?.pageInfo?.hasNextPage ?? false;
+
+    if (edges.length === 0) break;
+
+    for (const edge of edges) {
+      const n = edge.node;
+      const text = (n.message?.fragments ?? [])
+        .map((f) => f.text ?? "")
+        .join("")
+        .trim();
+      if (!text) continue;
+      messages.push({
+        time: n.contentOffsetSeconds,
+        user: n.commenter?.login ?? n.commenter?.displayName ?? "anonymous",
+        text,
+        id: n.id,
+      });
+    }
+
+    if (messages.length >= maxMessages) {
+      console.warn(`[twitch chat] Hit message cap ${maxMessages}, stopping`);
+      break;
+    }
+
+    if (!hasNext) break;
+    cursor = edges[edges.length - 1].cursor;
+    if (!cursor) break;
+  }
+
+  console.log(`[twitch chat] Fetched ${messages.length} messages across ${pageCount} pages for VOD ${vodId}`);
+  return messages;
+}
+
 /** Convert a raw Twitch VOD into the shape we store in Supabase */
 export function mapVodToRow(vod: TwitchVod, userId: string) {
   return {

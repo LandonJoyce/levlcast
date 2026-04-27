@@ -12,7 +12,8 @@
 
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
+import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
+import { bucketChat } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
@@ -102,6 +103,41 @@ export const analyzeVod = inngest.createFunction(
         await supabase.from("vods").update(update).eq("id", vodId);
 
         return segments;
+      });
+
+      // Step 1.5: Fetch & bucket Twitch chat replay. Best-effort — chat is
+      // platform-integration ground truth that AI wrappers can't access,
+      // but it's not load-bearing: a chat-fetch failure just means this
+      // VOD's pulse is empty and downstream coaching falls back to
+      // audio-only signals. Wrapped in its own step so the network +
+      // bucketing time doesn't eat into the analyze step's 5min window.
+      await step.run("fetch-chat-pulse", async () => {
+        try {
+          const { data: vodForChat } = await supabase
+            .from("vods")
+            .select("twitch_vod_id, duration_seconds")
+            .eq("id", vodId)
+            .single();
+          if (!vodForChat?.twitch_vod_id) return { skipped: "no_vod_id" };
+          const duration = (vodForChat.duration_seconds as number | null) ?? 0;
+          if (duration < 60) return { skipped: "too_short" };
+
+          const messages = await fetchTwitchVodChat(vodForChat.twitch_vod_id);
+          if (messages.length === 0) {
+            console.log(`[analyze] No chat messages found for VOD ${vodId.slice(0, 8)}`);
+            return { messages: 0 };
+          }
+
+          const buckets = bucketChat(messages, duration, 30);
+          await supabase.from("vods").update({ chat_pulse: buckets }).eq("id", vodId);
+          console.log(`[analyze] Saved chat pulse: ${messages.length} messages → ${buckets.length} buckets`);
+          return { messages: messages.length, buckets: buckets.length };
+        } catch (err) {
+          // NEVER throw from here — chat is best-effort. Log and move on.
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`[analyze] Chat pulse fetch failed (continuing without):`, msg);
+          return { error: msg };
+        }
       });
 
       // Steps 2 & 3 used to be a single "analyze" step that ran both Claude
