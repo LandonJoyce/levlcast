@@ -17,7 +17,7 @@ import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
 import type { CaptionWord } from "@/lib/captions";
-import { detectGameCategory, keywordsForCategory } from "@/lib/game-keywords";
+import { detectGame, keywordsForGame } from "@/lib/game-keywords";
 import { uploadToR2 } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
@@ -67,15 +67,17 @@ export const analyzeVod = inngest.createFunction(
         if (!vod) throw new Error("VOD not found");
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
 
-        const category = detectGameCategory(vod.title ?? "");
-        const keywords = keywordsForCategory(category);
-        console.log(`[analyze] Detected game category "${category}" — boosting ${keywords.length} keywords`);
+        const detection = detectGame(vod.title ?? "");
+        const keywords = keywordsForGame(detection);
+        console.log(
+          `[analyze] Detected game="${detection.gameId ?? "(unknown)"}" category="${detection.category}" — boosting ${keywords.length} keywords`
+        );
 
         const stream = streamTwitchVodAudio(vod.twitch_vod_id);
         const { segments, words } = await transcribePassThrough(stream, keywords);
         if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
 
-        const update: Record<string, unknown> = { game_category: category };
+        const update: Record<string, unknown> = { game_category: detection.category };
         if (words.length > 0) update.word_timestamps = words;
         await supabase.from("vods").update(update).eq("id", vodId);
 
