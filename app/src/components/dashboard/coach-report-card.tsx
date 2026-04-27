@@ -114,6 +114,65 @@ function useAudio(r: CoachReport, prev?: number) {
   return { ps, play, pause, stop };
 }
 
+// ─── Insight Card (visual replacement for text-bullet feedback items) ─────
+
+function InsightCard({
+  accent, label, body, ts, index,
+}: {
+  accent: string;
+  label: string;
+  body: string;
+  ts: string | null;
+  index: number;
+}) {
+  // Drop a thin colored accent bar on the left, big bold title (the label),
+  // compact body text, optional timestamp pin in the corner. Reads as a
+  // tile, not a paragraph — users can scan the whole list in 2-3 seconds
+  // before deciding which ones to deep-read.
+  return (
+    <div style={{
+      position: "relative",
+      padding: "12px 14px 14px 18px",
+      borderRadius: 8,
+      background: "rgba(255,255,255,0.025)",
+      border: "1px solid rgba(255,255,255,0.07)",
+      borderLeft: `3px solid ${accent}`,
+    }}>
+      {ts && (
+        <span style={{
+          position: "absolute", top: 10, right: 12,
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+          color: accent, opacity: 0.85, letterSpacing: "0.04em",
+        }}>
+          {ts}
+        </span>
+      )}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: label && body ? 6 : 0, paddingRight: ts ? 56 : 0 }}>
+        <span style={{
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+          color: "#4D5876", letterSpacing: "0.16em",
+        }}>
+          0{index}
+        </span>
+        <span style={{
+          fontWeight: 600, fontSize: 14, color: accent, lineHeight: 1.3,
+          letterSpacing: "-0.005em",
+        }}>
+          {label || body}
+        </span>
+      </div>
+      {label && body && (
+        <p style={{
+          fontSize: 13, color: "#A6B3C9", lineHeight: 1.55,
+          margin: 0, paddingLeft: 22,
+        }}>
+          {body}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Unlock Stat (count + label tile) ───────────────────────────────────────
 
 function UnlockStat({ n, label, color }: { n: number; label: string; color: string }) {
@@ -668,34 +727,26 @@ export function CoachReportCard({
 
           {/* ── WHAT WORKED / FIX FOR NEXT ── */}
           {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
-            <div className="cr2-two" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, marginBottom: 36, position: "relative" }}>
-              <div className="cr2-two-divider" style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.07)", transform: "translateX(-50%)" }} />
+            <div className="cr2-two" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 36 }}>
 
-              {/* What Worked */}
+              {/* What Worked — visual insight cards */}
               <div>
                 <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
                   What <em style={{ fontStyle: "italic", color: "#A3E635" }}>worked.</em>
                 </h2>
-                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 20 }}>Keep doing these</div>
-                {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => {
-                  const { label, body, ts } = parseItem(s);
-                  return (
-                    <div key={i} style={{ marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 5, flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 16, color: "#4D5876", minWidth: 22 }}>0{i + 1}</span>
-                        <span style={{ fontWeight: 600, fontSize: 15, color: "#A3E635", flex: 1, lineHeight: 1.3 }}>{label || body}</span>
-                        {ts && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#6F7C95", whiteSpace: "nowrap" }}>{ts}</span>}
-                      </div>
-                      {label && <p style={{ fontSize: 14, color: "#A6B3C9", lineHeight: 1.65, paddingLeft: 32 }}>{body}</p>}
-                    </div>
-                  );
-                })}
+                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 16 }}>Keep doing these</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => {
+                    const { label, body, ts } = parseItem(s);
+                    return <InsightCard key={i} accent="#A3E635" label={label} body={body} ts={ts} index={i + 1} />;
+                  })}
+                </div>
                 {!isPro && (report.strengths ?? []).length > 1 && (
                   <button
                     onClick={openUpgrade}
                     style={{
                       fontSize: 11, fontFamily: '"JetBrains Mono", monospace',
-                      color: "#a78bfa", paddingLeft: 32, marginTop: 4,
+                      color: "#a78bfa", paddingLeft: 4, marginTop: 12,
                       background: "transparent", border: "none", cursor: "pointer",
                       textDecoration: "underline", letterSpacing: "0.04em",
                     }}
@@ -705,26 +756,19 @@ export function CoachReportCard({
                 )}
               </div>
 
-              {/* Fix for Next */}
+              {/* Fix for Next — visual insight cards */}
               {isPro ? (
                 <div>
                   <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
                     What to <em style={{ fontStyle: "italic", color: "#F59E0B" }}>fix.</em>
                   </h2>
-                  <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 20 }}>Change these next time</div>
-                  {(report.improvements ?? []).map((s, i) => {
-                    const { label, body, ts } = parseItem(s);
-                    return (
-                      <div key={i} style={{ marginBottom: 20 }}>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 5, flexWrap: "wrap" }}>
-                          <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 16, color: "#4D5876", minWidth: 22 }}>0{i + 1}</span>
-                          <span style={{ fontWeight: 600, fontSize: 15, color: "#F59E0B", flex: 1, lineHeight: 1.3 }}>{label || body}</span>
-                          {ts && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#6F7C95", whiteSpace: "nowrap" }}>{ts}</span>}
-                        </div>
-                        {label && <p style={{ fontSize: 14, color: "#A6B3C9", lineHeight: 1.65, paddingLeft: 32 }}>{body}</p>}
-                      </div>
-                    );
-                  })}
+                  <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 16 }}>Change these next time</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {(report.improvements ?? []).map((s, i) => {
+                      const { label, body, ts } = parseItem(s);
+                      return <InsightCard key={i} accent="#F59E0B" label={label} body={body} ts={ts} index={i + 1} />;
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div>
