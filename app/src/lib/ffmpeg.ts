@@ -13,25 +13,48 @@ import {
 export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
 
 const CAPTION_FONT_PATH = "/tmp/levlcast-caption-font.ttf";
-// Roboto Bold via jsDelivr (mirrors Google Fonts repo, reliable CDN)
-const CAPTION_FONT_URL = "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Bold.ttf";
+
+// Multiple sources tried in order. The previous gh/google/fonts path was
+// returning 403 from jsDelivr — they appear to rate-limit large mirrored
+// repos. The npm-package routes are more reliable and the file is
+// identical (Roboto Bold TTF, ~170KB).
+const CAPTION_FONT_URLS = [
+  "https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Bold.ttf",
+  "https://unpkg.com/roboto-fontface@0.10.0/fonts/roboto/Roboto-Bold.ttf",
+  "https://cdn.jsdelivr.net/npm/@openfonts/roboto_latin@1.44.2/files/roboto-latin-700.ttf",
+];
 
 async function getCaptionFont(): Promise<string | null> {
   try {
     await access(CAPTION_FONT_PATH);
     return CAPTION_FONT_PATH;
   } catch {}
-  try {
-    console.log("[ffmpeg] Downloading caption font...");
-    const res = await fetch(CAPTION_FONT_URL);
-    if (!res.ok) throw new Error(`Font download failed: ${res.status}`);
-    await writeFile(CAPTION_FONT_PATH, Buffer.from(await res.arrayBuffer()));
-    console.log("[ffmpeg] Caption font ready");
-    return CAPTION_FONT_PATH;
-  } catch (err) {
-    console.warn("[ffmpeg] Caption font unavailable:", err);
-    return null;
+
+  for (const url of CAPTION_FONT_URLS) {
+    try {
+      console.log(`[ffmpeg] Downloading caption font from ${new URL(url).host}...`);
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`[ffmpeg] Font source ${new URL(url).host} returned ${res.status}`);
+        continue;
+      }
+      const bytes = Buffer.from(await res.arrayBuffer());
+      // Sanity check — font files should be at least 50KB. If we got an
+      // HTML error page (~few KB) the download silently "succeeded".
+      if (bytes.length < 50_000) {
+        console.warn(`[ffmpeg] Font from ${new URL(url).host} too small (${bytes.length}b), skipping`);
+        continue;
+      }
+      await writeFile(CAPTION_FONT_PATH, bytes);
+      console.log(`[ffmpeg] Caption font ready (${bytes.length} bytes)`);
+      return CAPTION_FONT_PATH;
+    } catch (err) {
+      console.warn(`[ffmpeg] Font fetch from ${new URL(url).host} failed:`, err);
+    }
   }
+
+  console.warn("[ffmpeg] All caption font sources failed — clip will encode without captions");
+  return null;
 }
 
 /**
