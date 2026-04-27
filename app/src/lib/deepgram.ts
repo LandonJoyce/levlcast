@@ -19,7 +19,7 @@ import { withRetry } from "./retry";
 
 const DEEPGRAM_API = "https://api.deepgram.com/v1/listen";
 
-const DEEPGRAM_PARAMS = new URLSearchParams({
+const BASE_PARAMS: Record<string, string> = {
   model: "nova-3",
   smart_format: "true",
   punctuate: "true",
@@ -27,7 +27,20 @@ const DEEPGRAM_PARAMS = new URLSearchParams({
   utt_split: "1.5",
   disfluencies: "true",   // keep "uh", "oh", "wait", "what" — critical emotional markers
   diarize: "true",         // tag each utterance with speaker ID so we can filter to the streamer's voice
-}).toString();
+};
+
+/**
+ * Build the Deepgram URL with optional keyword boosting.
+ * keywords format: ["desync:2", "headshot:2"] — the :N suffix is the boost.
+ */
+function buildDeepgramUrl(keywords: string[] = []): string {
+  const params = new URLSearchParams(BASE_PARAMS);
+  // `keywords` can repeat in the URL. Cap at 200 (Deepgram's documented limit).
+  for (const kw of keywords.slice(0, 200)) {
+    params.append("keywords", kw);
+  }
+  return `${DEEPGRAM_API}?${params.toString()}`;
+}
 
 export interface TranscriptSegment {
   text: string;
@@ -91,9 +104,9 @@ function parseDeepgramResponse(json: DeepgramJson): TranscribeResult {
  * Transcribe directly from a URL — no download needed.
  * Deepgram fetches the audio/M3U8 itself.
  */
-export async function transcribeFromUrl(url: string): Promise<TranscribeResult> {
+export async function transcribeFromUrl(url: string, keywords: string[] = []): Promise<TranscribeResult> {
   const res = await withRetry(() =>
-    fetch(`${DEEPGRAM_API}?${DEEPGRAM_PARAMS}`, {
+    fetch(buildDeepgramUrl(keywords), {
       method: "POST",
       headers: {
         Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
@@ -115,8 +128,11 @@ export async function transcribeFromUrl(url: string): Promise<TranscribeResult> 
  * Segments are streamed directly to Deepgram as they download.
  * The caller writes segment data to the returned PassThrough and calls .end() when done.
  */
-export async function transcribePassThrough(stream: PassThrough): Promise<TranscribeResult> {
-  const res = await fetch(`${DEEPGRAM_API}?${DEEPGRAM_PARAMS}`, {
+export async function transcribePassThrough(
+  stream: PassThrough,
+  keywords: string[] = []
+): Promise<TranscribeResult> {
+  const res = await fetch(buildDeepgramUrl(keywords), {
     method: "POST",
     headers: {
       Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
@@ -140,10 +156,10 @@ export async function transcribePassThrough(stream: PassThrough): Promise<Transc
  * Transcribe a local audio file using Deepgram's pre-recorded API.
  * Streams the file so we don't load it all into memory.
  */
-export async function transcribeFile(filePath: string): Promise<TranscribeResult> {
+export async function transcribeFile(filePath: string, keywords: string[] = []): Promise<TranscribeResult> {
   const res = await withRetry(() => {
     const stream = createReadStream(filePath);
-    return fetch(`${DEEPGRAM_API}?${DEEPGRAM_PARAMS}`, {
+    return fetch(buildDeepgramUrl(keywords), {
       method: "POST",
       headers: {
         Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,

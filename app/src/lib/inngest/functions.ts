@@ -17,6 +17,7 @@ import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
 import type { CaptionWord } from "@/lib/captions";
+import { detectGameCategory, keywordsForCategory } from "@/lib/game-keywords";
 import { uploadToR2 } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
@@ -50,10 +51,15 @@ export const analyzeVod = inngest.createFunction(
       // Word-level timestamps are persisted to vods.word_timestamps inside this step
       // (not returned) — keeping them out of inter-step state avoids Inngest's
       // ~4MB JSON cap, which 30k+ word entries would push against.
+      //
+      // Game category is detected from the VOD title and the corresponding
+      // jargon list is boosted into Deepgram via the keywords param so terms
+      // like "desync", "headshot", or "clutch" stop getting transcribed as
+      // generic English ("this is decent", "head shot," etc.).
       const segments = await step.run("transcribe", async () => {
         const { data: vod } = await supabase
           .from("vods")
-          .select("twitch_vod_id")
+          .select("twitch_vod_id, title")
           .eq("id", vodId)
           .eq("user_id", userId)
           .single();
@@ -61,13 +67,17 @@ export const analyzeVod = inngest.createFunction(
         if (!vod) throw new Error("VOD not found");
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
 
+        const category = detectGameCategory(vod.title ?? "");
+        const keywords = keywordsForCategory(category);
+        console.log(`[analyze] Detected game category "${category}" — boosting ${keywords.length} keywords`);
+
         const stream = streamTwitchVodAudio(vod.twitch_vod_id);
-        const { segments, words } = await transcribePassThrough(stream);
+        const { segments, words } = await transcribePassThrough(stream, keywords);
         if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
 
-        if (words.length > 0) {
-          await supabase.from("vods").update({ word_timestamps: words }).eq("id", vodId);
-        }
+        const update: Record<string, unknown> = { game_category: category };
+        if (words.length > 0) update.word_timestamps = words;
+        await supabase.from("vods").update(update).eq("id", vodId);
 
         return segments;
       });
