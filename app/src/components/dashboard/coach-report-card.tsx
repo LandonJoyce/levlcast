@@ -3,7 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Lock } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
+import { computeReportDelta } from "@/lib/report-delta";
 import { UpgradeModal } from "./upgrade-modal";
+import { LastStreamRecap } from "./last-stream-recap";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -235,10 +237,11 @@ const ANTI_PATTERN_LABELS: Record<string, string> = {
 const ROMAN = ["i.", "ii.", "iii.", "iv.", "v."];
 
 export function CoachReportCard({
-  report, previousScore, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds,
 }: {
   report: CoachReport;
   previousScore?: number;
+  previousReport?: CoachReport;
   streak?: number;
   isPersonalBest?: boolean;
   streamerTitle?: string;
@@ -260,6 +263,11 @@ export function CoachReportCard({
   const fixCount = report.improvements?.length ?? 0;
   const missionCount = report.next_stream_goals?.length ?? 0;
   const antiPatternCount = report.anti_patterns?.length ?? 0;
+
+  // Longitudinal recap — only when we have a prior stream's full report
+  // to compare against. This is the "we remember what you tried" moment
+  // that proves LevlCast isn't a one-shot wrapper.
+  const recapDelta = previousReport ? computeReportDelta(previousReport, report) : null;
 
   useEffect(() => {
     const target = report.overall_score;
@@ -492,6 +500,9 @@ export function CoachReportCard({
               )}
             </div>
           </section>
+
+          {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
+          {recapDelta && <LastStreamRecap delta={recapDelta} />}
 
           {/* ── SHAREABLE WIN ── */}
           {report.shareable_win && (

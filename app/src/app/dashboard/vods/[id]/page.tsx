@@ -107,6 +107,7 @@ export default async function VodDetailPage({
   const peaks = (vod.peak_data as any[]) || [];
   const coachReport = vod.coach_report as any;
   const previousScore = (prevVod?.coach_report as any)?.overall_score as number | undefined;
+  const previousReport = (prevVod?.coach_report as any) ?? undefined;
 
   let streak = 0;
   for (const v of (recentVods ?? [])) {
@@ -219,6 +220,7 @@ export default async function VodDetailPage({
             <CoachReportCard
               report={coachReport}
               previousScore={previousScore}
+              previousReport={previousReport}
               streak={streak}
               isPersonalBest={isPersonalBest}
               streamerTitle={streamerTitle}

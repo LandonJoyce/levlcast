@@ -20,6 +20,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.9.3",
+    date: "2026-04-27",
+    title: "Last Stream Recap",
+    items: [
+      { type: "new", text: "Coach reports now open with a Last Stream Recap — score delta, sub-score moves, dead-air change, and which of last stream's missions you actually pulled off" },
+      { type: "new", text: "Recurring weaknesses across streams get explicitly flagged: 'still happening this stream AND last' — the system remembers what you've been working on" },
+      { type: "new", text: "Cleared anti-patterns are surfaced as wins ('was flagged last stream, gone this stream')" },
+      { type: "improved", text: "Mission status pills (Done / Slipped / Ongoing) match each prior goal against the actual numbers from this stream" },
+    ],
+  },
+  {
     version: "v0.9.2",
     date: "2026-04-27",
     title: "Coach Report Pro Unlocks + Auto-Sync",
