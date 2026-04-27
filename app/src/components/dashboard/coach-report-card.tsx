@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import Link from "next/link";
 import { Lock } from "lucide-react";
 import { CoachReport } from "@/lib/analyze";
+import { UpgradeModal } from "./upgrade-modal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -108,9 +108,34 @@ function useAudio(r: CoachReport, prev?: number) {
   return { ps, play, pause, stop };
 }
 
+// ─── Unlock Stat (count + label tile) ───────────────────────────────────────
+
+function UnlockStat({ n, label, color }: { n: number; label: string; color: string }) {
+  return (
+    <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, color, letterSpacing: "-0.02em", marginBottom: 6 }}>
+        +{n}
+      </div>
+      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#A6B3C9", lineHeight: 1.4, letterSpacing: "0.02em" }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
 // ─── Locked Section ───────────────────────────────────────────────────────────
 
-function LockedSection({ label, height = 120 }: { label: string; height?: number }) {
+function LockedSection({
+  label,
+  hint,
+  height = 120,
+  onUpgrade,
+}: {
+  label: string;
+  hint?: string;
+  height?: number;
+  onUpgrade: () => void;
+}) {
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
       <div style={{ minHeight: height, padding: "18px 20px", filter: "blur(5px)", opacity: 0.4, pointerEvents: "none" }}>
@@ -122,10 +147,15 @@ function LockedSection({ label, height = 120 }: { label: string; height?: number
           <Lock size={12} style={{ color: "#a78bfa" }} />
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#a78bfa" }}>{label}</span>
         </div>
-        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.5, maxWidth: "34ch" }}>Pro unlocks the full report — every fix, every mission, every flagged moment.</p>
-        <Link href="/dashboard/settings" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, padding: "7px 16px", borderRadius: 8, background: "rgba(139,92,246,0.18)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd", textDecoration: "none" }}>
-          Unlock with Pro
-        </Link>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, maxWidth: "36ch" }}>
+          {hint ?? "Pro unlocks the full report — every fix, every mission, every flagged moment."}
+        </p>
+        <button
+          onClick={onUpgrade}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, padding: "8px 18px", borderRadius: 8, background: "rgba(139,92,246,0.18)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd", cursor: "pointer" }}
+        >
+          Unlock with Pro · $9.99/mo
+        </button>
       </div>
     </div>
   );
@@ -221,6 +251,15 @@ export function CoachReportCard({
   const [displayScore, setDisplayScore] = useState(0);
   const [draw, setDraw] = useState(false);
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const openUpgrade = useCallback(() => setUpgradeOpen(true), []);
+
+  // Concrete unlock counts — used in CTA copy so free users see what
+  // they're actually missing in THIS report, not a generic feature list.
+  const lockedStrengths = Math.max(0, (report.strengths?.length ?? 0) - 1);
+  const fixCount = report.improvements?.length ?? 0;
+  const missionCount = report.next_stream_goals?.length ?? 0;
+  const antiPatternCount = report.anti_patterns?.length ?? 0;
 
   useEffect(() => {
     const target = report.overall_score;
@@ -508,7 +547,12 @@ export function CoachReportCard({
             </div>
           ) : (
             <div style={{ marginTop: 8 }}>
-              <LockedSection label="#1 Priority Fix" height={110} />
+              <LockedSection
+                label="#1 Priority Fix"
+                hint="Pro reveals the single most important fix to make next stream — pulled from this report's biggest weakness."
+                height={110}
+                onUpgrade={openUpgrade}
+              />
             </div>
           )}
 
@@ -541,7 +585,12 @@ export function CoachReportCard({
               </div>
             ) : (
               <div style={{ margin: "28px 0" }}>
-                <LockedSection label="Score Breakdown" height={110} />
+                <LockedSection
+                  label="Score Breakdown"
+                  hint="See the four sub-scores driving your overall: energy, engagement, consistency, content."
+                  height={110}
+                  onUpgrade={openUpgrade}
+                />
               </div>
             )
           )}
@@ -561,7 +610,12 @@ export function CoachReportCard({
               </div>
             ) : (
               <div style={{ margin: "28px 0" }}>
-                <LockedSection label="Best Moment" height={100} />
+                <LockedSection
+                  label="Best Moment"
+                  hint="The single moment in this stream that landed hardest — exact timestamp, what made it work, and how to repeat it."
+                  height={100}
+                  onUpgrade={openUpgrade}
+                />
               </div>
             )
           )}
@@ -593,7 +647,17 @@ export function CoachReportCard({
                   );
                 })}
                 {!isPro && (report.strengths ?? []).length > 1 && (
-                  <p style={{ fontSize: 11, fontFamily: '"JetBrains Mono", monospace', color: "#4D5876", paddingLeft: 32 }}>+{(report.strengths ?? []).length - 1} more — Pro</p>
+                  <button
+                    onClick={openUpgrade}
+                    style={{
+                      fontSize: 11, fontFamily: '"JetBrains Mono", monospace',
+                      color: "#a78bfa", paddingLeft: 32, marginTop: 4,
+                      background: "transparent", border: "none", cursor: "pointer",
+                      textDecoration: "underline", letterSpacing: "0.04em",
+                    }}
+                  >
+                    + {(report.strengths ?? []).length - 1} more strength{(report.strengths ?? []).length - 1 !== 1 ? "s" : ""} — unlock with Pro
+                  </button>
                 )}
               </div>
 
@@ -623,7 +687,14 @@ export function CoachReportCard({
                   <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 20, color: "#ECF1FA" }}>
                     What to <em style={{ fontStyle: "italic", color: "#F59E0B" }}>fix.</em>
                   </h2>
-                  <LockedSection label="Fix For Next" height={140} />
+                  <LockedSection
+                    label={fixCount > 0 ? `${fixCount} Specific Fix${fixCount !== 1 ? "es" : ""}` : "Fix For Next"}
+                    hint={fixCount > 0
+                      ? `${fixCount} actionable fix${fixCount !== 1 ? "es" : ""} for next stream — with timestamps and specific moments to change.`
+                      : undefined}
+                    height={140}
+                    onUpgrade={openUpgrade}
+                  />
                 </div>
               )}
             </div>
@@ -682,7 +753,14 @@ export function CoachReportCard({
               </div>
             ) : (
               <div style={{ margin: "28px 0" }}>
-                <LockedSection label="Your Missions · 3 next-stream goals" height={140} />
+                <LockedSection
+                  label={`Your Missions · ${missionCount} next-stream goal${missionCount !== 1 ? "s" : ""}`}
+                  hint={missionCount > 0
+                    ? `${missionCount} concrete mission${missionCount !== 1 ? "s" : ""} to commit to before your next stream — checkable, trackable, built from this stream's data.`
+                    : undefined}
+                  height={140}
+                  onUpgrade={openUpgrade}
+                />
               </div>
             )
           )}
@@ -785,6 +863,70 @@ export function CoachReportCard({
             </div>
           )}
 
+          {/* ── PRO UNLOCKS · CONCRETE COUNTS ── (free only) */}
+          {!isPro && (
+            <div style={{ marginTop: 40, padding: "26px 28px", borderRadius: 14, background: "linear-gradient(135deg, rgba(139,92,246,0.10), rgba(34,211,238,0.06))", border: "1px solid rgba(139,92,246,0.32)", position: "relative", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <Lock size={11} style={{ color: "#c4b5fd" }} />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#c4b5fd" }}>
+                  Locked in this report
+                </span>
+              </div>
+              <h3 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.15, color: "#ECF1FA", margin: 0, fontWeight: 400, letterSpacing: "-0.01em" }}>
+                You&apos;re seeing the surface. <em style={{ fontStyle: "italic", color: "#c4b5fd" }}>Pro shows the rest.</em>
+              </h3>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14, marginTop: 22, marginBottom: 22 }}>
+                {fixCount > 0 && (
+                  <UnlockStat n={fixCount} label={`Specific fix${fixCount !== 1 ? "es" : ""} for next stream`} color="#F59E0B" />
+                )}
+                {missionCount > 0 && (
+                  <UnlockStat n={missionCount} label={`Mission${missionCount !== 1 ? "s" : ""} to commit to`} color="#22D3EE" />
+                )}
+                {antiPatternCount > 0 && (
+                  <UnlockStat n={antiPatternCount} label={`Growth killer${antiPatternCount !== 1 ? "s" : ""} flagged`} color="#F87171" />
+                )}
+                {lockedStrengths > 0 && (
+                  <UnlockStat n={lockedStrengths} label={`More strength${lockedStrengths !== 1 ? "s" : ""} to keep doing`} color="#A3E635" />
+                )}
+                <UnlockStat n={20} label="VOD analyses per month" color="#c4b5fd" />
+                <UnlockStat n={20} label="Clips per month with captions" color="#c4b5fd" />
+              </div>
+
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 15, color: "#A6B3C9", lineHeight: 1.5, margin: "0 0 18px" }}>
+                One report tells you where you stand. The longitudinal track — score deltas across streams, recurring weaknesses, what you fixed and what you didn&apos;t — is where the actual coaching lives.
+              </p>
+
+              <button
+                onClick={openUpgrade}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 10,
+                  fontSize: 13, fontWeight: 700, padding: "11px 22px",
+                  borderRadius: 10, border: "1px solid rgba(167,139,250,0.5)",
+                  background: "rgba(139,92,246,0.22)", color: "#ECF1FA",
+                  cursor: "pointer", letterSpacing: "0.01em",
+                }}
+              >
+                Unlock Pro · $9.99/month <span style={{ color: "#c4b5fd", fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600 }}>cancel anytime</span>
+              </button>
+            </div>
+          )}
+
+          {/* ── COMEBACK HOOK ── (free only) */}
+          {!isPro && (
+            <div style={{ marginTop: 24, padding: "20px 24px", borderRadius: 12, background: "rgba(34,211,238,0.05)", border: "1px solid rgba(34,211,238,0.22)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#22D3EE", marginBottom: 10 }}>
+                What this report can&apos;t tell you yet
+              </div>
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, color: "#ECF1FA", lineHeight: 1.5, margin: "0 0 6px" }}>
+                Your <em style={{ fontStyle: "italic", color: "#22D3EE" }}>next stream</em> is the one that matters.
+              </p>
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.55, margin: 0 }}>
+                One report is a snapshot. The delta between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t — that&apos;s how coaching actually works.
+              </p>
+            </div>
+          )}
+
           {/* ── SIGNOFF ── */}
           <footer style={{ marginTop: 40, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
             <div>
@@ -805,6 +947,12 @@ export function CoachReportCard({
 
         </div>
       </div>
+
+      <UpgradeModal
+        isOpen={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        reason="Unlock all fixes, missions, growth-killer flags, and 20 VOD analyses per month with full clip generation."
+      />
     </>
   );
 }

@@ -12,7 +12,7 @@
 
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { streamTwitchVodAudio, downloadTwitchVodVideo } from "@/lib/twitch";
+import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
@@ -24,7 +24,7 @@ import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
-import { sendActivationEmail, sendVodReadyEmail } from "@/lib/email";
+import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail } from "@/lib/email";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -1212,5 +1212,107 @@ export const sendActivationNudge = inngest.createFunction(
     }
 
     return { sent };
+  }
+);
+
+// ─── Auto-Sync VODs ────────────────────────────────────────────────────────
+// Runs every 6 hours. For users with a connected Twitch ID who have already
+// analyzed at least one VOD, fetch their latest VODs from Twitch, insert any
+// new ones, and email a "your latest stream is ready to analyze" nudge.
+//
+// This is the single biggest retention lever — without it, users who stream
+// on Sat/Sun never come back unless they manually remember to open the app
+// and click Sync. Once they have any analysis, they've shown intent; auto-
+// pulling new streams + nudging closes the loop.
+
+export const autoSyncTwitchVods = inngest.createFunction(
+  { id: "auto-sync-twitch-vods" },
+  { cron: "0 */6 * * *" }, // every 6 hours on the hour
+  async ({ step }) => {
+    const supabase = createAdminClient();
+
+    return await step.run("sync-active-users", async () => {
+      // Active = has at least one ready VOD (signaled real intent)
+      const { data: activeUserIds } = await supabase
+        .from("vods")
+        .select("user_id")
+        .eq("status", "ready");
+
+      if (!activeUserIds?.length) return { synced: 0, emailed: 0 };
+
+      const uniqueUserIds = Array.from(new Set(activeUserIds.map((r: { user_id: string }) => r.user_id)));
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, twitch_id, twitch_display_name")
+        .in("id", uniqueUserIds)
+        .not("twitch_id", "is", null);
+
+      if (!profiles?.length) return { synced: 0, emailed: 0 };
+
+      let appToken: string;
+      try {
+        appToken = await getAppAccessToken();
+      } catch (err) {
+        console.error("[auto-sync] App token failed:", err);
+        return { synced: 0, emailed: 0, error: "twitch_auth_failed" };
+      }
+
+      let totalSynced = 0;
+      let totalEmailed = 0;
+
+      for (const profile of profiles) {
+        try {
+          const twitchVods = await fetchTwitchVods(profile.twitch_id!, appToken, 10);
+          if (twitchVods.length === 0) continue;
+
+          const twitchIds = twitchVods.map((v) => v.id);
+          const { data: existing } = await supabase
+            .from("vods")
+            .select("twitch_vod_id")
+            .eq("user_id", profile.id)
+            .in("twitch_vod_id", twitchIds);
+          const existingIds = new Set(existing?.map((e: { twitch_vod_id: string }) => e.twitch_vod_id) || []);
+
+          const newVods = twitchVods.filter((v) => !existingIds.has(v.id));
+          if (newVods.length === 0) continue;
+
+          const rows = newVods.map((v) => mapVodToRow(v, profile.id));
+          const { error: insertError } = await supabase.from("vods").insert(rows);
+          if (insertError) {
+            console.error(`[auto-sync] Insert failed for ${profile.id.slice(0, 8)}:`, insertError.message);
+            continue;
+          }
+          totalSynced += newVods.length;
+
+          // Find their email + count of prior analyzed VODs for the email tone
+          const { data: { user } } = await supabase.auth.admin.getUserById(profile.id);
+          if (!user?.email) continue;
+
+          const { count: priorAnalysisCount } = await supabase
+            .from("vods")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", profile.id)
+            .eq("status", "ready");
+
+          const name = profile.twitch_display_name || "Streamer";
+          await sendNewVodEmail(
+            user.email,
+            name,
+            newVods[0].title,
+            newVods.length,
+            (priorAnalysisCount ?? 0) > 0
+          );
+          totalEmailed++;
+
+          console.log(`[auto-sync] ${profile.id.slice(0, 8)}: synced ${newVods.length}, emailed`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[auto-sync] Failed for ${profile.id.slice(0, 8)}:`, msg);
+        }
+      }
+
+      return { synced: totalSynced, emailed: totalEmailed, users: profiles.length };
+    });
   }
 );

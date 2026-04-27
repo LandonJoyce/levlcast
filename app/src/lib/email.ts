@@ -2,6 +2,88 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+/**
+ * Sent when the auto-sync cron detects a new VOD on Twitch for a user
+ * who has analyzed at least one stream before. The whole point: bridge
+ * "I streamed again" → "open LevlCast and run the report." Without
+ * this email, most one-time users never come back.
+ */
+export async function sendNewVodEmail(
+  to: string,
+  name: string,
+  vodTitle: string,
+  vodCount: number,
+  hasPriorAnalyses: boolean
+): Promise<void> {
+  const subject = vodCount === 1
+    ? `Your latest stream is ready to analyze`
+    : `${vodCount} new streams ready to analyze`;
+
+  const headline = hasPriorAnalyses
+    ? "Track the delta from last stream."
+    : "Your stream is ready for its first coach report.";
+
+  const subhead = hasPriorAnalyses
+    ? "One report is a snapshot. The change between streams is where coaching actually lives — your last report set the baseline, this one shows what moved."
+    : "5 minutes to a full coach report — score, peak moments, and exactly what to change next stream.";
+
+  await resend.emails.send({
+    from: "LevlCast <hello@levlcast.com>",
+    to,
+    subject,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#22D3EE;">Hey ${name}</p>
+          <h1 style="margin:0 0 14px;font-size:26px;font-weight:800;color:#ffffff;line-height:1.2;">${headline}</h1>
+          <p style="margin:0 0 22px;font-size:14px;color:rgba(255,255,255,0.6);line-height:1.6;">${subhead}</p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a22;border-radius:14px;padding:16px 20px;margin-bottom:26px;">
+            <tr><td>
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.35);">${vodCount === 1 ? "New stream" : `${vodCount} new streams · most recent`}</p>
+              <p style="margin:0;font-size:15px;color:#ffffff;line-height:1.4;">${vodTitle}</p>
+            </td></tr>
+          </table>
+
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <tr><td style="background:#7C3AED;border-radius:12px;">
+              <a href="https://levlcast.com/dashboard/vods" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
+                Analyze ${vodCount === 1 ? "It" : "Them"} →
+              </a>
+            </td></tr>
+          </table>
+
+          <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.35);line-height:1.5;">
+            We auto-detect new streams on your Twitch channel so you never have to remember to come back.
+          </p>
+
+        </td></tr>
+
+        <tr><td style="padding-top:24px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">
+            LevlCast · <a href="https://levlcast.com/dashboard/settings" style="color:rgba(255,255,255,0.2);text-decoration:underline;">Unsubscribe</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendVodReadyEmail(to: string, name: string, vodId: string, title: string, score: number | undefined, recommendation: string): Promise<void> {
   const scoreText = score !== undefined ? `${score}/100` : null;
   const snippet = recommendation.length > 120 ? recommendation.slice(0, 117) + "..." : recommendation;

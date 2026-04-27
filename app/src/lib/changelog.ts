@@ -20,6 +20,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.9.2",
+    date: "2026-04-27",
+    title: "Coach Report Pro Unlocks + Auto-Sync",
+    items: [
+      { type: "new", text: "Coach report now shows exactly what Pro unlocks for THIS report — concrete counts of fixes, missions, and growth killers, not generic feature lists" },
+      { type: "improved", text: "Upgrade buttons go straight to checkout from anywhere on the report — no more settings detour" },
+      { type: "new", text: "We auto-detect new streams on your Twitch channel every 6 hours and email you when one's ready to analyze. Never miss a stream's coaching window again." },
+      { type: "fix", text: "Clip generation reliability — tighter Twitch segment tolerance plus a remux fallback for VODs whose timestamps trip up FFmpeg's encoder" },
+      { type: "fix", text: "Failed VODs now show the actual failure reason and a one-click retry button" },
+    ],
+  },
+  {
     version: "v0.9.1",
     date: "2026-04-26",
     title: "Word-Synced Captions on Every Clip",
