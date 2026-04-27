@@ -365,7 +365,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -377,6 +377,9 @@ export function CoachReportCard({
   streamDurationSeconds?: number;
   chatPulse?: ChatPulseBucket[] | null;
   trajectory?: TrajectoryPoint[];
+  /** Optional word-level timestamps from Deepgram. Used to build the
+   *  per-minute energy curve overlaid on the Silence Map. */
+  wordTimestamps?: Array<{ start: number; end: number }> | null;
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
@@ -419,6 +422,24 @@ export function CoachReportCard({
   }, [report.overall_score]);
 
   const gaps = report.dead_zones ?? [];
+  // Per-minute WPM curve from word-level timestamps. Each bucket = 1
+  // minute of stream time. Used as an overlay on the Silence Map so the
+  // user sees not just WHERE silence was but HOW HARD they spoke during
+  // active windows. Falls through silently when wordTimestamps absent.
+  const wpmCurve: number[] = (() => {
+    if (!wordTimestamps || wordTimestamps.length === 0) return [];
+    const lastEnd = wordTimestamps[wordTimestamps.length - 1].end ?? 0;
+    const totalDur = streamDurationSeconds ?? lastEnd;
+    if (totalDur <= 0) return [];
+    const minutes = Math.max(1, Math.ceil(totalDur / 60));
+    const counts = new Array(minutes).fill(0) as number[];
+    for (const w of wordTimestamps) {
+      if (typeof w.start !== "number" || w.start < 0) continue;
+      const idx = Math.min(minutes - 1, Math.floor(w.start / 60));
+      counts[idx]++;
+    }
+    return counts; // each entry = words spoken in that minute = WPM
+  })();
   const totalSecs = streamDurationSeconds ??
     (gaps.length > 0 ? Math.max(...gaps.map(g => parseTimeSecs(g.time) + g.duration)) * 1.25 : 0);
 
@@ -958,6 +979,53 @@ export function CoachReportCard({
 
               {/* Timeline */}
               <div style={{ position: "relative", padding: "52px 0 40px" }}>
+                {/* Energy curve overlay — sits above the silence track. Words
+                    per minute scaled to a 60px-tall band; visualizes how
+                    HARD the streamer was speaking when they did speak. */}
+                {wpmCurve.length >= 3 && (() => {
+                  const maxWpm = Math.max(...wpmCurve);
+                  if (maxWpm <= 0) return null;
+                  const peakColor = "#22D3EE";
+                  const W = 1000;
+                  const H = 60;
+                  const xFor = (i: number) =>
+                    wpmCurve.length === 1 ? W / 2 : (i / (wpmCurve.length - 1)) * W;
+                  const yFor = (v: number) => H - (v / maxWpm) * (H - 4) - 2;
+
+                  // Smooth path
+                  const pts = wpmCurve.map((v, i) => [xFor(i), yFor(v)] as const);
+                  let line = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+                  for (let i = 0; i < pts.length - 1; i++) {
+                    const [x0, y0] = pts[i];
+                    const [x1, y1] = pts[i + 1];
+                    const cx = (x0 + x1) / 2;
+                    line += ` C ${cx.toFixed(1)} ${y0.toFixed(1)}, ${cx.toFixed(1)} ${y1.toFixed(1)}, ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+                  }
+                  const area = line + ` L ${W} ${H} L 0 ${H} Z`;
+
+                  return (
+                    <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: H, pointerEvents: "none" }}>
+                      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" width="100%" height={H} style={{ display: "block" }}>
+                        <defs>
+                          <linearGradient id="energy-fill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={peakColor} stopOpacity="0.32" />
+                            <stop offset="100%" stopColor={peakColor} stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <path d={area} fill="url(#energy-fill)" />
+                        <path d={line} fill="none" stroke={peakColor} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" opacity={0.75} />
+                      </svg>
+                      <div style={{
+                        position: "absolute", top: 4, right: 8,
+                        fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+                        textTransform: "uppercase", letterSpacing: "0.22em", color: peakColor,
+                      }}>
+                        Words / min · peak {maxWpm}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div style={{ position: "relative", height: 36, background: "rgba(255,255,255,0.025)", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                   {/* Time markers */}
                   {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
@@ -1048,6 +1116,12 @@ export function CoachReportCard({
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#F87171", boxShadow: "0 0 4px rgba(248,113,113,0.6)" }} />
                       Growth killer flagged
+                    </span>
+                  )}
+                  {wpmCurve.length >= 3 && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ display: "inline-block", width: 24, height: 8, background: "linear-gradient(180deg, rgba(34,211,238,0.45), rgba(34,211,238,0.05))", borderTop: "1px solid #22D3EE", borderRadius: 2 }} />
+                      Words / min
                     </span>
                   )}
                 </div>

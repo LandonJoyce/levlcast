@@ -109,6 +109,9 @@ export default async function VodDetailPage({
   const previousScore = (prevVod?.coach_report as any)?.overall_score as number | undefined;
   const previousReport = (prevVod?.coach_report as any) ?? undefined;
   const chatPulse = (vod.chat_pulse as any[] | null) ?? null;
+  // word_timestamps powers the per-minute energy curve overlay on the
+  // Silence Map. May be null on legacy VODs analyzed before migration 007.
+  const wordTimestamps = (vod.word_timestamps as Array<{ start: number; end: number }> | null) ?? null;
 
   let streak = 0;
   for (const v of (recentVods ?? [])) {
@@ -250,6 +253,7 @@ export default async function VodDetailPage({
               streamDurationSeconds={vod.duration_seconds ?? undefined}
               chatPulse={chatPulse}
               trajectory={trajectory}
+              wordTimestamps={wordTimestamps}
             />
           ) : (
             <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
