@@ -252,6 +252,12 @@ export async function cutClip(
         const sliced = sliceWordsForClip(options.vodWords, options.vodWindow.start, options.vodWindow.end);
         const cards = groupWordsIntoCards(sliced);
         if (cards.length > 0) {
+          // One-line per card so we can verify alignment against audio in
+          // Vercel logs without spamming.
+          for (let i = 0; i < cards.length; i++) {
+            const c = cards[i];
+            console.log(`[clip] card ${i}: ${c.start.toFixed(2)}s-${c.end.toFixed(2)}s "${c.text}"`);
+          }
           // Source video resolution drives caption sizing. Most Twitch VODs
           // are 1920×1080 or 1280×720. We don't know the exact source here
           // without probing — assume 1280×720 baseline and let drawtext scale
