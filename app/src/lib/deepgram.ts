@@ -30,14 +30,25 @@ const BASE_PARAMS: Record<string, string> = {
 };
 
 /**
- * Build the Deepgram URL with optional keyword boosting.
- * keywords format: ["desync:2", "headshot:2"] — the :N suffix is the boost.
+ * Build the Deepgram URL with optional vocabulary boosting.
+ *
+ * Nova-3 dropped the legacy `keywords` parameter (with :N boost
+ * suffix) in favor of `keyterm` — a flat list of terms, no boosts.
+ * Inputs may carry the legacy ":N" suffix from older callers; strip
+ * it here so the same keyword library serves both code paths.
+ *
+ * Cap conservatively at 100 terms; Deepgram's own limit is higher
+ * but very long URLs occasionally trip CDN edge proxies.
  */
 function buildDeepgramUrl(keywords: string[] = []): string {
   const params = new URLSearchParams(BASE_PARAMS);
-  // `keywords` can repeat in the URL. Cap at 200 (Deepgram's documented limit).
-  for (const kw of keywords.slice(0, 200)) {
-    params.append("keywords", kw);
+  const seen = new Set<string>();
+  for (const raw of keywords) {
+    const term = raw.replace(/:\d+(\.\d+)?$/, "").trim();
+    if (!term || seen.has(term.toLowerCase())) continue;
+    seen.add(term.toLowerCase());
+    params.append("keyterm", term);
+    if (seen.size >= 100) break;
   }
   return `${DEEPGRAM_API}?${params.toString()}`;
 }
