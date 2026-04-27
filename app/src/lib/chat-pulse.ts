@@ -33,6 +33,34 @@ export interface ChatBucket {
   raidEvents: number;
   /** Net-positive sentiment proxy: (laughs+hype) - sad. Useful for coloring. */
   vibe: number;
+  // ─── Surgical metrics (computed in a second pass) ──────────────────────────
+  /**
+   * Velocity — bucket count divided by stream-wide average bucket count.
+   * v=1 is normal, v>1.5 is a real spike RELATIVE to this streamer's
+   * typical bucket density. Normalizes for streamer size: a spike for a
+   * 10-viewer stream looks the same as a spike for a 10,000-viewer stream.
+   */
+  velocity: number;
+  /**
+   * Diversity — unique chatters in bucket divided by total messages in
+   * bucket. d=1 means every message is from a different person (community
+   * moment). d~0.2 means a few people had a long conversation (NOT a
+   * community win, even if message count is high). Used to filter out
+   * "looks like a spike but it's just one person spamming" false positives.
+   */
+  diversity: number;
+  /**
+   * Hype ratio — fraction of messages that were emote-only / very short
+   * reaction tokens (POG, KEKW, LUL, +1, F, W). On Twitch these are the
+   * purest sentiment signal because text gets dampened by people typing
+   * questions. High hypeRatio + high velocity = a clip-worthy moment.
+   */
+  hypeRatio: number;
+  /**
+   * Dominant signal label — coarse human-readable category for prompts and
+   * UI. "laughs" / "hype" / "sad" / "neutral" / "monetary".
+   */
+  dominantSignal: "laughs" | "hype" | "sad" | "monetary" | "neutral";
 }
 
 const DEFAULT_BUCKET_SEC = 30;
@@ -105,6 +133,64 @@ function matchesAny(text: string, patterns: RegExp[]): boolean {
 }
 
 /**
+ * Detect "emote-only" / pure-reaction messages — the ground-truth hype
+ * signal on Twitch. These are short, mostly-token messages like "POG",
+ * "KEKW LUL KEKW", "W", "+1", "F", "OMEGALUL OMEGALUL OMEGALUL".
+ *
+ * Heuristic: 1-4 words, every word ≤ 12 chars, AND at least one of:
+ *   - all-uppercase (typical emote naming convention: KEKW, LUL, POG)
+ *   - matches the laugh / hype / sad pattern banks
+ *   - is a single-character "F" or "+1" / "-1" reaction
+ * Excludes messages with sentence punctuation (?, .) which usually
+ * indicates real text not pure reaction.
+ */
+function isEmoteOnly(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 60) return false;
+  if (/[?.!]{2,}/.test(trimmed)) return false; // multiple ?? or ... = typed sentence
+  const words = trimmed.split(/\s+/);
+  if (words.length === 0 || words.length > 4) return false;
+  if (words.some((w) => w.length > 12)) return false;
+
+  for (const word of words) {
+    const w = word.replace(/[!?.,]+$/, "");
+    if (!w) return false;
+    // Single-char reactions
+    if (/^[Ff]$/.test(w) || /^[+\-]\d$/.test(w)) continue;
+    // All-uppercase tokens like KEKW, LUL, POG
+    if (/^[A-Z][A-Z0-9]+$/.test(w) && w.length >= 3) continue;
+    // Hits one of our pattern banks
+    if (
+      matchesAny(w, LAUGH_PATTERNS) ||
+      matchesAny(w, HYPE_PATTERNS) ||
+      matchesAny(w, SAD_PATTERNS)
+    ) continue;
+    return false;
+  }
+  return true;
+}
+
+function pickDominantSignal(b: ChatBucket): ChatBucket["dominantSignal"] {
+  // Monetary trumps everything because subs/bits/raids are explicit events
+  if (b.subEvents + b.bitEvents + b.raidEvents > 0) {
+    // Only flag as monetary if those events are at least 10% of the bucket;
+    // otherwise it's a normal bucket that happens to contain one cheer.
+    if ((b.subEvents + b.bitEvents + b.raidEvents) / Math.max(1, b.count) >= 0.1) {
+      return "monetary";
+    }
+  }
+  const laughs = b.laughCount;
+  const hype = b.hypeCount;
+  const sad = b.sadCount;
+  const max = Math.max(laughs, hype, sad);
+  // Need at least 3 reaction signals to dominate
+  if (max < 3) return "neutral";
+  if (max === laughs) return "laughs";
+  if (max === hype) return "hype";
+  return "sad";
+}
+
+/**
  * Bucket chat messages into fixed-duration windows. Empty buckets are
  * still emitted (count=0) so timeline visualizations have a continuous
  * x-axis without gaps.
@@ -118,6 +204,7 @@ export function bucketChat(
   const bucketCount = Math.ceil(durationSeconds / bucketSec);
   const buckets: ChatBucket[] = [];
   const userSetsPerBucket: Set<string>[] = [];
+  const emoteOnlyPerBucket: number[] = [];
 
   for (let i = 0; i < bucketCount; i++) {
     buckets.push({
@@ -132,10 +219,16 @@ export function bucketChat(
       bitEvents: 0,
       raidEvents: 0,
       vibe: 0,
+      velocity: 0,
+      diversity: 0,
+      hypeRatio: 0,
+      dominantSignal: "neutral",
     });
     userSetsPerBucket.push(new Set<string>());
+    emoteOnlyPerBucket.push(0);
   }
 
+  // Pass 1: per-bucket counts
   for (const msg of messages) {
     if (msg.time < 0 || msg.time >= durationSeconds) continue;
     const idx = Math.min(bucketCount - 1, Math.floor(msg.time / bucketSec));
@@ -150,11 +243,29 @@ export function bucketChat(
     if (matchesAny(text, SUB_PATTERNS)) b.subEvents++;
     if (BIT_PATTERN.test(text)) b.bitEvents++;
     if (matchesAny(text, RAID_PATTERNS)) b.raidEvents++;
+    if (isEmoteOnly(text)) emoteOnlyPerBucket[idx]++;
   }
 
+  // Pass 2: stream-wide aggregates needed for velocity normalization
+  let totalCount = 0;
+  let nonEmptyBuckets = 0;
+  for (const b of buckets) {
+    totalCount += b.count;
+    if (b.count > 0) nonEmptyBuckets++;
+  }
+  // Use non-empty avg so a 4-hour stream with chat in just 2 hrs doesn't
+  // get a deflated baseline that makes every active bucket look like a spike.
+  const avgPerBucket = nonEmptyBuckets > 0 ? totalCount / nonEmptyBuckets : 0;
+
+  // Pass 3: derived metrics + dominant signal
   for (let i = 0; i < buckets.length; i++) {
-    buckets[i].uniqueChatters = userSetsPerBucket[i].size;
-    buckets[i].vibe = buckets[i].laughCount + buckets[i].hypeCount - buckets[i].sadCount;
+    const b = buckets[i];
+    b.uniqueChatters = userSetsPerBucket[i].size;
+    b.vibe = b.laughCount + b.hypeCount - b.sadCount;
+    b.velocity = avgPerBucket > 0 ? b.count / avgPerBucket : 0;
+    b.diversity = b.count > 0 ? b.uniqueChatters / b.count : 0;
+    b.hypeRatio = b.count > 0 ? emoteOnlyPerBucket[i] / b.count : 0;
+    b.dominantSignal = pickDominantSignal(b);
   }
 
   return buckets;
@@ -223,6 +334,8 @@ export function summarizePulse(buckets: ChatBucket[], allMessages: ChatMessage[]
 
   // Spike / drop detection — compare against rolling neighbor average so a
   // single quiet stretch in an otherwise-quiet stream doesn't keep flagging.
+  // Diversity gate: a "spike" with diversity < 0.4 is one-or-two-people
+  // spamming, NOT a community moment, so we don't mark those as spikes.
   for (let i = 2; i < buckets.length - 2; i++) {
     const neighbors = [buckets[i - 2], buckets[i - 1], buckets[i + 1], buckets[i + 2]];
     const neighborAvg = neighbors.reduce((s, n) => s + n.count, 0) / neighbors.length;
@@ -230,10 +343,13 @@ export function summarizePulse(buckets: ChatBucket[], allMessages: ChatMessage[]
 
     const here = buckets[i];
     if (here.count >= neighborAvg * SPIKE_THRESHOLD) {
+      const isCommunityMoment = here.diversity >= 0.4;
       notable.push({
         type: "spike",
         bucket: here,
-        note: `Chat surged to ${here.count} messages (avg ~${Math.round(neighborAvg)})`,
+        note: isCommunityMoment
+          ? `Community surge — ${here.count} messages from ${here.uniqueChatters} chatters (avg ~${Math.round(neighborAvg)})`
+          : `Spike — ${here.count} messages but only ${here.uniqueChatters} chatters (likely 1-2 people, not a community moment)`,
       });
     } else if (here.count < neighborAvg * DROP_THRESHOLD) {
       notable.push({
@@ -345,6 +461,14 @@ export function isPulseViable(buckets: ChatBucket[] | null | undefined): boolean
   return true;
 }
 
+/**
+ * Outliers-first prompt formatter. Instead of dumping the whole pulse on
+ * Claude (which lets it wander), we hand-pick the moments that pass our
+ * statistical bars — high-velocity community moments, sudden vibe shifts,
+ * monetary events — and explicitly tell Claude these are the timestamps
+ * worth coaching about. This turns the model from a summarizer into a
+ * Director pointing at specific successes and failures.
+ */
 export function formatPulseForPrompt(buckets: ChatBucket[] | null | undefined): string {
   if (!buckets || buckets.length === 0) return "";
   if (!isPulseViable(buckets)) return "";
@@ -358,47 +482,138 @@ export function formatPulseForPrompt(buckets: ChatBucket[] | null | undefined): 
   const totalSub = buckets.reduce((s, b) => s + b.subEvents, 0);
   const totalBit = buckets.reduce((s, b) => s + b.bitEvents, 0);
   const totalRaid = buckets.reduce((s, b) => s + b.raidEvents, 0);
-  const allUsers = new Set<string>(); // can't recover from buckets, omit
 
-  const avg = total / buckets.length;
+  const bucketSec = buckets[0].end - buckets[0].start;
+  const totalMin = Math.round((buckets[buckets.length - 1].end - buckets[0].start) / 60);
 
-  // Top 6 chat moments by absolute deviation from the average — these are
-  // the windows worth citing in coaching ("your chat exploded at 47:12")
-  const sorted = [...buckets]
-    .map((b) => ({ b, dev: Math.abs(b.count - avg) }))
-    .sort((a, b) => b.dev - a.dev)
-    .slice(0, 6)
-    .map(({ b }) => b)
-    .sort((a, b) => a.start - b.start);
+  // ── COMMUNITY MOMENTS — high velocity AND high diversity ──────────────
+  // Real spikes where many different people reacted, not 1-2 spamming.
+  const communityMoments = buckets
+    .filter((b) => b.velocity >= 1.6 && b.diversity >= 0.5 && b.count >= 5)
+    .sort((a, b) => b.velocity * b.diversity - a.velocity * a.diversity)
+    .slice(0, 5);
+
+  // ── PURE HYPE MOMENTS — high emote ratio + decent volume ─────────────
+  // The "this is going viral" signal — most people typed pure reactions.
+  const hypeMoments = buckets
+    .filter((b) => b.hypeRatio >= 0.45 && b.count >= 5 && b.velocity >= 1.2)
+    .filter((b) => !communityMoments.includes(b))
+    .sort((a, b) => b.hypeRatio - a.hypeRatio)
+    .slice(0, 3);
+
+  // ── VIBE SHIFTS — sentiment delta from previous bucket ───────────────
+  // Where the room turned. Positive → negative or vice versa.
+  const vibeShifts: Array<{ bucket: ChatBucket; delta: number; from: string; to: string }> = [];
+  for (let i = 1; i < buckets.length; i++) {
+    const prev = buckets[i - 1];
+    const here = buckets[i];
+    if (prev.count < 3 || here.count < 3) continue;
+    const delta = here.vibe - prev.vibe;
+    if (Math.abs(delta) < 5) continue;
+    if (prev.dominantSignal === here.dominantSignal) continue;
+    vibeShifts.push({
+      bucket: here,
+      delta,
+      from: prev.dominantSignal,
+      to: here.dominantSignal,
+    });
+  }
+  vibeShifts.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const topShifts = vibeShifts.slice(0, 3);
+
+  // ── MONETARY EVENTS — always interesting ─────────────────────────────
+  const monetary = buckets
+    .filter((b) => b.subEvents + b.bitEvents + b.raidEvents > 0)
+    .slice(0, 5);
+
+  // ── DROPS — where chat went quiet relative to baseline ───────────────
+  const drops = buckets
+    .filter((b) => b.velocity > 0 && b.velocity < 0.4 && b.start > 60)
+    .sort((a, b) => a.velocity - b.velocity)
+    .slice(0, 3);
 
   const lines: string[] = [];
-  lines.push("━━━ CHAT PULSE (real viewer reaction data) ━━━");
-  lines.push(`Total messages: ${total} across ${buckets.length} ${buckets[0].end - buckets[0].start}s buckets (avg ${avg.toFixed(1)}/bucket)`);
+  lines.push("━━━ CHAT PULSE — REAL VIEWER REACTION DATA ━━━");
+  lines.push(`${total} messages across ${totalMin}min (${buckets.length} × ${bucketSec}s buckets)`);
   if (totalLaugh + totalHype + totalSad > 0) {
-    lines.push(`Reaction breakdown — laughs:${totalLaugh}  hype:${totalHype}  sad/cringe:${totalSad}`);
+    lines.push(`Reactions: laughs=${totalLaugh}  hype=${totalHype}  sad/cringe=${totalSad}`);
   }
   if (totalSub + totalBit + totalRaid > 0) {
-    lines.push(`Monetary signals — subs:${totalSub}  bits:${totalBit}  raids:${totalRaid}`);
+    lines.push(`Events: subs=${totalSub}  bits=${totalBit}  raids=${totalRaid}`);
   }
   lines.push("");
-  lines.push("Notable windows (chat surged or crashed relative to neighbors):");
-  for (const b of sorted) {
-    const label = [];
-    if (b.laughCount > 0) label.push(`${b.laughCount} laugh`);
-    if (b.hypeCount > 0) label.push(`${b.hypeCount} hype`);
-    if (b.sadCount > 0) label.push(`${b.sadCount} sad`);
-    if (b.subEvents > 0) label.push(`${b.subEvents} subs`);
-    if (b.bitEvents > 0) label.push(`${b.bitEvents} bits`);
-    if (b.raidEvents > 0) label.push("raid");
-    const tail = label.length > 0 ? ` [${label.join(", ")}]` : "";
-    lines.push(`  ${fmtTime(b.start)}-${fmtTime(b.end)}: ${b.count} msgs${tail}`);
+
+  if (communityMoments.length > 0) {
+    lines.push("COMMUNITY MOMENTS — many different chatters reacted at once (this is the gold):");
+    for (const b of communityMoments) {
+      const tags = labelBucket(b);
+      lines.push(`  ${fmtTime(b.start)}-${fmtTime(b.end)}: ${b.count} msgs from ${b.uniqueChatters} chatters (velocity ${b.velocity.toFixed(1)}x, diversity ${b.diversity.toFixed(2)})${tags}`);
+    }
+    lines.push("");
   }
-  lines.push("");
-  lines.push("USE THIS DATA: chat reaction is ground truth for engagement. A moment that looked great in the transcript but had quiet chat did NOT land. A moment with an audio dip but chat surge IS a comedy/reaction beat. Cite specific timestamps from this pulse when explaining strengths or weaknesses.");
+
+  if (hypeMoments.length > 0) {
+    lines.push("PURE HYPE MOMENTS — chat went into emote-only mode (POG / KEKW / W spam):");
+    for (const b of hypeMoments) {
+      lines.push(`  ${fmtTime(b.start)}-${fmtTime(b.end)}: ${b.count} msgs, ${Math.round(b.hypeRatio * 100)}% pure-reaction (velocity ${b.velocity.toFixed(1)}x)`);
+    }
+    lines.push("");
+  }
+
+  if (topShifts.length > 0) {
+    lines.push("VIBE SHIFTS — chat's mood pivoted here:");
+    for (const s of topShifts) {
+      lines.push(`  ${fmtTime(s.bucket.start)}: ${s.from} → ${s.to} (delta ${s.delta > 0 ? "+" : ""}${s.delta})`);
+    }
+    lines.push("");
+  }
+
+  if (monetary.length > 0) {
+    lines.push("MONETARY / EVENT MOMENTS:");
+    for (const b of monetary) {
+      const evts = [];
+      if (b.subEvents > 0) evts.push(`${b.subEvents} sub${b.subEvents !== 1 ? "s" : ""}`);
+      if (b.bitEvents > 0) evts.push(`${b.bitEvents} bit cheer${b.bitEvents !== 1 ? "s" : ""}`);
+      if (b.raidEvents > 0) evts.push(`raid arrival`);
+      lines.push(`  ${fmtTime(b.start)}: ${evts.join(", ")}`);
+    }
+    lines.push("");
+  }
+
+  if (drops.length > 0) {
+    lines.push("CHAT DROPS — viewers went quiet (something stopped landing):");
+    for (const b of drops) {
+      lines.push(`  ${fmtTime(b.start)}-${fmtTime(b.end)}: only ${b.count} msgs (velocity ${b.velocity.toFixed(2)}x of baseline)`);
+    }
+    lines.push("");
+  }
+
+  if (
+    communityMoments.length === 0 &&
+    hypeMoments.length === 0 &&
+    topShifts.length === 0 &&
+    monetary.length === 0 &&
+    drops.length === 0
+  ) {
+    // Pulse was viable but nothing notable — Claude shouldn't lean on it
+    // for specific citations; falls back to general engagement summary.
+    lines.push("(No statistically notable chat moments — chat was steady throughout.)");
+    lines.push("");
+  }
+
+  lines.push("DIRECTOR INSTRUCTION: When you cite chat behavior in strengths, improvements, or anti_patterns, use the SPECIFIC timestamps above. Tell the streamer exactly what they did at those moments to trigger (or fail to trigger) the community reaction. A moment with high audio energy but a chat DROP did NOT land — say so. A moment with low audio but a community surge IS a clip-worthy beat.");
   lines.push("━━━");
 
-  // suppress unused warning — we may want to surface unique chatters here later
-  void allUsers;
-
   return lines.join("\n");
+}
+
+function labelBucket(b: ChatBucket): string {
+  const tags: string[] = [];
+  if (b.laughCount >= 3) tags.push(`${b.laughCount} laughs`);
+  if (b.hypeCount >= 3) tags.push(`${b.hypeCount} hype`);
+  if (b.sadCount >= 3) tags.push(`${b.sadCount} sad`);
+  if (b.subEvents > 0) tags.push(`${b.subEvents} subs`);
+  if (b.bitEvents > 0) tags.push(`${b.bitEvents} bits`);
+  if (b.raidEvents > 0) tags.push("raid");
+  return tags.length > 0 ? ` [${tags.join(", ")}]` : "";
 }

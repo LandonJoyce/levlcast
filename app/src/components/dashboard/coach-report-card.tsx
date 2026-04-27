@@ -243,6 +243,11 @@ interface ChatPulseBucket {
   start: number; end: number; count: number; uniqueChatters: number;
   laughCount: number; hypeCount: number; sadCount: number;
   subEvents: number; bitEvents: number; raidEvents: number; vibe: number;
+  // New fields — older bucketed data may not have them; handle as optional in UI.
+  velocity?: number;
+  diversity?: number;
+  hypeRatio?: number;
+  dominantSignal?: "laughs" | "hype" | "sad" | "monetary" | "neutral";
 }
 
 export function CoachReportCard({
@@ -519,7 +524,10 @@ export function CoachReportCard({
               otherwise the simpler audience snapshot — no embarrassing
               empty bars for new streamers. */}
           {chatPulse && chatPulse.length > 0 && (
-            isPulseViable(chatPulse)
+            // Cast — older buckets persisted before the velocity/diversity
+            // fields existed; isPulseViable only reads count/uniqueChatters
+            // so legacy data is safe.
+            isPulseViable(chatPulse as Parameters<typeof isPulseViable>[0])
               ? <ChatPulseCard buckets={chatPulse} durationSeconds={streamDurationSeconds} />
               : <AudienceSnapshotCard buckets={chatPulse} />
           )}

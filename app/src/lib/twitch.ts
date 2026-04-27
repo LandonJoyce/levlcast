@@ -798,21 +798,33 @@ export async function fetchTwitchVodChat(
       },
     }];
 
-    let res: Response;
-    try {
-      res = await fetch("https://gql.twitch.tv/gql", {
-        method: "POST",
-        headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: options.signal,
-      });
-    } catch (err) {
-      console.warn(`[twitch chat] Network error on page ${pageCount}:`, err);
-      break;
+    // Retry transient failures (5xx, network errors) up to 2 times before
+    // bailing on this page. Bailing the whole fetch on one flake means the
+    // user sees an empty pulse for what would otherwise be a great stream.
+    let res: Response | null = null;
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+      try {
+        const r = await fetch("https://gql.twitch.tv/gql", {
+          method: "POST",
+          headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: options.signal,
+        });
+        if (r.ok) { res = r; break; }
+        if (r.status >= 400 && r.status < 500) {
+          // Client errors won't get better with retry — log and stop paging
+          console.warn(`[twitch chat] GQL ${r.status} on page ${pageCount} (client error, stopping)`);
+          return messages;
+        }
+        lastErr = new Error(`HTTP ${r.status}`);
+      } catch (err) {
+        lastErr = err;
+      }
     }
-
-    if (!res.ok) {
-      console.warn(`[twitch chat] GQL ${res.status} on page ${pageCount}`);
+    if (!res) {
+      console.warn(`[twitch chat] Page ${pageCount} failed after retries:`, lastErr);
       break;
     }
 
@@ -822,6 +834,17 @@ export async function fetchTwitchVodChat(
     } catch (err) {
       console.warn(`[twitch chat] JSON parse failed on page ${pageCount}:`, err);
       break;
+    }
+
+    // Surface GraphQL errors — without this a stale persisted-query hash
+    // returns errors: [...] with empty data and we'd silently get zero chat.
+    type GqlError = { message?: string };
+    const maybeErrs = (Array.isArray(json) ? json[0] : json) as { errors?: GqlError[] };
+    if (maybeErrs?.errors && maybeErrs.errors.length > 0) {
+      console.warn(`[twitch chat] GQL errors on page ${pageCount}:`, maybeErrs.errors.map((e) => e.message).join("; "));
+      // If first page has errors, the whole fetch is doomed (likely stale
+      // persisted-query hash). Stop and return whatever we have.
+      if (pageCount === 1) return messages;
     }
 
     type CommentEdge = {
@@ -850,7 +873,15 @@ export async function fetchTwitchVodChat(
     const edges = comments?.edges ?? [];
     const hasNext = comments?.pageInfo?.hasNextPage ?? false;
 
-    if (edges.length === 0) break;
+    // Empty edges + no next page → genuinely done. Empty edges + next page
+    // means a transient hiccup; we can't advance the cursor without an edge,
+    // so bail rather than infinite-loop.
+    if (edges.length === 0) {
+      if (hasNext) {
+        console.warn(`[twitch chat] Empty page ${pageCount} with hasNextPage=true (no cursor to advance) — stopping`);
+      }
+      break;
+    }
 
     for (const edge of edges) {
       const n = edge.node;
@@ -873,8 +904,13 @@ export async function fetchTwitchVodChat(
     }
 
     if (!hasNext) break;
-    cursor = edges[edges.length - 1].cursor;
-    if (!cursor) break;
+    const nextCursor = edges[edges.length - 1].cursor;
+    if (!nextCursor || nextCursor === cursor) {
+      // Cursor didn't advance — would loop forever otherwise
+      console.warn(`[twitch chat] Cursor failed to advance on page ${pageCount} — stopping`);
+      break;
+    }
+    cursor = nextCursor;
   }
 
   console.log(`[twitch chat] Fetched ${messages.length} messages across ${pageCount} pages for VOD ${vodId}`);
