@@ -180,7 +180,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
         Score Trajectory · {trendLabel}
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", height: "auto" }} aria-hidden>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxHeight: "160px" }} aria-hidden>
         <defs>
           <linearGradient id="trj-area" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.34" />
