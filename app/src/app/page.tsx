@@ -523,7 +523,7 @@ export default function LandingPage() {
                   </Link>
                   <a href="#how-it-works" className="btn btn-ghost">How it works</a>
                 </div>
-                <div className="hero-foot">Free to start · No credit card · We never post to your channel</div>
+                <div className="hero-foot">Free to start · No credit card · Read-only Twitch access — we see your VODs, nothing else</div>
                 <div className="hero-stats">
                   <div className="hero-stat">
                     <div className="v blue">0–100</div>
@@ -635,8 +635,8 @@ export default function LandingPage() {
           <div className="problem-grid">
             <div className="problem-card blue">
               <span className="topline"></span>
-              <h3>You can&apos;t diagnose yourself while live</h3>
-              <p>Dead air, slow openings, the moments chat went quiet — you can&apos;t see any of it in real time. You need someone watching from the outside.</p>
+              <h3>You&apos;re too in it to see what&apos;s wrong</h3>
+              <p>You&apos;re focused on the game, the chat, the everything. The 3-minute silence at 1:40 — you didn&apos;t notice it. Your viewers did.</p>
             </div>
 
             <div className="problem-card green tall">
@@ -653,8 +653,8 @@ export default function LandingPage() {
 
             <div className="problem-card cyan">
               <span className="topline"></span>
-              <h3>Your best moments are already gone</h3>
-              <p>You had good moments last stream. You didn&apos;t clip them. They expire in two weeks. That&apos;s months of content that&apos;ll never exist.</p>
+              <h3>Last stream&apos;s best moment is already gone</h3>
+              <p>Something good happened at 2:30. Nobody clipped it. The VOD expires in 14 days and that&apos;s it. Happens every stream.</p>
             </div>
           </div>
         </div>
