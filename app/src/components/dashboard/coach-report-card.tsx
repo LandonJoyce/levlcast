@@ -1120,9 +1120,9 @@ export function CoachReportCard({
           <footer style={{ marginTop: 40, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
             <div>
               <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 17, color: "#A6B3C9", lineHeight: 1.5 }}>
-                Pick a fix.<br />
-                Run it next stream.<br />
-                <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>Check the delta.</strong>
+                Go live.<br />
+                Own your stream.<br />
+                <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>Level up.</strong>
               </p>
               <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#A6B3C9", letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-4px)", lineHeight: 1, marginTop: 12, display: "inline-block" }}>
                 — LevlCast
