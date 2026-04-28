@@ -278,7 +278,7 @@ function ChatPulseMock() {
   );
 }
 
-/* ─── Full report visual (used in §05) — editorial style matching new coach-report-card ─── */
+/* ─── Full report visual (used in §05) — matches current coach-report-card design ─── */
 function ReportVisual() {
   const serif = '"Instrument Serif", Georgia, serif';
   const mono  = '"JetBrains Mono", monospace';
@@ -293,26 +293,31 @@ function ReportVisual() {
   const rose  = "#F87171";
   const cyan  = "#22D3EE";
 
+  // Sub-score color helpers matching last-stream-recap.tsx
+  const ssColor  = (v: number) => v >= 66 ? lime  : v >= 33 ? amber  : rose;
+  const ssBg     = (v: number) => v >= 66 ? "rgba(163,230,53,0.05)"  : v >= 33 ? "rgba(245,158,11,0.04)"  : "rgba(248,113,113,0.05)";
+  const ssBorder = (v: number) => v >= 66 ? "rgba(163,230,53,0.22)"  : v >= 33 ? "rgba(245,158,11,0.20)"  : "rgba(248,113,113,0.22)";
+
   return (
-    <div style={{ borderRadius: 16, overflow: "hidden", background: "#0C111C", border: `1px solid ${line}`, boxShadow: "0 40px 80px -40px rgba(0,0,0,0.6)", color: ink, WebkitFontSmoothing: "antialiased", backgroundImage: "radial-gradient(900px 500px at 80% -100px, rgba(34,211,238,0.06), transparent 60%)" }}>
-      <div style={{ padding: "28px 24px 40px" }}>
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "#0C111C", border: `1px solid ${line}`, boxShadow: "0 40px 80px -40px rgba(0,0,0,0.6)", color: ink, WebkitFontSmoothing: "antialiased", backgroundImage: "radial-gradient(900px 500px at 80% -100px, rgba(34,211,238,0.06), transparent 60%), radial-gradient(700px 400px at 0% 30%, rgba(163,230,53,0.03), transparent 60%)" }}>
+      <div style={{ padding: "32px 28px 48px" }}>
 
         {/* Masthead */}
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, paddingBottom: 14, borderBottom: `1px solid ${line}`, marginBottom: 24, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, paddingBottom: 16, borderBottom: `1px solid ${line}`, marginBottom: 28, flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: ink3, marginBottom: 3 }}>Stream Debrief</div>
-            <div style={{ fontFamily: serif, fontSize: 28, lineHeight: 1, color: ink }}>Gaming <em style={{ fontStyle: "italic", color: cyan }}>Coaching</em></div>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: ink3, marginBottom: 4 }}>Stream Debrief</div>
+            <div style={{ fontFamily: serif, fontSize: 34, lineHeight: 1.05, color: ink }}>Gaming <em style={{ fontStyle: "italic", color: cyan }}>Coaching</em></div>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ padding: "3px 8px", border: `1px solid rgba(34,211,238,0.32)`, borderRadius: 4, background: "rgba(34,211,238,0.06)", color: cyan, fontSize: 10, fontFamily: mono }}>◆ Consistent Creator</span>
-            <span style={{ padding: "3px 8px", border: `1px solid rgba(245,158,11,0.32)`, borderRadius: 4, background: "rgba(245,158,11,0.06)", color: amber, fontSize: 10, fontFamily: mono }}>▲ 4-stream streak</span>
+            <span style={{ padding: "3px 9px", border: `1px solid rgba(34,211,238,0.32)`, borderRadius: 4, background: "rgba(34,211,238,0.06)", color: cyan, fontSize: 11, fontFamily: mono }}>◆ Consistent Creator</span>
+            <span style={{ padding: "3px 9px", border: `1px solid rgba(245,158,11,0.32)`, borderRadius: 4, background: "rgba(245,158,11,0.06)", color: amber, fontSize: 11, fontFamily: mono }}>▲ 4-stream streak</span>
           </div>
         </div>
 
         {/* Hero: dial + story */}
-        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 32, alignItems: "start", marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 40, alignItems: "start", marginBottom: 32 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 10, textAlign: "left" }}>Performance Score</div>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: ink3, marginBottom: 14, textAlign: "left" }}>Performance Score</div>
             <StaticDial score={67} size={220} />
             <div style={{ marginTop: 12, fontFamily: serif, fontSize: 17, color: lime, fontStyle: "italic" }}>↗ +8 from last stream</div>
             <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center" }}>
@@ -324,112 +329,130 @@ function ReportVisual() {
             </div>
           </div>
           <div style={{ paddingTop: 4 }}>
-            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 20, height: 1, background: ink4, display: "inline-block" }} />The Story of This Stream
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: ink3, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 24, height: 1, background: ink4, display: "inline-block" }} />The Story of This Stream
             </div>
-            <p style={{ fontFamily: serif, fontSize: 18, lineHeight: 1.45, color: ink, margin: "0 0 20px" }}>
+            <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 15, lineHeight: 1.65, color: "#D4DCF0", margin: 0 }}>
               Three solid hours on Elden Ring, anchored by a clean Malenia clear at 2:55. You opened hot, dipped at the 1:40 mark when chat went quiet, then recovered for one of your sharpest closing stretches of the week.
             </p>
           </div>
         </div>
 
-        {/* Opening row */}
-        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 20, padding: "16px 0", borderBottom: `1px dashed ${line2}` }}>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3 }}>
-            <span style={{ fontFamily: serif, color: cyan, fontSize: 22, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>i.</span>Opening
-          </div>
-          <p style={{ fontFamily: serif, fontSize: 16, lineHeight: 1.5, color: ink, margin: 0 }}>Came in with energy and a clear hook within the first 90 seconds. Strong start — energy held through the early grind.</p>
-        </div>
-
-        {/* #1 Fix row */}
-        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 20, padding: "16px 20px 16px 16px", margin: "0 -16px", borderBottom: `1px dashed ${line2}`, borderLeft: `2px solid ${rose}`, background: "linear-gradient(180deg, rgba(248,113,113,0.04), transparent 80%)" }}>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: rose }}>
-            <span style={{ fontFamily: serif, color: rose, fontSize: 22, fontStyle: "italic", display: "block", marginBottom: 2, lineHeight: 1 }}>ii.</span>The #1 Fix
-          </div>
-          <p style={{ fontFamily: serif, fontSize: 16, lineHeight: 1.5, color: ink, margin: 0 }}>
+        {/* #1 Fix */}
+        <div style={{ marginBottom: 28, padding: "20px 22px 22px", borderRadius: 12, background: "linear-gradient(180deg, rgba(248,113,113,0.07), rgba(248,113,113,0.02))", border: "1px solid rgba(248,113,113,0.28)", borderLeft: `3px solid ${rose}` }}>
+          <div style={{ fontFamily: mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: rose, marginBottom: 12 }}>The #1 Fix</div>
+          <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 15, lineHeight: 1.65, color: ink, margin: 0 }}>
             Lead the room when chat goes quiet — your job is to set the tempo, not match it. Narrate every clutch attempt out loud.
           </p>
         </div>
 
-        {/* Sub-scores */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", margin: "28px 0 24px", borderTop: `1px solid ${line}`, borderBottom: `1px solid ${line}`, padding: "16px 0" }}>
-          {([["energy", 74, lime], ["engagement", 61, amber], ["consistency", 70, lime], ["content", 63, amber]] as [string, number, string][]).map(([k, v, c], i, arr) => (
-            <div key={k} style={{ padding: i === 0 ? "0 16px 0 0" : i === arr.length - 1 ? "0 0 0 16px" : "0 16px", borderRight: i < arr.length - 1 ? `1px solid ${line}` : "none" }}>
-              <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 6 }}>{k}</div>
-              <div style={{ fontFamily: serif, fontSize: 38, lineHeight: 0.9, letterSpacing: "-0.04em", marginBottom: 7, color: c }}>
-                {v}<span style={{ fontFamily: mono, fontSize: 10, color: ink4, letterSpacing: "0.1em" }}>/100</span>
+        <div style={{ borderTop: `1px solid ${line}`, margin: "0 0 28px" }} />
+
+        {/* What worked / Fix — InsightCard tile style */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 36, position: "relative" }}>
+          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: line, transform: "translateX(-50%)" }} />
+          <div>
+            <div style={{ fontFamily: serif, fontSize: 26, marginBottom: 4, color: ink }}>What <em style={{ fontStyle: "italic", color: lime }}>worked.</em></div>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Keep doing these</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([["Clutch Read", "Mechanical breakdown of the stun trap interaction at 2:11 — exactly what viewers want to learn.", "2:11"], ["Energy Open", "First 10 minutes were full-presence and set the tone for the whole session.", "0:08"]] as [string,string,string][]).map(([l, b, t], i) => (
+                <div key={l} style={{ position: "relative", padding: "12px 14px 14px 18px", borderRadius: 8, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `3px solid ${lime}` }}>
+                  <span style={{ position: "absolute", top: 10, right: 12, fontFamily: mono, fontSize: 10, color: lime, opacity: 0.85 }}>{t}</span>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, paddingRight: 48 }}>
+                    <span style={{ fontFamily: mono, fontSize: 9, color: ink4, fontWeight: 700, letterSpacing: "0.16em" }}>0{i + 1}</span>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: lime, lineHeight: 1.35 }}>{l}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: ink2, lineHeight: 1.6, margin: 0, paddingLeft: 22 }}>{b}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontFamily: serif, fontSize: 26, marginBottom: 4, color: ink }}>What to <em style={{ fontStyle: "italic", color: amber }}>fix.</em></div>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Change these next time</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([["Silent Grind", "84% of the stream was silent during active match — chat had nothing to react to.", "1:42"], ["No Take", "Recognized opponents but never gave a strong opinion — give viewers something to agree or argue with.", "2:25"]] as [string,string,string][]).map(([l, b, t], i) => (
+                <div key={l} style={{ position: "relative", padding: "12px 14px 14px 18px", borderRadius: 8, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `3px solid ${amber}` }}>
+                  <span style={{ position: "absolute", top: 10, right: 12, fontFamily: mono, fontSize: 10, color: amber, opacity: 0.85 }}>{t}</span>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, paddingRight: 48 }}>
+                    <span style={{ fontFamily: mono, fontSize: 9, color: ink4, fontWeight: 700, letterSpacing: "0.16em" }}>0{i + 1}</span>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: amber, lineHeight: 1.35 }}>{l}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: ink2, lineHeight: 1.6, margin: 0, paddingLeft: 22 }}>{b}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sub-scores — individual tinted cards (matches last-stream-recap style) */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, margin: "0 0 28px" }}>
+          {([["energy", 74], ["engagement", 61], ["consistency", 70], ["content", 63]] as [string, number][]).map(([k, v]) => (
+            <div key={k} style={{ padding: "12px 14px", borderRadius: 8, background: ssBg(v), border: `1px solid ${ssBorder(v)}`, borderLeft: `3px solid ${ssColor(v)}` }}>
+              <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: ssColor(v), marginBottom: 6 }}>{k}</div>
+              <div style={{ fontFamily: serif, fontSize: 32, lineHeight: 1, letterSpacing: "-0.03em", color: ssColor(v) }}>
+                {v}<span style={{ fontFamily: mono, fontSize: 9, color: ink4, letterSpacing: "0.08em" }}>/100</span>
               </div>
-              <div style={{ height: 4, borderRadius: 3, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${v}%`, background: c, borderRadius: 3 }} />
+              <div style={{ height: 3, borderRadius: 3, background: "rgba(255,255,255,0.06)", marginTop: 8, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${v}%`, background: ssColor(v), borderRadius: 3 }} />
               </div>
             </div>
           ))}
         </div>
 
+        {/* Opening / Closing — ArcCard style (whole box tinted by quality) */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, margin: "0 0 28px" }}>
+          {([
+            { index: "i", label: "Opening", quality: "strong" as "strong" | "average" | "weak", body: "Came in with energy and a clear hook within the first 90 seconds. Strong start — energy held through the early grind." },
+            { index: "ii", label: "Closing", quality: "average" as "strong" | "average" | "weak", body: "Finished stronger than the mid-stream dip but the sign-off came before the final tactic breakdown — front-load next time." },
+          ]).map(({ index, label, quality, body }) => {
+            const qColor = quality === "strong" ? lime : quality === "weak" ? rose : amber;
+            const qBg    = quality === "strong" ? "rgba(163,230,53,0.05)" : quality === "weak" ? "rgba(248,113,113,0.06)" : "rgba(245,158,11,0.05)";
+            return (
+              <div key={label} style={{ padding: "16px 18px 18px", borderRadius: 10, background: qBg, border: `1px solid ${qColor}55`, borderLeft: `3px solid ${qColor}` }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 20, color: qColor, lineHeight: 1, letterSpacing: "-0.02em" }}>{index}.</span>
+                  <span style={{ fontFamily: mono, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: qColor }}>{label}</span>
+                </div>
+                <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 14, color: ink, lineHeight: 1.55, margin: 0 }}>{body}</p>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Best Moment */}
-        <div style={{ margin: "0 0 24px", padding: "18px 0 18px 24px", position: "relative", borderLeft: `2px solid ${lime}` }}>
-          <div style={{ position: "absolute", left: 12, top: 2, fontFamily: serif, fontSize: 64, lineHeight: 1, color: lime, opacity: 0.35, fontStyle: "italic", userSelect: "none" }}>"</div>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase", color: lime, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-            Best Moment <span style={{ color: ink3, marginLeft: "auto", fontSize: 11, textTransform: "none", letterSpacing: "0.06em" }}>2:55:31</span>
+        <div style={{ margin: "0 0 28px", padding: "16px 18px", borderRadius: 8, background: "rgba(163,230,53,0.05)", border: "1px solid rgba(163,230,53,0.2)", borderLeft: `3px solid ${lime}` }}>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: lime, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+            Best Moment
+            <span style={{ color: ink3, marginLeft: "auto", fontSize: 11, textTransform: "none", letterSpacing: "0.06em" }}>2:55:31</span>
           </div>
-          <p style={{ fontFamily: serif, fontSize: 16, lineHeight: 1.5, color: ink, margin: 0 }}>
+          <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 14, color: ink, lineHeight: 1.55, margin: 0 }}>
             The Malenia phase 2 clear — clean execution, voice never cracked, and the reaction at the end was completely unscripted. That&apos;s the clip of the night.
           </p>
         </div>
 
-        {/* What worked / Fix */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 36, marginBottom: 28, position: "relative" }}>
-          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: line, transform: "translateX(-50%)" }} />
-          <div>
-            <div style={{ fontFamily: serif, fontSize: 22, marginBottom: 4, color: ink }}>What <em style={{ fontStyle: "italic", color: lime }}>worked.</em></div>
-            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Keep doing these</div>
-            {[["01", "Clutch Read", "Mechanical breakdown of the stun trap interaction at 2:11 — exactly what viewers want to learn.", "2:11"], ["02", "Energy Open", "First 10 minutes were full-presence and set the tone for the whole session.", "0:08"]].map(([n, l, b, t]) => (
-              <div key={n} style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 14, color: ink4 }}>{n}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: lime, flex: 1 }}>{l}</span>
-                  <span style={{ fontFamily: mono, fontSize: 10, color: ink3 }}>{t}</span>
-                </div>
-                <p style={{ fontSize: 13, color: ink2, lineHeight: 1.6, paddingLeft: 28, margin: 0 }}>{b}</p>
-              </div>
-            ))}
-          </div>
-          <div>
-            <div style={{ fontFamily: serif, fontSize: 22, marginBottom: 4, color: ink }}>What to <em style={{ fontStyle: "italic", color: amber }}>fix.</em></div>
-            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Change these next time</div>
-            {[["01", "Silent Grind", "84% of the stream was silent during active match — chat had nothing to react to.", "1:42"], ["02", "No Take", "Recognized opponents but never gave a strong opinion — give viewers something to agree or argue with.", "2:25"]].map(([n, l, b, t]) => (
-              <div key={n} style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 14, color: ink4 }}>{n}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: amber, flex: 1 }}>{l}</span>
-                  <span style={{ fontFamily: mono, fontSize: 10, color: ink3 }}>{t}</span>
-                </div>
-                <p style={{ fontSize: 13, color: ink2, lineHeight: 1.6, paddingLeft: 28, margin: 0 }}>{b}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Missions */}
-        <div style={{ paddingTop: 20, borderTop: `1px solid ${line}` }}>
-          <div style={{ fontFamily: serif, fontSize: 22, marginBottom: 4, color: ink }}>Missions for <em style={{ fontStyle: "italic", color: cyan }}>next stream.</em></div>
-          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 16 }}>Click to mark as committed</div>
+        <div style={{ paddingTop: 22, borderTop: `1px solid ${line}`, borderBottom: `1px solid ${line}`, paddingBottom: 12, marginBottom: 28 }}>
+          <div style={{ fontFamily: serif, fontSize: 28, marginBottom: 4, color: ink }}>Missions for <em style={{ fontStyle: "italic", color: cyan }}>next stream.</em></div>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: ink3, marginBottom: 20 }}>Click to mark as committed</div>
           {(["Narrate every clutch attempt out loud — set the tempo, don't match it.", "Open with one specific take per match — who they remind you of, what makes them dangerous.", "Front-load your tactical breakdowns — best content shouldn't arrive at the sign-off."] as string[]).map((g, i, arr) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "40px 1fr 24px", gap: 10, alignItems: "start", padding: "11px 0", borderBottom: i < arr.length - 1 ? `1px dashed ${line2}` : "none" }}>
-              <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 26, color: cyan, letterSpacing: "-0.03em", lineHeight: 0.9 }}>{["i.", "ii.", "iii."][i]}</span>
-              <p style={{ fontFamily: serif, fontSize: 15, lineHeight: 1.45, color: ink, margin: 0 }}>{g}</p>
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "44px 1fr 28px", gap: 12, alignItems: "start", padding: "13px 0", borderBottom: i < arr.length - 1 ? `1px dashed ${line2}` : "none" }}>
+              <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 28, color: cyan, letterSpacing: "-0.03em", lineHeight: 0.9 }}>{["i.", "ii.", "iii."][i]}</span>
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 14, lineHeight: 1.6, color: ink, margin: 0 }}>{g}</p>
               <div style={{ width: 20, height: 20, border: `1.5px solid ${ink4}`, borderRadius: 4, marginTop: 2 }} />
             </div>
           ))}
         </div>
 
         {/* Signoff */}
-        <div style={{ marginTop: 32, paddingTop: 18, borderTop: `1px solid ${line}`, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
           <div>
-            <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 15, color: ink2, lineHeight: 1.5, margin: 0 }}>Read once.<br />Stream once.<br /><strong style={{ color: ink, fontWeight: 400 }}>See you next time.</strong></p>
-            <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 24, color: ink2, letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-3px)", lineHeight: 1, marginTop: 10, display: "inline-block" }}>— LevlCast</p>
+            <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 17, color: ink2, lineHeight: 1.5, margin: 0 }}>
+              Go live.<br />Own your stream.<br /><strong style={{ color: ink, fontWeight: 400 }}>Level up.</strong>
+            </p>
+            <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 28, color: ink2, letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-4px)", lineHeight: 1, marginTop: 12, display: "inline-block" }}>— LevlCast</p>
           </div>
-          <div style={{ textAlign: "right", fontFamily: mono, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: ink4, lineHeight: 1.8 }}>Coach Report<br />Stream Debrief</div>
+          <div style={{ textAlign: "right", fontFamily: mono, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: ink4, lineHeight: 1.8 }}>Coach Report<br />Stream Debrief</div>
         </div>
 
       </div>
