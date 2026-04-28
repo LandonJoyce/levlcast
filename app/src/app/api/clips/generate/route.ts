@@ -89,7 +89,11 @@ export async function POST(request: Request) {
 
   if (!peak || idx < 0) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
 
-  if (typeof peak.start !== "number" || typeof peak.end !== "number" ||
+  // Coerce string timestamps — older peak_data rows may store these as strings
+  peak.start = Number(peak.start);
+  peak.end = Number(peak.end);
+
+  if (!isFinite(peak.start) || !isFinite(peak.end) ||
       peak.start < 0 || peak.end <= peak.start || peak.end - peak.start < 2) {
     return NextResponse.json({ error: "Peak has invalid timestamps" }, { status: 400 });
   }
