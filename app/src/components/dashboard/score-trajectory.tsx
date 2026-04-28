@@ -104,11 +104,11 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
   // Geometry — slightly taller for breathing room and bigger viewBox so
   // SVG text reads as substantial at any container width.
   const W = 1000;
-  const H = 150;
+  const H = 200;
   const PAD_L = 52;
   const PAD_R = 52;
-  const PAD_T = 22;
-  const PAD_B = 28;
+  const PAD_T = 28;
+  const PAD_B = 34;
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
 
