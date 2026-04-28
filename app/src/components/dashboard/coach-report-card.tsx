@@ -652,71 +652,32 @@ export function CoachReportCard({
             </div>
           </section>
 
-          {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
-          {recapDelta && <LastStreamRecap delta={recapDelta} />}
-
-          {/* ── SCORE TRAJECTORY ── (line chart of last N streams) */}
-          {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
-
-
-          {/* ── OPENING / CLOSING / #1 FIX ── as a card grid ──
-              Replaces the row-style Roman-numeral list with three visual
-              cards. Opening + Closing get score badges (Strong / Average /
-              Weak); #1 Fix gets a danger accent. Scannable at a glance. */}
-          {(report.cold_open?.note || report.closing?.note || (isPro && report.recommendation)) && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 32px" }}>
-              {report.cold_open?.note && (
-                <ArcCard
-                  index="i"
-                  label="Opening"
-                  scoreLabel={report.cold_open.score === "strong" ? "Strong" : report.cold_open.score === "weak" ? "Weak" : "Average"}
-                  scoreColor={report.cold_open.score === "strong" ? "#A3E635" : report.cold_open.score === "weak" ? "#F87171" : "#F59E0B"}
-                  body={report.cold_open.note}
-                  accent="#22D3EE"
-                />
-              )}
-              {report.closing?.note && (
-                <ArcCard
-                  index="ii"
-                  label="Closing"
-                  scoreLabel={report.closing.score === "strong" ? "Strong" : report.closing.score === "weak" ? "Weak" : "Average"}
-                  scoreColor={report.closing.score === "strong" ? "#A3E635" : report.closing.score === "weak" ? "#F87171" : "#F59E0B"}
-                  body={report.closing.note}
-                  accent="#22D3EE"
-                />
-              )}
-              {isPro && report.recommendation && (
-                <ArcCard
-                  index="iii"
-                  label="The #1 Fix"
-                  body={report.recommendation}
-                  accent="#F87171"
-                  isPriority
-                />
-              )}
+          {/* ── 1. THE #1 FIX — most important action, immediately after the verdict ── */}
+          {isPro && report.recommendation ? (
+            <div style={{ margin: "0 0 28px", padding: "20px 22px 22px", borderRadius: 12, background: "linear-gradient(180deg, rgba(248,113,113,0.07), rgba(248,113,113,0.02))", border: "1px solid rgba(248,113,113,0.28)", borderLeft: "3px solid #F87171" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#F87171", marginBottom: 12 }}>
+                The #1 Fix
+              </div>
+              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.5, color: "#ECF1FA", margin: 0, letterSpacing: "-0.005em" }}>
+                {report.recommendation}
+              </p>
             </div>
-          )}
-
-          {/* Free-tier #1 Priority placeholder — sits inline where the card
-              grid above would put it for a Pro user, so layout stays balanced. */}
-          {!isPro && (
-            <div style={{ marginTop: 8 }}>
+          ) : !isPro ? (
+            <div style={{ marginBottom: 28 }}>
               <LockedSection
                 label="#1 Priority Fix"
-                hint="Pro reveals the single most important fix to make next stream — pulled from this report's biggest weakness."
-                height={110}
+                hint="Pro reveals the single most important fix for next stream — pulled from this report's biggest weakness."
+                height={100}
                 onUpgrade={openUpgrade}
               />
             </div>
-          )}
+          ) : null}
 
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", margin: "32px 0 28px" }} />
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", margin: "0 0 28px" }} />
 
-          {/* ── WHAT WORKED / FIX FOR NEXT ── */}
+          {/* ── 2. WHAT WORKED / FIX FOR NEXT ── */}
           {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
             <div className="cr2-two" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 36 }}>
-
-              {/* What Worked — visual insight cards */}
               <div>
                 <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
                   What <em style={{ fontStyle: "italic", color: "#A3E635" }}>worked.</em>
@@ -729,21 +690,11 @@ export function CoachReportCard({
                   })}
                 </div>
                 {!isPro && (report.strengths ?? []).length > 1 && (
-                  <button
-                    onClick={openUpgrade}
-                    style={{
-                      fontSize: 11, fontFamily: '"JetBrains Mono", monospace',
-                      color: "#a78bfa", paddingLeft: 4, marginTop: 12,
-                      background: "transparent", border: "none", cursor: "pointer",
-                      textDecoration: "underline", letterSpacing: "0.04em",
-                    }}
-                  >
+                  <button onClick={openUpgrade} style={{ fontSize: 11, fontFamily: '"JetBrains Mono", monospace', color: "#a78bfa", paddingLeft: 4, marginTop: 12, background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", letterSpacing: "0.04em" }}>
                     + {(report.strengths ?? []).length - 1} more strength{(report.strengths ?? []).length - 1 !== 1 ? "s" : ""} — unlock with Pro
                   </button>
                 )}
               </div>
-
-              {/* Fix for Next — visual insight cards */}
               {isPro ? (
                 <div>
                   <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
@@ -764,9 +715,7 @@ export function CoachReportCard({
                   </h2>
                   <LockedSection
                     label={fixCount > 0 ? `${fixCount} Specific Fix${fixCount !== 1 ? "es" : ""}` : "Fix For Next"}
-                    hint={fixCount > 0
-                      ? `${fixCount} actionable fix${fixCount !== 1 ? "es" : ""} for next stream — with timestamps and specific moments to change.`
-                      : undefined}
+                    hint={fixCount > 0 ? `${fixCount} actionable fix${fixCount !== 1 ? "es" : ""} for next stream — with timestamps.` : undefined}
                     height={140}
                     onUpgrade={openUpgrade}
                   />
@@ -775,35 +724,10 @@ export function CoachReportCard({
             </div>
           )}
 
-          {/* ── GROWTH KILLERS ── */}
-          {isPro && (report.anti_patterns ?? []).length > 0 && (
-            <div style={{ margin: "0 0 36px", padding: "22px 24px", borderRadius: 10, background: "rgba(248,113,113,0.04)", border: "1px solid rgba(248,113,113,0.18)" }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.36em", textTransform: "uppercase", color: "#F87171", marginBottom: 20 }}>
-                Growth Killers Flagged
-              </div>
-              {(report.anti_patterns ?? []).map((ap, i, arr) => (
-                <div key={i} style={{ paddingBottom: i < arr.length - 1 ? 20 : 0, marginBottom: i < arr.length - 1 ? 20 : 0, borderBottom: i < arr.length - 1 ? "1px dashed rgba(248,113,113,0.18)" : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
-                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, color: "#F87171", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                      {ANTI_PATTERN_LABELS[ap.type] ?? ap.type}
-                    </span>
-                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95" }}>{ap.time}</span>
-                  </div>
-                  <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "rgba(248,113,113,0.75)", lineHeight: 1.55, margin: "0 0 10px", padding: "8px 14px", background: "rgba(248,113,113,0.07)", borderRadius: 6, borderLeft: "2px solid rgba(248,113,113,0.45)" }}>
-                    &ldquo;{ap.quote}&rdquo;
-                  </p>
-                  <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.55, margin: 0 }}>
-                    {ap.note}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── MISSIONS ── GATED */}
+          {/* ── 3. MISSIONS — what to commit to before next stream ── */}
           {(report.next_stream_goals ?? []).length > 0 && (
             isPro ? (
-              <div style={{ margin: "32px 0 24px", padding: "22px 0 12px", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ margin: "0 0 32px", padding: "22px 0 12px", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 28, letterSpacing: "-0.015em", marginBottom: 4, color: "#ECF1FA" }}>
                   Missions for <em style={{ fontStyle: "italic", color: "#22D3EE" }}>next stream.</em>
                 </h2>
@@ -827,18 +751,73 @@ export function CoachReportCard({
                 ))}
               </div>
             ) : (
-              <div style={{ margin: "28px 0" }}>
+              <div style={{ margin: "0 0 28px" }}>
                 <LockedSection
                   label={`Your Missions · ${missionCount} next-stream goal${missionCount !== 1 ? "s" : ""}`}
-                  hint={missionCount > 0
-                    ? `${missionCount} concrete mission${missionCount !== 1 ? "s" : ""} to commit to before your next stream — checkable, trackable, built from this stream's data.`
-                    : undefined}
+                  hint={missionCount > 0 ? `${missionCount} concrete mission${missionCount !== 1 ? "s" : ""} to commit to — checkable, built from this stream's data.` : undefined}
                   height={140}
                   onUpgrade={openUpgrade}
                 />
               </div>
             )
           )}
+
+          {/* ── 4. OPENING / CLOSING — stream structure detail ── */}
+          {(report.cold_open?.note || report.closing?.note) && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 32px" }}>
+              {report.cold_open?.note && (
+                <ArcCard
+                  index="i"
+                  label="Opening"
+                  scoreLabel={report.cold_open.score === "strong" ? "Strong" : report.cold_open.score === "weak" ? "Weak" : "Average"}
+                  scoreColor={report.cold_open.score === "strong" ? "#A3E635" : report.cold_open.score === "weak" ? "#F87171" : "#F59E0B"}
+                  body={report.cold_open.note}
+                  accent="#22D3EE"
+                />
+              )}
+              {report.closing?.note && (
+                <ArcCard
+                  index="ii"
+                  label="Closing"
+                  scoreLabel={report.closing.score === "strong" ? "Strong" : report.closing.score === "weak" ? "Weak" : "Average"}
+                  scoreColor={report.closing.score === "strong" ? "#A3E635" : report.closing.score === "weak" ? "#F87171" : "#F59E0B"}
+                  body={report.closing.note}
+                  accent="#22D3EE"
+                />
+              )}
+            </div>
+          )}
+
+          {/* ── 5. GROWTH KILLERS — anti-pattern flags ── */}
+          {isPro && (report.anti_patterns ?? []).length > 0 && (
+            <div style={{ margin: "0 0 36px", padding: "22px 24px", borderRadius: 10, background: "rgba(248,113,113,0.04)", border: "1px solid rgba(248,113,113,0.18)" }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#F87171", marginBottom: 20 }}>
+                Growth Killers Flagged
+              </div>
+              {(report.anti_patterns ?? []).map((ap, i, arr) => (
+                <div key={i} style={{ paddingBottom: i < arr.length - 1 ? 20 : 0, marginBottom: i < arr.length - 1 ? 20 : 0, borderBottom: i < arr.length - 1 ? "1px dashed rgba(248,113,113,0.18)" : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, color: "#F87171", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      {ANTI_PATTERN_LABELS[ap.type] ?? ap.type}
+                    </span>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95" }}>{ap.time}</span>
+                  </div>
+                  <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "rgba(248,113,113,0.75)", lineHeight: 1.55, margin: "0 0 10px", padding: "8px 14px", background: "rgba(248,113,113,0.07)", borderRadius: 6, borderLeft: "2px solid rgba(248,113,113,0.45)" }}>
+                    &ldquo;{ap.quote}&rdquo;
+                  </p>
+                  <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.55, margin: 0 }}>
+                    {ap.note}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── 6. LAST STREAM RECAP — how you compared to last time ── */}
+          {recapDelta && <LastStreamRecap delta={recapDelta} />}
+
+          {/* ── 7. SCORE TRAJECTORY — long-term trend ── */}
+          {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
 
           {/* ── STREAM TIMELINE ── unified silence + chat pulse ── */}
           {(gaps.length > 0 || (chatPulse && chatPulse.length > 0)) && totalSecs > 0 && (
