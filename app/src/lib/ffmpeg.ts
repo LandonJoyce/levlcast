@@ -346,7 +346,7 @@ export async function cutClip(
       await execAsync(buildCutCmd(inputFilePath), { timeout: 180000 });
     } catch (err: any) {
       const stderr: string = err.stderr || "";
-      const isPtsBug = /time=-\d+:\d+:\d+|frame=\s*0\b|Invalid timestamp|non-monotonic/i.test(stderr);
+      const isPtsBug = /time=-\d+:\d+:\d+|frame=\s*0\b|Invalid timestamp|non-monotonic|valid timeline|no valid/i.test(stderr);
       if (!isPtsBug) {
         console.error("[ffmpeg] encode failed (no retry):", stderr.slice(-800));
         throw ffmpegError(err);

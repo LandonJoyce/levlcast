@@ -41,19 +41,24 @@ export function sliceWordsForClip(
   const dominant = pickDominantSpeaker(vodWords, clipStart, clipEnd);
   const duration = clipEnd - clipStart;
 
-  const sliced: CaptionWord[] = [];
-  for (const w of vodWords) {
-    if (w.end <= clipStart || w.start >= clipEnd) continue;
-    if (dominant !== null && w.speaker !== undefined && w.speaker !== dominant) continue;
+  const slice = (speakerFilter: number | null): CaptionWord[] => {
+    const out: CaptionWord[] = [];
+    for (const w of vodWords) {
+      if (w.end <= clipStart || w.start >= clipEnd) continue;
+      if (speakerFilter !== null && w.speaker !== undefined && w.speaker !== speakerFilter) continue;
+      const start = Math.max(0, w.start - clipStart);
+      const end = Math.min(duration, w.end - clipStart);
+      if (end - start < 0.05) continue;
+      out.push({ word: w.word, start, end, speaker: w.speaker });
+    }
+    return out;
+  };
 
-    const start = Math.max(0, w.start - clipStart);
-    const end = Math.min(duration, w.end - clipStart);
-    if (end - start < 0.05) continue; // sub-50ms slivers are noise
-
-    sliced.push({ word: w.word, start, end, speaker: w.speaker });
-  }
-
-  return sliced;
+  const filtered = slice(dominant);
+  // If speaker filtering wiped everything out, fall back to all speakers —
+  // better to show captions from a co-streamer than show nothing.
+  if (filtered.length === 0 && dominant !== null) return slice(null);
+  return filtered;
 }
 
 /**

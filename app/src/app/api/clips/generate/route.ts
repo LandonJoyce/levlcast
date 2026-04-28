@@ -177,6 +177,7 @@ async function runClipGeneration({
       .eq("id", vodId)
       .single();
     const vodWords = (vodRow?.word_timestamps as CaptionWord[] | null) ?? null;
+    if (!vodWords) console.warn("[clip] No word_timestamps on VOD — captions will be skipped (VOD needs re-analysis)");
 
     let buffer: Buffer;
     try {
