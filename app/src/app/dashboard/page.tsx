@@ -106,6 +106,26 @@ export default async function DashboardPage() {
     .eq("status", "ready")
     .gte("created_at", monthStart.toISOString());
 
+  // Clip performance data — aggregate views by category
+  const { data: perfClips } = await supabase
+    .from("clips")
+    .select("peak_category, views_count, follows_gained")
+    .eq("user_id", user.id)
+    .eq("status", "ready")
+    .not("views_count", "is", null);
+
+  type PerfEntry = { views: number; follows: number; count: number };
+  const perfByCategory: Record<string, PerfEntry> = {};
+  for (const c of perfClips ?? []) {
+    const cat = (c.peak_category as string) || "other";
+    if (!perfByCategory[cat]) perfByCategory[cat] = { views: 0, follows: 0, count: 0 };
+    perfByCategory[cat].views += (c.views_count as number) ?? 0;
+    perfByCategory[cat].follows += (c.follows_gained as number) ?? 0;
+    perfByCategory[cat].count++;
+  }
+  const topPerfCategory = Object.entries(perfByCategory).sort((a, b) => b[1].views - a[1].views)[0] ?? null;
+  const totalTrackedViews = Object.values(perfByCategory).reduce((s, e) => s + e.views, 0);
+
   const displayName = profile?.twitch_display_name || "Streamer";
 
   // ─── Empty state — no streams analyzed yet ─────────────
@@ -170,13 +190,23 @@ export default async function DashboardPage() {
   // SVG trend path
   const trendW = 320;
   const trendH = 90;
-  const maxScore = Math.max(50, ...trend);
+  const minScore = Math.max(0, Math.min(...trend) - 10);
+  const maxScore = Math.max(minScore + 20, Math.max(50, ...trend));
   const points = trend.map((v, i) => [
     trend.length === 1 ? trendW / 2 : i * (trendW / (trend.length - 1)),
-    trendH - (v / maxScore) * (trendH - 8),
+    trendH - ((v - minScore) / (maxScore - minScore)) * (trendH - 16),
   ]);
   const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   const area = `${path} L${trendW},${trendH} L0,${trendH} Z`;
+
+  // Dates for x-axis labels on trend chart (oldest → newest)
+  const trendDates = (recentVods ?? [])
+    .slice(0, 12)
+    .map((v) => {
+      const d = new Date(v.stream_date ?? v.analyzed_at ?? v.created_at ?? "");
+      return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    })
+    .reverse();
 
   return (
     <>
@@ -249,7 +279,7 @@ export default async function DashboardPage() {
               </div>
             </div>
             {trend.length > 1 ? (
-              <svg viewBox={`0 0 ${trendW} ${trendH}`} style={{ width: "100%", height: trendH, marginTop: 14, overflow: "visible" }}>
+              <svg viewBox={`0 0 ${trendW} ${trendH + 28}`} style={{ width: "100%", height: trendH + 28, marginTop: 14, overflow: "visible" }}>
                 <defs>
                   <linearGradient id="dashTrendGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="oklch(0.66 0.18 245)" stopOpacity="0.32" />
@@ -258,12 +288,39 @@ export default async function DashboardPage() {
                 </defs>
                 <path d={area} fill="url(#dashTrendGradient)" />
                 <path d={path} stroke="oklch(0.66 0.18 245)" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                {points.length > 0 && (
-                  <g>
-                    <circle cx={points[points.length - 1][0]} cy={points[points.length - 1][1]} r="5" fill="oklch(0.66 0.18 245)" />
-                    <circle cx={points[points.length - 1][0]} cy={points[points.length - 1][1]} r="9" fill="oklch(0.66 0.18 245)" opacity="0.25" />
-                  </g>
-                )}
+                {points.map((p, i) => {
+                  const isLast = i === points.length - 1;
+                  const score = trend[i];
+                  const prevScore = i > 0 ? trend[i - 1] : null;
+                  const up = prevScore !== null && score > prevScore;
+                  const down = prevScore !== null && score < prevScore;
+                  const dotColor = isLast ? "oklch(0.66 0.18 245)" : up ? "oklch(0.72 0.18 145)" : down ? "oklch(0.65 0.22 25)" : "oklch(0.55 0.04 245)";
+                  return (
+                    <g key={i}>
+                      {isLast && <circle cx={p[0]} cy={p[1]} r="9" fill="oklch(0.66 0.18 245)" opacity="0.25" />}
+                      <circle cx={p[0]} cy={p[1]} r={isLast ? 5 : 4} fill={dotColor} />
+                      <text
+                        x={p[0]}
+                        y={p[1] - 10}
+                        textAnchor="middle"
+                        fontSize="9"
+                        fontFamily="var(--font-geist-mono), monospace"
+                        fill={isLast ? "oklch(0.66 0.18 245)" : "oklch(0.6 0.04 245)"}
+                        fontWeight={isLast ? "700" : "400"}
+                      >{score}</text>
+                      {trendDates[i] && (
+                        <text
+                          x={Math.max(16, Math.min(trendW - 16, p[0]))}
+                          y={trendH + 20}
+                          textAnchor="middle"
+                          fontSize="8"
+                          fontFamily="var(--font-geist-mono), monospace"
+                          fill="oklch(0.45 0.03 245)"
+                        >{trendDates[i]}</text>
+                      )}
+                    </g>
+                  );
+                })}
               </svg>
             ) : (
               <p style={{ marginTop: 14, fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: "20px 0" }}>
@@ -289,6 +346,31 @@ export default async function DashboardPage() {
               <span style={{ color: "var(--ink-3)", fontSize: 13 }}>this month</span>
             </div>
           </div>
+          {totalTrackedViews > 0 && (
+            <div className="col gap-sm" style={{ paddingTop: 6, borderTop: "1px solid var(--line)" }}>
+              <span className="mono-label">Best clip category</span>
+              {topPerfCategory && (
+                <div className="row" style={{ alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--ink)", textTransform: "uppercase" }}>
+                    {topPerfCategory[0] === "funny" ? "Comedy" : topPerfCategory[0]}
+                  </span>
+                  <span style={{ color: "var(--ink-3)", fontSize: 12 }}>
+                    {topPerfCategory[1].views.toLocaleString()} views
+                    {topPerfCategory[1].follows > 0 && ` · +${topPerfCategory[1].follows} follows`}
+                  </span>
+                </div>
+              )}
+              <span style={{ fontSize: 11, color: "var(--ink-3)", fontFamily: "var(--font-geist-mono), monospace" }}>
+                from {Object.values(perfByCategory).reduce((s, e) => s + e.count, 0)} tracked clips
+              </span>
+            </div>
+          )}
+          {totalTrackedViews === 0 && (
+            <div className="col gap-sm" style={{ paddingTop: 6, borderTop: "1px solid var(--line)" }}>
+              <span className="mono-label">Clip performance</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>Log views on your clips to see which category performs best.</span>
+            </div>
+          )}
         </div>
 
         {/* Upgrade card (only if Free) */}

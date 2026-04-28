@@ -6,6 +6,7 @@ import { PostToYouTube, DownloadClip } from "@/components/dashboard/clip-actions
 import { ExportClipButton } from "@/components/dashboard/clip-export-modal";
 import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
+import { ClipPerformanceLogger } from "@/components/dashboard/clip-performance-logger";
 import { scoreColorVar } from "@/lib/score-utils";
 import { getUserUsage } from "@/lib/limits";
 
@@ -279,6 +280,11 @@ export default async function ClipsPage({
                         ? <ExportClipButton clipId={c.id} clipTitle={(c.title as string) || "Clip"} />
                         : <DownloadClip clipId={c.id} />
                       }
+                      <ClipPerformanceLogger
+                        clipId={c.id}
+                        initialViews={(c.views_count as number | null) ?? null}
+                        initialFollows={(c.follows_gained as number | null) ?? null}
+                      />
                     </div>
                   </div>
                 );
