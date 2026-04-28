@@ -463,32 +463,24 @@ function ReportVisual() {
 /* ─── Data ─── */
 
 const steps = [
-  { n: "01", cls: "blue",  title: "Stream on Twitch",    body: "Just go live like normal. No setup, no overlays, no changes to how you stream.",                                          Icon: TwitchIcon },
-  { n: "02", cls: "green", title: "Sync Your VOD",       body: "After your stream, open LevlCast and hit Sync. Your VOD appears instantly — one tap to analyze.",                          Icon: SyncIcon },
-  { n: "03", cls: "cyan",  title: "Review Your Report",  body: "Your coach scores the stream 0–100. You get exact timestamps, what worked, what didn't, and one priority to fix.",        Icon: DocIcon },
-  { n: "04", cls: "mint",  title: "Improve Next Stream", body: "Take your one goal into your next session. Analyze again. Watch your score climb over time.",                              Icon: TrendIcon },
+  { n: "01", cls: "blue",  title: "Stream normally",   body: "Nothing changes about how you go live. No setup, no overlay, no extra software to run.",                                   Icon: TwitchIcon },
+  { n: "02", cls: "green", title: "Hit Sync after",    body: "Open LevlCast after you end stream and hit Sync. Your VOD shows up. One button to start the analysis.",                    Icon: SyncIcon },
+  { n: "03", cls: "cyan",  title: "Read your report",  body: "You get a 0–100 score with exact timestamps — what worked, what didn't, and the one thing to fix next time.",              Icon: DocIcon },
+  { n: "04", cls: "mint",  title: "Go live again",     body: "Take the one thing from the report into your next stream. Analyze it after. That's the whole loop.",                       Icon: TrendIcon },
 ];
 
 const features = [
-  { cls: "blue",  Icon: CoachIcon, title: "Know Why Viewers Leave", body: "After every stream, see the exact moments viewers tuned out — dead air, weak transitions, silent stretches. One specific fix to take into your next session." },
-  { cls: "green", Icon: ClipIcon,  title: "Smart Clips",     body: "AI detects your best hype, comedy, clutch, and educational moments. One tap generates a ready-to-post clip — no editing needed." },
-  { cls: "cyan",  Icon: PlayIcon,  title: "YouTube Shorts",  body: "Post clips directly to YouTube Shorts from the app. Your best content, live on your channel without leaving LevlCast." },
-];
-
-const ranks = [
-  { cls: "r1",     range: "0–39",   name: "Fresh Streamer" },
-  { cls: "r2",     range: "40–54",  name: "Rising Talent" },
-  { cls: "r3 you", range: "55–69",  name: "Consistent Creator" },
-  { cls: "r4",     range: "70–79",  name: "Crowd Favorite" },
-  { cls: "r5",     range: "80–89",  name: "Elite Entertainer" },
+  { cls: "blue",  Icon: CoachIcon, title: "Know Why Viewers Leave", body: "See the exact moments viewers tuned out — dead air, slow openings, the parts your chat went quiet. One specific fix every session, not a list of generic tips." },
+  { cls: "green", Icon: ClipIcon,  title: "Auto Clips",             body: "LevlCast finds your best hype, comedy, and clutch moments. One tap cuts and captions the clip — no timeline scrubbing, no editing software." },
+  { cls: "cyan",  Icon: PlayIcon,  title: "Post to YouTube",        body: "Connect your channel once and post clips to Shorts from inside the app. The title fills itself from the report. Takes about 30 seconds." },
 ];
 
 const faqItems = [
-  { q: "How long does analysis take?", a: "Most VODs analyze in 2–5 minutes after you hit Sync. Longer streams scale roughly linearly. You'll get a notification the moment your report is ready." },
-  { q: "Do you store my VODs?", a: "No. We stream your VOD directly from Twitch, analyze it, then discard the raw video. Only your transcription data and any clips you generate stay in your account." },
-  { q: "What about YouTube integration?", a: "Connect your YouTube channel once and post Smart Clips straight to Shorts from inside LevlCast. Title and description are pre-filled — you can edit before posting." },
-  { q: "Is it really free to start?", a: "Yes. The Free plan is permanent. One full VOD analysis per month and 5 clips total, with the same coaching engine Pro uses. No credit card required." },
-  { q: "Does it work with any Twitch streamer?", a: "Yes. Any Twitch channel works — partner, affiliate, or just starting out. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
+  { q: "How long does analysis take?", a: "Usually 2–5 minutes. Longer streams take a bit more — it scales roughly with stream length. You get a push notification the moment the report is ready." },
+  { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
+  { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast — the title and description come from the report. Edit them if you want, or just tap post." },
+  { q: "Is it actually free?", a: "Yeah. One full VOD analysis and 5 clips per month, permanently. No trial period, no credit card, no expiry. If you want more than that, that's what Pro is for." },
+  { q: "Does it work for my channel?", a: "Any public Twitch channel works — partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
 ];
 
 /* ─── Page ─── */
@@ -514,36 +506,36 @@ export default function LandingPage() {
         <div className="hero-bg" aria-hidden="true"></div>
         <div className="container">
           <div className="hero-grid">
-              {/* Text block — centered */}
-              <div style={{ maxWidth: 680 }}>
+              {/* Text block */}
+              <div style={{ maxWidth: 640 }}>
                 <h1 style={{ marginTop: 0 }}>
-                  Your Personal<br/>
-                  <span className="accent">Stream</span> <span className="accent-2">Manager.</span>
+                  Stop guessing what&apos;s<br/>
+                  wrong with your <span className="accent-2">stream.</span>
                 </h1>
-                <p className="hero-sub" style={{ maxWidth: 560, margin: "0 auto 28px" }}>
-                  LevlCast reads your VODs and tells you exactly when viewers tune out —
-                  the dead air, the slow openings, the moments your chat went quiet.
-                  Specific feedback on your actual stream, so every session makes you sharper.
+                <p className="hero-sub" style={{ marginTop: 28 }}>
+                  LevlCast reads your VOD after every stream and tells you the exact moments that lost viewers —
+                  dead air, slow openings, the parts your chat went quiet.
+                  Not generic advice. Timestamps.
                 </p>
-                <div className="hero-cta-row" style={{ justifyContent: "center" }}>
+                <div className="hero-cta-row">
                   <Link href="/auth/login" className="btn btn-primary">
                     Get Your First Report Free <ArrowIcon/>
                   </Link>
                   <a href="#how-it-works" className="btn btn-ghost">How it works</a>
                 </div>
-                <div className="hero-foot">— Free to start · No credit card · Twitch OAuth — we never post or go live for you</div>
-                <div className="hero-stats" style={{ justifyContent: "center" }}>
+                <div className="hero-foot">Free to start · No credit card · We never post to your channel</div>
+                <div className="hero-stats">
                   <div className="hero-stat">
                     <div className="v blue">0–100</div>
                     <div className="k">Score every stream</div>
                   </div>
                   <div className="hero-stat">
                     <div className="v green">~5 min</div>
-                    <div className="k">Average analysis</div>
+                    <div className="k">Average analysis time</div>
                   </div>
                   <div className="hero-stat">
-                    <div className="v">1 goal</div>
-                    <div className="k">Per session, focused</div>
+                    <div className="v">1 fix</div>
+                    <div className="k">Per session, specific</div>
                   </div>
                 </div>
               </div>
@@ -629,63 +621,50 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ─── §01 PROBLEM ─── */}
+      {/* ─── PROBLEM ─── */}
       <section className="section" id="problem">
         <div className="container">
           <div className="sec-head">
-            <div className="sec-marker">
-              <span className="num">§ 01</span>
-              <span className="rule"/>
-              <span className="tag">The Problem</span>
-            </div>
-            <h2>You don&apos;t have a team.<br/><span style={{ color: "var(--blue)" }}>Now you do.</span></h2>
+            <h2>Most streamers are flying<br/><span style={{ color: "var(--blue)" }}>completely blind.</span></h2>
             <p className="lead" style={{ marginTop: 18 }}>
-              Big streamers have managers, coaches, and editors. You&apos;re doing everything yourself.
-              LevlCast gives you the same support system — built around your actual VODs.
+              You end stream, check your viewer count, see the same number, and have no idea what to change.
+              Nobody watches back your VODs and gives you honest notes. So you do the same thing next stream.
             </p>
           </div>
 
           <div className="problem-grid">
             <div className="problem-card blue">
               <span className="topline"></span>
-              <span className="num mono">01 / Growth</span>
-              <h3>No one managing your growth</h3>
-              <p>You stream, you end, you guess. No one is tracking which content works, when you&apos;re burning out, or who you should collab with.</p>
+              <h3>You can&apos;t diagnose yourself while live</h3>
+              <p>Dead air, slow openings, the moments chat went quiet — you can&apos;t see any of it in real time. You need someone watching from the outside.</p>
             </div>
 
             <div className="problem-card green tall">
               <div>
                 <span className="topline"></span>
-                <span className="num mono">02 / Feedback</span>
-                <h3>You don&apos;t know why it&apos;s not growing</h3>
-                <p>The habits holding you back — dead air, weak openings, ignored chat — are invisible to you in the moment. No one watches back your VODs and tells you the truth.</p>
+                <h3>No one&apos;s telling you the truth</h3>
+                <p>Your friends say it was great. Your mods don&apos;t want to be harsh. Nobody actually tells you the 18 minutes of dead air at 1:40 is why viewers left.</p>
               </div>
               <div className="footer-meta">
-                <span className="k">Most common gap</span>
-                <span className="v">Mid-stream energy dropoff</span>
+                <span className="k">Average dead air per stream</span>
+                <span className="v">18 minutes</span>
               </div>
             </div>
 
             <div className="problem-card cyan">
               <span className="topline"></span>
-              <span className="num mono">03 / Clips</span>
-              <h3>Your best moments go unclipped</h3>
-              <p>You had 5 great moments last stream. But you didn&apos;t clip them, so they disappeared when the VOD expired in two weeks.</p>
+              <h3>Your best moments are already gone</h3>
+              <p>You had good moments last stream. You didn&apos;t clip them. They expire in two weeks. That&apos;s months of content that&apos;ll never exist.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── §02 HOW IT WORKS ─── */}
+      {/* ─── HOW IT WORKS ─── */}
       <section className="section" id="how-it-works">
         <div className="container">
           <div className="sec-head">
-            <div className="sec-marker">
-              <span className="num">§ 02</span>
-              <span className="rule"/>
-              <span className="tag">How It Works</span>
-            </div>
-            <h2 style={{ marginTop: 0 }}>Connect once.<br/>Get managed forever.</h2>
+            <h2 style={{ marginTop: 0 }}>Four steps.<br/>No new habits to build.</h2>
           </div>
 
           <div className="steps">
@@ -709,16 +688,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §03 FEATURES ─── */}
+      {/* ─── FEATURES ─── */}
       <section className="section" id="features">
         <div className="container">
           <div className="sec-head">
-            <div className="sec-marker">
-              <span className="num">§ 03</span>
-              <span className="rule"/>
-              <span className="tag">What You Get</span>
-            </div>
-            <h2 style={{ marginTop: 0 }}>Everything you need.<br/>Nothing you don&apos;t.</h2>
+            <h2 style={{ marginTop: 0 }}>What you actually get.</h2>
+            <p className="lead" style={{ marginTop: 18 }}>Three things, built around the VOD workflow. Nothing else.</p>
           </div>
           <div className="features">
             {features.map((f, i) => {
@@ -736,20 +711,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §04 CHAT PULSE ─── */}
+      {/* ─── CHAT PULSE ─── */}
       <section className="section" id="chat-pulse">
         <div className="container">
           <div className="sec-head">
-            <div className="sec-marker">
-              <span className="num">§ 04</span>
-              <span className="rule"/>
-              <span className="tag">Chat Intelligence</span>
-            </div>
-            <h2 style={{ marginTop: 0 }}>See exactly when your<br/><span style={{ color: "var(--green)" }}>audience reacted.</span></h2>
-            <p className="lead">
-              LevlCast links your chat volume to every moment of your stream.
-              Not just &ldquo;your chat was active&rdquo; — you see the exact spike at 1:55 that confirms your best clip,
-              and the drop at 2:20 you need to fix next time.
+            <h2 style={{ marginTop: 0 }}>Your chat is telling you<br/><span style={{ color: "var(--green)" }}>what worked.</span></h2>
+            <p className="lead" style={{ marginTop: 18 }}>
+              We link your chat volume to every moment of your stream.
+              The spike at 1:55 confirms your best clip. The drop at 2:20 tells you what to fix.
+              Not a heatmap — exact timestamps you can act on.
             </p>
           </div>
 
@@ -772,19 +742,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §05 COACHING REPORT ─── */}
+      {/* ─── COACHING REPORT ─── */}
       <section className="section" id="report">
         <div className="container">
           <div className="sec-head">
-            <div className="sec-marker">
-              <span className="num">§ 05</span>
-              <span className="rule"/>
-              <span className="tag">The Stream Report</span>
-            </div>
-            <h2 style={{ marginTop: 0 }}>Real feedback after every stream.</h2>
-            <p className="lead">
-              Your manager reviews every VOD — scored, honest, and specific to what actually happened.
-              Not &ldquo;be more engaging.&rdquo; Actual notes.
+            <h2 style={{ marginTop: 0 }}>This is what you get<br/>after every stream.</h2>
+            <p className="lead" style={{ marginTop: 18 }}>
+              A scored breakdown of what actually happened — not &ldquo;be more engaging.&rdquo;
+              Specific timestamps, what worked, what to fix, and three goals to carry into next session.
             </p>
           </div>
 
@@ -792,86 +757,42 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §06 RANKS ─── */}
-      <section className="section" id="rank">
-        <div className="container" style={{ textAlign: "center" }}>
-          <div className="sec-marker" style={{ justifyContent: "center", maxWidth: 360, margin: "0 auto 28px" }}>
-            <span className="rule" style={{ maxWidth: 80 }}/>
-            <span className="num">§ 06</span>
-            <span className="tag">Your Score · Your Rank</span>
-            <span className="rule" style={{ maxWidth: 80 }}/>
-          </div>
-          <h2 style={{ marginTop: 0 }}>Level up, stream by stream.</h2>
-          <p className="lead" style={{ margin: "18px auto 0" }}>
-            Every stream earns a score. Your last 5 streams set your rank.
-            Keep analyzing — keep climbing.
-          </p>
-
-          <div className="ranks">
-            {ranks.map((r) => (
-              <div className={`rank ${r.cls}`} key={r.cls}>
-                <span className="range mono">{r.range}</span>
-                <span className="name">{r.name}</span>
-                <span className="bar"></span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <div className="rank-cap">
-              <span className="range">90–100</span>
-              <span className="name">LevlCast Legend</span>
-            </div>
-          </div>
-
-          <p className="mono" style={{ color: "var(--ink-3)", marginTop: 36, fontSize: 12, letterSpacing: ".06em", textTransform: "uppercase" }}>
-            Where does your stream score land?
-          </p>
-        </div>
-      </section>
-
-      {/* ─── §07 PRICING ─── */}
+      {/* ─── PRICING ─── */}
       <section className="section" id="pricing">
         <div className="container" style={{ textAlign: "center" }}>
-          <div className="sec-marker" style={{ justifyContent: "center", maxWidth: 280, margin: "0 auto 28px" }}>
-            <span className="rule" style={{ maxWidth: 80 }}/>
-            <span className="num">§ 07</span>
-            <span className="tag">Pricing</span>
-            <span className="rule" style={{ maxWidth: 80 }}/>
-          </div>
-          <h2 style={{ marginTop: 0 }}>Simple, honest pricing.</h2>
-          <p className="lead" style={{ margin: "18px auto 56px" }}>Start free. Upgrade when you&apos;re ready.</p>
+          <h2 style={{ marginTop: 0 }}>Two plans. No tricks.</h2>
+          <p className="lead" style={{ margin: "18px auto 56px" }}>Start free. Every feature is real — no paywalled demo mode.</p>
 
           <div className="pricing">
             <div className="plan">
               <h3>Free</h3>
-              <div className="plan-tag">See what your manager can do.</div>
+              <div className="plan-tag">Good enough to know if it&apos;s for you.</div>
               <div className="plan-price">
                 <span className="amt">$0</span>
                 <span className="per">/forever</span>
               </div>
               <ul>
-                <li><CheckIcon color="var(--green)"/>1 VOD analysis per month</li>
-                <li><CheckIcon color="var(--green)"/>AI coaching report + score</li>
-                <li><CheckIcon color="var(--green)"/>5 clips total</li>
-                <li><CheckIcon color="var(--green)"/>iOS &amp; web app</li>
+                <li><CheckIcon color="var(--green)"/>1 full VOD analysis per month</li>
+                <li><CheckIcon color="var(--green)"/>Full coaching report + score</li>
+                <li><CheckIcon color="var(--green)"/>5 clips per month</li>
+                <li><CheckIcon color="var(--green)"/>iOS app + web</li>
               </ul>
               <Link href="/auth/login" className="btn btn-ghost">Get started free</Link>
             </div>
 
             <div className="plan featured">
-              <span className="plan-badge">★ Most Popular · Founding Price</span>
+              <span className="plan-badge">Founding Price — locks in for life</span>
               <h3>Pro</h3>
-              <div className="plan-tag">Full management, every stream.</div>
+              <div className="plan-tag">For streamers who analyze every session.</div>
               <div className="plan-price">
                 <span className="amt">$9.99</span>
                 <span className="per">/month</span>
               </div>
-              <div className="plan-price-note">Locks in for life. Goes to $14.99 soon.</div>
+              <div className="plan-price-note">Price goes to $14.99 soon. Founders keep $9.99.</div>
               <ul>
                 <li><CheckIcon color="var(--blue)"/>20 VOD analyses per month</li>
                 <li><CheckIcon color="var(--blue)"/>20 clips per month</li>
-                <li><CheckIcon color="var(--blue)"/>YouTube Shorts posting</li>
+                <li><CheckIcon color="var(--blue)"/>Post to YouTube Shorts</li>
                 <li><CheckIcon color="var(--blue)"/>Priority processing</li>
                 <li><CheckIcon color="var(--blue)"/>Everything in Free</li>
               </ul>
@@ -881,21 +802,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §08 FAQ ─── */}
+      {/* ─── FAQ ─── */}
       <section className="section" id="faq">
         <div className="container">
-          <div className="sec-head" style={{ textAlign: "center", margin: "0 auto 64px" }}>
-            <div className="sec-marker" style={{ justifyContent: "center", maxWidth: 280, margin: "0 auto 28px" }}>
-              <span className="rule" style={{ maxWidth: 80 }}/>
-              <span className="num">§ 08</span>
-              <span className="tag">FAQ</span>
-              <span className="rule" style={{ maxWidth: 80 }}/>
-            </div>
-            <h2 style={{ marginTop: 0 }}>Got questions?</h2>
-            <p className="lead" style={{ margin: "18px auto 0" }}>
-              Built for streamers who want real growth. Growth stalls and no one tells you why.
-              LevlCast is the feedback loop you&apos;ve been missing — specific notes on your actual stream, so every session makes you sharper than the last.
-            </p>
+          <div className="sec-head" style={{ maxWidth: 600, marginBottom: 48 }}>
+            <h2 style={{ marginTop: 0 }}>Common questions.</h2>
           </div>
 
           <FaqAccordion items={faqItems} />
@@ -907,8 +818,8 @@ export default function LandingPage() {
         <div className="container">
           <div className="cta-strip">
             <div>
-              <h2>Stream sharper. Starting tonight.</h2>
-              <p className="lead">Get your first report free. No card, no setup, no overlays.</p>
+              <h2>Your VOD is sitting there right now.</h2>
+              <p className="lead">Connect Twitch, hit Sync, and read your first report in under 10 minutes. Free.</p>
             </div>
             <Link href="/auth/login" className="btn btn-primary">Get Your First Report Free <ArrowIcon/></Link>
           </div>
