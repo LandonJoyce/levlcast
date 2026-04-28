@@ -164,8 +164,9 @@ function ArcCard({
         )}
       </div>
       <p style={{
-        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 16,
-        color: "#ECF1FA", lineHeight: 1.5, margin: 0, letterSpacing: "-0.005em",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: "calc(var(--cs, 1) * 14px)",
+        color: "#ECF1FA", lineHeight: 1.55, margin: 0,
       }}>
         {body}
       </p>
@@ -214,15 +215,17 @@ function InsightCard({
           0{index}
         </span>
         <span style={{
-          fontWeight: 600, fontSize: 14, color: accent, lineHeight: 1.3,
-          letterSpacing: "-0.005em",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontWeight: 600, fontSize: "calc(var(--cs, 1) * 13px)",
+          color: accent, lineHeight: 1.35,
         }}>
           {label || body}
         </span>
       </div>
       {label && body && (
         <p style={{
-          fontSize: 13, color: "#A6B3C9", lineHeight: 1.55,
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontSize: "calc(var(--cs, 1) * 12px)", color: "#A6B3C9", lineHeight: 1.6,
           margin: 0, paddingLeft: 22,
         }}>
           {body}
@@ -264,14 +267,14 @@ function LockedSection({
     <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
       <div style={{ minHeight: height, padding: "18px 20px", filter: "blur(5px)", opacity: 0.4, pointerEvents: "none" }}>
         <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, textTransform: "uppercase", letterSpacing: "0.28em", color: "#6F7C95", marginBottom: 8 }}>{label}</p>
-        <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, color: "#A6B3C9", lineHeight: 1.5 }}>Detailed coaching insight available. Includes specific timestamps and actionable guidance.</p>
+        <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 14, color: "#A6B3C9", lineHeight: 1.5 }}>Detailed coaching insight available.</p>
       </div>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: "0 20px", textAlign: "center", background: "linear-gradient(180deg, rgba(10,9,20,0.5) 0%, rgba(10,9,20,0.88) 100%)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <Lock size={12} style={{ color: "#a78bfa" }} />
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#a78bfa" }}>{label}</span>
         </div>
-        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, maxWidth: "36ch" }}>
+        <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.55, maxWidth: "36ch" }}>
           {hint ?? "Pro unlocks the full report — every fix, every mission, every flagged moment."}
         </p>
         <button
@@ -494,18 +497,11 @@ export function CoachReportCard({
           from { stroke-dashoffset: 100; }
           to { stroke-dashoffset: var(--ring-rest, 72); }
         }
-        .cr2-ruler {
-          margin: 28px 0; text-align: center;
-          color: #4D5876; font-family: "JetBrains Mono", monospace;
-          font-size: 10px; letter-spacing: 0.4em;
-          position: relative; text-transform: uppercase;
-        }
-        .cr2-ruler::before, .cr2-ruler::after {
-          content: ""; position: absolute; top: 50%;
-          width: calc(50% - 56px); height: 1px; background: rgba(255,255,255,0.07);
-        }
-        .cr2-ruler::before { left: 0; }
-        .cr2-ruler::after { right: 0; }
+        /* Responsive scale — bumps readable body text up on wide monitors */
+        .cr2-wrap { --cs: 1; }
+        @media (min-width: 1440px) { .cr2-wrap { --cs: 1.13; } }
+        @media (min-width: 1920px) { .cr2-wrap { --cs: 1.28; } }
+        @media (min-width: 2560px) { .cr2-wrap { --cs: 1.5; } }
         .cr2-tl-gap {
           position: absolute; top: 0; bottom: 0;
           background: repeating-linear-gradient(135deg, rgba(248,113,113,0.18) 0, rgba(248,113,113,0.18) 6px, transparent 6px, transparent 11px);
@@ -539,7 +535,7 @@ export function CoachReportCard({
         }
       `}</style>
 
-      <div style={{
+      <div className="cr2-wrap" style={{
         background: "#0C111C",
         borderRadius: 16,
         overflow: "hidden",
@@ -641,11 +637,11 @@ export function CoachReportCard({
                 The Story of This Stream
               </div>
               {report.stream_story ? (
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.5, color: "#ECF1FA", letterSpacing: "-0.005em" }}>
+                <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.65, color: "#D4DCF0" }}>
                   {report.stream_story}
                 </p>
               ) : (
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.5, color: "#A6B3C9", fontStyle: "italic" }}>
+                <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.65, color: "#A6B3C9" }}>
                   Score: {report.overall_score}/100
                 </p>
               )}
@@ -658,7 +654,7 @@ export function CoachReportCard({
               <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#F87171", marginBottom: 12 }}>
                 The #1 Fix
               </div>
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.5, color: "#ECF1FA", margin: 0, letterSpacing: "-0.005em" }}>
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.65, color: "#ECF1FA", margin: 0 }}>
                 {report.recommendation}
               </p>
             </div>
@@ -739,7 +735,7 @@ export function CoachReportCard({
                     <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#22D3EE", letterSpacing: "-0.03em", lineHeight: 0.9 }}>
                       {ROMAN[i] ?? `${i + 1}.`}
                     </div>
-                    <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, lineHeight: 1.45, color: checked.has(i) ? "#6F7C95" : "#ECF1FA" }}>
+                    <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", lineHeight: 1.6, color: checked.has(i) ? "#6F7C95" : "#ECF1FA", margin: 0 }}>
                       {goal}
                     </p>
                     <button
@@ -805,7 +801,7 @@ export function CoachReportCard({
                   <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "rgba(248,113,113,0.75)", lineHeight: 1.55, margin: "0 0 10px", padding: "8px 14px", background: "rgba(248,113,113,0.07)", borderRadius: 6, borderLeft: "2px solid rgba(248,113,113,0.45)" }}>
                     &ldquo;{ap.quote}&rdquo;
                   </p>
-                  <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.55, margin: 0 }}>
+                  <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: 0 }}>
                     {ap.note}
                   </p>
                 </div>
@@ -1102,7 +1098,7 @@ export function CoachReportCard({
                 <UnlockStat n={20} label="Clips per month with captions" color="#c4b5fd" />
               </div>
 
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 15, color: "#A6B3C9", lineHeight: 1.5, margin: "0 0 18px" }}>
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 18px" }}>
                 One report tells you where you stand. The longitudinal track — score deltas across streams, recurring weaknesses, what you fixed and what you didn&apos;t — is where the actual coaching lives.
               </p>
 
@@ -1127,10 +1123,10 @@ export function CoachReportCard({
               <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#22D3EE", marginBottom: 10 }}>
                 What this report can&apos;t tell you yet
               </div>
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, color: "#ECF1FA", lineHeight: 1.5, margin: "0 0 6px" }}>
-                Your <em style={{ fontStyle: "italic", color: "#22D3EE" }}>next stream</em> is the one that matters.
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.6, margin: "0 0 6px" }}>
+                Your <strong style={{ color: "#22D3EE", fontWeight: 600 }}>next stream</strong> is the one that matters.
               </p>
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.55, margin: 0 }}>
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: 0 }}>
                 One report is a snapshot. The delta between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t — that&apos;s how coaching actually works.
               </p>
             </div>
