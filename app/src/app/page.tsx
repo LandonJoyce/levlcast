@@ -178,7 +178,107 @@ function HeroMock() {
   );
 }
 
-/* ─── Full report visual (used in §04) — editorial style matching new coach-report-card ─── */
+/* ─── Chat Pulse mock (used in §04 Chat Intelligence section) ─── */
+function ChatPulseMock() {
+  const serif = '"Instrument Serif", Georgia, serif';
+  const mono  = '"JetBrains Mono", monospace';
+  const ink   = "#ECF1FA";
+  const ink2  = "#A6B3C9";
+  const ink3  = "#6F7C95";
+  const ink4  = "#4D5876";
+  const line  = "rgba(255,255,255,0.07)";
+  const lime  = "#A3E635";
+  const amber = "#F59E0B";
+  const rose  = "#F87171";
+  const cyan  = "#22D3EE";
+
+  // Bars: 0-100 relative chat volume, one per ~5-min bucket over a 3h+ stream
+  const barData = [
+    22, 30, 44, 50, 38, 24, 18, 20, 30, 50,  // 0–50 min opener + first hype
+    62, 55, 42, 34, 24, 16, 12, 18, 28, 40,  // 50–100 min builds then quiet
+    96, 90, 74, 56, 40, 28,  8,  6, 14, 22,  // 100–150 min clutch then crash
+    32, 46, 54, 64, 74, 80, 86, 90, 76, 62,  // 150–200 min comedy + strong close
+  ];
+
+  const events: { idx: number; label: string; msgs: string; color: string }[] = [
+    { idx: 9,  label: "Hype spike",        msgs: "50",  color: amber },
+    { idx: 20, label: "Clutch moment",      msgs: "96",  color: lime  },
+    { idx: 26, label: "Chat went quiet",    msgs: "8",   color: rose  },
+    { idx: 37, label: "Comedy moment",      msgs: "90",  color: cyan  },
+  ];
+
+  const maxH = 64;
+  const timeLabels = ["0:00", "45m", "1:30", "2:15", "3:00+"];
+
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "#0C111C", border: `1px solid ${line}`, padding: "24px 24px 20px", boxShadow: "0 30px 80px -30px rgba(0,0,0,0.7)" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: ink3, marginBottom: 4 }}>Chat Pulse</div>
+          <div style={{ fontFamily: serif, fontSize: 22, color: ink }}>When your audience <em style={{ color: lime, fontStyle: "italic" }}>reacted.</em></div>
+        </div>
+        <span style={{ fontFamily: mono, fontSize: 10, color: ink3, background: "rgba(255,255,255,0.04)", border: `1px solid ${line}`, borderRadius: 4, padding: "4px 10px" }}>
+          3h 20m stream
+        </span>
+      </div>
+
+      {/* Activity bars */}
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: ink3, marginBottom: 10 }}>Chat activity / minute</div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: maxH + 12 }}>
+          {barData.map((v, i) => {
+            const h = Math.max(3, Math.round((v / 100) * maxH));
+            const ev = events.find((e) => e.idx === i);
+            const barColor = ev ? ev.color : v > 70 ? lime : v > 35 ? amber : ink4;
+            const opacity  = ev ? 1 : v > 70 ? 0.85 : v > 35 ? 0.55 : 0.3;
+            return (
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: maxH + 12, minWidth: 0 }}>
+                {ev && (
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: ev.color, boxShadow: `0 0 8px ${ev.color}`, marginBottom: 3, flexShrink: 0 }} />
+                )}
+                <div style={{ width: "100%", height: h, background: barColor, borderRadius: "2px 2px 0 0", opacity }} />
+              </div>
+            );
+          })}
+        </div>
+        {/* Time axis */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+          {timeLabels.map((t) => (
+            <span key={t} style={{ fontFamily: mono, fontSize: 9, color: ink4 }}>{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Event list */}
+      <div style={{ borderTop: `1px solid ${line}`, paddingTop: 16, marginTop: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+          {events.map((e) => (
+            <div key={e.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.025)", border: `1px solid ${e.color}1A` }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color, flexShrink: 0, boxShadow: `0 0 7px ${e.color}88` }} />
+              <div>
+                <div style={{ fontFamily: mono, fontSize: 9, color: e.color, letterSpacing: "0.1em" }}>{e.msgs} msg/min</div>
+                <div style={{ fontSize: 12, color: ink2, marginTop: 2 }}>{e.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderTop: `1px solid ${line}`, marginTop: 16, paddingTop: 16 }}>
+        {([["Chat score", "64/100", amber], ["Peak", "96 msg/min", lime], ["Quiet time", "18 min", rose]] as [string, string, string][]).map(([k, v, c], i, arr) => (
+          <div key={k} style={{ paddingLeft: i > 0 ? 16 : 0, paddingRight: i < arr.length - 1 ? 16 : 0, borderRight: i < arr.length - 1 ? `1px solid ${line}` : "none" }}>
+            <div style={{ fontFamily: mono, fontSize: 9, color: ink3, letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 5 }}>{k}</div>
+            <div style={{ fontFamily: serif, fontSize: 20, color: c, lineHeight: 1 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Full report visual (used in §05) — editorial style matching new coach-report-card ─── */
 function ReportVisual() {
   const serif = '"Instrument Serif", Georgia, serif';
   const mono  = '"JetBrains Mono", monospace';
@@ -347,7 +447,7 @@ const steps = [
 ];
 
 const features = [
-  { cls: "blue",  Icon: CoachIcon, title: "Stream Coaching", body: "After every stream, get a scored report with what worked, what didn't, and one specific goal for next time. Feedback on your actual VOD — not generic tips." },
+  { cls: "blue",  Icon: CoachIcon, title: "Know Why Viewers Leave", body: "After every stream, see the exact moments viewers tuned out — dead air, weak transitions, silent stretches. One specific fix to take into your next session." },
   { cls: "green", Icon: ClipIcon,  title: "Smart Clips",     body: "AI detects your best hype, comedy, clutch, and educational moments. One tap generates a ready-to-post clip — no editing needed." },
   { cls: "cyan",  Icon: PlayIcon,  title: "YouTube Shorts",  body: "Post clips directly to YouTube Shorts from the app. Your best content, live on your channel without leaving LevlCast." },
 ];
@@ -398,9 +498,9 @@ export default function LandingPage() {
                   <span className="accent">Stream</span> <span className="accent-2">Manager.</span>
                 </h1>
                 <p className="hero-sub" style={{ maxWidth: 560, margin: "0 auto 28px" }}>
-                  LevlCast watches your VODs and tells you — specifically — what to fix.
-                  The dead air, the slow openings, the habits you can&apos;t see while you&apos;re live.
-                  Real coaching on your actual stream, so every session makes you sharper.
+                  LevlCast reads your VODs and tells you exactly when viewers tune out —
+                  the dead air, the slow openings, the moments your chat went quiet.
+                  Specific feedback on your actual stream, so every session makes you sharper.
                 </p>
                 <div className="hero-cta-row" style={{ justifyContent: "center" }}>
                   <Link href="/auth/login" className="btn btn-primary">
@@ -408,7 +508,7 @@ export default function LandingPage() {
                   </Link>
                   <a href="#how-it-works" className="btn btn-ghost">How it works</a>
                 </div>
-                <div className="hero-foot">— Free to start · No credit card required · Cancel anytime</div>
+                <div className="hero-foot">— Free to start · No credit card · Twitch OAuth — we never post or go live for you</div>
                 <div className="hero-stats" style={{ justifyContent: "center" }}>
                   <div className="hero-stat">
                     <div className="v blue">0–100</div>
@@ -613,14 +713,50 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §04 COACHING REPORT ─── */}
-      <section className="section" id="report">
+      {/* ─── §04 CHAT PULSE ─── */}
+      <section className="section" id="chat-pulse">
         <div className="container">
           <div className="sec-head">
             <div className="sec-marker">
               <span className="num">§ 04</span>
               <span className="rule"/>
-              <span className="tag">The Coaching Report</span>
+              <span className="tag">Chat Intelligence</span>
+            </div>
+            <h2 style={{ marginTop: 0 }}>See exactly when your<br/><span style={{ color: "var(--green)" }}>audience reacted.</span></h2>
+            <p className="lead">
+              LevlCast links your chat volume to every moment of your stream.
+              Not just &ldquo;your chat was active&rdquo; — you see the exact spike at 1:55 that confirms your best clip,
+              and the drop at 2:20 you need to fix next time.
+            </p>
+          </div>
+
+          <div style={{ maxWidth: 760, margin: "0 auto" }}>
+            <ChatPulseMock />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginTop: 40 }}>
+            {([
+              ["Match clips to spikes", "Chat volume confirms your best moments — every AI-detected clip is backed by real audience reaction data."],
+              ["Find the drop-offs", "See exactly where chat went quiet so you know what to change. Not a guess — a timestamp."],
+              ["Correlated with your voice", "Chat spikes are mapped to your transcript. Know what you said that made people react."],
+            ] as [string, string][]).map(([t, b]) => (
+              <div key={t} style={{ padding: "18px 20px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>{t}</div>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>{b}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── §05 COACHING REPORT ─── */}
+      <section className="section" id="report">
+        <div className="container">
+          <div className="sec-head">
+            <div className="sec-marker">
+              <span className="num">§ 05</span>
+              <span className="rule"/>
+              <span className="tag">The Stream Report</span>
             </div>
             <h2 style={{ marginTop: 0 }}>Real feedback after every stream.</h2>
             <p className="lead">
@@ -633,12 +769,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §05 RANKS ─── */}
+      {/* ─── §06 RANKS ─── */}
       <section className="section" id="rank">
         <div className="container" style={{ textAlign: "center" }}>
           <div className="sec-marker" style={{ justifyContent: "center", maxWidth: 360, margin: "0 auto 28px" }}>
             <span className="rule" style={{ maxWidth: 80 }}/>
-            <span className="num">§ 05</span>
+            <span className="num">§ 06</span>
             <span className="tag">Your Score · Your Rank</span>
             <span className="rule" style={{ maxWidth: 80 }}/>
           </div>
@@ -671,12 +807,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §06 PRICING ─── */}
+      {/* ─── §07 PRICING ─── */}
       <section className="section" id="pricing">
         <div className="container" style={{ textAlign: "center" }}>
           <div className="sec-marker" style={{ justifyContent: "center", maxWidth: 280, margin: "0 auto 28px" }}>
             <span className="rule" style={{ maxWidth: 80 }}/>
-            <span className="num">§ 06</span>
+            <span className="num">§ 07</span>
             <span className="tag">Pricing</span>
             <span className="rule" style={{ maxWidth: 80 }}/>
           </div>
@@ -722,13 +858,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── §07 FAQ ─── */}
+      {/* ─── §08 FAQ ─── */}
       <section className="section" id="faq">
         <div className="container">
           <div className="sec-head" style={{ textAlign: "center", margin: "0 auto 64px" }}>
             <div className="sec-marker" style={{ justifyContent: "center", maxWidth: 280, margin: "0 auto 28px" }}>
               <span className="rule" style={{ maxWidth: 80 }}/>
-              <span className="num">§ 07</span>
+              <span className="num">§ 08</span>
               <span className="tag">FAQ</span>
               <span className="rule" style={{ maxWidth: 80 }}/>
             </div>
