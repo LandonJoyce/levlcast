@@ -97,10 +97,20 @@ export async function POST(request: Request) {
 
   console.log(`[clip] peak timestamps: raw=(${rawStart}, ${rawEnd}) coerced=(${peak.start}, ${peak.end}) duration=${peak.end - peak.start}`);
 
-  if (!isFinite(peak.start) || !isFinite(peak.end) ||
-      peak.start < 0 || peak.end <= peak.start || peak.end - peak.start < 2) {
+  if (!isFinite(peak.start) || !isFinite(peak.end) || peak.start < 0 || peak.end <= peak.start) {
     console.error(`[clip] Invalid timestamps rejected: start=${peak.start} end=${peak.end} rawStart=${JSON.stringify(rawStart)} rawEnd=${JSON.stringify(rawEnd)}`);
-    return NextResponse.json({ error: "Peak has invalid timestamps", debug: { rawStart, rawEnd, start: peak.start, end: peak.end } }, { status: 400 });
+    return NextResponse.json({ error: "Peak has invalid timestamps" }, { status: 400 });
+  }
+
+  // Expand short peaks to a minimum 30s window centered on the moment.
+  // The AI sometimes returns tight 1-3s windows — still a valid moment, just needs padding.
+  const MIN_DURATION = 30;
+  const peakDuration = peak.end - peak.start;
+  if (peakDuration < MIN_DURATION) {
+    const pad = (MIN_DURATION - peakDuration) / 2;
+    peak.start = Math.max(0, peak.start - pad);
+    peak.end = peak.end + pad;
+    console.log(`[clip] Expanded short peak (${peakDuration}s) to ${peak.start}s–${peak.end}s`);
   }
 
   const admin = createAdminClient();
