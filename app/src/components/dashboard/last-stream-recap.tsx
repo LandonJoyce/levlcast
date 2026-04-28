@@ -61,6 +61,16 @@ function StatusPill({ status }: { status: MissionCheck["status"] }) {
   );
 }
 
+function subScoreColor(score: number) {
+  return score >= 66 ? "#A3E635" : score >= 33 ? "#F59E0B" : "#F87171";
+}
+function subScoreBg(score: number) {
+  return score >= 66 ? "rgba(163,230,53,0.05)" : score >= 33 ? "rgba(245,158,11,0.04)" : "rgba(248,113,113,0.05)";
+}
+function subScoreBorder(score: number) {
+  return score >= 66 ? "rgba(163,230,53,0.22)" : score >= 33 ? "rgba(245,158,11,0.2)" : "rgba(248,113,113,0.22)";
+}
+
 function deltaColor(delta: number) {
   if (delta > 0) return "#A3E635";
   if (delta < 0) return "#F87171";
@@ -147,19 +157,19 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
             <div key={s.key} style={{
               padding: "14px 16px",
               borderRadius: 10,
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: subScoreBg(s.current),
+              border: `1px solid ${subScoreBorder(s.current)}`,
             }}>
               <div style={{
                 fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", fontWeight: 700,
-                textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
+                textTransform: "uppercase", letterSpacing: "0.22em", color: subScoreColor(s.current),
                 marginBottom: 8,
               }}>
                 {SUBSCORE_LABEL[s.key]}
               </div>
               <div style={{
                 fontFamily: '"Instrument Serif", Georgia, serif', fontSize: "calc(var(--cs, 1) * 28px)", lineHeight: 1,
-                color: "#ECF1FA", letterSpacing: "-0.02em", marginBottom: 6,
+                color: subScoreColor(s.current), letterSpacing: "-0.02em", marginBottom: 6,
               }}>
                 {s.current}
                 <span style={{ color: "#4D5876", fontSize: "calc(var(--cs, 1) * 13px)" }}>/100</span>

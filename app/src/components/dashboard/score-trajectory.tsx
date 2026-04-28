@@ -104,11 +104,11 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
   // Geometry — slightly taller for breathing room and bigger viewBox so
   // SVG text reads as substantial at any container width.
   const W = 1000;
-  const H = 220;
-  const PAD_L = 58;
-  const PAD_R = 58;
-  const PAD_T = 38;
-  const PAD_B = 46;
+  const H = 150;
+  const PAD_L = 52;
+  const PAD_R = 52;
+  const PAD_T = 22;
+  const PAD_B = 28;
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
 
@@ -277,15 +277,6 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
                 stroke={isCurrent ? color : "rgba(167,139,250,0.7)"}
                 strokeWidth={isCurrent ? 0 : 2}
               />
-              {isPeak && (
-                <text
-                  x={x} y={y - 18}
-                  fontFamily='"Instrument Serif", Georgia, serif' fontStyle="italic" fontSize={20}
-                  fill="#fbbf24" textAnchor="middle"
-                >
-                  ★
-                </text>
-              )}
             </g>
           );
         })}
@@ -313,15 +304,6 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
               >
                 {current.score}
               </text>
-              {isPersonalBest && (
-                <text
-                  x={labelX} y={pinY - (pinAbove ? 22 : 28)}
-                  fontFamily='"JetBrains Mono", monospace' fontSize={10} fontWeight={700}
-                  fill="#fbbf24" textAnchor={anchor} letterSpacing="0.18em"
-                >
-                  ★ PB
-                </text>
-              )}
             </g>
           );
         })()}
@@ -351,7 +333,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
         display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 18,
       }}>
         <TrjStat n={current.score} label="This stream" color={scoreColor(current.score)} />
-        <TrjStat n={peak} label={`Peak${isPersonalBest ? " · this stream" : ""}`} color="#fbbf24" />
+        <TrjStat n={peak} label="Peak score" color="#fbbf24" />
         <TrjStat n={avg} label={`Avg of ${N}`} color="#A6B3C9" />
         <TrjStat n={overallDelta} label={`Δ from first (${first})`} color={trendColor} signed />
       </div>

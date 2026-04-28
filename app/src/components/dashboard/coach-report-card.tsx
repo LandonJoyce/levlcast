@@ -112,56 +112,44 @@ function useAudio(r: CoachReport, prev?: number) {
   return { ps, play, pause, stop };
 }
 
-// ─── Arc Card (Opening / Closing / #1 Fix as visual tiles) ─────────────────
+// ─── Arc Card (Opening / Closing) — whole box tinted by quality ────────────
 
 function ArcCard({
-  index, label, body, accent, scoreLabel, scoreColor, isPriority,
+  index, label, body, quality,
 }: {
   index: string;
   label: string;
   body: string;
-  accent: string;
-  scoreLabel?: string;
-  scoreColor?: string;
-  isPriority?: boolean;
+  quality?: "strong" | "average" | "weak";
 }) {
+  const qColor = quality === "strong" ? "#A3E635" : quality === "weak" ? "#F87171" : "#F59E0B";
+  const qBg = quality === "strong"
+    ? "rgba(163,230,53,0.05)"
+    : quality === "weak"
+    ? "rgba(248,113,113,0.06)"
+    : "rgba(245,158,11,0.05)";
+
   return (
     <div style={{
-      position: "relative",
       padding: "16px 18px 18px",
       borderRadius: 10,
-      background: isPriority
-        ? "linear-gradient(180deg, rgba(248,113,113,0.06), rgba(248,113,113,0.02))"
-        : "rgba(255,255,255,0.025)",
-      border: `1px solid ${isPriority ? "rgba(248,113,113,0.28)" : "rgba(255,255,255,0.08)"}`,
-      borderLeft: `3px solid ${accent}`,
+      background: quality ? qBg : "rgba(255,255,255,0.025)",
+      border: quality ? `1px solid ${qColor}55` : "1px solid rgba(255,255,255,0.08)",
+      borderLeft: quality ? `3px solid ${qColor}` : "3px solid rgba(255,255,255,0.12)",
     }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{
-            fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic",
-            fontSize: 20, color: accent, lineHeight: 1, letterSpacing: "-0.02em",
-          }}>
-            {index}.
-          </span>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.28em", color: isPriority ? "#F87171" : "#A6B3C9",
-          }}>
-            {label}
-          </span>
-        </div>
-        {scoreLabel && scoreColor && (
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.16em",
-            padding: "3px 8px", borderRadius: 999,
-            background: `${scoreColor}1F`,
-            color: scoreColor, border: `1px solid ${scoreColor}50`,
-          }}>
-            {scoreLabel}
-          </span>
-        )}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+        <span style={{
+          fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic",
+          fontSize: 20, color: quality ? qColor : "#A6B3C9", lineHeight: 1, letterSpacing: "-0.02em",
+        }}>
+          {index}.
+        </span>
+        <span style={{
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
+          textTransform: "uppercase", letterSpacing: "0.28em", color: quality ? qColor : "#A6B3C9",
+        }}>
+          {label}
+        </span>
       </div>
       <p style={{
         fontFamily: "system-ui, -apple-system, sans-serif",
@@ -765,20 +753,16 @@ export function CoachReportCard({
                 <ArcCard
                   index="i"
                   label="Opening"
-                  scoreLabel={report.cold_open.score === "strong" ? "Strong" : report.cold_open.score === "weak" ? "Weak" : "Average"}
-                  scoreColor={report.cold_open.score === "strong" ? "#A3E635" : report.cold_open.score === "weak" ? "#F87171" : "#F59E0B"}
+                  quality={report.cold_open.score as "strong" | "average" | "weak"}
                   body={report.cold_open.note}
-                  accent="#22D3EE"
                 />
               )}
               {report.closing?.note && (
                 <ArcCard
                   index="ii"
                   label="Closing"
-                  scoreLabel={report.closing.score === "strong" ? "Strong" : report.closing.score === "weak" ? "Weak" : "Average"}
-                  scoreColor={report.closing.score === "strong" ? "#A3E635" : report.closing.score === "weak" ? "#F87171" : "#F59E0B"}
+                  quality={report.closing.score as "strong" | "average" | "weak"}
                   body={report.closing.note}
-                  accent="#22D3EE"
                 />
               )}
             </div>
@@ -1136,9 +1120,9 @@ export function CoachReportCard({
           <footer style={{ marginTop: 40, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
             <div>
               <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 17, color: "#A6B3C9", lineHeight: 1.5 }}>
-                Read once.<br />
-                Stream once.<br />
-                <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>See you next time.</strong>
+                Pick a fix.<br />
+                Run it next stream.<br />
+                <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>Check the delta.</strong>
               </p>
               <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#A6B3C9", letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-4px)", lineHeight: 1, marginTop: 12, display: "inline-block" }}>
                 — LevlCast
