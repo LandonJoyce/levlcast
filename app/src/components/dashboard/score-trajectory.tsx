@@ -131,7 +131,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
         </span>
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxHeight: "200px" }} aria-hidden>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxHeight: "280px" }} aria-hidden>
         <defs>
           {/* Area gradient uses chart color — green/amber/red at a glance */}
           <linearGradient id="trj-area" x1="0" y1="0" x2="0" y2="1">
@@ -171,7 +171,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
         {ticks.map((s) => (
           <text key={s}
             x={PAD_L - 10} y={yFor(s) + 5}
-            fontFamily='"JetBrains Mono", monospace' fontSize={13}
+            fontFamily='"JetBrains Mono", monospace' fontSize={15}
             fill="#4D5876" textAnchor="end"
           >
             {s}
@@ -208,12 +208,23 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
         <circle cx={cX} cy={cY} r={7} fill={chartColor} />
         <circle cx={cX} cy={cY} r={3} fill="rgba(10,9,20,0.9)" />
 
-        {/* Score label beside dot */}
+        {/* Score label beside dot — white so it reads against the line */}
         <text
           x={labelRight ? cX + 18 : cX - 18}
           y={cY + 9}
-          fontFamily='"Instrument Serif", Georgia, serif' fontSize={26}
-          fill={chartColor}
+          fontFamily='"Instrument Serif", Georgia, serif' fontSize={30}
+          fill={chartColor} opacity={0.3}
+          textAnchor={labelRight ? "start" : "end"}
+          letterSpacing="-0.025em"
+          strokeWidth={8} stroke={chartColor} strokeLinejoin="round" paintOrder="stroke"
+        >
+          {current.score}
+        </text>
+        <text
+          x={labelRight ? cX + 18 : cX - 18}
+          y={cY + 9}
+          fontFamily='"Instrument Serif", Georgia, serif' fontSize={30}
+          fill="#ECF1FA"
           textAnchor={labelRight ? "start" : "end"}
           letterSpacing="-0.025em"
         >
@@ -227,7 +238,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
             i === 0 ? "start" : i === N - 1 ? "end" : "middle";
           return (
             <text key={i} x={x} y={PAD_T + innerH + 30}
-              fontFamily='"JetBrains Mono", monospace' fontSize={12}
+              fontFamily='"JetBrains Mono", monospace' fontSize={14}
               fill="#6F7C95" letterSpacing="0.04em" textAnchor={anchor}
             >
               {formatTickDate(sorted[i].date, allDates)}
