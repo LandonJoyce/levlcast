@@ -523,7 +523,7 @@ export default function LandingPage() {
                   </Link>
                   <a href="#how-it-works" className="btn btn-ghost">How it works</a>
                 </div>
-                <div className="hero-foot">Free to start · No credit card · Read-only Twitch access — we see your VODs, nothing else</div>
+                <div className="hero-foot">Free to start · No credit card · We can&apos;t post, chat, or go live on your behalf</div>
                 <div className="hero-stats">
                   <div className="hero-stat">
                     <div className="v blue">0–100</div>
