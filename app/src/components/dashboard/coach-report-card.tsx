@@ -7,8 +7,6 @@ import { computeReportDelta } from "@/lib/report-delta";
 import { isPulseViable } from "@/lib/chat-pulse";
 import { UpgradeModal } from "./upgrade-modal";
 import { LastStreamRecap } from "./last-stream-recap";
-import { ChatPulseCard } from "./chat-pulse-card";
-import { AudienceSnapshotCard } from "./audience-snapshot-card";
 import { ScoreTrajectory, type TrajectoryPoint } from "./score-trajectory";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -142,7 +140,7 @@ function ArcCard({
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <span style={{
             fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic",
-            fontSize: 22, color: accent, lineHeight: 1, letterSpacing: "-0.02em",
+            fontSize: 20, color: accent, lineHeight: 1, letterSpacing: "-0.02em",
           }}>
             {index}.
           </span>
@@ -171,60 +169,6 @@ function ArcCard({
       }}>
         {body}
       </p>
-    </div>
-  );
-}
-
-// ─── Stat Tile (at-a-glance number with optional progress bar) ──────────
-
-function StatTile({
-  label, value, sub, color, barPct,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  color: string;
-  barPct?: number;
-}) {
-  return (
-    <div style={{
-      padding: "12px 14px",
-      borderRadius: 8,
-      background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.07)",
-    }}>
-      <div style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-        textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
-        marginBottom: 6,
-      }}>
-        {label}
-      </div>
-      <div style={{
-        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 24, lineHeight: 1,
-        color, letterSpacing: "-0.02em", marginBottom: sub ? 4 : 0,
-      }}>
-        {value}
-      </div>
-      {sub && (
-        <div style={{
-          fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
-          color: "#A6B3C9", letterSpacing: "0.04em",
-        }}>
-          {sub}
-        </div>
-      )}
-      {typeof barPct === "number" && (
-        <div style={{
-          marginTop: 8, height: 3, borderRadius: 2,
-          background: "rgba(255,255,255,0.05)", overflow: "hidden",
-        }}>
-          <div style={{
-            width: `${Math.min(100, Math.max(0, barPct))}%`,
-            height: "100%", background: color, borderRadius: 2,
-          }} />
-        </div>
-      )}
     </div>
   );
 }
@@ -697,58 +641,16 @@ export function CoachReportCard({
                 The Story of This Stream
               </div>
               {report.stream_story ? (
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 21, lineHeight: 1.45, color: "#ECF1FA", letterSpacing: "-0.005em" }}>
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.5, color: "#ECF1FA", letterSpacing: "-0.005em" }}>
                   {report.stream_story}
                 </p>
               ) : (
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 21, lineHeight: 1.45, color: "#A6B3C9", fontStyle: "italic" }}>
+                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 18, lineHeight: 1.5, color: "#A6B3C9", fontStyle: "italic" }}>
                   Score: {report.overall_score}/100
-                </p>
-              )}
-              {report.community_note && (
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 15, lineHeight: 1.55, color: "#A6B3C9", marginTop: 16, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.1)" }}>
-                  {report.community_note}
                 </p>
               )}
             </div>
           </section>
-
-          {/* ── AT-A-GLANCE STATS STRIP ──
-              Replaces "you have to read 2 paragraphs to know what happened"
-              with visual at-a-glance tiles. All data already in the report. */}
-          {streamDurationSeconds !== undefined && streamDurationSeconds > 0 && (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-              gap: 10,
-              margin: "0 0 32px",
-            }}>
-              {(() => {
-                const totalSilenceSec = gaps.reduce((s, g) => s + (g.duration ?? 0), 0);
-                const speakSec = Math.max(0, streamDurationSeconds - totalSilenceSec);
-                const speakPct = Math.round((speakSec / streamDurationSeconds) * 100);
-                const deadPct = Math.round((totalSilenceSec / streamDurationSeconds) * 100);
-                const speakColor = speakPct >= 70 ? "#A3E635" : speakPct >= 40 ? "#F59E0B" : "#F87171";
-                const deadColor = deadPct >= 30 ? "#F87171" : deadPct >= 15 ? "#F59E0B" : "#A3E635";
-
-                const trendArrow = report.energy_trend === "building" ? "↑" : report.energy_trend === "declining" ? "↓" : report.energy_trend === "volatile" ? "↕" : "→";
-                const trendColor = report.energy_trend === "building" ? "#A3E635" : report.energy_trend === "declining" ? "#F87171" : report.energy_trend === "volatile" ? "#F59E0B" : "#A6B3C9";
-                const trendLabel = report.energy_trend === "building" ? "Building" : report.energy_trend === "declining" ? "Declining" : report.energy_trend === "volatile" ? "Volatile" : "Consistent";
-
-                const retLabel = report.viewer_retention_risk === "high" ? "High Risk" : report.viewer_retention_risk === "medium" ? "Medium Risk" : "Low Risk";
-                const retColor = report.viewer_retention_risk === "high" ? "#F87171" : report.viewer_retention_risk === "medium" ? "#F59E0B" : "#A3E635";
-
-                return (
-                  <>
-                    <StatTile label="Speak Time" value={`${speakPct}%`} sub={fmtTimestamp(speakSec)} color={speakColor} barPct={speakPct} />
-                    <StatTile label="Dead Air" value={`${deadPct}%`} sub={fmtTimestamp(totalSilenceSec)} color={deadColor} barPct={deadPct} />
-                    <StatTile label="Energy" value={trendArrow} sub={trendLabel} color={trendColor} />
-                    <StatTile label="Retention" value={retLabel} color={retColor} />
-                  </>
-                );
-              })()}
-            </div>
-          )}
 
           {/* ── LAST STREAM RECAP ── (only when prior data exists) */}
           {recapDelta && <LastStreamRecap delta={recapDelta} />}
@@ -756,33 +658,6 @@ export function CoachReportCard({
           {/* ── SCORE TRAJECTORY ── (line chart of last N streams) */}
           {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
 
-          {/* ── CHAT PULSE / AUDIENCE SNAPSHOT ──
-              Pulse timeline only when chat is statistically meaningful;
-              otherwise the simpler audience snapshot — no embarrassing
-              empty bars for new streamers. */}
-          {chatPulse && chatPulse.length > 0 && (
-            // Cast — older buckets persisted before the velocity/diversity
-            // fields existed; isPulseViable only reads count/uniqueChatters
-            // so legacy data is safe.
-            isPulseViable(chatPulse as Parameters<typeof isPulseViable>[0])
-              ? <ChatPulseCard buckets={chatPulse} durationSeconds={streamDurationSeconds} />
-              : <AudienceSnapshotCard buckets={chatPulse} />
-          )}
-
-          {/* ── SHAREABLE WIN ── */}
-          {report.shareable_win && (
-            <div style={{ margin: "0 0 28px", padding: "20px 24px", borderRadius: 10, background: "linear-gradient(135deg, rgba(163,230,53,0.07), rgba(163,230,53,0.02))", border: "1px solid rgba(163,230,53,0.22)" }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.36em", textTransform: "uppercase", color: "#A3E635", marginBottom: 10 }}>
-                Win of the Session
-              </div>
-              <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.1, color: "#ECF1FA", letterSpacing: "-0.01em", marginBottom: 8 }}>
-                {report.shareable_win.stat}
-              </div>
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#A6B3C9", lineHeight: 1.5, margin: 0 }}>
-                {report.shareable_win.context}
-              </p>
-            </div>
-          )}
 
           {/* ── OPENING / CLOSING / #1 FIX ── as a card grid ──
               Replaces the row-style Roman-numeral list with three visual
@@ -835,71 +710,7 @@ export function CoachReportCard({
             </div>
           )}
 
-          {/* ── SUB-SCORES ── GATED */}
-          {report.score_breakdown && (
-            isPro ? (
-              <div className="cr2-subs" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", margin: "32px 0 28px", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "18px 0" }}>
-                {(["energy", "engagement", "consistency", "content"] as const).map((k, i, arr) => {
-                  const v = report.score_breakdown![k];
-                  const c = scoreColor(v);
-                  return (
-                    <div key={k} style={{ padding: i === 0 ? "0 18px 0 0" : i === arr.length - 1 ? "0 0 0 18px" : "0 18px", borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 8 }}>{k}</div>
-                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 46, lineHeight: 0.9, letterSpacing: "-0.04em", marginBottom: 8, display: "flex", alignItems: "baseline", gap: 5, color: c }}>
-                        {v}<span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "#4D5876", letterSpacing: "0.1em" }}>/100</span>
-                      </div>
-                      <div style={{ width: "100%", height: 5, borderRadius: 3, background: "rgba(255,255,255,0.05)", overflow: "hidden", marginBottom: 7 }}>
-                        <div style={{ height: "100%", width: `${v}%`, borderRadius: 3, background: c }} />
-                      </div>
-                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#A6B3C9", lineHeight: 1.4 }}>
-                        {k === "energy"
-                          ? report.energy_trend === "volatile" ? "Volatile, spiky output." : report.energy_trend === "building" ? "Energy built through stream." : report.energy_trend === "declining" ? "Energy dropped off." : "Consistent energy level."
-                          : k === "engagement" ? "Chat interaction rate."
-                          : k === "consistency" ? "Sustained quality score."
-                          : "Content originality."}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ margin: "28px 0" }}>
-                <LockedSection
-                  label="Score Breakdown"
-                  hint="See the four sub-scores driving your overall: energy, engagement, consistency, content."
-                  height={110}
-                  onUpgrade={openUpgrade}
-                />
-              </div>
-            )
-          )}
-
-          {/* ── BEST MOMENT ── GATED */}
-          {report.best_moment && (
-            isPro ? (
-              <div style={{ margin: "28px 0", padding: "22px 0 22px 28px", position: "relative", borderLeft: "2px solid #A3E635" }}>
-                <div style={{ position: "absolute", left: 14, top: 2, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 80, lineHeight: 1, color: "#A3E635", opacity: 0.35, fontStyle: "italic", userSelect: "none" }}>"</div>
-                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#A3E635", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
-                  Best Moment
-                  <span style={{ color: "#6F7C95", marginLeft: "auto", fontSize: 12, textTransform: "none", letterSpacing: "0.06em" }}>{report.best_moment.time}</span>
-                </div>
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 19, lineHeight: 1.5, color: "#ECF1FA" }}>
-                  {report.best_moment.description}
-                </p>
-              </div>
-            ) : (
-              <div style={{ margin: "28px 0" }}>
-                <LockedSection
-                  label="Best Moment"
-                  hint="The single moment in this stream that landed hardest — exact timestamp, what made it work, and how to repeat it."
-                  height={100}
-                  onUpgrade={openUpgrade}
-                />
-              </div>
-            )
-          )}
-
-          <div className="cr2-ruler">coaching</div>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", margin: "32px 0 28px" }} />
 
           {/* ── WHAT WORKED / FIX FOR NEXT ── */}
           {((report.strengths ?? []).length > 0 || (report.improvements ?? []).length > 0) && (
@@ -1001,7 +812,7 @@ export function CoachReportCard({
                 </div>
                 {(report.next_stream_goals ?? []).map((goal, i, arr) => (
                   <div key={i} style={{ display: "grid", gridTemplateColumns: "44px 1fr 28px", gap: 12, alignItems: "start", padding: "13px 0", borderBottom: i < arr.length - 1 ? "1px dashed rgba(255,255,255,0.12)" : "none" }}>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 30, color: "#22D3EE", letterSpacing: "-0.03em", lineHeight: 0.9 }}>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#22D3EE", letterSpacing: "-0.03em", lineHeight: 0.9 }}>
                       {ROMAN[i] ?? `${i + 1}.`}
                     </div>
                     <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 17, lineHeight: 1.45, color: checked.has(i) ? "#6F7C95" : "#ECF1FA" }}>
@@ -1029,81 +840,137 @@ export function CoachReportCard({
             )
           )}
 
-          {/* ── SILENCE MAP ── */}
-          {gaps.length > 0 && totalSecs > 0 && (
+          {/* ── STREAM TIMELINE ── unified silence + chat pulse ── */}
+          {(gaps.length > 0 || (chatPulse && chatPulse.length > 0)) && totalSecs > 0 && (
             <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: 20, flexWrap: "wrap" }}>
+
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
                 <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 28, letterSpacing: "-0.015em", lineHeight: 1, margin: 0, color: "#ECF1FA" }}>
-                  The <em style={{ fontStyle: "italic", color: "#F87171" }}>Silence Map.</em>
+                  Stream <em style={{ fontStyle: "italic", color: "#a78bfa" }}>Timeline.</em>
                 </h2>
-                <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#6F7C95", textAlign: "right", maxWidth: 240, lineHeight: 1.4, margin: 0 }}>
-                  Where you went quiet — vertical strikes mark moments you showed up.
-                </p>
+                {chatPulse && chatPulse.length > 0 && isPulseViable(chatPulse as Parameters<typeof isPulseViable>[0]) && (() => {
+                  const total = chatPulse.reduce((s, b) => s + b.count, 0);
+                  const laughs = chatPulse.reduce((s, b) => s + b.laughCount, 0);
+                  const hype = chatPulse.reduce((s, b) => s + b.hypeCount, 0);
+                  const subs = chatPulse.reduce((s, b) => s + b.subEvents, 0);
+                  const raids = chatPulse.reduce((s, b) => s + b.raidEvents, 0);
+                  return (
+                    <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.12em", color: "#6F7C95" }}>
+                      {total.toLocaleString()} messages
+                      {laughs > 0 && <> · <span style={{ color: "#A3E635" }}>{laughs} laughs</span></>}
+                      {hype > 0 && <> · <span style={{ color: "#A3E635" }}>{hype} hype</span></>}
+                      {subs > 0 && <> · <span style={{ color: "#a78bfa" }}>{subs} subs</span></>}
+                      {raids > 0 && <> · <span style={{ color: "#F59E0B" }}>{raids} raids</span></>}
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Timeline */}
-              <div style={{ position: "relative", padding: "52px 0 40px" }}>
-                {/* Energy curve overlay — sits above the silence track. Words
-                    per minute scaled to a 60px-tall band; visualizes how
-                    HARD the streamer was speaking when they did speak. */}
-                {wpmCurve.length >= 3 && (() => {
-                  const maxWpm = Math.max(...wpmCurve);
-                  if (maxWpm <= 0) return null;
-                  const peakColor = "#22D3EE";
-                  const W = 1000;
-                  const H = 60;
-                  const xFor = (i: number) =>
-                    wpmCurve.length === 1 ? W / 2 : (i / (wpmCurve.length - 1)) * W;
-                  const yFor = (v: number) => H - (v / maxWpm) * (H - 4) - 2;
+              {/* Visualization stack */}
+              <div style={{ position: "relative" }}>
 
-                  // Smooth path
-                  const pts = wpmCurve.map((v, i) => [xFor(i), yFor(v)] as const);
-                  let line = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-                  for (let i = 0; i < pts.length - 1; i++) {
-                    const [x0, y0] = pts[i];
-                    const [x1, y1] = pts[i + 1];
-                    const cx = (x0 + x1) / 2;
-                    line += ` C ${cx.toFixed(1)} ${y0.toFixed(1)}, ${cx.toFixed(1)} ${y1.toFixed(1)}, ${x1.toFixed(1)} ${y1.toFixed(1)}`;
-                  }
-                  const area = line + ` L ${W} ${H} L 0 ${H} Z`;
-
+                {/* Chat pulse bars — rendered directly above the silence track */}
+                {chatPulse && chatPulse.length > 0 && isPulseViable(chatPulse as Parameters<typeof isPulseViable>[0]) && (() => {
+                  const peak = chatPulse.reduce((m, b) => (b.count > m ? b.count : m), 0);
                   return (
-                    <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: H, pointerEvents: "none" }}>
-                      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" width="100%" height={H} style={{ display: "block" }}>
-                        <defs>
-                          <linearGradient id="energy-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={peakColor} stopOpacity="0.32" />
-                            <stop offset="100%" stopColor={peakColor} stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <path d={area} fill="url(#energy-fill)" />
-                        <path d={line} fill="none" stroke={peakColor} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" opacity={0.75} />
-                      </svg>
-                      <div style={{
-                        position: "absolute", top: 4, right: 8,
-                        fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-                        textTransform: "uppercase", letterSpacing: "0.22em", color: peakColor,
-                      }}>
-                        Words / min · peak {maxWpm}
-                      </div>
+                    <div style={{
+                      position: "relative", height: 72, marginBottom: 0,
+                      background: "rgba(255,255,255,0.015)",
+                      borderTop: "1px solid rgba(255,255,255,0.06)",
+                      display: "flex", alignItems: "flex-end", gap: 1,
+                    }}>
+                      {chatPulse.map((b, i) => {
+                        const heightPct = peak > 0 ? Math.max(2, (b.count / peak) * 100) : 0;
+                        const widthPct = 100 / chatPulse.length;
+                        const color = (() => {
+                          if (b.count === 0) return "rgba(255,255,255,0.05)";
+                          const positive = b.laughCount + b.hypeCount;
+                          const tot = positive + b.sadCount;
+                          if (tot === 0) return "rgba(167,139,250,0.5)";
+                          const posShare = positive / tot;
+                          if (posShare >= 0.65) return "#A3E635";
+                          if (posShare <= 0.35) return "#F87171";
+                          return "rgba(167,139,250,0.5)";
+                        })();
+                        return (
+                          <div key={i} style={{
+                            flex: `0 0 ${widthPct}%`, height: `${heightPct}%`,
+                            background: color, opacity: 0.72,
+                            borderRadius: "2px 2px 0 0",
+                          }} />
+                        );
+                      })}
+                      {/* Sub/bits/raid event dots */}
+                      {chatPulse.map((b, i) => {
+                        const hasEvent = b.subEvents > 0 || b.bitEvents > 0 || b.raidEvents > 0;
+                        if (!hasEvent) return null;
+                        const pct = ((b.start + (b.end - b.start) / 2) / totalSecs) * 100;
+                        const color = b.raidEvents > 0 ? "#F59E0B" : b.bitEvents > 0 ? "#22D3EE" : "#a78bfa";
+                        return (
+                          <div key={`evt-${i}`} title={
+                            (b.raidEvents > 0 ? "Raid · " : "") +
+                            (b.subEvents > 0 ? `${b.subEvents} subs · ` : "") +
+                            (b.bitEvents > 0 ? `${b.bitEvents} bits · ` : "")
+                          } style={{
+                            position: "absolute", top: 5, left: `${pct}%`,
+                            width: 6, height: 6, borderRadius: "50%",
+                            background: color, transform: "translateX(-50%)",
+                            border: "1px solid rgba(10,9,20,0.9)",
+                          }} />
+                        );
+                      })}
                     </div>
                   );
                 })()}
 
+                {/* WPM energy curve — voice intensity overlay */}
+                {wpmCurve.length >= 3 && (() => {
+                  const maxWpm = Math.max(...wpmCurve);
+                  if (maxWpm <= 0) return null;
+                  const peakColor = "#22D3EE";
+                  const W = 1000; const H = 40;
+                  const xFor = (i: number) => wpmCurve.length === 1 ? W / 2 : (i / (wpmCurve.length - 1)) * W;
+                  const yFor = (v: number) => H - (v / maxWpm) * (H - 4) - 2;
+                  const pts = wpmCurve.map((v, i) => [xFor(i), yFor(v)] as const);
+                  let line = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+                  for (let i = 0; i < pts.length - 1; i++) {
+                    const [x0, y0] = pts[i]; const [x1, y1] = pts[i + 1];
+                    const cx = (x0 + x1) / 2;
+                    line += ` C ${cx.toFixed(1)} ${y0.toFixed(1)}, ${cx.toFixed(1)} ${y1.toFixed(1)}, ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+                  }
+                  const area = line + ` L ${W} ${H} L 0 ${H} Z`;
+                  return (
+                    <div style={{ height: H, position: "relative", pointerEvents: "none" }}>
+                      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" width="100%" height={H} style={{ display: "block" }}>
+                        <defs>
+                          <linearGradient id="energy-fill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={peakColor} stopOpacity="0.28" />
+                            <stop offset="100%" stopColor={peakColor} stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <path d={area} fill="url(#energy-fill)" />
+                        <path d={line} fill="none" stroke={peakColor} strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" opacity={0.6} />
+                      </svg>
+                    </div>
+                  );
+                })()}
+
+                {/* Silence track — the gaps themselves */}
                 <div style={{ position: "relative", height: 36, background: "rgba(255,255,255,0.025)", borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                  {/* Time markers */}
+                  {/* Time markers + labels */}
                   {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
                     const secs = Math.round(pct * totalSecs);
                     return (
                       <div key={i} style={{ position: "absolute", top: -4, bottom: -4, left: `${pct * 100}%`, width: 1, background: i % 2 === 0 ? "#4D5876" : "rgba(255,255,255,0.12)" }}>
-                        <span style={{ position: "absolute", top: "calc(100% + 5px)", left: 0, transform: "translateX(-50%)", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+                        <span style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, transform: "translateX(-50%)", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                           {fmtTimestamp(secs)}
                         </span>
                       </div>
                     );
                   })}
 
-                  {/* Gaps */}
+                  {/* Silence gaps */}
                   {gaps.map((g, i) => {
                     const startPct = (parseTimeSecs(g.time) / totalSecs) * 100;
                     const widthPct = Math.max((g.duration / totalSecs) * 100, 0.8);
@@ -1111,10 +978,10 @@ export function CoachReportCard({
                     return (
                       <div key={i} className={`cr2-tl-gap${isHot ? " hot" : ""}`} style={{ left: `${startPct}%`, width: `${widthPct}%` }}>
                         {isHot && (
-                          <div style={{ position: "absolute", bottom: "calc(100% + 12px)", left: "50%", transform: "translateX(-50%)", textAlign: "center", whiteSpace: "nowrap", pointerEvents: "none" }}>
-                            <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 15, color: "#F59E0B", lineHeight: 1 }}>{fmtDur(g.duration)}</div>
+                          <div style={{ position: "absolute", bottom: "calc(100% + 10px)", left: "50%", transform: "translateX(-50%)", textAlign: "center", whiteSpace: "nowrap", pointerEvents: "none" }}>
+                            <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 14, color: "#F59E0B", lineHeight: 1 }}>{fmtDur(g.duration)}</div>
                             <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.06em", marginTop: 2 }}>{g.time}</div>
-                            <div style={{ width: 1, height: 8, background: "#4D5876", margin: "3px auto 0" }} />
+                            <div style={{ width: 1, height: 7, background: "#4D5876", margin: "3px auto 0" }} />
                           </div>
                         )}
                       </div>
@@ -1134,82 +1001,95 @@ export function CoachReportCard({
                     );
                   })()}
 
-                  {/* Anti-pattern markers — red dots above the timeline at
-                      flagged moments. Visualizes growth-killers on the same
-                      timeline as silence so users see WHEN the bad behaviors
-                      hit, not just that they happened. */}
+                  {/* Anti-pattern dots */}
                   {isPro && (report.anti_patterns ?? []).map((ap, i) => {
                     const secs = parseTimeSecs(ap.time);
                     const pct = (secs / totalSecs) * 100;
                     if (pct < 0 || pct > 100) return null;
                     return (
-                      <div
-                        key={`ap-${i}`}
-                        title={`${ANTI_PATTERN_LABELS[ap.type] ?? ap.type} · ${ap.time}`}
-                        style={{
-                          position: "absolute",
-                          top: -8,
-                          left: `${pct}%`,
-                          width: 8, height: 8,
-                          borderRadius: "50%",
-                          background: "#F87171",
-                          transform: "translateX(-50%)",
-                          border: "2px solid rgba(10,9,20,0.85)",
-                          boxShadow: "0 0 4px rgba(248,113,113,0.6)",
-                        }}
-                      />
+                      <div key={`ap-${i}`} title={`${ANTI_PATTERN_LABELS[ap.type] ?? ap.type} · ${ap.time}`} style={{
+                        position: "absolute", top: -8, left: `${pct}%`,
+                        width: 8, height: 8, borderRadius: "50%",
+                        background: "#F87171", transform: "translateX(-50%)",
+                        border: "2px solid rgba(10,9,20,0.85)",
+                        boxShadow: "0 0 4px rgba(248,113,113,0.6)",
+                      }} />
                     );
                   })}
                 </div>
 
                 {/* Legend */}
-                <div style={{ marginTop: 26, display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6F7C95" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ display: "inline-block", width: 28, height: 10, background: "repeating-linear-gradient(135deg, rgba(248,113,113,0.18) 0, rgba(248,113,113,0.18) 4px, transparent 4px, transparent 8px)", borderLeft: "1px dashed rgba(248,113,113,0.7)", borderRight: "1px dashed rgba(248,113,113,0.7)" }} />
-                    Silence
-                  </span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ display: "inline-block", width: 28, height: 10, background: "repeating-linear-gradient(135deg, rgba(245,158,11,0.32) 0, rgba(245,158,11,0.32) 4px, transparent 4px, transparent 8px)", borderLeft: "1px dashed #F59E0B", borderRight: "1px dashed #F59E0B" }} />
-                    Over 2 min
-                  </span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ display: "inline-block", width: 2, height: 16, background: "#A3E635", boxShadow: "0 0 5px rgba(163,230,53,0.6)" }} />
-                    Best moment
-                  </span>
-                  {isPro && (report.anti_patterns ?? []).length > 0 && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#F87171", boxShadow: "0 0 4px rgba(248,113,113,0.6)" }} />
-                      Growth killer flagged
+                <div style={{ marginTop: 24, display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#6F7C95" }}>
+                  {gaps.length > 0 && (
+                    <>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ display: "inline-block", width: 24, height: 10, background: "repeating-linear-gradient(135deg, rgba(248,113,113,0.18) 0, rgba(248,113,113,0.18) 4px, transparent 4px, transparent 8px)", borderLeft: "1px dashed rgba(248,113,113,0.7)", borderRight: "1px dashed rgba(248,113,113,0.7)" }} />
+                        Silence
+                      </span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ display: "inline-block", width: 24, height: 10, background: "repeating-linear-gradient(135deg, rgba(245,158,11,0.32) 0, rgba(245,158,11,0.32) 4px, transparent 4px, transparent 8px)", borderLeft: "1px dashed #F59E0B", borderRight: "1px dashed #F59E0B" }} />
+                        Over 2 min
+                      </span>
+                    </>
+                  )}
+                  {report.best_moment && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ display: "inline-block", width: 2, height: 14, background: "#A3E635", boxShadow: "0 0 5px rgba(163,230,53,0.6)" }} />
+                      Best moment
                     </span>
                   )}
+                  {isPro && (report.anti_patterns ?? []).length > 0 && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#F87171", boxShadow: "0 0 4px rgba(248,113,113,0.6)" }} />
+                      Growth killer
+                    </span>
+                  )}
+                  {chatPulse && chatPulse.length > 0 && isPulseViable(chatPulse as Parameters<typeof isPulseViable>[0]) && (
+                    <>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ display: "inline-block", width: 10, height: 10, background: "#A3E635", opacity: 0.72, borderRadius: 2 }} />
+                        Chat hype
+                      </span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ display: "inline-block", width: 10, height: 10, background: "rgba(167,139,250,0.5)", borderRadius: 2 }} />
+                        Chatter
+                      </span>
+                    </>
+                  )}
                   {wpmCurve.length >= 3 && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ display: "inline-block", width: 24, height: 8, background: "linear-gradient(180deg, rgba(34,211,238,0.45), rgba(34,211,238,0.05))", borderTop: "1px solid #22D3EE", borderRadius: 2 }} />
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ display: "inline-block", width: 22, height: 8, background: "linear-gradient(180deg, rgba(34,211,238,0.4), rgba(34,211,238,0.05))", borderTop: "1px solid #22D3EE", borderRadius: 2 }} />
                       Words / min
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Summary stats */}
-              <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.12)", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-                <div>
-                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#F87171", marginBottom: 6 }}>
-                    {fmtDur(gaps.reduce((s, g) => s + g.duration, 0))}
-                  </div>
-                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Total silence during active gameplay.</div>
-                </div>
-                <div>
-                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#ECF1FA", marginBottom: 6 }}>{gaps.length}</div>
-                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Gaps — longest was {fmtDur(Math.max(...gaps.map(g => g.duration)))}.</div>
-                </div>
-                {report.best_moment && (
+              {/* Summary stats row */}
+              {gaps.length > 0 && (
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.1)", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
                   <div>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#A3E635", marginBottom: 6 }}>1</div>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Standout moment at {report.best_moment.time}.</div>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#F87171", marginBottom: 6 }}>
+                      {fmtDur(gaps.reduce((s, g) => s + g.duration, 0))}
+                    </div>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Total silence.</div>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#ECF1FA", marginBottom: 6 }}>{gaps.length}</div>
+                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Gaps — longest {fmtDur(Math.max(...gaps.map(g => g.duration)))}.</div>
+                  </div>
+                  {report.best_moment && (
+                    <div>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
+                        Best · {report.best_moment.time}
+                      </div>
+                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 14, color: "#ECF1FA", lineHeight: 1.45 }}>
+                        {report.best_moment.description}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

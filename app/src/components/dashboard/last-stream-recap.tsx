@@ -25,7 +25,7 @@ function StatusPill({ status }: { status: MissionCheck["status"] }) {
   if (status === "achieved") {
     return (
       <span style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+        fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
         textTransform: "uppercase", letterSpacing: "0.18em",
         padding: "3px 8px", borderRadius: 999,
         background: "rgba(163,230,53,0.12)", color: "#A3E635",
@@ -38,7 +38,7 @@ function StatusPill({ status }: { status: MissionCheck["status"] }) {
   if (status === "regressed") {
     return (
       <span style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+        fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
         textTransform: "uppercase", letterSpacing: "0.18em",
         padding: "3px 8px", borderRadius: 999,
         background: "rgba(248,113,113,0.12)", color: "#F87171",
@@ -50,7 +50,7 @@ function StatusPill({ status }: { status: MissionCheck["status"] }) {
   }
   return (
     <span style={{
-      fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+      fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
       textTransform: "uppercase", letterSpacing: "0.18em",
       padding: "3px 8px", borderRadius: 999,
       background: "rgba(255,255,255,0.04)", color: "#A6B3C9",
@@ -102,7 +102,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
     }}>
       {/* Eyebrow */}
       <div style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
+        fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
         textTransform: "uppercase", letterSpacing: "0.32em", color: "#22D3EE",
         marginBottom: 14,
       }}>
@@ -151,7 +151,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
               border: "1px solid rgba(255,255,255,0.07)",
             }}>
               <div style={{
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
                 marginBottom: 6,
               }}>
@@ -186,7 +186,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           marginBottom: 14, display: "flex", alignItems: "center", gap: 12,
         }}>
           <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
             textTransform: "uppercase", letterSpacing: "0.22em", color: "#A3E635",
             flexShrink: 0,
           }}>
@@ -206,7 +206,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           marginBottom: 14, display: "flex", alignItems: "center", gap: 12,
         }}>
           <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
             textTransform: "uppercase", letterSpacing: "0.22em", color: "#F87171",
             flexShrink: 0,
           }}>
@@ -229,7 +229,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
         }}>
           <div>
             <div style={{
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
               textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
               marginBottom: 4,
             }}>
@@ -254,7 +254,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
       {missions.length > 0 && (
         <div style={{ marginTop: 22 }}>
           <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
             textTransform: "uppercase", letterSpacing: "0.28em", color: "#c4b5fd",
             marginBottom: 12,
           }}>
@@ -300,7 +300,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           border: "1px solid rgba(248,113,113,0.2)",
         }}>
           <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
             textTransform: "uppercase", letterSpacing: "0.28em", color: "#F87171",
             marginBottom: 8,
           }}>
@@ -325,7 +325,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           border: "1px solid rgba(163,230,53,0.2)",
         }}>
           <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
             textTransform: "uppercase", letterSpacing: "0.28em", color: "#A3E635",
             marginBottom: 8,
           }}>
@@ -346,7 +346,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           border: "1px solid rgba(245,158,11,0.22)",
         }}>
           <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
             textTransform: "uppercase", letterSpacing: "0.28em", color: "#F59E0B",
             marginBottom: 8,
           }}>
