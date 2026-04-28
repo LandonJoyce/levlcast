@@ -90,12 +90,17 @@ export async function POST(request: Request) {
   if (!peak || idx < 0) return NextResponse.json({ error: "Peak not found" }, { status: 404 });
 
   // Coerce string timestamps — older peak_data rows may store these as strings
+  const rawStart = peak.start;
+  const rawEnd = peak.end;
   peak.start = Number(peak.start);
   peak.end = Number(peak.end);
 
+  console.log(`[clip] peak timestamps: raw=(${rawStart}, ${rawEnd}) coerced=(${peak.start}, ${peak.end}) duration=${peak.end - peak.start}`);
+
   if (!isFinite(peak.start) || !isFinite(peak.end) ||
       peak.start < 0 || peak.end <= peak.start || peak.end - peak.start < 2) {
-    return NextResponse.json({ error: "Peak has invalid timestamps" }, { status: 400 });
+    console.error(`[clip] Invalid timestamps rejected: start=${peak.start} end=${peak.end} rawStart=${JSON.stringify(rawStart)} rawEnd=${JSON.stringify(rawEnd)}`);
+    return NextResponse.json({ error: "Peak has invalid timestamps", debug: { rawStart, rawEnd, start: peak.start, end: peak.end } }, { status: 400 });
   }
 
   const admin = createAdminClient();
