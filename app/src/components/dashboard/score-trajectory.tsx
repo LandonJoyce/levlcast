@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * ScoreTrajectory — score history chart in the report's full design
- * language. Auto-fits the Y-axis to the actual data range so a cluster
- * of low scores doesn't crawl along the bottom of a 0-100 chart.
- * Personal-best ★, current-stream pin (positioned to avoid axis-label
- * collisions), summary stats grid below.
- */
-
 interface TrajectoryPoint {
   score: number;
   date: string;
@@ -28,51 +20,23 @@ function fmtDateTime(iso: string): string {
   return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric" });
 }
 
-/**
- * Pick a Y-axis range that frames the data well. If all scores are
- * low (<50), don't show the upper half. If they're tight (e.g. 60-75),
- * pad enough to show the variance without zooming into noise.
- *
- * Returns [yMin, yMax, ticks[]] where ticks are nice round numbers to
- * label.
- */
 function pickYRange(scores: number[]): { min: number; max: number; ticks: number[] } {
   if (scores.length === 0) return { min: 0, max: 100, ticks: [0, 33, 66, 100] };
-
   const dataMin = Math.min(...scores);
   const dataMax = Math.max(...scores);
-
-  // If full range used, default 0-100 with standard ticks
-  if (dataMin <= 5 && dataMax >= 90) {
-    return { min: 0, max: 100, ticks: [0, 33, 66, 100] };
-  }
-
-  // Pad ~15% above and below; round to nearest 10 for clean ticks
-  const span = Math.max(20, dataMax - dataMin); // floor at 20-pt span so flat lines don't get squished
+  if (dataMin <= 5 && dataMax >= 90) return { min: 0, max: 100, ticks: [0, 33, 66, 100] };
+  const span = Math.max(20, dataMax - dataMin);
   const padBelow = Math.max(8, span * 0.15);
   const padAbove = Math.max(8, span * 0.20);
   const min = Math.max(0, Math.floor((dataMin - padBelow) / 10) * 10);
   const max = Math.min(100, Math.ceil((dataMax + padAbove) / 10) * 10);
-
-  // 4 evenly-spaced ticks across [min, max]
   const step = (max - min) / 3;
-  const ticks = [
-    min,
-    Math.round(min + step),
-    Math.round(min + step * 2),
-    max,
-  ];
-  return { min, max, ticks };
+  return { min, max, ticks: [min, Math.round(min + step), Math.round(min + step * 2), max] };
 }
 
-/**
- * Disambiguate axis date labels. If multiple stream dates fall on the
- * same calendar day, add hour. Otherwise just date.
- */
 function formatTickDate(iso: string, allDates: string[]): string {
   const day = iso.slice(0, 10);
-  const sameDayCount = allDates.filter((d) => d.slice(0, 10) === day).length;
-  return sameDayCount > 1 ? fmtDateTime(iso) : fmtShortDate(iso);
+  return allDates.filter((d) => d.slice(0, 10) === day).length > 1 ? fmtDateTime(iso) : fmtShortDate(iso);
 }
 
 export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
@@ -85,30 +49,25 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
 
   const scores = sorted.map((p) => p.score);
   const peak = Math.max(...scores);
-  const peakIdx = scores.indexOf(peak);
   const first = sorted[0].score;
   const last = sorted[N - 1].score;
   const avg = Math.round(scores.reduce((a, b) => a + b, 0) / N);
   const overallDelta = last - first;
-  const isPersonalBest = peakIdx === currentIdx && N >= 3;
 
-  const trendLabel =
-    overallDelta > 8 ? "trending up" :
-    overallDelta < -8 ? "trending down" :
-    "holding steady";
   const trendColor = overallDelta > 8 ? "#A3E635" : overallDelta < -8 ? "#F87171" : "#A6B3C9";
   const trendItalic = overallDelta > 8 ? "climbing." : overallDelta < -8 ? "drifting." : "steady.";
 
+  // Chart color follows current score tier — green/amber/red at a glance
+  const chartColor = scoreColor(current.score);
+
   const { min: yMin, max: yMax, ticks } = pickYRange(scores);
 
-  // Geometry — slightly taller for breathing room and bigger viewBox so
-  // SVG text reads as substantial at any container width.
   const W = 1000;
-  const H = 200;
+  const H = 240;
   const PAD_L = 52;
   const PAD_R = 52;
-  const PAD_T = 28;
-  const PAD_B = 34;
+  const PAD_T = 30;
+  const PAD_B = 42;
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
 
@@ -136,177 +95,130 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
     ` L ${xFor(N - 1).toFixed(1)} ${(PAD_T + innerH).toFixed(1)}` +
     ` L ${xFor(0).toFixed(1)} ${(PAD_T + innerH).toFixed(1)} Z`;
 
-  // Pick a few x-axis labels (avoid all 6 dates crowding)
   const tickIndices = (() => {
     if (N <= 5) return Array.from({ length: N }, (_, i) => i);
     return [0, Math.floor((N - 1) / 3), Math.floor(2 * (N - 1) / 3), N - 1];
   })();
   const allDates = sorted.map((p) => p.date);
 
-  // Current-stream pin position — try above, but if too close to top
-  // of chart area, drop below to avoid colliding with the y-axis scale.
-  const currentY = yFor(current.score);
-  const pinAbove = currentY - PAD_T > 40;
-  const pinY = pinAbove ? currentY - 20 : currentY + 26;
+  // Position score label left or right of dot to avoid edge clipping
+  const cIdx = currentIdx >= 0 ? currentIdx : N - 1;
+  const cX = xFor(cIdx);
+  const cY = yFor(current.score);
+  const labelRight = cX < W - PAD_R - 80;
 
   return (
     <div style={{
       margin: "0 0 36px",
-      padding: "28px 30px 24px",
+      padding: "18px 22px 16px",
       borderRadius: 12,
       background: "rgba(255,255,255,0.025)",
       border: "1px solid rgba(255,255,255,0.08)",
     }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 24, marginBottom: 6 }}>
+      {/* Header — compact single row */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
         <h2 style={{
           fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400,
-          fontSize: 30, letterSpacing: "-0.015em", lineHeight: 1, margin: 0, color: "#ECF1FA",
+          fontSize: 26, letterSpacing: "-0.015em", lineHeight: 1, margin: 0, color: "#ECF1FA",
         }}>
           The <em style={{ fontStyle: "italic", color: trendColor }}>Trajectory.</em>
         </h2>
-        <p style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          fontSize: 13, color: "#6F7C95", textAlign: "right", margin: 0, maxWidth: 320, lineHeight: 1.4,
+        <span style={{
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+          color: "#6F7C95", letterSpacing: "0.1em", textTransform: "uppercase",
         }}>
-          Last {N} streams — <span style={{ color: trendColor }}>{trendItalic}</span>
-        </p>
-      </div>
-      <div style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
-        textTransform: "uppercase", letterSpacing: "0.28em", color: "#6F7C95",
-        marginBottom: 20,
-      }}>
-        Score Trajectory · {trendLabel}
+          {N} streams — <span style={{ color: trendColor }}>{trendItalic}</span>
+        </span>
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxHeight: "160px" }} aria-hidden>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxHeight: "200px" }} aria-hidden>
         <defs>
+          {/* Area gradient uses chart color — green/amber/red at a glance */}
           <linearGradient id="trj-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.34" />
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+            <stop offset="0%" stopColor={chartColor} stopOpacity="0.26" />
+            <stop offset="55%" stopColor={chartColor} stopOpacity="0.07" />
+            <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
           </linearGradient>
-          <pattern id="trj-zone-red" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(248,113,113,0.06)" strokeWidth="2" />
-          </pattern>
-          <pattern id="trj-zone-amber" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(245,158,11,0.05)" strokeWidth="2" />
-          </pattern>
-          <pattern id="trj-zone-green" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(163,230,53,0.06)" strokeWidth="2" />
-          </pattern>
-          <filter id="trj-line-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2.5" />
-          </filter>
         </defs>
 
-        {/* Score zone bands — only render bands that fall within the
-            visible y-range so a 14-28 chart doesn't show a tiny green
-            sliver at the top. */}
+        {/* Zone bands — flat solid fills, no crosshatch */}
         {yMin < 33 && (
-          <rect
-            x={PAD_L} y={yFor(Math.min(33, yMax))}
-            width={innerW}
-            height={yFor(yMin) - yFor(Math.min(33, yMax))}
-            fill="url(#trj-zone-red)"
-          />
+          <rect x={PAD_L} y={yFor(Math.min(33, yMax))} width={innerW}
+            height={yFor(yMin) - yFor(Math.min(33, yMax))} fill="rgba(248,113,113,0.04)" />
         )}
         {yMax > 33 && yMin < 66 && (
-          <rect
-            x={PAD_L} y={yFor(Math.min(66, yMax))}
-            width={innerW}
-            height={yFor(Math.max(33, yMin)) - yFor(Math.min(66, yMax))}
-            fill="url(#trj-zone-amber)"
-          />
+          <rect x={PAD_L} y={yFor(Math.min(66, yMax))} width={innerW}
+            height={yFor(Math.max(33, yMin)) - yFor(Math.min(66, yMax))} fill="rgba(245,158,11,0.03)" />
         )}
         {yMax > 66 && (
-          <rect
-            x={PAD_L} y={yFor(yMax)}
-            width={innerW}
-            height={yFor(Math.max(66, yMin)) - yFor(yMax)}
-            fill="url(#trj-zone-green)"
-          />
+          <rect x={PAD_L} y={yFor(yMax)} width={innerW}
+            height={yFor(Math.max(66, yMin)) - yFor(yMax)} fill="rgba(163,230,53,0.04)" />
         )}
 
-        {/* Top + bottom borders on chart area */}
-        <line x1={PAD_L} x2={W - PAD_R} y1={PAD_T} y2={PAD_T} stroke="rgba(255,255,255,0.07)" />
-        <line x1={PAD_L} x2={W - PAD_R} y1={PAD_T + innerH} y2={PAD_T + innerH} stroke="rgba(255,255,255,0.14)" />
-
-        {/* Y-axis ticks — bigger labels (14px) for legibility on 1440p */}
+        {/* Subtle horizontal grid lines */}
         {ticks.map((s) => (
-          <g key={s}>
-            <line
-              x1={PAD_L} x2={W - PAD_R}
-              y1={yFor(s)} y2={yFor(s)}
-              stroke="rgba(255,255,255,0.06)"
-              strokeDasharray="2 5"
-            />
-            <text
-              x={PAD_L - 10} y={yFor(s) + 5}
-              fontFamily='"JetBrains Mono", monospace' fontSize={14}
-              fill="#6F7C95" letterSpacing="0.06em" textAnchor="end"
-              fontWeight={500}
-            >
-              {s}
-            </text>
-          </g>
+          <line key={s}
+            x1={PAD_L} x2={W - PAD_R} y1={yFor(s)} y2={yFor(s)}
+            stroke="rgba(255,255,255,0.05)"
+          />
+        ))}
+
+        {/* Bottom baseline */}
+        <line x1={PAD_L} x2={W - PAD_R} y1={PAD_T + innerH} y2={PAD_T + innerH}
+          stroke="rgba(255,255,255,0.1)" />
+
+        {/* Y-axis labels */}
+        {ticks.map((s) => (
+          <text key={s}
+            x={PAD_L - 10} y={yFor(s) + 5}
+            fontFamily='"JetBrains Mono", monospace' fontSize={13}
+            fill="#4D5876" textAnchor="end"
+          >
+            {s}
+          </text>
         ))}
 
         {/* Area fill */}
         <path d={areaPath} fill="url(#trj-area)" />
 
-        {/* Glow + crisp line */}
-        <path d={linePath} fill="none" stroke="rgba(167,139,250,0.4)" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" filter="url(#trj-line-glow)" />
-        <path d={linePath} fill="none" stroke="#a78bfa" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Line — outer glow layer, then crisp line on top */}
+        <path d={linePath} fill="none" stroke={chartColor} strokeWidth={10}
+          strokeLinecap="round" strokeLinejoin="round" opacity={0.10} />
+        <path d={linePath} fill="none" stroke={chartColor} strokeWidth={5}
+          strokeLinecap="round" strokeLinejoin="round" opacity={0.18} />
+        <path d={linePath} fill="none" stroke={chartColor} strokeWidth={2.5}
+          strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* Bubbles */}
+        {/* Historical dots — hollow */}
         {sorted.map((p, i) => {
+          if (!!p.current) return null;
           const x = xFor(i);
           const y = yFor(p.score);
-          const isCurrent = !!p.current;
-          const isPeak = i === peakIdx && N >= 3 && peak !== current.score;
-          const color = isCurrent ? scoreColor(p.score) : "#a78bfa";
-          const r = isCurrent ? 9 : 5;
-
           return (
-            <g key={i}>
-              {isCurrent && <circle cx={x} cy={y} r={r + 8} fill={color} opacity={0.16} />}
-              <circle
-                cx={x} cy={y} r={r}
-                fill={isCurrent ? color : "rgba(167,139,250,0.18)"}
-                stroke={isCurrent ? color : "rgba(167,139,250,0.7)"}
-                strokeWidth={isCurrent ? 0 : 2}
-              />
-            </g>
+            <circle key={i} cx={x} cy={y} r={4.5}
+              fill="rgba(10,9,20,1)"
+              stroke={chartColor} strokeWidth={1.5} opacity={0.45}
+            />
           );
         })}
 
-        {/* Current-stream score pin — outside the chart's left/right
-            padding so it never collides with the Y-axis tick labels. */}
-        {(() => {
-          const x = xFor(currentIdx >= 0 ? currentIdx : N - 1);
-          const color = scoreColor(current.score);
-          // Push the label inward if the bubble is too close to the right edge
-          const labelX = x > W - PAD_R - 40 ? x - 8 : x;
-          const anchor: "start" | "middle" | "end" = x > W - PAD_R - 40 ? "end" : "middle";
-          return (
-            <g>
-              <line
-                x1={x} x2={x}
-                y1={pinAbove ? currentY - 12 : currentY + 14}
-                y2={pinY + (pinAbove ? 6 : -10)}
-                stroke={color} strokeWidth={1} strokeDasharray="1 4" opacity={0.7}
-              />
-              <text
-                x={labelX} y={pinY}
-                fontFamily='"Instrument Serif", Georgia, serif' fontSize={28}
-                fill={color} textAnchor={anchor} letterSpacing="-0.025em"
-              >
-                {current.score}
-              </text>
-            </g>
-          );
-        })()}
+        {/* Current stream dot — concentric rings */}
+        <circle cx={cX} cy={cY} r={22} fill={chartColor} opacity={0.06} />
+        <circle cx={cX} cy={cY} r={13} fill={chartColor} opacity={0.13} />
+        <circle cx={cX} cy={cY} r={7} fill={chartColor} />
+        <circle cx={cX} cy={cY} r={3} fill="rgba(10,9,20,0.9)" />
+
+        {/* Score label beside dot */}
+        <text
+          x={labelRight ? cX + 18 : cX - 18}
+          y={cY + 9}
+          fontFamily='"Instrument Serif", Georgia, serif' fontSize={26}
+          fill={chartColor}
+          textAnchor={labelRight ? "start" : "end"}
+          letterSpacing="-0.025em"
+        >
+          {current.score}
+        </text>
 
         {/* X-axis date labels */}
         {tickIndices.map((i) => {
@@ -314,11 +226,9 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
           const anchor: "start" | "middle" | "end" =
             i === 0 ? "start" : i === N - 1 ? "end" : "middle";
           return (
-            <text
-              key={i} x={x} y={PAD_T + innerH + 30}
-              fontFamily='"JetBrains Mono", monospace' fontSize={13}
-              fill="#A6B3C9" letterSpacing="0.04em" textAnchor={anchor}
-              fontWeight={500}
+            <text key={i} x={x} y={PAD_T + innerH + 30}
+              fontFamily='"JetBrains Mono", monospace' fontSize={12}
+              fill="#6F7C95" letterSpacing="0.04em" textAnchor={anchor}
             >
               {formatTickDate(sorted[i].date, allDates)}
             </text>
@@ -326,16 +236,16 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
         })}
       </svg>
 
-      {/* Summary stats footer */}
+      {/* Stats footer */}
       <div style={{
-        marginTop: 22, paddingTop: 18,
-        borderTop: "1px dashed rgba(255,255,255,0.12)",
-        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 18,
+        marginTop: 16, paddingTop: 14,
+        borderTop: "1px dashed rgba(255,255,255,0.1)",
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 14,
       }}>
         <TrjStat n={current.score} label="This stream" color={scoreColor(current.score)} />
         <TrjStat n={peak} label="Peak score" color="#fbbf24" />
         <TrjStat n={avg} label={`Avg of ${N}`} color="#A6B3C9" />
-        <TrjStat n={overallDelta} label={`Δ from first (${first})`} color={trendColor} signed />
+        <TrjStat n={overallDelta} label={`Change from first`} color={trendColor} signed />
       </div>
     </div>
   );
@@ -346,15 +256,12 @@ function TrjStat({ n, label, color, signed }: { n: number; label: string; color:
   return (
     <div>
       <div style={{
-        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1,
-        letterSpacing: "-0.02em", color, marginBottom: 5,
+        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 28, lineHeight: 1,
+        letterSpacing: "-0.02em", color, marginBottom: 4,
       }}>
         {display}
       </div>
-      <div style={{
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        fontSize: 12, color: "#6F7C95", lineHeight: 1.4,
-      }}>
+      <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 11, color: "#6F7C95", lineHeight: 1.4 }}>
         {label}
       </div>
     </div>
