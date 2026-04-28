@@ -38,33 +38,43 @@ export function ClipPerformanceLogger({ clipId, initialViews, initialFollows }: 
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        style={{
-          width: "100%",
-          background: "none",
-          border: "1px solid var(--line)",
-          borderRadius: 6,
-          padding: "6px 10px",
-          fontSize: 11,
-          fontFamily: "var(--font-geist-mono), monospace",
-          letterSpacing: ".05em",
-          color: saved ? "var(--green)" : hasData ? "var(--ink-2)" : "var(--ink-3)",
-          cursor: "pointer",
-          textAlign: "center",
-        }}
-      >
-        {saved ? "✓ saved" : hasData ? `${initialViews?.toLocaleString()} views${initialFollows ? ` · +${initialFollows} follows` : ""}` : "Log performance"}
-      </button>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            width: "100%",
+            background: "none",
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+            padding: "6px 10px",
+            fontSize: 11,
+            fontFamily: "var(--font-geist-mono), monospace",
+            letterSpacing: ".05em",
+            color: saved ? "var(--green)" : hasData ? "var(--ink-2)" : "var(--ink-3)",
+            cursor: "pointer",
+            textAlign: "center",
+          }}
+        >
+          {saved ? "✓ saved" : hasData ? `${initialViews?.toLocaleString()} views${initialFollows ? ` · +${initialFollows} follows` : ""}` : "Log views after sharing"}
+        </button>
+        {!hasData && (
+          <span style={{ fontSize: 10, color: "var(--ink-3)", textAlign: "center", lineHeight: 1.4, fontFamily: "var(--font-geist-mono), monospace" }}>
+            Posted this clip? Log how it did.
+          </span>
+        )}
+      </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: 10, color: "var(--ink-3)", lineHeight: 1.4 }}>
+        How did this clip perform after you shared it?
+      </span>
       <input
         type="number"
         min="0"
-        placeholder="Views"
+        placeholder="Views on TikTok / YouTube / Twitter"
         value={views}
         onChange={(e) => setViews(e.target.value)}
         style={{
@@ -82,7 +92,7 @@ export function ClipPerformanceLogger({ clipId, initialViews, initialFollows }: 
       <input
         type="number"
         min="0"
-        placeholder="Follows gained"
+        placeholder="New Twitch follows after posting"
         value={follows}
         onChange={(e) => setFollows(e.target.value)}
         style={{
