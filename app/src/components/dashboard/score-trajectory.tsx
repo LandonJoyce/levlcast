@@ -104,11 +104,11 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
   // Geometry — slightly taller for breathing room and bigger viewBox so
   // SVG text reads as substantial at any container width.
   const W = 1000;
-  const H = 320;
-  const PAD_L = 64;
-  const PAD_R = 64;
-  const PAD_T = 50;
-  const PAD_B = 56;
+  const H = 220;
+  const PAD_L = 58;
+  const PAD_R = 58;
+  const PAD_T = 38;
+  const PAD_B = 46;
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
 
@@ -166,10 +166,10 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
           The <em style={{ fontStyle: "italic", color: trendColor }}>Trajectory.</em>
         </h2>
         <p style={{
-          fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic",
-          fontSize: 15, color: "#6F7C95", textAlign: "right", margin: 0, maxWidth: 320, lineHeight: 1.4,
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontSize: 13, color: "#6F7C95", textAlign: "right", margin: 0, maxWidth: 320, lineHeight: 1.4,
         }}>
-          Last {N} streams. The line is your story — <span style={{ color: trendColor }}>{trendItalic}</span>
+          Last {N} streams — <span style={{ color: trendColor }}>{trendItalic}</span>
         </p>
       </div>
       <div style={{
@@ -364,14 +364,14 @@ function TrjStat({ n, label, color, signed }: { n: number; label: string; color:
   return (
     <div>
       <div style={{
-        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 36, lineHeight: 1,
-        letterSpacing: "-0.02em", color, marginBottom: 6,
+        fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1,
+        letterSpacing: "-0.02em", color, marginBottom: 5,
       }}>
         {display}
       </div>
       <div style={{
-        fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic",
-        fontSize: 14, color: "#6F7C95", lineHeight: 1.4,
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: 12, color: "#6F7C95", lineHeight: 1.4,
       }}>
         {label}
       </div>

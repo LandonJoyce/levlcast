@@ -1055,10 +1055,10 @@ export function CoachReportCard({
                   </div>
                   {report.best_moment && (
                     <div>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
-                        Best · {report.best_moment.time}
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
+                        Best moment · {report.best_moment.time}
                       </div>
-                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 14, color: "#ECF1FA", lineHeight: 1.45 }}>
+                      <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.55 }}>
                         {report.best_moment.description}
                       </div>
                     </div>

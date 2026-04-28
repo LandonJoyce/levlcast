@@ -145,27 +145,27 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
         }}>
           {subscores.map((s) => (
             <div key={s.key} style={{
-              padding: "12px 14px",
+              padding: "14px 16px",
               borderRadius: 10,
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.07)",
             }}>
               <div style={{
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
-                marginBottom: 6,
+                marginBottom: 8,
               }}>
                 {SUBSCORE_LABEL[s.key]}
               </div>
               <div style={{
-                fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 22, lineHeight: 1,
-                color: "#ECF1FA", letterSpacing: "-0.02em", marginBottom: 4,
+                fontFamily: '"Instrument Serif", Georgia, serif', fontSize: "calc(var(--cs, 1) * 28px)", lineHeight: 1,
+                color: "#ECF1FA", letterSpacing: "-0.02em", marginBottom: 6,
               }}>
                 {s.current}
-                <span style={{ color: "#4D5876", fontSize: 12 }}>/100</span>
+                <span style={{ color: "#4D5876", fontSize: "calc(var(--cs, 1) * 13px)" }}>/100</span>
               </div>
               <div style={{
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
+                fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 12px)", fontWeight: 600,
                 color: deltaColor(s.delta),
               }}>
                 {deltaArrow(s.delta)} {s.delta > 0 ? "+" : ""}{s.delta}
@@ -192,7 +192,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           }}>
             Biggest Win
           </span>
-          <span style={{ fontSize: 13, color: "#ECF1FA" }}>
+          <span style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#ECF1FA" }}>
             {SUBSCORE_LABEL[biggestWin.key]} climbed{" "}
             <strong style={{ color: "#A3E635" }}>+{biggestWin.delta}</strong> ({biggestWin.previous} → {biggestWin.current})
           </span>
@@ -212,43 +212,13 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           }}>
             Watch
           </span>
-          <span style={{ fontSize: 13, color: "#ECF1FA" }}>
+          <span style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#ECF1FA" }}>
             {SUBSCORE_LABEL[biggestRegression.key]} dropped{" "}
             <strong style={{ color: "#F87171" }}>{biggestRegression.delta}</strong> ({biggestRegression.previous} → {biggestRegression.current})
           </span>
         </div>
       )}
 
-      {/* Dead-air delta */}
-      {deadAir && (
-        <div style={{
-          padding: "12px 16px", borderRadius: 8,
-          background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
-          marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: 12, flexWrap: "wrap",
-        }}>
-          <div>
-            <div style={{
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
-              textTransform: "uppercase", letterSpacing: "0.22em", color: "#6F7C95",
-              marginBottom: 4,
-            }}>
-              Dead Air
-            </div>
-            <div style={{ fontSize: 13, color: "#ECF1FA" }}>
-              {deadAir.prevCount} gap{deadAir.prevCount !== 1 ? "s" : ""} ({formatSeconds(deadAir.prevTotalSec)}) →{" "}
-              <strong>{deadAir.currentCount} gap{deadAir.currentCount !== 1 ? "s" : ""} ({formatSeconds(deadAir.currentTotalSec)})</strong>
-            </div>
-          </div>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
-            color: deltaColor(deadAir.improved ? 1 : -1),
-            letterSpacing: "0.02em",
-          }}>
-            {deadAir.improved ? "↓ less" : "↑ more"}
-          </span>
-        </div>
-      )}
 
       {/* Mission check — last stream's goals matched against this stream */}
       {missions.length > 0 && (
@@ -270,9 +240,10 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
                 <span style={{
-                  fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 15,
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                  fontSize: "calc(var(--cs, 1) * 14px)",
                   color: m.status === "achieved" ? "#A3E635" : m.status === "regressed" ? "#F87171" : "#ECF1FA",
-                  lineHeight: 1.35, flex: 1,
+                  lineHeight: 1.5, flex: 1,
                   textDecoration: m.status === "achieved" ? "line-through" : "none",
                   textDecorationColor: "rgba(163,230,53,0.5)",
                 }}>
@@ -307,7 +278,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
             Still happening · flagged this stream AND last
           </div>
           {recurring.map((r) => (
-            <div key={r.type} style={{ fontSize: 13, color: "#ECF1FA", marginBottom: 4 }}>
+            <div key={r.type} style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#ECF1FA", marginBottom: 4 }}>
               · {antiPatternLabel(r.type)}{" "}
               <span style={{ color: "#6F7C95", fontFamily: '"JetBrains Mono", monospace', fontSize: 11 }}>
                 ({r.prevCount} → {r.currentCount})
@@ -332,7 +303,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
             Cleared · was flagged last stream
           </div>
           {cleared.map((c) => (
-            <div key={c.type} style={{ fontSize: 13, color: "#ECF1FA", marginBottom: 2 }}>
+            <div key={c.type} style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#ECF1FA", marginBottom: 2 }}>
               · {antiPatternLabel(c.type)}
             </div>
           ))}
@@ -353,7 +324,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
             New this stream
           </div>
           {newlyFlagged.map((n) => (
-            <div key={n.type} style={{ fontSize: 13, color: "#ECF1FA", marginBottom: 2 }}>
+            <div key={n.type} style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#ECF1FA", marginBottom: 2 }}>
               · {antiPatternLabel(n.type)}
             </div>
           ))}
