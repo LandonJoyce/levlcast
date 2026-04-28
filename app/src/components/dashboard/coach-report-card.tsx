@@ -1026,20 +1026,24 @@ export function CoachReportCard({
 
               {/* Summary stats row */}
               {gaps.length > 0 && (
-                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.1)", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-                  <div>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#F87171", marginBottom: 6 }}>
-                      {fmtDur(gaps.reduce((s, g) => s + g.duration, 0))}
-                    </div>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Total silence.</div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 32, lineHeight: 1, letterSpacing: "-0.02em", color: "#ECF1FA", marginBottom: 6 }}>{gaps.length}</div>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 13, color: "#6F7C95", lineHeight: 1.4 }}>Gaps — longest {fmtDur(Math.max(...gaps.map(g => g.duration)))}.</div>
-                  </div>
-                  {report.best_moment && (
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed rgba(255,255,255,0.1)", display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  {/* Compact silence stats */}
+                  <div style={{ display: "flex", gap: 20, flexShrink: 0 }}>
                     <div>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
+                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 28, lineHeight: 1, letterSpacing: "-0.02em", color: "#F87171", marginBottom: 4 }}>
+                        {fmtDur(gaps.reduce((s, g) => s + g.duration, 0))}
+                      </div>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.08em", textTransform: "uppercase" }}>Total silence</div>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 28, lineHeight: 1, letterSpacing: "-0.02em", color: "#ECF1FA", marginBottom: 4 }}>{gaps.length}</div>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.08em", textTransform: "uppercase" }}>Gaps · longest {fmtDur(Math.max(...gaps.map(g => g.duration)))}</div>
+                    </div>
+                  </div>
+                  {/* Best moment fills remaining width */}
+                  {report.best_moment && (
+                    <div style={{ flex: 1, minWidth: 180, padding: "12px 16px", borderRadius: 8, background: "rgba(163,230,53,0.05)", border: "1px solid rgba(163,230,53,0.2)" }}>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
                         Best moment · {report.best_moment.time}
                       </div>
                       <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.55 }}>
