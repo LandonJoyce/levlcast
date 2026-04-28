@@ -153,6 +153,8 @@ export function groupWordsIntoCards(words: CaptionWord[]): CaptionCard[] {
   return cards;
 }
 
+export type CaptionStyle = "bold" | "boxed" | "minimal";
+
 export interface CaptionRenderConfig {
   fontPath: string;
   /** Output frame height in pixels. Caption sits at ~78% of this. */
@@ -161,6 +163,8 @@ export interface CaptionRenderConfig {
   videoWidth: number;
   /** Where to write per-card textfiles. Caller controls cleanup. */
   tempDir: string;
+  /** Visual style for the captions. Defaults to "bold". */
+  style?: CaptionStyle;
 }
 
 export interface CaptionRenderResult {
@@ -183,19 +187,7 @@ export async function buildCaptionFilters(
 ): Promise<CaptionRenderResult> {
   if (cards.length === 0) return { filter: "", textFiles: [] };
 
-  // Viral-edit caption style:
-  //   - Heavy white sans on a thick black stroke (no box) so it reads
-  //     on bright AND dark backgrounds without a card behind it
-  //   - Soft drop shadow gives depth/separation without the chunky look
-  //     of a solid box
-  //   - Uppercase the text so single words feel weighty (TikTok default)
-  //   - Position at ~70% height — well clear of UI safe areas on
-  //     Shorts/Reels and above the bottom-row UI on TikTok
-  //   - All values are video-height relative so the caption looks the
-  //     same on a 720p clip as a 1080p one
-  const fontSize = 78;
-  const borderWidth = 8;
-  const lineSpacing = Math.round(fontSize * 0.18);
+  const style = config.style ?? "bold";
   const yExpr = "(h*0.70)-(text_h/2)";
 
   const parts: string[] = [];
@@ -204,29 +196,67 @@ export async function buildCaptionFilters(
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
     const filePath = join(config.tempDir, `cap-${i}.txt`);
-    // Uppercase text — punchier for short bursts. Keep punctuation.
-    await writeFile(filePath, card.text.toUpperCase());
-    textFiles.push(filePath);
-
-    // Single-quoted enable value — FFmpeg treats chars inside ''
-    // literally, so the commas inside between() reach the expression
-    // evaluator un-mangled. DO NOT also \-escape the commas; that
-    // produces between(t\,5\,7) which the expr parser silently rejects
-    // (filter renders nothing, no error).
     const enable = `between(t,${card.start.toFixed(3)},${card.end.toFixed(3)})`;
-    parts.push(
-      `drawtext=` +
-      `textfile=${filePath}:` +
-      `fontfile=${config.fontPath}:` +
-      `fontcolor=white:` +
-      `fontsize=${fontSize}:` +
-      `borderw=${borderWidth}:` +
-      `bordercolor=black:` +
-      `shadowcolor=black:shadowx=3:shadowy=4:` +
-      `x=(w-text_w)/2:y=${yExpr}:` +
-      `line_spacing=${lineSpacing}:` +
-      `enable='${enable}'`
-    );
+
+    let drawtextArgs: string;
+
+    if (style === "boxed") {
+      // White text on a semi-transparent black pill — easy to read on
+      // any background, familiar from native TikTok/Reels captions.
+      await writeFile(filePath, card.text.toUpperCase());
+      const fontSize = 68;
+      const lineSpacing = Math.round(fontSize * 0.18);
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:` +
+        `fontfile=${config.fontPath}:` +
+        `fontcolor=white:` +
+        `fontsize=${fontSize}:` +
+        `borderw=0:` +
+        `box=1:boxcolor=black@0.55:boxborderw=14:` +
+        `shadowcolor=black@0:shadowx=0:shadowy=0:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${lineSpacing}:` +
+        `enable='${enable}'`;
+    } else if (style === "minimal") {
+      // Smaller, thinner, mixed-case — cleaner look for educational/calm content.
+      await writeFile(filePath, card.text);
+      const fontSize = 54;
+      const lineSpacing = Math.round(fontSize * 0.18);
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:` +
+        `fontfile=${config.fontPath}:` +
+        `fontcolor=white@0.92:` +
+        `fontsize=${fontSize}:` +
+        `borderw=3:` +
+        `bordercolor=black@0.7:` +
+        `shadowcolor=black@0.5:shadowx=2:shadowy=3:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${lineSpacing}:` +
+        `enable='${enable}'`;
+    } else {
+      // bold (default) — heavy white + thick black stroke, no box.
+      await writeFile(filePath, card.text.toUpperCase());
+      const fontSize = 78;
+      const borderWidth = 8;
+      const lineSpacing = Math.round(fontSize * 0.18);
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:` +
+        `fontfile=${config.fontPath}:` +
+        `fontcolor=white:` +
+        `fontsize=${fontSize}:` +
+        `borderw=${borderWidth}:` +
+        `bordercolor=black:` +
+        `shadowcolor=black:shadowx=3:shadowy=4:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${lineSpacing}:` +
+        `enable='${enable}'`;
+    }
+
+    textFiles.push(filePath);
+    parts.push(drawtextArgs);
   }
 
   return { filter: "," + parts.join(","), textFiles };

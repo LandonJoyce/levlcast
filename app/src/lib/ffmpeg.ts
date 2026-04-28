@@ -5,6 +5,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 import {
   type CaptionWord,
+  type CaptionStyle,
   sliceWordsForClip,
   groupWordsIntoCards,
   buildCaptionFilters,
@@ -214,6 +215,8 @@ export interface CutClipOptions {
    * If omitted, captions are skipped (we wouldn't know how to align them).
    */
   vodWindow?: { start: number; end: number };
+  /** Caption visual style. Defaults to "bold". */
+  captionStyle?: CaptionStyle;
 }
 
 /**
@@ -279,6 +282,7 @@ export async function cutClip(
             videoWidth: 1280,
             videoHeight: 720,
             tempDir,
+            style: options.captionStyle ?? "bold",
           });
           captionFilter = built.filter;
           captionFiles = built.textFiles;

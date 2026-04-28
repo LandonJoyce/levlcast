@@ -20,7 +20,7 @@ import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { downloadTwitchVodVideo } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
-import type { CaptionWord } from "@/lib/captions";
+import type { CaptionWord, CaptionStyle } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
 
@@ -49,7 +49,10 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { vodId, peakIndex, startSeconds } = body;
+  const { vodId, peakIndex, startSeconds, captionStyle } = body;
+
+  const validStyles: CaptionStyle[] = ["bold", "boxed", "minimal"];
+  const resolvedStyle: CaptionStyle = validStyles.includes(captionStyle) ? captionStyle : "bold";
 
   if (!vodId || typeof vodId !== "string" || (peakIndex === undefined && startSeconds === undefined)) {
     return NextResponse.json({ error: "Missing vodId or peakIndex/startSeconds" }, { status: 400 });
@@ -162,6 +165,7 @@ export async function POST(request: Request) {
     vodId: vod.id,
     peakIndex: idx,
     peak,
+    captionStyle: resolvedStyle,
   }));
 
   return NextResponse.json({ clipId: clipRecord.id });
@@ -174,6 +178,7 @@ async function runClipGeneration({
   vodId,
   peakIndex,
   peak,
+  captionStyle,
 }: {
   clipId: string;
   twitchVodId: string;
@@ -181,6 +186,7 @@ async function runClipGeneration({
   vodId: string;
   peakIndex: number;
   peak: { title: string; start: number; end: number; score: number; category: string; reason: string; caption: string };
+  captionStyle: CaptionStyle;
 }) {
   const admin = createAdminClient();
 
@@ -206,6 +212,7 @@ async function runClipGeneration({
       buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
         vodWords,
         vodWindow: { start: peak.start, end: peak.end },
+        captionStyle,
       });
       console.log(`[clip] Cut complete: ${buffer.length} bytes`);
     } finally {

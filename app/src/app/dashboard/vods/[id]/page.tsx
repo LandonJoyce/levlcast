@@ -70,6 +70,13 @@ const Icons = {
   ),
 };
 
+function twitchTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`;
+}
+
 function getStreamerTitle(avg: number): string {
   if (avg >= 90) return "LevlCast Legend";
   if (avg >= 80) return "Elite Entertainer";
@@ -376,8 +383,16 @@ export default async function VodDetailPage({
                         </p>
                       )}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                        <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-3)" }}>
-                          {formatDuration(peak.start)} – {formatDuration(peak.end)}
+                        <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 6 }}>
+                          <a
+                            href={`https://www.twitch.tv/videos/${vod.twitch_vod_id}?t=${twitchTimestamp(Math.floor(peak.start))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Watch on Twitch"
+                            style={{ color: "var(--blue)", textDecoration: "none", fontFamily: "inherit" }}
+                          >
+                            {formatDuration(peak.start)} – {formatDuration(peak.end)}
+                          </a>
                           {" · "}Score {Math.round(peak.score * 100)}
                         </span>
                         {alreadyClaimed ? (
