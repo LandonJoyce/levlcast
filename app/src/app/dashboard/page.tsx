@@ -80,10 +80,10 @@ export default async function DashboardPage() {
   // Latest analyzed VODs — most recent first, up to 12 for trend
   const { data: recentVods } = await supabase
     .from("vods")
-    .select("id, title, duration_seconds, analyzed_at, coach_report, created_at, peak_data")
+    .select("id, title, duration_seconds, analyzed_at, stream_date, coach_report, created_at, peak_data")
     .eq("user_id", user.id)
     .eq("status", "ready")
-    .order("analyzed_at", { ascending: false, nullsFirst: false })
+    .order("stream_date", { ascending: false, nullsFirst: false })
     .limit(12);
 
   const totalAnalyzed = recentVods?.length ?? 0;

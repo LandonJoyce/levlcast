@@ -94,7 +94,7 @@ export default async function VodDetailPage({
     supabase.from("social_connections").select("platform").eq("user_id", user!.id),
     supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("stream_date", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("vods").select("status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(20),
-    supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("analyzed_at", { ascending: false }).limit(50),
+    supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("stream_date", { ascending: false, nullsFirst: false }).limit(50),
     supabase.from("profiles").select("plan, subscription_expires_at").eq("id", user!.id).single(),
   ]);
 
@@ -138,7 +138,7 @@ export default async function VodDetailPage({
       return { score, date };
     })
     .filter((p): p is { score: number; date: string } => p !== null)
-    .slice(0, 9); // most recent 9 (already analyzed_at DESC from query)
+    .slice(0, 9); // most recent 9 by actual stream date, not analysis date
 
   const trajectory = currentScore !== undefined && (vod.stream_date || vod.analyzed_at)
     ? [
