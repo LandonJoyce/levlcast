@@ -266,10 +266,19 @@ export async function cutClip(
         const sliced = sliceWordsForClip(options.vodWords, options.vodWindow.start, options.vodWindow.end);
         const cards = groupWordsIntoCards(sliced);
         if (cards.length > 0) {
-          // One-line per card so we can verify alignment against audio in
-          // Vercel logs without spamming.
-          for (let i = 0; i < cards.length; i++) {
-            const c = cards[i];
+          // Caption cards use clip-relative timestamps (0 = clip start).
+          // The FFmpeg drawtext enable expression evaluates against the
+          // filter-chain PTS, where t=0 is the start of the downloaded
+          // MPEG-TS file and t=safeStart is where the clip content begins.
+          // Offset every card by safeStart so enable fires at the correct
+          // position in the filter timeline.
+          const offsetCards = cards.map((c) => ({
+            ...c,
+            start: c.start + safeStart,
+            end: c.end + safeStart,
+          }));
+          for (let i = 0; i < offsetCards.length; i++) {
+            const c = offsetCards[i];
             console.log(`[clip] card ${i}: ${c.start.toFixed(2)}s-${c.end.toFixed(2)}s "${c.text}"`);
           }
           // Source video resolution drives caption sizing. Most Twitch VODs
@@ -277,7 +286,7 @@ export async function cutClip(
           // without probing — assume 1280×720 baseline and let drawtext scale
           // proportionally. Slightly small captions on 1080p > monstrous
           // captions on 720p.
-          const built = await buildCaptionFilters(cards, {
+          const built = await buildCaptionFilters(offsetCards, {
             fontPath,
             videoWidth: 1280,
             videoHeight: 720,
