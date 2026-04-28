@@ -84,6 +84,7 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .eq("status", "ready")
     .order("stream_date", { ascending: false, nullsFirst: false })
+    .order("analyzed_at", { ascending: false, nullsFirst: false })
     .limit(12);
 
   const totalAnalyzed = recentVods?.length ?? 0;
