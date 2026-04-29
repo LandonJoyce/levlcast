@@ -58,6 +58,7 @@ export const analyzeVod = inngest.createFunction(
       // like "desync", "headshot", or "clutch" stop getting transcribed as
       // generic English ("this is decent", "head shot," etc.).
       const segments = await step.run("transcribe", async () => {
+        console.log(`[analyze] Stage 1/4: transcribing vod=${vodId} user=${userId}`);
         const { data: vod } = await supabase
           .from("vods")
           .select("twitch_vod_id, title, duration_seconds")
@@ -66,6 +67,7 @@ export const analyzeVod = inngest.createFunction(
           .single();
 
         if (!vod) throw new Error("VOD not found");
+        console.log(`[analyze] VOD: "${vod.title}" twitch_id=${vod.twitch_vod_id} duration=${vod.duration_seconds}s`);
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
 
         const detection = detectGame(vod.title ?? "");
@@ -75,7 +77,9 @@ export const analyzeVod = inngest.createFunction(
         );
 
         const stream = streamTwitchVodAudio(vod.twitch_vod_id);
+        console.log(`[analyze] Streaming audio to Deepgram...`);
         const { segments, words } = await transcribePassThrough(stream, keywords);
+        console.log(`[analyze] Transcription complete: ${segments.length} segments, ${words.length} words`);
         if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
 
         // Caption timing depends on the audio stream covering the full VOD
@@ -157,6 +161,7 @@ export const analyzeVod = inngest.createFunction(
       }
 
       const peaks = await step.run("detect-peaks", async () => {
+        console.log(`[analyze] Stage 2/4: detecting peaks from ${filtered.length} segments`);
         await supabase.from("vods").update({ status: "analyzing" }).eq("id", vodId);
         const { data: vod } = await supabase.from("vods").select("title, chat_pulse").eq("id", vodId).single();
         const title = vod?.title || "Stream";
@@ -193,15 +198,18 @@ export const analyzeVod = inngest.createFunction(
             };
           });
 
+        console.log(`[analyze] Stage 3/4: generating coach report (${peaks.length} peaks, ${priorReports.length} prior reports)`);
         const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined);
         if (!report) {
           throw new Error("Failed to generate coaching report — AI returned invalid response");
         }
+        console.log(`[analyze] Coach report generated: score=${report.overall_score}`);
         return report;
       });
 
       // Step 4: Save results + record usage
       await step.run("save", async () => {
+        console.log(`[analyze] Stage 4/4: saving results for vod=${vodId}`);
         const now = new Date();
         const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -329,8 +337,10 @@ export const analyzeVod = inngest.createFunction(
     } catch (err) {
       // Mark the VOD as failed so the user can see it and retry —
       // without this, the VOD would be stuck in "transcribing" or "analyzing" forever.
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`[inngest] analyze-vod failed for ${vodId}:`, message);
+      const message = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      console.error(`[analyze] FAILED vod=${vodId} user=${userId}:`, message);
+      if (stack) console.error(`[analyze] Stack:`, stack);
 
       await supabase.from("vods").update({
         status: "failed",
