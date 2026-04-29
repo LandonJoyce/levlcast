@@ -832,6 +832,156 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
   return passThrough;
 }
 
+export interface VodSegmentList {
+  urls: string[];
+  /** VOD-relative start time (seconds) of each segment, from #EXTINF cumulative sum */
+  startTimes: number[];
+}
+
+/**
+ * Fetch the full segment list from a Twitch VOD's audio-only HLS playlist.
+ * Returns segment URLs and their VOD-relative start times so callers can
+ * slice the list into time-bounded chunks without re-fetching the M3U8.
+ */
+export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegmentList> {
+  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  const gqlRes = await fetch("https://gql.twitch.tv/gql", {
+    method: "POST",
+    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      operationName: "PlaybackAccessToken",
+      query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
+        videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) {
+          value
+          signature
+        }
+      }`,
+      variables: { vodID: vodId, playerType: "site" },
+    }),
+  });
+
+  if (!gqlRes.ok) {
+    const body = await gqlRes.text();
+    throw new Error(`Twitch GQL failed: ${gqlRes.status} — ${body.slice(0, 200)}`);
+  }
+  const gqlData = await gqlRes.json();
+  const token = gqlData.data?.videoPlaybackAccessToken;
+  if (!token) {
+    throw new Error(
+      "Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or DMCA restricted. " +
+      "Check Twitch Video Producer to confirm the VOD is publicly accessible."
+    );
+  }
+
+  const usherParams = new URLSearchParams({
+    allow_source: "true",
+    allow_audio_only: "true",
+    allow_spectre: "true",
+    player: "twitchweb",
+    playlist_include_framerate: "true",
+    sig: token.signature,
+    token: token.value,
+  });
+
+  const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
+  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+
+  const masterLines = (await masterRes.text()).split("\n");
+  let streamUrl = "";
+  for (let i = 0; i < masterLines.length; i++) {
+    if (masterLines[i].includes("audio_only") || masterLines[i].includes('VIDEO="audio_only"')) {
+      for (let j = i + 1; j < masterLines.length; j++) {
+        if (masterLines[j].trim() && !masterLines[j].startsWith("#")) {
+          streamUrl = masterLines[j].trim();
+          break;
+        }
+      }
+      break;
+    }
+  }
+  if (!streamUrl) {
+    for (let i = masterLines.length - 1; i >= 0; i--) {
+      const line = masterLines[i].trim();
+      if (line && !line.startsWith("#") && line.startsWith("http")) { streamUrl = line; break; }
+    }
+  }
+  if (!streamUrl) throw new Error("No audio stream found in Twitch VOD");
+
+  const subRes = await fetch(streamUrl);
+  if (!subRes.ok) throw new Error(`Sub-playlist fetch failed: ${subRes.status}`);
+  const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
+  const subLines = (await subRes.text()).split("\n");
+
+  const urls: string[] = [];
+  const startTimes: number[] = [];
+  let cursor = 0;
+
+  for (let i = 0; i < subLines.length; i++) {
+    const line = subLines[i].trim();
+    if (line.startsWith("#EXTINF:")) {
+      const dur = parseFloat(line.slice(8));
+      for (let j = i + 1; j < subLines.length; j++) {
+        const seg = subLines[j].trim();
+        if (!seg || seg.startsWith("#")) continue;
+        urls.push(seg.startsWith("http") ? seg : baseUrl + seg);
+        startTimes.push(cursor);
+        cursor += isNaN(dur) ? 0 : dur;
+        i = j;
+        break;
+      }
+    }
+  }
+
+  if (urls.length === 0) throw new Error("No segments found in VOD playlist");
+  console.log(`[twitch] segment list: ${urls.length} segments, ~${Math.round(cursor)}s for VOD ${vodId}`);
+  return { urls, startTimes };
+}
+
+/**
+ * Stream a specific list of segment URLs into a PassThrough — no disk writes.
+ * Throws on repeated failures rather than silently skipping to prevent
+ * caption timestamp drift (each skipped segment shifts all subsequent timestamps).
+ */
+export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough {
+  const passThrough = new PassThrough();
+
+  (async () => {
+    for (let i = 0; i < segmentUrls.length; i++) {
+      const url = segmentUrls[i];
+      let success = false;
+      let lastErr: unknown = null;
+
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        try {
+          const segRes = await fetch(url, { signal: controller.signal });
+          if (!segRes.ok) { lastErr = new Error(`HTTP ${segRes.status}`); continue; }
+          const buf = Buffer.from(await segRes.arrayBuffer());
+          passThrough.write(buf);
+          success = true;
+        } catch (err) {
+          lastErr = err;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+
+      if (!success) {
+        const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+        throw new Error(
+          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries — ${msg}. ` +
+          `Skipping it would misalign every subsequent caption timestamp; please retry.`
+        );
+      }
+    }
+    passThrough.end();
+  })().catch((err) => passThrough.destroy(err));
+
+  return passThrough;
+}
+
 // ─── Chat Replay ────────────────────────────────────────────────────────────
 
 export interface ChatMessage {

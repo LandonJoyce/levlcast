@@ -12,7 +12,8 @@
 
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
+import { getTwitchVodSegmentList, streamSegmentsToPassThrough, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
+import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
@@ -47,17 +48,12 @@ export const analyzeVod = inngest.createFunction(
     const supabase = createAdminClient();
 
     try {
-      // Step 1: Stream audio directly to Deepgram — no disk writes, no disk space issues.
-      // Word-level timestamps are persisted to vods.word_timestamps inside this step
-      // (not returned) — keeping them out of inter-step state avoids Inngest's
-      // ~4MB JSON cap, which 30k+ word entries would push against.
-      //
-      // Game category is detected from the VOD title and the corresponding
-      // jargon list is boosted into Deepgram via the keywords param so terms
-      // like "desync", "headshot", or "clutch" stop getting transcribed as
-      // generic English ("this is decent", "head shot," etc.).
-      const segments = await step.run("transcribe", async () => {
-        console.log(`[analyze] Stage 1/4: transcribing vod=${vodId} user=${userId}`);
+      // Step 1a: Resolve segment URLs + timing — fast (no audio download), just M3U8 fetch.
+      // Segment list is stored in Inngest step state (~1-2MB for 8hr VODs, under the 4MB cap).
+      // Game keywords and category are detected here so chunk steps can use them without
+      // re-reading the VOD title from the DB each time.
+      const segmentSetup = await step.run("get-vod-segments", async () => {
+        console.log(`[analyze] Stage 1/4: fetching segment list for vod=${vodId} user=${userId}`);
         const { data: vod } = await supabase
           .from("vods")
           .select("twitch_vod_id, title, duration_seconds")
@@ -71,49 +67,74 @@ export const analyzeVod = inngest.createFunction(
 
         const detection = detectGame(vod.title ?? "");
         const keywords = keywordsForGame(detection);
-        console.log(
-          `[analyze] Detected game="${detection.gameId ?? "(unknown)"}" category="${detection.category}" — boosting ${keywords.length} keywords`
-        );
+        console.log(`[analyze] game="${detection.gameId ?? "(unknown)"}" category="${detection.category}" — ${keywords.length} keywords`);
 
-        // Use the user's stored OAuth token so Twitch GQL grants a playback token
-        // even for VODs where anonymous requests are blocked.
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("twitch_access_token, twitch_refresh_token")
-          .eq("id", userId)
-          .single();
-        let twitchUserToken = profile?.twitch_access_token || undefined;
+        await supabase.from("vods").update({ game_category: detection.category }).eq("id", vodId);
 
-        let transcribeResult: { segments: Awaited<ReturnType<typeof transcribePassThrough>>["segments"]; words: Awaited<ReturnType<typeof transcribePassThrough>>["words"] };
-        try {
-          transcribeResult = await transcribePassThrough(streamTwitchVodAudio(vod.twitch_vod_id, twitchUserToken), keywords);
-        } catch (err) {
-          if (err instanceof TwitchAuthError && profile?.twitch_refresh_token) {
-            console.log(`[analyze] Twitch token expired — refreshing and retrying`);
-            const refreshed = await refreshTwitchToken(profile.twitch_refresh_token);
-            twitchUserToken = refreshed.accessToken;
-            await supabase.from("profiles").update({
-              twitch_access_token: refreshed.accessToken,
-              twitch_refresh_token: refreshed.refreshToken,
-            }).eq("id", userId);
-            transcribeResult = await transcribePassThrough(streamTwitchVodAudio(vod.twitch_vod_id, twitchUserToken), keywords);
-          } else if (err instanceof TwitchAuthError) {
-            throw new Error("Twitch connection expired and refresh token missing — user must log out and back in.");
-          } else {
-            throw err;
+        const list = await getTwitchVodSegmentList(vod.twitch_vod_id);
+        return {
+          urls: list.urls,
+          startTimes: list.startTimes,
+          keywords,
+          gameCategory: detection.category,
+          duration_seconds: vod.duration_seconds as number | null,
+        };
+      });
+
+      // Split into 15-minute chunks so each Inngest step completes well within
+      // Vercel's 10-minute function invocation limit. A single-chunk VOD (<15 min)
+      // behaves identically to the old single-step approach.
+      const CHUNK_SECONDS = 900;
+      const chunks: Array<{ urls: string[]; timeOffset: number }> = [];
+      {
+        let chunkUrls: string[] = [];
+        let chunkStartIdx = 0;
+        for (let i = 0; i < segmentSetup.urls.length; i++) {
+          chunkUrls.push(segmentSetup.urls[i]);
+          const nextStart = i + 1 < segmentSetup.startTimes.length
+            ? segmentSetup.startTimes[i + 1]
+            : segmentSetup.startTimes[i] + 10;
+          const chunkDuration = nextStart - segmentSetup.startTimes[chunkStartIdx];
+          if (chunkDuration >= CHUNK_SECONDS || i === segmentSetup.urls.length - 1) {
+            chunks.push({ urls: [...chunkUrls], timeOffset: segmentSetup.startTimes[chunkStartIdx] });
+            chunkStartIdx = i + 1;
+            chunkUrls = [];
           }
         }
-        const { segments, words } = transcribeResult;
-        console.log(`[analyze] Transcription complete: ${segments.length} segments, ${words.length} words`);
-        if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+      }
+      console.log(`[analyze] ${chunks.length} transcription chunks for ${segmentSetup.urls.length} segments`);
 
-        // Caption timing depends on the audio stream covering the full VOD
-        // duration. If Deepgram's last word lands suspiciously early,
-        // the audio HLS likely truncated — every caption from then on
-        // would appear before its audio. Better to fail loud than ship
-        // misaligned captions.
-        const vodDuration = (vod.duration_seconds as number | null) ?? 0;
-        const lastWordEnd = words.length > 0 ? words[words.length - 1].end : 0;
+      // Step 1b+: Each chunk is transcribed in its own step — timestamps are
+      // adjusted by the chunk's timeOffset so they're accurate within the full VOD.
+      // Inngest persists each chunk result so retries skip already-done chunks.
+      const allChunkSegments: TranscriptSegment[][] = [];
+      const allChunkWords: CaptionWord[][] = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const result = await step.run(`transcribe-chunk-${i}`, async () => {
+          console.log(`[analyze] Chunk ${i + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s`);
+          const stream = streamSegmentsToPassThrough(chunk.urls);
+          const { segments, words } = await transcribePassThrough(stream, segmentSetup.keywords);
+          return {
+            segments: segments.map((s) => ({ ...s, start: s.start + chunk.timeOffset, end: s.end + chunk.timeOffset })),
+            words: words.map((w) => ({ ...w, start: w.start + chunk.timeOffset, end: w.end + chunk.timeOffset })),
+          };
+        });
+        allChunkSegments.push(result.segments);
+        allChunkWords.push(result.words);
+      }
+
+      const allWords = allChunkWords.flat();
+      const segments = ((): TranscriptSegment[] => {
+        const merged = allChunkSegments.flat();
+        console.log(`[analyze] Transcription complete: ${merged.length} segments, ${allWords.length} words across ${chunks.length} chunks`);
+        if (merged.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+
+        // Validate coverage — if the last word ends suspiciously early the audio
+        // stream was likely truncated, which would shift all subsequent caption timestamps.
+        const vodDuration = segmentSetup.duration_seconds ?? 0;
+        const lastWordEnd = allWords.length > 0 ? allWords[allWords.length - 1].end : 0;
         if (vodDuration > 120 && lastWordEnd > 0 && lastWordEnd < vodDuration * 0.5) {
           throw new Error(
             `Transcript covers only ${Math.round(lastWordEnd)}s of a ${Math.round(vodDuration)}s VOD — ` +
@@ -126,13 +147,13 @@ export const analyzeVod = inngest.createFunction(
             `(${Math.round((lastWordEnd / vodDuration) * 100)}% coverage) — captions for late moments may be absent`
           );
         }
+        return merged;
+      })();
 
-        const update: Record<string, unknown> = { game_category: detection.category };
-        if (words.length > 0) update.word_timestamps = words;
-        await supabase.from("vods").update(update).eq("id", vodId);
-
-        return segments;
-      });
+      // Persist word timestamps for caption rendering
+      if (allWords.length > 0) {
+        await supabase.from("vods").update({ word_timestamps: allWords }).eq("id", vodId);
+      }
 
       // Step 1.5: Fetch & bucket Twitch chat replay. Best-effort — chat is
       // platform-integration ground truth that AI wrappers can't access,
