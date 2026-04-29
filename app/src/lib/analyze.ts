@@ -231,11 +231,11 @@ If a moment has all three, it is a clip. If it is missing any one of them, it is
 2. COMEDY — Unexpected twist, absurd observation, self-aware joke, timing that lands perfectly. The streamer is either the punchline or delivers one. Viewer reaction: "I'm dead."
    Viral trigger: people share things that made them laugh out loud.
 
-3. RAGE/TILT — Genuine frustration, salt, disbelief at the game or a situation. NOT performed anger — real emotional response. The best rage clips have an escalation arc. Viewer reaction: "this is literally me."
-   Viral trigger: extreme relatability — everyone has felt this.
+3. RAGE/TILT — Genuine frustration, salt, disbelief at the game or a situation. NOT performed anger — real emotional response. The best rage clips follow a 3-stage arc: (1) TRIGGER — something specific happens that starts the frustration; (2) ESCALATION — mounting frustration, shorter sentences, word repetition, the streamer narrating their own tilt ("I'm actually tilting right now", "this is genuinely griefing", "I'm going insane", "I'm cooked"); (3) PEAK + AFTERMATH — the explosion, then either self-aware laughter at themselves or continued escalation. The AFTERMATH is critical — the moment the streamer laughs at themselves or decides to keep going anyway is the most human part and what gets shared. A clip that catches all three stages beats a clip that catches only the peak. Viewer reaction: "this is literally me."
+   Viral trigger: extreme relatability — everyone has felt this exact feeling, and the aftermath makes it safe to laugh about.
 
-4. CLUTCH — High-stakes moment that looked lost then flipped, or required obvious skill to pull off. The setup (it looks bad) is as important as the payoff (it works). Viewer reaction: "how did they do that."
-   Viral trigger: people share skill they want others to see.
+4. CLUTCH — High-stakes moment that looked LOST then flipped. CRITICAL: the clip MUST start at the worst point — the moment it looks most hopeless, most wrong, most over. If you start the clip after the clutch is already in progress, you lose the entire hook. The viewer needs to see the nadir first. Setup (it looks lost) → Build (it gets worse OR the streamer rallies) → Payoff (it works against all odds). Viewer reaction: "how did they do that."
+   Viral trigger: people share survival and skill moments they want their friends to witness.
 
 5. HOT TAKE — Bold opinion stated with conviction. Controversial read, unpopular opinion, calling something out. The streamer takes a real position, not a soft one. Viewer reaction: "I agree / I strongly disagree."
    Viral trigger: opinion content drives comments and shares.
@@ -259,6 +259,7 @@ HIGH-CONFIDENCE clip signals (almost always a clip):
 - Disbelief: "there is no way", "how is that even legal", "that is actually insane", "I'm not making this up"
 - Story payoff signals: "and then—", "so what happened was—", "I kid you not"
 - Self-roast or self-awareness: streamer laughing at their own mistake or calling themselves out
+- TENSION-SNAP: a pause of 3-8 seconds (marked "--- Xs pause ---" in the transcript) immediately before a high-energy utterance. The silence is the setup — it signals something happened that left the streamer momentarily speechless before they exploded. This is especially powerful as the clip's opening hook. Do NOT discard this pattern as "dead air" — it is the calm before the storm and viewers feel it.
 
 MEDIUM-CONFIDENCE signals (needs context check):
 - Rhetorical questions with stakes: "why would you ever—", "who decided that—"
@@ -270,7 +271,7 @@ NOT a clip (skip immediately):
 - Reading donations or subs without a reaction that stands alone
 - Explaining game mechanics with no emotional hook
 - Any moment where speech is slow, low-energy, or monotone
-- Silences longer than 5 seconds inside the clip window
+- Extended silence (5+ seconds) in the MIDDLE of the clip with no setup function — dead air that kills momentum mid-arc. Exception: a silence at the START of the clip that serves as a tension-snap hook (see HIGH-CONFIDENCE above) is not dead air — it IS the hook.
 - Moments that need 10+ minutes of context to understand why they matter
 
 ━━━ SCORING ━━━
@@ -283,6 +284,8 @@ Be harsh. Most streams have 1-3 real clips. Padding with weak moments makes the 
 - Below 0.60: Do not include.
 
 Ask yourself for every candidate: "Would I stop scrolling for this if I had never heard of this streamer?" If the honest answer is no, the score is below 0.60.
+
+CHAT PULSE SCORING: If a chat pulse section is present in the input above, match its timestamps to your clip candidates. Any clip whose window overlaps a notable chat activity spike earns +0.05 to +0.10 to its score. Chat spikes are the most reliable external signal that a moment actually landed with a live audience — even a verbally understated moment that lit up chat is worth more than a high-energy moment that got no response. A chat spike with no obvious verbal signal is a high-priority candidate: something happened that the streamer may have undersold.
 
 ━━━ CLIP BOUNDARIES — CRITICAL ━━━
 
@@ -300,6 +303,8 @@ Never cut mid-utterance. Land on complete sentences.
 Timestamps are plain seconds (e.g. 234 = 234 seconds into the stream).
 Output start and end as plain integers. Minimum clip: 20 seconds.
 No emojis. Clean text only.
+
+TIGHTNESS CHECK — before finalizing each clip, ask: "Can I trim 5-10 seconds from the front without losing the hook or context?" Start the clip at the FIRST moment a stranger would feel something — confusion, curiosity, or energy — not the first moment of calm setup narration. A 40s clip that hooks in 2 seconds beats a 65s clip with 20s of context preamble. Trim aggressively from the front. Be more generous at the end — let the reaction breathe.
 
 ━━━ NO QUOTES — GLOBAL RULE (CRITICAL) ━━━
 
@@ -328,7 +333,7 @@ Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
     "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
     "reason": "<2-3 sentences: what is the arc, what emotional beats anchor it, why a stranger would care. No quoted dialogue.>",
     "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue.>",
-    "caption": "<TikTok/Shorts caption under 150 chars — conversational tone, 3-4 relevant hashtags. Describes the moment. Never a quote. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title — never guess the game from transcript context. Use #gaming, #Twitch, #PVP, #clutch, etc. instead of a game name you are not certain of.>"
+    "caption": "<TikTok/Shorts caption under 150 chars. Use one of these proven formats: (1) Relatability: 'when the game does this to you 💀' or 'POV: [specific situation]'; (2) Escalation tease: 'it started as [mild thing] then...'; (3) Statement hook: '[what happened] and I am not okay'. Hashtags at the end only — 3-4 max. Never quote the streamer. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title. Use #gaming #Twitch #clutch #PVP #FPS etc. instead of a game you are not certain of.>"
   }
 ]
 
