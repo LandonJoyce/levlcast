@@ -36,7 +36,7 @@ export default async function SettingsPage({
   const params = await searchParams;
 
   const [{ data: profile }, { data: subscription }, { data: connections }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase.from("profiles").select("*, stripe_customer_id, paypal_subscription_id").eq("id", user.id).single(),
     supabase.from("subscriptions").select("status, subscription_expires_at").eq("user_id", user.id).maybeSingle(),
     supabase.from("social_connections").select("platform").eq("user_id", user.id),
   ]);
@@ -113,6 +113,7 @@ export default async function SettingsPage({
               analysesLimit={limits.analyses_per_month}
               clipsUsed={usage.clips_this_month}
               clipsLimit={limits.clips_per_month}
+              hasStripeSubscription={!!profile?.stripe_customer_id}
               hasPaypalSubscription={!!profile?.paypal_subscription_id}
               subscriptionExpiresAt={subscription?.subscription_expires_at ?? profile?.subscription_expires_at ?? null}
               subscriptionStatus={subscription?.status ?? null}
