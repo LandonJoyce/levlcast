@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { sendWelcomeEmail } from "@/lib/email";
 
 /**
  * OAuth callback — exchanges the auth code for a session,
@@ -54,6 +55,14 @@ export async function GET(request: NextRequest) {
   // Use admin client to bypass RLS for profile creation
   const admin = createAdminClient();
 
+  // Check if this is a new user before upserting (upsert alone can't tell us)
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isNewUser = !existingProfile;
+
   const { error: profileError } = await admin.from("profiles").upsert(
     {
       id: user.id,
@@ -73,6 +82,14 @@ export async function GET(request: NextRequest) {
     // Profile failed — redirect to login with error so user sees a message
     // instead of landing on a broken dashboard with no profile row
     return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
+  }
+
+  // Fire welcome email for new users — don't await so it doesn't block the redirect
+  if (isNewUser && user.email) {
+    const displayName = meta.nickname || meta.full_name || meta.name || meta.preferred_username || "there";
+    sendWelcomeEmail(user.email, displayName).catch((err) => {
+      console.error("[auth/callback] Welcome email failed:", err instanceof Error ? err.message : err);
+    });
   }
 
   return response;
