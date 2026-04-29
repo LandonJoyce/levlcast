@@ -294,6 +294,7 @@ export default async function VodsPage({
                       vodTitle={v.title}
                       durationSeconds={v.duration_seconds ?? 0}
                       hasProcessing={hasProcessing}
+                      userPlan={usage.plan}
                     />
                   ) : null}
                   {v.status === "ready" && (

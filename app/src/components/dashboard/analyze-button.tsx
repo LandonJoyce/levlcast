@@ -11,12 +11,14 @@ export function AnalyzeButton({
   vodTitle,
   durationSeconds,
   hasProcessing,
+  userPlan,
 }: {
   vodId: string;
   status: string;
   vodTitle: string;
   durationSeconds: number;
   hasProcessing?: boolean;
+  userPlan?: string;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -61,6 +63,7 @@ export function AnalyzeButton({
         vodId={vodId}
         vodTitle={vodTitle}
         durationSeconds={durationSeconds}
+        userPlan={userPlan}
         onUpgrade={(reason) => {
           setUpgradeReason(reason);
           setUpgradeOpen(true);

@@ -69,6 +69,34 @@ export async function POST(request: Request) {
     }
   }
 
+  // Free users can analyze at most 2 hours of audio per job.
+  // Beyond that, Deepgram costs scale linearly and a single 8-hour free
+  // analysis costs 4× more than the free tier is designed for.
+  if (!hasRange) {
+    const { data: vodMeta } = await supabase
+      .from("vods")
+      .select("duration_seconds")
+      .eq("id", vodId)
+      .eq("user_id", user.id)
+      .single();
+
+    const FREE_MAX_SECONDS = 7200; // 2 hours
+    if (
+      usage.plan !== "pro" &&
+      vodMeta?.duration_seconds &&
+      vodMeta.duration_seconds > FREE_MAX_SECONDS
+    ) {
+      return NextResponse.json(
+        {
+          error: "vod_too_long",
+          message: "Free accounts can analyze streams up to 2 hours. Upgrade to Pro to analyze longer streams.",
+          upgrade: true,
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   // Atomic status claim — prevents duplicate jobs
   const { data: claimedVod, error: claimError } = await supabase
     .from("vods")

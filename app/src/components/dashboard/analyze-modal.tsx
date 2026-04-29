@@ -10,8 +10,11 @@ interface AnalyzeModalProps {
   vodId: string;
   vodTitle: string;
   durationSeconds: number;
+  userPlan?: string;
   onUpgrade: (reason: string) => void;
 }
+
+const FREE_MAX_SECONDS = 7200; // 2 hours
 
 type Preset = "full" | "first_hour" | "last_hour" | "custom";
 
@@ -47,6 +50,7 @@ export function AnalyzeModal({
   vodId,
   vodTitle,
   durationSeconds,
+  userPlan,
   onUpgrade,
 }: AnalyzeModalProps) {
   const [preset, setPreset] = useState<Preset>("full");
@@ -74,6 +78,8 @@ export function AnalyzeModal({
   const rangeSeconds = Math.max(0, endSeconds - startSeconds);
   const isFull = preset === "full";
   const estimatedMin = estimateMinutes(durationSeconds, isFull ? durationSeconds : rangeSeconds);
+  const isFree = userPlan !== "pro";
+  const tooLongForFree = isFree && isFull && durationSeconds > FREE_MAX_SECONDS;
 
   let validationError: string | null = null;
   if (preset === "custom") {
@@ -252,9 +258,14 @@ export function AnalyzeModal({
               We transcribe the full stream first, then run coaching analysis on your selected section only.
             </div>
           )}
-          {isFull && durationSeconds >= 7200 && (
+          {isFull && durationSeconds >= 7200 && !tooLongForFree && (
             <div style={{ fontSize: 11, color: "#F59E0B", marginTop: 8, lineHeight: 1.5 }}>
               Long stream detected — analysis runs in the background. You can close this page and come back when it's done.
+            </div>
+          )}
+          {tooLongForFree && (
+            <div style={{ fontSize: 11, color: "#F87171", marginTop: 8, lineHeight: 1.5 }}>
+              Free accounts can only analyze streams up to 2 hours. Select "First Hour" or "Custom Range", or upgrade to Pro to analyze the full stream.
             </div>
           )}
         </div>
@@ -292,19 +303,32 @@ export function AnalyzeModal({
           >
             Cancel
           </button>
-          <button
-            onClick={handleAnalyze}
-            disabled={analyzing || !!validationError}
-            style={{
-              padding: "10px 22px", borderRadius: 8, border: "none",
-              background: "#22D3EE", color: "#001318", fontSize: 13, fontWeight: 700,
-              cursor: analyzing || validationError ? "not-allowed" : "pointer",
-              opacity: analyzing || validationError ? 0.6 : 1,
-              transition: "opacity 150ms",
-            }}
-          >
-            {analyzing ? "Starting…" : "Analyze Stream"}
-          </button>
+          {tooLongForFree ? (
+            <button
+              onClick={() => { onClose(); onUpgrade("Upgrade to Pro to analyze streams longer than 2 hours."); }}
+              style={{
+                padding: "10px 22px", borderRadius: 8, border: "none",
+                background: "#22D3EE", color: "#001318", fontSize: 13, fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Upgrade to Pro
+            </button>
+          ) : (
+            <button
+              onClick={handleAnalyze}
+              disabled={analyzing || !!validationError}
+              style={{
+                padding: "10px 22px", borderRadius: 8, border: "none",
+                background: "#22D3EE", color: "#001318", fontSize: 13, fontWeight: 700,
+                cursor: analyzing || validationError ? "not-allowed" : "pointer",
+                opacity: analyzing || validationError ? 0.6 : 1,
+                transition: "opacity 150ms",
+              }}
+            >
+              {analyzing ? "Starting…" : "Analyze Stream"}
+            </button>
+          )}
         </div>
       </div>
     </div>
