@@ -461,12 +461,17 @@ export async function downloadTwitchVodVideo(
   // Step 1: Get playback access token (15s timeout)
   // Use the web player's anonymous client ID — same as yt-dlp/streamlink/TwitchDownloader.
   // App Access Tokens (client_credentials) return 400 on this internal GQL endpoint.
+  // Include the user's OAuth token when available so subscriber-only VODs (including
+  // the creator's own content set to subs-only) can be accessed.
   const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
   const gqlCtrl = withTimeout(15000);
   const gqlHeaders: Record<string, string> = {
     "Client-Id": GQL_CLIENT_ID,
     "Content-Type": "application/json",
   };
+  if (twitchUserToken) {
+    gqlHeaders["Authorization"] = `Bearer ${twitchUserToken}`;
+  }
 
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
@@ -495,7 +500,15 @@ export async function downloadTwitchVodVideo(
     console.error(`[twitch] downloadTwitchVodVideo GQL errors for VOD ${vodId}:`, JSON.stringify(gqlData.errors).slice(0, 400));
   }
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
+  if (!token) {
+    const authed = !!twitchUserToken;
+    console.error(`[twitch] null playback token for VOD ${vodId} (authenticated: ${authed}) — likely subscriber-only or deleted`);
+    throw new Error(
+      authed
+        ? "Twitch did not return a playback token. This VOD may be subscriber-only or has been deleted. Try logging out and back in, then retry."
+        : "Twitch did not return a playback token. This VOD may be subscriber-only, deleted, or Twitch's API may be temporarily down. Try again in a few minutes."
+    );
+  }
 
   // Step 2: Get M3U8 master playlist (10s timeout)
   const usherParams = new URLSearchParams({
@@ -696,10 +709,13 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
   (async () => {
     // Anonymous web player client ID — same approach as yt-dlp/streamlink.
     // App Access Tokens (client_credentials) are rejected with 400 by this endpoint.
+    // Include user token if available so subscriber-only VODs can be transcribed.
     const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+    const streamGqlHeaders: Record<string, string> = { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" };
+    if (twitchUserToken) streamGqlHeaders["Authorization"] = `Bearer ${twitchUserToken}`;
     const gqlRes = await fetch("https://gql.twitch.tv/gql", {
       method: "POST",
-      headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+      headers: streamGqlHeaders,
       body: JSON.stringify({
         operationName: "PlaybackAccessToken",
         query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
