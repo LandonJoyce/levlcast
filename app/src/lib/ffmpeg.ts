@@ -9,6 +9,7 @@ import {
   sliceWordsForClip,
   groupWordsIntoCards,
   buildCaptionFilters,
+  type CaptionCard,
 } from "./captions";
 
 export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
@@ -42,9 +43,11 @@ async function getCaptionFont(): Promise<string | null> {
 /**
  * Re-encode an MP4 clip into 1080×1920 (9:16) vertical format.
  *
- * Captions are NOT added here — they are baked into the source clip during
- * cutClip() so every clip (Free + Pro, downloaded or exported) has them and
- * we don't pay a second drawtext pass.
+ * Captions are re-burned here at the correct scale for 1080px wide vertical
+ * output. The horizontal R2 clip has captions burned for the original 16:9
+ * width — after a 9:16 center-crop the horizontal text gets sliced off at
+ * both sides and becomes unreadable. We burn fresh captions sized for the
+ * vertical frame instead.
  *
  * Layout options:
  *   no_cam  — center-crop gameplay to fill the full frame
@@ -55,7 +58,13 @@ async function getCaptionFont(): Promise<string | null> {
  */
 export async function exportClipVertical(
   inputFilePath: string,
-  layout: StreamLayout
+  layout: StreamLayout,
+  captionData?: {
+    vodWords: CaptionWord[];
+    clipStart: number;
+    clipEnd: number;
+    style?: CaptionStyle;
+  }
 ): Promise<Buffer> {
   const ffmpegPath = await getFFmpegPath();
 
@@ -67,9 +76,48 @@ export async function exportClipVertical(
   const gameH = Math.round(H * 0.62);  // 1190 px
   const camH  = H - gameH;             // 730 px
 
-  // Audio is included in the filter_complex so -map "[aout]" is consistent
-  // and there's no conflict with a separate -af flag.
-  const filterComplex = buildVerticalFilterComplex(layout, W, H, gameH, camH);
+  // Build vertical captions if word data is available.
+  // Cards are clip-relative (0 = clip start). The export processes the full
+  // clip (no -ss offset), so no timestamp offset is needed — unlike cutClip.
+  let captionFilter = "";
+  let captionFiles: string[] = [];
+  if (captionData?.vodWords?.length) {
+    try {
+      const fontPath = await getCaptionFont();
+      if (fontPath) {
+        const sliced = sliceWordsForClip(captionData.vodWords, captionData.clipStart, captionData.clipEnd);
+        const cards = groupWordsIntoCards(sliced);
+        if (cards.length > 0) {
+          // Y position within the game area so captions don't land in the facecam.
+          // For cam_tr/tl the game is at the bottom (starts at y=camH).
+          const isGameBottom = layout === "cam_tr" || layout === "cam_tl";
+          const yExpr = isGameBottom
+            ? `(${camH}+${gameH}*0.72)-(text_h/2)`
+            : layout === "no_cam"
+              ? `(h*0.72)-(text_h/2)`
+              : `(${gameH}*0.72)-(text_h/2)`;
+
+          const built = await buildCaptionFilters(cards, {
+            fontPath,
+            videoWidth: W,
+            videoHeight: H,
+            tempDir,
+            style: captionData.style ?? "bold",
+            yExpr,
+            fontSize: 72,
+          });
+          captionFilter = built.filter;
+          captionFiles = built.textFiles;
+          console.log(`[export] Vertical captions: ${cards.length} cards, layout=${layout}`);
+        }
+      }
+    } catch (err) {
+      console.warn("[export] Caption build failed, exporting without captions:", err);
+      captionFilter = "";
+    }
+  }
+
+  const filterComplex = buildVerticalFilterComplex(layout, W, H, gameH, camH, captionFilter);
 
   try {
     const cmd = [
@@ -104,6 +152,7 @@ export async function exportClipVertical(
     return await readFile(outputPath);
   } finally {
     await unlink(outputPath).catch(() => {});
+    for (const f of captionFiles) await unlink(f).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");
       await rmdir(tempDir);
@@ -116,15 +165,18 @@ function buildVerticalFilterComplex(
   W: number,
   H: number,
   gameH: number,
-  camH: number
+  camH: number,
+  captionFilter: string = ""
 ): string {
   const audioChain = `[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]`;
   const gameCrop = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${gameH},setpts=PTS-STARTPTS`;
+  // Caption filter starts with "," — appended directly before [vout] label
+  const cap = captionFilter; // e.g. ",drawtext=...,drawtext=..."
 
   let videoChain: string;
 
   if (layout === "no_cam") {
-    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS[vout]`;
+    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS${cap}[vout]`;
   } else {
     const camCorners: Record<string, string> = {
       cam_br: `iw*0.75:ih*0.75:iw*0.75:ih*0.75`,
@@ -136,9 +188,9 @@ function buildVerticalFilterComplex(
     const isTop = layout === "cam_tr" || layout === "cam_tl";
 
     if (isTop) {
-      videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2[vout]`;
+      videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2${cap}[vout]`;
     } else {
-      videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2[vout]`;
+      videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2${cap}[vout]`;
     }
   }
 

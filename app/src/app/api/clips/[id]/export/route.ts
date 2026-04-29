@@ -11,6 +11,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { exportClipVertical, StreamLayout } from "@/lib/ffmpeg";
+import type { CaptionWord } from "@/lib/captions";
 import { writeFile, unlink, mkdtemp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -39,13 +40,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const admin = createAdminClient();
   const { data: clip } = await admin
     .from("clips")
-    .select("id, title, video_url, status")
+    .select("id, title, video_url, status, vod_id, start_time_seconds, end_time_seconds")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
   if (!clip || !clip.video_url) {
     return NextResponse.json({ error: "Clip not found or not ready" }, { status: 404 });
+  }
+
+  // Fetch VOD word timestamps for vertical caption re-burn
+  let vodWords: CaptionWord[] | null = null;
+  if (clip.vod_id) {
+    const { data: vod } = await admin
+      .from("vods")
+      .select("word_timestamps")
+      .eq("id", clip.vod_id)
+      .single();
+    vodWords = (vod?.word_timestamps as CaptionWord[] | null) ?? null;
   }
 
   // Prevent SSRF — only fetch from our R2 bucket
@@ -69,7 +81,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     let outputBuffer: Buffer;
     try {
-      outputBuffer = await exportClipVertical(inputPath, layout);
+      const captionData = vodWords && clip.start_time_seconds != null && clip.end_time_seconds != null
+        ? { vodWords, clipStart: clip.start_time_seconds as number, clipEnd: clip.end_time_seconds as number }
+        : undefined;
+      outputBuffer = await exportClipVertical(inputPath, layout, captionData);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[export] FFmpeg failed for clip ${id} layout ${layout}:`, msg);

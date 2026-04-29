@@ -157,14 +157,26 @@ export type CaptionStyle = "bold" | "boxed" | "minimal" | "classic" | "neon" | "
 
 export interface CaptionRenderConfig {
   fontPath: string;
-  /** Output frame height in pixels. Caption sits at ~78% of this. */
+  /** Output frame height in pixels. */
   videoHeight: number;
-  /** Output frame width in pixels. Used to pick a font size that scales. */
+  /** Output frame width in pixels. */
   videoWidth: number;
   /** Where to write per-card textfiles. Caller controls cleanup. */
   tempDir: string;
   /** Visual style for the captions. Defaults to "bold". */
   style?: CaptionStyle;
+  /**
+   * Custom FFmpeg expression for the Y position of captions.
+   * Defaults to "(h*0.70)-(text_h/2)" (70% down the video).
+   * Override this for vertical exports where captions must land inside
+   * a specific layout zone (e.g. just the game area of a cam+game layout).
+   */
+  yExpr?: string;
+  /**
+   * Font size override. Defaults per style (bold=78, etc).
+   * Pass explicitly for vertical export (use ~72 for 1080px wide output).
+   */
+  fontSize?: number;
 }
 
 export interface CaptionRenderResult {
@@ -188,7 +200,7 @@ export async function buildCaptionFilters(
   if (cards.length === 0) return { filter: "", textFiles: [] };
 
   const style = config.style ?? "bold";
-  const yExpr = "(h*0.70)-(text_h/2)";
+  const yExpr = config.yExpr ?? "(h*0.70)-(text_h/2)";
 
   const parts: string[] = [];
   const textFiles: string[] = [];
@@ -202,7 +214,7 @@ export async function buildCaptionFilters(
 
     if (style === "boxed") {
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 68;
+      const fontSize = config.fontSize ?? 68;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
@@ -214,7 +226,7 @@ export async function buildCaptionFilters(
         `enable='${enable}'`;
     } else if (style === "minimal") {
       await writeFile(filePath, card.text);
-      const fontSize = 54;
+      const fontSize = config.fontSize ?? 54;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
@@ -224,9 +236,8 @@ export async function buildCaptionFilters(
         `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     } else if (style === "classic") {
-      // Bright yellow text with thick black stroke — classic subtitle look.
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 74;
+      const fontSize = config.fontSize ?? 74;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
@@ -236,9 +247,8 @@ export async function buildCaptionFilters(
         `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     } else if (style === "neon") {
-      // Bright cyan with matching dark border — high contrast pop.
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 70;
+      const fontSize = config.fontSize ?? 70;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
@@ -248,9 +258,8 @@ export async function buildCaptionFilters(
         `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     } else if (style === "fire") {
-      // Bright orange text with deep red/black border — energetic.
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 76;
+      const fontSize = config.fontSize ?? 76;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
@@ -260,9 +269,8 @@ export async function buildCaptionFilters(
         `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     } else if (style === "impact") {
-      // Maximum size, very thick stroke — fills the screen.
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 96;
+      const fontSize = config.fontSize ?? 96;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
@@ -272,9 +280,9 @@ export async function buildCaptionFilters(
         `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     } else {
-      // bold (default) — heavy white + thick black stroke.
+      // bold (default)
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 78;
+      const fontSize = config.fontSize ?? 78;
       drawtextArgs =
         `drawtext=` +
         `textfile=${filePath}:fontfile=${config.fontPath}:` +
