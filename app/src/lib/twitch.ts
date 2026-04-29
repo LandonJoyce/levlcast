@@ -188,17 +188,15 @@ export interface VodDownloadResult {
  * Used by Deepgram URL transcription to avoid downloading to disk.
  */
 export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: string): Promise<string> {
-  // When using a user's OAuth token the Client-Id must match the app that issued it.
-  // Our tokens are issued by TWITCH_CLIENT_ID (our registered app), so use that when
-  // authenticated. The web-player client ID only works for anonymous requests.
-  const gqlClientId = twitchUserToken
-    ? process.env.TWITCH_CLIENT_ID!
-    : "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  // Use our App Access Token (client_credentials Bearer) with our registered Client-Id.
+  // Twitch's GQL rejects third-party OAuth user tokens — the only reliable server-side
+  // approach is a first-party app token via client credentials.
+  const appToken = await getAppAccessToken();
   const gqlHeaders: Record<string, string> = {
-    "Client-Id": gqlClientId,
+    "Client-Id": process.env.TWITCH_CLIENT_ID!,
     "Content-Type": "application/json",
+    "Authorization": `Bearer ${appToken}`,
   };
-  if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
 
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
@@ -456,17 +454,13 @@ export async function downloadTwitchVodVideo(
   twitchUserToken?: string
 ): Promise<VodDownloadResult> {
   // Step 1: Get playback access token (15s timeout)
-  // When using a user token, Client-Id must match the app that issued it (our registered app).
-  // The web-player client ID only works for anonymous requests.
-  const gqlClientId = twitchUserToken
-    ? process.env.TWITCH_CLIENT_ID!
-    : "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  const appToken = await getAppAccessToken();
   const gqlCtrl = withTimeout(15000);
   const gqlHeaders: Record<string, string> = {
-    "Client-Id": gqlClientId,
+    "Client-Id": process.env.TWITCH_CLIENT_ID!,
     "Content-Type": "application/json",
+    "Authorization": `Bearer ${appToken}`,
   };
-  if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
 
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
@@ -689,14 +683,12 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
   const passThrough = new PassThrough();
 
   (async () => {
-    const gqlClientId = twitchUserToken
-      ? process.env.TWITCH_CLIENT_ID!
-      : "kimne78kx3ncx6brgo4mv6wki5h1ko";
+    const appToken = await getAppAccessToken();
     const gqlHeaders: Record<string, string> = {
-      "Client-Id": gqlClientId,
+      "Client-Id": process.env.TWITCH_CLIENT_ID!,
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${appToken}`,
     };
-    if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
 
     const gqlRes = await fetch("https://gql.twitch.tv/gql", {
       method: "POST",
