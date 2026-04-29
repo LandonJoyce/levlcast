@@ -154,12 +154,17 @@ export interface VodDownloadResult {
  * Get the audio-only M3U8 URL for a Twitch VOD without downloading it.
  * Used by Deepgram URL transcription to avoid downloading to disk.
  */
-export async function getTwitchVodAudioUrl(vodId: string): Promise<string> {
+export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: string): Promise<string> {
   const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  const gqlHeaders: Record<string, string> = {
+    "Client-Id": GQL_CLIENT_ID,
+    "Content-Type": "application/json",
+  };
+  if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
 
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
-    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+    headers: gqlHeaders,
     body: JSON.stringify({
       operationName: "PlaybackAccessToken",
       query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
@@ -403,16 +408,24 @@ function withTimeout(ms: number): AbortController {
 export async function downloadTwitchVodVideo(
   vodId: string,
   startSeconds: number,
-  endSeconds: number
+  endSeconds: number,
+  twitchUserToken?: string
 ): Promise<VodDownloadResult> {
   // Step 1: Get playback access token (15s timeout)
   // GQL endpoint is Twitch's unofficial internal API — it uses the web player
-  // client ID and does NOT accept app access tokens (client credentials).
+  // client ID. Anonymous requests are increasingly blocked by Twitch; passing
+  // the user's OAuth token in the Authorization header reliably works for their own VODs.
   const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
   const gqlCtrl = withTimeout(15000);
+  const gqlHeaders: Record<string, string> = {
+    "Client-Id": GQL_CLIENT_ID,
+    "Content-Type": "application/json",
+  };
+  if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
+
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
     method: "POST",
-    headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+    headers: gqlHeaders,
     body: JSON.stringify({
       operationName: "PlaybackAccessToken",
       query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
@@ -624,14 +637,20 @@ export async function downloadTwitchVodVideo(
  * The returned PassThrough is written to in the background; pass it straight to
  * transcribePassThrough() so Deepgram receives data as it downloads.
  */
-export function streamTwitchVodAudio(vodId: string): PassThrough {
+export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): PassThrough {
   const passThrough = new PassThrough();
 
   (async () => {
     const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+    const gqlHeaders: Record<string, string> = {
+      "Client-Id": GQL_CLIENT_ID,
+      "Content-Type": "application/json",
+    };
+    if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
+
     const gqlRes = await fetch("https://gql.twitch.tv/gql", {
       method: "POST",
-      headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
+      headers: gqlHeaders,
       body: JSON.stringify({
         operationName: "PlaybackAccessToken",
         query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {

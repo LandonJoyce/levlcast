@@ -76,7 +76,16 @@ export const analyzeVod = inngest.createFunction(
           `[analyze] Detected game="${detection.gameId ?? "(unknown)"}" category="${detection.category}" — boosting ${keywords.length} keywords`
         );
 
-        const stream = streamTwitchVodAudio(vod.twitch_vod_id);
+        // Use the user's stored OAuth token so Twitch GQL grants a playback token
+        // even for VODs where anonymous requests are blocked.
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("twitch_access_token")
+          .eq("id", userId)
+          .single();
+        const twitchUserToken = profile?.twitch_access_token || undefined;
+
+        const stream = streamTwitchVodAudio(vod.twitch_vod_id, twitchUserToken);
         console.log(`[analyze] Streaming audio to Deepgram...`);
         const { segments, words } = await transcribePassThrough(stream, keywords);
         console.log(`[analyze] Transcription complete: ${segments.length} segments, ${words.length} words`);

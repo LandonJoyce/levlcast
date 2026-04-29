@@ -193,8 +193,17 @@ async function runClipGeneration({
   try {
     console.log(`[clip] Starting generation for "${peak.title}" (${peak.start}s–${peak.end}s)`);
 
+    // Fetch the user's Twitch OAuth token — Twitch blocks anonymous GQL playback
+    // token requests for some VODs; using the user's own token gets around it.
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("twitch_access_token")
+      .eq("id", userId)
+      .single();
+    const twitchUserToken = profile?.twitch_access_token || undefined;
+
     console.log(`[clip] Stage 1/4: downloading segments from Twitch`);
-    const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end);
+    const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken);
 
     // Pull word-level timestamps so cutClip can burn TikTok-style captions.
     const { data: vodRow } = await admin
