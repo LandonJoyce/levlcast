@@ -149,9 +149,9 @@ export async function sendVodReadyEmail(to: string, name: string, vodId: string,
 
 export async function sendWelcomeEmail(to: string, name: string): Promise<void> {
   await resend.emails.send({
-    from: "LevlCast <hello@levlcast.com>",
+    from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
-    subject: "Welcome to LevlCast — your first coach report is waiting",
+    subject: "Hey, welcome to LevlCast",
     html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome to LevlCast</title></head>
@@ -166,34 +166,31 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
 
         <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
 
-          <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#22D3EE;">Welcome, ${name}</p>
-          <h1 style="margin:0 0 16px;font-size:28px;font-weight:800;color:#ffffff;line-height:1.2;">Your Twitch coach is ready.</h1>
-          <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.55);line-height:1.6;">
-            LevlCast analyzes your streams and tells you exactly what to improve — score, peak clip moments, and a personalized recommendation every time you go live.
+          <p style="margin:0 0 20px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Hey ${name},</p>
+
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            I'm Landon, the founder of LevlCast. I just wanted to personally say — thank you for signing up and giving this a shot. It genuinely means a lot.
           </p>
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);padding:20px 0;margin-bottom:28px;">
-            <tr><td style="padding:10px 0;">
-              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#ffffff;">1. Sync your streams</p>
-              <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);">We pull your recent VODs from Twitch automatically.</p>
-            </td></tr>
-            <tr><td style="padding:10px 0;">
-              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#ffffff;">2. Run your first analysis</p>
-              <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);">Takes about 5 minutes. We transcribe, score, and find your best moments.</p>
-            </td></tr>
-            <tr><td style="padding:10px 0;">
-              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#ffffff;">3. Get your coach report</p>
-              <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);">Stream score, what you're doing well, and one thing to change next time.</p>
-            </td></tr>
-          </table>
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            I built LevlCast because I wanted a tool that actually helps streamers grow — not just gives them vague numbers, but tells them what to fix and shows them their best moments. Every person who joins is part of a community of streamers who are serious about improving together, and I'm glad you're one of them.
+          </p>
 
-          <table cellpadding="0" cellspacing="0">
+          <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            To get started, sync your streams and run your first analysis. It takes about 5 minutes and you'll get a full coach report with your stream score, peak clip moments, and one specific thing to focus on next time.
+          </p>
+
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
             <tr><td style="background:#7C3AED;border-radius:12px;">
               <a href="https://levlcast.com/dashboard/vods" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
                 Analyze My First Stream →
               </a>
             </td></tr>
           </table>
+
+          <p style="margin:0 0 6px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Talk soon,</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#ffffff;">Landon</p>
+          <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.35);">Founder, LevlCast</p>
 
         </td></tr>
 
