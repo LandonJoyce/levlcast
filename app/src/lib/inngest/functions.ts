@@ -17,7 +17,6 @@ import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pu
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
-import type { CaptionWord } from "@/lib/captions";
 import { detectGame, keywordsForGame } from "@/lib/game-keywords";
 import { uploadToR2 } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -467,24 +466,15 @@ export const generateClip = inngest.createFunction(
         const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken)
           .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
-        // Pull word-level timestamps so cutClip can burn TikTok-style captions.
-        // Missing/empty words → cutClip falls back to a no-caption encode.
-        const { data: vodRow } = await supabase
-          .from("vods")
-          .select("word_timestamps")
-          .eq("id", vodId)
-          .single();
-        const vodWords = (vodRow?.word_timestamps as CaptionWord[] | null) ?? null;
-
+        // Captions are burned at vertical-export time, not here — burning into the
+        // horizontal R2 clip causes double-captions on vertical export.
         let buffer: Buffer;
         try {
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
           console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
-            vodWords,
-            vodWindow: { start: peak.start, end: peak.end },
-          }).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
+          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd)
+            .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
           console.log(`[clip] Cut complete: ${buffer.length} bytes`);
         } finally {
           await download.cleanup();

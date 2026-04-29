@@ -20,7 +20,7 @@ import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { downloadTwitchVodVideo } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
-import type { CaptionWord, CaptionStyle } from "@/lib/captions";
+import type { CaptionStyle } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
 
@@ -205,25 +205,15 @@ async function runClipGeneration({
     console.log(`[clip] Stage 1/4: downloading segments from Twitch`);
     const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken);
 
-    // Pull word-level timestamps so cutClip can burn TikTok-style captions.
-    const { data: vodRow } = await admin
-      .from("vods")
-      .select("word_timestamps")
-      .eq("id", vodId)
-      .single();
-    const vodWords = (vodRow?.word_timestamps as CaptionWord[] | null) ?? null;
-    if (!vodWords) console.warn("[clip] No word_timestamps on VOD — captions will be skipped (VOD needs re-analysis)");
-
+    // Captions are burned at vertical-export time (exportClipVertical), not here.
+    // Burning into the horizontal R2 clip causes double-captions on export because
+    // the 9:16 center-crop preserves the full frame height, making both layers visible.
     let buffer: Buffer;
     try {
       const adjustedStart = peak.start - download.segmentStartSeconds;
       const adjustedEnd = peak.end - download.segmentStartSeconds;
       console.log(`[clip] Stage 2/4: cutting ${adjustedStart.toFixed(2)}s–${adjustedEnd.toFixed(2)}s (segment offset: ${download.segmentStartSeconds.toFixed(2)}s)`);
-      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
-        vodWords,
-        vodWindow: { start: peak.start, end: peak.end },
-        captionStyle,
-      });
+      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
       console.log(`[clip] Stage 2/4: cut complete — ${(buffer.length / 1024 / 1024).toFixed(1)}MB`);
     } finally {
       await download.cleanup();
