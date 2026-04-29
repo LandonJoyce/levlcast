@@ -79,7 +79,7 @@ export function AnalyzeModal({
   const isFull = preset === "full";
   const estimatedMin = estimateMinutes(durationSeconds, isFull ? durationSeconds : rangeSeconds);
   const isFree = userPlan !== "pro";
-  const tooLongForFree = isFree && isFull && durationSeconds > FREE_MAX_SECONDS;
+  const tooLongForFree = isFree && durationSeconds > FREE_MAX_SECONDS;
 
   let validationError: string | null = null;
   if (preset === "custom") {
@@ -181,7 +181,7 @@ export function AnalyzeModal({
         <div style={{ fontSize: 12, fontWeight: 600, color: "#ECF1FA", marginBottom: 10 }}>
           What to analyze
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: hasHour ? "1fr 1fr" : "1fr 1fr", gap: 8, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: hasHour ? "1fr 1fr" : "1fr 1fr", gap: 8, marginBottom: 14, opacity: tooLongForFree ? 0.35 : 1, pointerEvents: tooLongForFree ? "none" : "auto" }}>
           <PresetCard
             label="Full Stream"
             sub={formatDuration(durationSeconds)}
@@ -265,7 +265,7 @@ export function AnalyzeModal({
           )}
           {tooLongForFree && (
             <div style={{ fontSize: 11, color: "#F87171", marginTop: 8, lineHeight: 1.5 }}>
-              Free accounts can only analyze streams up to 2 hours. Select "First Hour" or "Custom Range", or upgrade to Pro to analyze the full stream.
+              This stream is over 2 hours. Upgrade to Pro to analyze it.
             </div>
           )}
         </div>
