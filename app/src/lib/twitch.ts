@@ -29,6 +29,39 @@ const HELIX_BASE = "https://api.twitch.tv/helix";
 
 let cachedAppToken: { token: string; expiresAt: number } | null = null;
 
+/** Thrown when Twitch returns 401 — signals that the stored token is expired and needs refreshing. */
+export class TwitchAuthError extends Error {
+  constructor() {
+    super("Twitch auth token expired");
+    this.name = "TwitchAuthError";
+  }
+}
+
+/**
+ * Exchange a Twitch refresh token for a new access + refresh token pair.
+ * Call this when a GQL or API request returns 401, then retry with the new token.
+ */
+export async function refreshTwitchToken(
+  refreshToken: string
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const res = await fetch("https://id.twitch.tv/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: process.env.TWITCH_CLIENT_ID!,
+      client_secret: process.env.TWITCH_CLIENT_SECRET!,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Twitch token refresh failed (${res.status}): ${body.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  return { accessToken: json.access_token, refreshToken: json.refresh_token };
+}
+
 /**
  * Get a Twitch App Access Token using client credentials.
  * Cached in memory until expiry.
@@ -177,7 +210,10 @@ export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: stri
     }),
   });
 
-  if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  if (!gqlRes.ok) {
+    if (gqlRes.status === 401) throw new TwitchAuthError();
+    throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  }
 
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
@@ -258,7 +294,10 @@ export async function downloadTwitchVodAudio(
     }),
   });
 
-  if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  if (!gqlRes.ok) {
+    if (gqlRes.status === 401) throw new TwitchAuthError();
+    throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  }
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
@@ -439,7 +478,10 @@ export async function downloadTwitchVodVideo(
     signal: gqlCtrl.signal,
   }).catch((err) => { throw new Error(`Twitch GQL token fetch timed out or failed: ${err.message}`); });
 
-  if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  if (!gqlRes.ok) {
+    if (gqlRes.status === 401) throw new TwitchAuthError();
+    throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  }
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
@@ -663,7 +705,10 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
       }),
     });
 
-    if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+    if (!gqlRes.ok) {
+    if (gqlRes.status === 401) throw new TwitchAuthError();
+    throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+  }
     const gqlData = await gqlRes.json();
     const token = gqlData.data?.videoPlaybackAccessToken;
     if (!token) throw new Error("Could not get video playback token");

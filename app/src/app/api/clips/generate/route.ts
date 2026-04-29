@@ -18,7 +18,7 @@ import { waitUntil } from "@vercel/functions";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
-import { downloadTwitchVodVideo } from "@/lib/twitch";
+import { downloadTwitchVodVideo, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
 import type { CaptionStyle } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
@@ -193,17 +193,36 @@ async function runClipGeneration({
   try {
     console.log(`[clip] Starting generation for "${peak.title}" (${peak.start}s–${peak.end}s)`);
 
-    // Fetch the user's Twitch OAuth token — Twitch blocks anonymous GQL playback
-    // token requests for some VODs; using the user's own token gets around it.
+    // Fetch the user's Twitch OAuth token — Twitch blocks anonymous GQL requests.
+    // If the stored token is expired (401), auto-refresh using the refresh token
+    // and retry once before giving up.
     const { data: profile } = await admin
       .from("profiles")
-      .select("twitch_access_token")
+      .select("twitch_access_token, twitch_refresh_token")
       .eq("id", userId)
       .single();
-    const twitchUserToken = profile?.twitch_access_token || undefined;
+    let twitchUserToken = profile?.twitch_access_token || undefined;
 
     console.log(`[clip] Stage 1/4: downloading segments from Twitch`);
-    const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken);
+    let download;
+    try {
+      download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken);
+    } catch (err) {
+      if (err instanceof TwitchAuthError && profile?.twitch_refresh_token) {
+        console.log(`[clip] Twitch token expired — refreshing and retrying`);
+        const refreshed = await refreshTwitchToken(profile.twitch_refresh_token);
+        twitchUserToken = refreshed.accessToken;
+        await admin.from("profiles").update({
+          twitch_access_token: refreshed.accessToken,
+          twitch_refresh_token: refreshed.refreshToken,
+        }).eq("id", userId);
+        download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken);
+      } else if (err instanceof TwitchAuthError) {
+        throw new Error("Your Twitch connection has expired. Please log out and log back in, then try again.");
+      } else {
+        throw err;
+      }
+    }
 
     // Captions are burned at vertical-export time (exportClipVertical), not here.
     // Burning into the horizontal R2 clip causes double-captions on export because

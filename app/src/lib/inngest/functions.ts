@@ -12,7 +12,7 @@
 
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
+import { streamTwitchVodAudio, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
@@ -79,14 +79,31 @@ export const analyzeVod = inngest.createFunction(
         // even for VODs where anonymous requests are blocked.
         const { data: profile } = await supabase
           .from("profiles")
-          .select("twitch_access_token")
+          .select("twitch_access_token, twitch_refresh_token")
           .eq("id", userId)
           .single();
-        const twitchUserToken = profile?.twitch_access_token || undefined;
+        let twitchUserToken = profile?.twitch_access_token || undefined;
 
-        const stream = streamTwitchVodAudio(vod.twitch_vod_id, twitchUserToken);
-        console.log(`[analyze] Streaming audio to Deepgram...`);
-        const { segments, words } = await transcribePassThrough(stream, keywords);
+        let transcribeResult: { segments: Awaited<ReturnType<typeof transcribePassThrough>>["segments"]; words: Awaited<ReturnType<typeof transcribePassThrough>>["words"] };
+        try {
+          transcribeResult = await transcribePassThrough(streamTwitchVodAudio(vod.twitch_vod_id, twitchUserToken), keywords);
+        } catch (err) {
+          if (err instanceof TwitchAuthError && profile?.twitch_refresh_token) {
+            console.log(`[analyze] Twitch token expired — refreshing and retrying`);
+            const refreshed = await refreshTwitchToken(profile.twitch_refresh_token);
+            twitchUserToken = refreshed.accessToken;
+            await supabase.from("profiles").update({
+              twitch_access_token: refreshed.accessToken,
+              twitch_refresh_token: refreshed.refreshToken,
+            }).eq("id", userId);
+            transcribeResult = await transcribePassThrough(streamTwitchVodAudio(vod.twitch_vod_id, twitchUserToken), keywords);
+          } else if (err instanceof TwitchAuthError) {
+            throw new Error("Twitch connection expired and refresh token missing — user must log out and back in.");
+          } else {
+            throw err;
+          }
+        }
+        const { segments, words } = transcribeResult;
         console.log(`[analyze] Transcription complete: ${segments.length} segments, ${words.length} words`);
         if (segments.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
 
@@ -456,15 +473,33 @@ export const generateClip = inngest.createFunction(
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("twitch_access_token")
+          .select("twitch_access_token, twitch_refresh_token")
           .eq("id", userId)
           .single();
-        const twitchUserToken = profile?.twitch_access_token || undefined;
+        let twitchUserToken = profile?.twitch_access_token || undefined;
 
         // NonRetriableError bypasses Inngest's step-level retry backoff — CDN failures
         // are not improved by waiting, so fail immediately and let the catch block run.
-        const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken)
-          .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
+        let download;
+        try {
+          download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken);
+        } catch (err) {
+          if (err instanceof TwitchAuthError && profile?.twitch_refresh_token) {
+            console.log(`[clip] Twitch token expired — refreshing and retrying`);
+            const refreshed = await refreshTwitchToken(profile.twitch_refresh_token);
+            twitchUserToken = refreshed.accessToken;
+            await supabase.from("profiles").update({
+              twitch_access_token: refreshed.accessToken,
+              twitch_refresh_token: refreshed.refreshToken,
+            }).eq("id", userId);
+            download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken)
+              .catch((e) => { throw new NonRetriableError(e instanceof Error ? e.message : String(e)); });
+          } else if (err instanceof TwitchAuthError) {
+            throw new NonRetriableError("Twitch connection expired and refresh token missing — user must log out and back in.");
+          } else {
+            throw new NonRetriableError(err instanceof Error ? err.message : String(err));
+          }
+        }
 
         // Captions are burned at vertical-export time, not here — burning into the
         // horizontal R2 clip causes double-captions on vertical export.
