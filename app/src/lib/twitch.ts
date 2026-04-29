@@ -188,9 +188,14 @@ export interface VodDownloadResult {
  * Used by Deepgram URL transcription to avoid downloading to disk.
  */
 export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: string): Promise<string> {
-  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  // When using a user's OAuth token the Client-Id must match the app that issued it.
+  // Our tokens are issued by TWITCH_CLIENT_ID (our registered app), so use that when
+  // authenticated. The web-player client ID only works for anonymous requests.
+  const gqlClientId = twitchUserToken
+    ? process.env.TWITCH_CLIENT_ID!
+    : "kimne78kx3ncx6brgo4mv6wki5h1ko";
   const gqlHeaders: Record<string, string> = {
-    "Client-Id": GQL_CLIENT_ID,
+    "Client-Id": gqlClientId,
     "Content-Type": "application/json",
   };
   if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
@@ -451,13 +456,14 @@ export async function downloadTwitchVodVideo(
   twitchUserToken?: string
 ): Promise<VodDownloadResult> {
   // Step 1: Get playback access token (15s timeout)
-  // GQL endpoint is Twitch's unofficial internal API — it uses the web player
-  // client ID. Anonymous requests are increasingly blocked by Twitch; passing
-  // the user's OAuth token in the Authorization header reliably works for their own VODs.
-  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  // When using a user token, Client-Id must match the app that issued it (our registered app).
+  // The web-player client ID only works for anonymous requests.
+  const gqlClientId = twitchUserToken
+    ? process.env.TWITCH_CLIENT_ID!
+    : "kimne78kx3ncx6brgo4mv6wki5h1ko";
   const gqlCtrl = withTimeout(15000);
   const gqlHeaders: Record<string, string> = {
-    "Client-Id": GQL_CLIENT_ID,
+    "Client-Id": gqlClientId,
     "Content-Type": "application/json",
   };
   if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
@@ -683,9 +689,11 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
   const passThrough = new PassThrough();
 
   (async () => {
-    const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+    const gqlClientId = twitchUserToken
+      ? process.env.TWITCH_CLIENT_ID!
+      : "kimne78kx3ncx6brgo4mv6wki5h1ko";
     const gqlHeaders: Record<string, string> = {
-      "Client-Id": GQL_CLIENT_ID,
+      "Client-Id": gqlClientId,
       "Content-Type": "application/json",
     };
     if (twitchUserToken) gqlHeaders["Authorization"] = `OAuth ${twitchUserToken}`;
