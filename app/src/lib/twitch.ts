@@ -188,14 +188,14 @@ export interface VodDownloadResult {
  * Used by Deepgram URL transcription to avoid downloading to disk.
  */
 export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: string): Promise<string> {
-  // Use our App Access Token (client_credentials Bearer) with our registered Client-Id.
-  // Twitch's GQL rejects third-party OAuth user tokens — the only reliable server-side
-  // approach is a first-party app token via client credentials.
-  const appToken = await getAppAccessToken();
+  // Use the web player's anonymous client ID — the same one yt-dlp, streamlink,
+  // and TwitchDownloader use. Twitch's internal GQL rejects App Access Tokens
+  // (client_credentials) with 400; the only thing it accepts for PlaybackAccessToken
+  // is the web player client ID (optionally with a user OAuth token for sub-only VODs).
+  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
   const gqlHeaders: Record<string, string> = {
-    "Client-Id": process.env.TWITCH_CLIENT_ID!,
+    "Client-Id": GQL_CLIENT_ID,
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${appToken}`,
   };
 
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
@@ -214,11 +214,16 @@ export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: stri
   });
 
   if (!gqlRes.ok) {
+    const body = await gqlRes.text();
+    console.error(`[twitch] getTwitchVodAudioUrl GQL ${gqlRes.status}: ${body.slice(0, 400)}`);
     if (gqlRes.status === 401) throw new TwitchAuthError();
     throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
   }
 
   const gqlData = await gqlRes.json();
+  if (gqlData.errors?.length) {
+    console.error(`[twitch] getTwitchVodAudioUrl GQL errors:`, JSON.stringify(gqlData.errors).slice(0, 400));
+  }
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
 
@@ -454,12 +459,13 @@ export async function downloadTwitchVodVideo(
   twitchUserToken?: string
 ): Promise<VodDownloadResult> {
   // Step 1: Get playback access token (15s timeout)
-  const appToken = await getAppAccessToken();
+  // Use the web player's anonymous client ID — same as yt-dlp/streamlink/TwitchDownloader.
+  // App Access Tokens (client_credentials) return 400 on this internal GQL endpoint.
+  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
   const gqlCtrl = withTimeout(15000);
   const gqlHeaders: Record<string, string> = {
-    "Client-Id": process.env.TWITCH_CLIENT_ID!,
+    "Client-Id": GQL_CLIENT_ID,
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${appToken}`,
   };
 
   const gqlRes = await fetch("https://gql.twitch.tv/gql", {
@@ -479,10 +485,15 @@ export async function downloadTwitchVodVideo(
   }).catch((err) => { throw new Error(`Twitch GQL token fetch timed out or failed: ${err.message}`); });
 
   if (!gqlRes.ok) {
+    const body = await gqlRes.text();
+    console.error(`[twitch] downloadTwitchVodVideo GQL ${gqlRes.status} for VOD ${vodId}: ${body.slice(0, 400)}`);
     if (gqlRes.status === 401) throw new TwitchAuthError();
     throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
   }
   const gqlData = await gqlRes.json();
+  if (gqlData.errors?.length) {
+    console.error(`[twitch] downloadTwitchVodVideo GQL errors for VOD ${vodId}:`, JSON.stringify(gqlData.errors).slice(0, 400));
+  }
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
 
@@ -683,16 +694,12 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
   const passThrough = new PassThrough();
 
   (async () => {
-    const appToken = await getAppAccessToken();
-    const gqlHeaders: Record<string, string> = {
-      "Client-Id": process.env.TWITCH_CLIENT_ID!,
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${appToken}`,
-    };
-
+    // Anonymous web player client ID — same approach as yt-dlp/streamlink.
+    // App Access Tokens (client_credentials) are rejected with 400 by this endpoint.
+    const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
     const gqlRes = await fetch("https://gql.twitch.tv/gql", {
       method: "POST",
-      headers: gqlHeaders,
+      headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
       body: JSON.stringify({
         operationName: "PlaybackAccessToken",
         query: `query PlaybackAccessToken($vodID: ID!, $playerType: String!) {
@@ -706,12 +713,17 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
     });
 
     if (!gqlRes.ok) {
-    if (gqlRes.status === 401) throw new TwitchAuthError();
-    throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
-  }
+      const body = await gqlRes.text();
+      console.error(`[twitch] streamTwitchVodAudio GQL ${gqlRes.status} for VOD ${vodId}: ${body.slice(0, 400)}`);
+      if (gqlRes.status === 401) throw new TwitchAuthError();
+      throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
+    }
     const gqlData = await gqlRes.json();
+    if (gqlData.errors?.length) {
+      console.error(`[twitch] streamTwitchVodAudio GQL errors for VOD ${vodId}:`, JSON.stringify(gqlData.errors).slice(0, 400));
+    }
     const token = gqlData.data?.videoPlaybackAccessToken;
-    if (!token) throw new Error("Could not get video playback token");
+    if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
 
     const usherParams = new URLSearchParams({
       allow_source: "true",
