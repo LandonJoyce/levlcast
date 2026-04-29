@@ -464,18 +464,25 @@ export async function downloadTwitchVodVideo(
     }
   }
 
-  // Priority: 480p60 > 480p > 360p60 > 360p > 720p > source (avoid huge source files)
+  // Priority: lowest quality that still has video (smallest segments = faster download)
+  // chunked = source quality (1080p60 or higher) — only use as last resort
   // Never pick audio_only
-  const videoQualities = qualities.filter((q) => !q.label.includes("audio"));
-  const preferred = ["480p60", "480p", "360p60", "360p", "720p60", "720p"];
+  const videoQualities = qualities.filter((q) => !q.label.includes("audio") && q.label !== "chunked");
+  const chunkedQuality = qualities.find((q) => q.label === "chunked");
+  const preferred = ["360p30", "360p", "360p60", "480p", "480p60", "720p", "720p60"];
   let streamUrl = "";
   for (const pref of preferred) {
     const match = videoQualities.find((q) => q.label === pref);
     if (match) { streamUrl = match.url; break; }
   }
-  // Fallback: first non-audio quality
+  // Fallback to any non-chunked non-audio quality (lowest first)
   if (!streamUrl && videoQualities.length > 0) {
-    streamUrl = videoQualities[videoQualities.length - 1].url; // last = lowest quality
+    streamUrl = videoQualities[videoQualities.length - 1].url;
+  }
+  // Last resort: chunked (source quality) — produces large files but works
+  if (!streamUrl && chunkedQuality) {
+    streamUrl = chunkedQuality.url;
+    console.warn("[twitch] No lower-quality stream available — falling back to source (chunked). Segments will be large.");
   }
   if (!streamUrl) throw new Error("No video stream found in master playlist");
 
