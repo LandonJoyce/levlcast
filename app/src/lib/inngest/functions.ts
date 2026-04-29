@@ -454,9 +454,17 @@ export const generateClip = inngest.createFunction(
       // causes silent failures where the clip appears "completed" but stays processing.
       await step.run("generate-and-upload", async () => {
         console.log(`[clip] Downloading segments for "${peak.title}" (${peak.start}s - ${peak.end}s)`);
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("twitch_access_token")
+          .eq("id", userId)
+          .single();
+        const twitchUserToken = profile?.twitch_access_token || undefined;
+
         // NonRetriableError bypasses Inngest's step-level retry backoff — CDN failures
         // are not improved by waiting, so fail immediately and let the catch block run.
-        const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end)
+        const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken)
           .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
         // Pull word-level timestamps so cutClip can burn TikTok-style captions.

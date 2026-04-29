@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UpgradeModal } from "./upgrade-modal";
-
-type CaptionStyle = "bold" | "boxed" | "minimal" | "classic" | "neon" | "fire" | "impact";
+import type { CaptionStyle } from "@/lib/captions";
 
 const STYLES: {
   value: CaptionStyle;
