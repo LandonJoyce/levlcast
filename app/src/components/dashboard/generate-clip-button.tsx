@@ -6,10 +6,52 @@ import { UpgradeModal } from "./upgrade-modal";
 
 type CaptionStyle = "bold" | "boxed" | "minimal";
 
-const STYLES: { value: CaptionStyle; label: string; desc: string }[] = [
-  { value: "bold", label: "Bold", desc: "Big white text, black stroke" },
-  { value: "boxed", label: "Boxed", desc: "White text on dark pill" },
-  { value: "minimal", label: "Minimal", desc: "Small, clean, lower-case" },
+const STYLES: {
+  value: CaptionStyle;
+  label: string;
+  preview: React.CSSProperties;
+  wrapStyle?: React.CSSProperties;
+}[] = [
+  {
+    value: "bold",
+    label: "Bold",
+    preview: {
+      fontFamily: "inherit",
+      fontSize: 13,
+      fontWeight: 900,
+      color: "#ffffff",
+      textTransform: "uppercase",
+      letterSpacing: ".04em",
+      textShadow: "-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000",
+      lineHeight: 1.2,
+    },
+  },
+  {
+    value: "boxed",
+    label: "Boxed",
+    preview: {
+      fontFamily: "inherit",
+      fontSize: 12,
+      fontWeight: 700,
+      color: "#ffffff",
+      background: "rgba(0,0,0,0.6)",
+      padding: "3px 8px",
+      borderRadius: 4,
+      lineHeight: 1.3,
+    },
+  },
+  {
+    value: "minimal",
+    label: "Minimal",
+    preview: {
+      fontFamily: "inherit",
+      fontSize: 11,
+      fontWeight: 500,
+      color: "rgba(255,255,255,0.9)",
+      textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000",
+      lineHeight: 1.3,
+    },
+  },
 ];
 
 export function GenerateClipButton({
@@ -27,7 +69,6 @@ export function GenerateClipButton({
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
   const [style, setStyle] = useState<CaptionStyle>("bold");
-  const [showStyles, setShowStyles] = useState(false);
   const router = useRouter();
 
   async function handleGenerate() {
@@ -65,62 +106,65 @@ export function GenerateClipButton({
 
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="btn btn-blue"
-            style={{ flex: 1, padding: "7px 0", fontSize: 12, justifyContent: "center", opacity: generating ? 0.6 : 1 }}
-          >
-            {generating ? "Queuing…" : "Generate Clip"}
-          </button>
-          <button
-            onClick={() => setShowStyles((v) => !v)}
-            title="Caption style"
-            style={{
-              background: showStyles ? "color-mix(in oklab, var(--blue) 15%, var(--surface-2))" : "var(--surface-2)",
-              border: "1px solid var(--line)",
-              borderRadius: 6,
-              padding: "7px 9px",
-              fontSize: 11,
-              fontFamily: "var(--font-geist-mono), monospace",
-              color: "var(--ink-2)",
-              cursor: "pointer",
-              letterSpacing: ".04em",
-              flexShrink: 0,
-            }}
-          >
-            {style === "bold" ? "Aa" : style === "boxed" ? "[A]" : "a"}
-          </button>
-        </div>
-
-        {showStyles && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8, padding: 8 }}>
-            <span style={{ fontSize: 10, color: "var(--ink-3)", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: ".05em", marginBottom: 2 }}>CAPTION STYLE</span>
-            {STYLES.map((s) => (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Caption style visual picker */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+          {STYLES.map((s) => {
+            const selected = style === s.value;
+            return (
               <button
                 key={s.value}
-                onClick={() => { setStyle(s.value); setShowStyles(false); }}
+                onClick={() => setStyle(s.value)}
                 style={{
-                  background: style === s.value ? "color-mix(in oklab, var(--blue) 12%, var(--surface))" : "none",
-                  border: style === s.value ? "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))" : "1px solid transparent",
-                  borderRadius: 6,
-                  padding: "6px 8px",
+                  background: selected ? "color-mix(in oklab, var(--blue) 10%, var(--surface))" : "var(--surface-2)",
+                  border: selected ? "1.5px solid color-mix(in oklab, var(--blue) 50%, transparent)" : "1.5px solid var(--line)",
+                  borderRadius: 8,
+                  padding: 0,
                   cursor: "pointer",
-                  textAlign: "left",
+                  overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 1,
+                  transition: "border-color 0.15s",
                 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 600, color: style === s.value ? "var(--blue)" : "var(--ink)" }}>{s.label}</span>
-                <span style={{ fontSize: 11, color: "var(--ink-3)" }}>{s.desc}</span>
+                {/* Preview area */}
+                <div style={{
+                  background: "#111",
+                  height: 44,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0 6px",
+                }}>
+                  <span style={s.preview}>Caption</span>
+                </div>
+                {/* Label */}
+                <div style={{
+                  padding: "5px 0",
+                  fontSize: 10,
+                  fontWeight: selected ? 700 : 500,
+                  color: selected ? "var(--blue)" : "var(--ink-3)",
+                  letterSpacing: ".04em",
+                  textAlign: "center",
+                }}>
+                  {s.label}
+                </div>
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
+
+        {/* Generate button */}
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="btn btn-blue"
+          style={{ width: "100%", justifyContent: "center", fontSize: 12, opacity: generating ? 0.6 : 1 }}
+        >
+          {generating ? "Queuing…" : "Generate Clip"}
+        </button>
       </div>
+
       {error && <span className="mono" style={{ fontSize: 11, color: "var(--danger)", marginTop: 4, display: "block" }}>{error}</span>}
       <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={upgradeReason} />
     </>
