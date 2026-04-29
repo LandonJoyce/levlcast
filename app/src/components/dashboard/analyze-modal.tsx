@@ -35,8 +35,9 @@ function toTimeString(seconds: number): string {
 }
 
 function estimateMinutes(durationSecs: number, rangeSecs: number): number {
-  const transcribeMin = Math.max(5, Math.ceil(durationSecs / 180));
-  const analyzeMin = Math.max(3, Math.ceil(rangeSecs / 180));
+  // Transcription runs in 15-min chunks — roughly 1 min of processing per 15 min of audio
+  const transcribeMin = Math.max(3, Math.ceil(durationSecs / 900));
+  const analyzeMin = Math.max(2, Math.ceil(rangeSecs / 1800));
   return transcribeMin + analyzeMin;
 }
 
@@ -249,6 +250,11 @@ export function AnalyzeModal({
           {!isFull && durationSeconds > 3600 && (
             <div style={{ fontSize: 11, color: "#6F7C95", marginTop: 8, lineHeight: 1.5 }}>
               We transcribe the full stream first, then run coaching analysis on your selected section only.
+            </div>
+          )}
+          {isFull && durationSeconds >= 7200 && (
+            <div style={{ fontSize: 11, color: "#F59E0B", marginTop: 8, lineHeight: 1.5 }}>
+              Long stream detected — analysis runs in the background. You can close this page and come back when it's done.
             </div>
           )}
         </div>
