@@ -176,7 +176,7 @@ export async function getTwitchVodAudioUrl(vodId: string): Promise<string> {
 
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Could not get video playback token");
+  if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
 
   const usherParams = new URLSearchParams({
     allow_source: "true",
@@ -256,7 +256,7 @@ export async function downloadTwitchVodAudio(
   if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Could not get video playback token from Twitch GQL");
+  if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
 
   // Step 2: Get M3U8 master playlist
   const usherParams = new URLSearchParams({
@@ -429,7 +429,7 @@ export async function downloadTwitchVodVideo(
   if (!gqlRes.ok) throw new Error(`Twitch GQL failed: ${gqlRes.status}`);
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Could not get video playback token from Twitch GQL");
+  if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
 
   // Step 2: Get M3U8 master playlist (10s timeout)
   const usherParams = new URLSearchParams({
