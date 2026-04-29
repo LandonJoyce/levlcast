@@ -341,7 +341,7 @@ export default async function ClipsPage({
                         <span>{categoryLabel(p.category)} · {p.vodTitle}</span>
                       </div>
                       <div style={{ padding: "0 12px 12px" }}>
-                        <GenerateClipButton vodId={p.vodId} peakIndex={p.peakIndex} hasProcessing={hasProcessing} />
+                        <GenerateClipButton vodId={p.vodId} peakIndex={p.peakIndex} hasProcessing={hasProcessing} clipTitle={p.title} />
                       </div>
                     </div>
                   ))}

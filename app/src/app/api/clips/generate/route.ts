@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { vodId, peakIndex, startSeconds, captionStyle } = body;
 
-  const validStyles: CaptionStyle[] = ["bold", "boxed", "minimal"];
+  const validStyles: CaptionStyle[] = ["bold", "boxed", "minimal", "classic", "neon", "fire", "impact"];
   const resolvedStyle: CaptionStyle = validStyles.includes(captionStyle) ? captionStyle : "bold";
 
   if (!vodId || typeof vodId !== "string" || (peakIndex === undefined && startSeconds === undefined)) {

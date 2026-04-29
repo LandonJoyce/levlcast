@@ -153,7 +153,7 @@ export function groupWordsIntoCards(words: CaptionWord[]): CaptionCard[] {
   return cards;
 }
 
-export type CaptionStyle = "bold" | "boxed" | "minimal";
+export type CaptionStyle = "bold" | "boxed" | "minimal" | "classic" | "neon" | "fire" | "impact";
 
 export interface CaptionRenderConfig {
   fontPath: string;
@@ -201,57 +201,87 @@ export async function buildCaptionFilters(
     let drawtextArgs: string;
 
     if (style === "boxed") {
-      // White text on a semi-transparent black pill — easy to read on
-      // any background, familiar from native TikTok/Reels captions.
       await writeFile(filePath, card.text.toUpperCase());
       const fontSize = 68;
-      const lineSpacing = Math.round(fontSize * 0.18);
       drawtextArgs =
         `drawtext=` +
-        `textfile=${filePath}:` +
-        `fontfile=${config.fontPath}:` +
-        `fontcolor=white:` +
-        `fontsize=${fontSize}:` +
-        `borderw=0:` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=white:fontsize=${fontSize}:borderw=0:` +
         `box=1:boxcolor=black@0.55:boxborderw=14:` +
         `shadowcolor=black@0:shadowx=0:shadowy=0:` +
         `x=(w-text_w)/2:y=${yExpr}:` +
-        `line_spacing=${lineSpacing}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     } else if (style === "minimal") {
-      // Smaller, thinner, mixed-case — cleaner look for educational/calm content.
       await writeFile(filePath, card.text);
       const fontSize = 54;
-      const lineSpacing = Math.round(fontSize * 0.18);
       drawtextArgs =
         `drawtext=` +
-        `textfile=${filePath}:` +
-        `fontfile=${config.fontPath}:` +
-        `fontcolor=white@0.92:` +
-        `fontsize=${fontSize}:` +
-        `borderw=3:` +
-        `bordercolor=black@0.7:` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=white@0.92:fontsize=${fontSize}:borderw=3:bordercolor=black@0.7:` +
         `shadowcolor=black@0.5:shadowx=2:shadowy=3:` +
         `x=(w-text_w)/2:y=${yExpr}:` +
-        `line_spacing=${lineSpacing}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
-    } else {
-      // bold (default) — heavy white + thick black stroke, no box.
+    } else if (style === "classic") {
+      // Bright yellow text with thick black stroke — classic subtitle look.
       await writeFile(filePath, card.text.toUpperCase());
-      const fontSize = 78;
-      const borderWidth = 8;
-      const lineSpacing = Math.round(fontSize * 0.18);
+      const fontSize = 74;
       drawtextArgs =
         `drawtext=` +
-        `textfile=${filePath}:` +
-        `fontfile=${config.fontPath}:` +
-        `fontcolor=white:` +
-        `fontsize=${fontSize}:` +
-        `borderw=${borderWidth}:` +
-        `bordercolor=black:` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=yellow:fontsize=${fontSize}:borderw=7:bordercolor=black:` +
         `shadowcolor=black:shadowx=3:shadowy=4:` +
         `x=(w-text_w)/2:y=${yExpr}:` +
-        `line_spacing=${lineSpacing}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
+        `enable='${enable}'`;
+    } else if (style === "neon") {
+      // Bright cyan with matching dark border — high contrast pop.
+      await writeFile(filePath, card.text.toUpperCase());
+      const fontSize = 70;
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=0x00EEFF:fontsize=${fontSize}:borderw=5:bordercolor=0x003344:` +
+        `shadowcolor=0x001122:shadowx=3:shadowy=4:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
+        `enable='${enable}'`;
+    } else if (style === "fire") {
+      // Bright orange text with deep red/black border — energetic.
+      await writeFile(filePath, card.text.toUpperCase());
+      const fontSize = 76;
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=0xFF6B00:fontsize=${fontSize}:borderw=7:bordercolor=0x1A0000:` +
+        `shadowcolor=0x330000:shadowx=4:shadowy=5:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
+        `enable='${enable}'`;
+    } else if (style === "impact") {
+      // Maximum size, very thick stroke — fills the screen.
+      await writeFile(filePath, card.text.toUpperCase());
+      const fontSize = 96;
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=white:fontsize=${fontSize}:borderw=12:bordercolor=black:` +
+        `shadowcolor=black:shadowx=5:shadowy=6:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
+        `enable='${enable}'`;
+    } else {
+      // bold (default) — heavy white + thick black stroke.
+      await writeFile(filePath, card.text.toUpperCase());
+      const fontSize = 78;
+      drawtextArgs =
+        `drawtext=` +
+        `textfile=${filePath}:fontfile=${config.fontPath}:` +
+        `fontcolor=white:fontsize=${fontSize}:borderw=8:bordercolor=black:` +
+        `shadowcolor=black:shadowx=3:shadowy=4:` +
+        `x=(w-text_w)/2:y=${yExpr}:` +
+        `line_spacing=${Math.round(fontSize * 0.18)}:` +
         `enable='${enable}'`;
     }
 
