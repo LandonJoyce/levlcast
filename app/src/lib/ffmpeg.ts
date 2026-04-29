@@ -356,100 +356,80 @@ export async function cutClip(
     }
   }
 
-  // Two-attempt strategy:
-  //   1. Direct cut from the MPEG-TS — fastest path, works for clean inputs.
-  //   2. If that fails (PTS rollover, discontinuity, "0 frames" output),
-  //      remux input to MP4 first to regenerate clean timestamps, then cut.
-  //      The remux is fast (stream copy) and resolves the most common
-  //      Twitch-VOD timestamp issues.
-  const useFilterComplex = captionFilter.length > 0;
+  // Strategy: remux MPEG-TS → clean MP4 (stream copy, resets PTS), then cut
+  // with stream copy. This is fast for any quality level including 1080p60
+  // source (chunked) — no re-encode means seconds instead of minutes.
+  // Remux must happen first because Twitch MPEG-TS segments have arbitrary
+  // large PTS offsets that break muxer seeking; -avoid_negative_ts make_zero
+  // normalises them to start at 0.
+  // If stream copy cut fails (rare corrupted input), fall back to re-encode
+  // from the already-clean remuxed file.
+  const remuxedPath = join(tempDir, "clean.mp4");
 
-  const buildCutCmd = (input: string): string => {
-    const baseArgs = [
+  try {
+    // Step 1: remux MPEG-TS → clean MP4 (stream copy, ~10-30s even for chunked)
+    const remuxCmd = [
       `"${ffmpegPath}"`,
       `-fflags +genpts+igndts+discardcorrupt`,
       `-err_detect ignore_err`,
-      `-i "${input}"`,
+      `-i "${inputFilePath}"`,
+      `-c copy`,
+      `-bsf:a aac_adtstoasc`,
+      `-avoid_negative_ts make_zero`,
+      `-y`,
+      `"${remuxedPath}"`,
+    ].join(" ");
+    try {
+      await execAsync(remuxCmd, { timeout: 60000 });
+    } catch (remuxErr: any) {
+      console.error("[ffmpeg] remux failed:", remuxErr.stderr?.slice(-600));
+      throw ffmpegError(remuxErr);
+    }
+    console.log(`[ffmpeg] Remux complete → ${remuxedPath}`);
+
+    // Step 2: stream copy cut from clean MP4 (near-instant, no re-encode)
+    const copyCmd = [
+      `"${ffmpegPath}"`,
+      `-i "${remuxedPath}"`,
       `-ss ${safeStart}`,
       `-t ${duration}`,
-      `-c:v libx264`,
-      `-profile:v main`,
-      `-level 4.0`,
-      `-preset fast`,
-      `-crf 23`,
-      `-pix_fmt yuv420p`,
-      `-vsync cfr`,
-      `-c:a aac`,
-      `-b:a 128k`,
-    ];
-
-    const filterArgs = useFilterComplex
-      ? [
-          `-filter_complex "[0:v]setpts=PTS-STARTPTS${captionFilter}[vout];[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]"`,
-          `-map "[vout]"`,
-          `-map "[aout]"`,
-        ]
-      : [
-          `-vf setpts=PTS-STARTPTS`,
-          `-af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
-        ];
-
-    const tailArgs = [
+      `-c copy`,
       `-avoid_negative_ts make_zero`,
       `-movflags +faststart`,
-      `-max_muxing_queue_size 9999`,
       `-y`,
       `"${outputPath}"`,
-    ];
-
-    return [...baseArgs, ...filterArgs, ...tailArgs].join(" ");
-  };
-
-  try {
-    // Attempt 1: direct
+    ].join(" ");
     try {
-      await execAsync(buildCutCmd(inputFilePath), { timeout: 180000 });
-    } catch (err: any) {
-      const stderr: string = err.stderr || "";
-      const isPtsBug = /time=-\d+:\d+:\d+|frame=\s*0\b|Invalid timestamp|non-monotonic|valid timeline|no valid/i.test(stderr);
-      if (!isPtsBug) {
-        console.error("[ffmpeg] encode failed (no retry):", stderr.slice(-800));
-        throw ffmpegError(err);
-      }
-
-      // Attempt 2: remux input to a clean MP4, then cut from that.
-      console.warn("[ffmpeg] Direct cut hit PTS issue, retrying via remux fallback");
-      const remuxedPath = join(tempDir, "clean.mp4");
-      const remuxCmd = [
+      await execAsync(copyCmd, { timeout: 30000 });
+      console.log(`[ffmpeg] Stream copy cut complete`);
+    } catch (copyErr: any) {
+      // Fallback: re-encode from clean MP4 (only needed for badly corrupted inputs)
+      console.warn("[ffmpeg] Stream copy cut failed, falling back to re-encode:", copyErr.stderr?.slice(-400));
+      const useFilterComplex = captionFilter.length > 0;
+      const encodeArgs = [
         `"${ffmpegPath}"`,
-        `-fflags +genpts+igndts+discardcorrupt`,
-        `-err_detect ignore_err`,
-        `-i "${inputFilePath}"`,
-        `-c copy`,
-        `-bsf:a aac_adtstoasc`,
-        `-avoid_negative_ts make_zero`,
-        `-y`,
-        `"${remuxedPath}"`,
+        `-i "${remuxedPath}"`,
+        `-ss ${safeStart}`,
+        `-t ${duration}`,
+        `-c:v libx264 -profile:v main -level 4.0 -preset fast -crf 23 -pix_fmt yuv420p`,
+        `-c:a aac -b:a 128k`,
+        useFilterComplex
+          ? `-filter_complex "[0:v]setpts=PTS-STARTPTS${captionFilter}[vout];[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]" -map "[vout]" -map "[aout]"`
+          : `-vf setpts=PTS-STARTPTS -af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
+        `-avoid_negative_ts make_zero -movflags +faststart -max_muxing_queue_size 9999`,
+        `-y "${outputPath}"`,
       ].join(" ");
       try {
-        await execAsync(remuxCmd, { timeout: 60000 });
-      } catch (remuxErr: any) {
-        console.error("[ffmpeg] remux fallback failed:", remuxErr.stderr?.slice(-600));
-        throw ffmpegError(err); // surface the original encode error, not the remux one
-      }
-
-      try {
-        await execAsync(buildCutCmd(remuxedPath), { timeout: 180000 });
-      } catch (retryErr: any) {
-        console.error("[ffmpeg] encode failed after remux:", retryErr.stderr?.slice(-800));
-        throw ffmpegError(retryErr);
-      } finally {
-        await unlink(remuxedPath).catch(() => {});
+        await execAsync(encodeArgs, { timeout: 180000 });
+      } catch (encErr: any) {
+        console.error("[ffmpeg] re-encode fallback failed:", encErr.stderr?.slice(-800));
+        throw ffmpegError(encErr);
       }
     }
 
     return await readFile(outputPath);
   } finally {
+    await unlink(remuxedPath).catch(() => {});
     await unlink(outputPath).catch(() => {});
     for (const f of captionFiles) await unlink(f).catch(() => {});
     try {
