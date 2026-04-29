@@ -11,6 +11,8 @@
  *   invoice.payment_failed           — payment failed, warn (don't downgrade yet)
  */
 
+export const dynamic = "force-dynamic";
+
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { NextResponse } from "next/server";

@@ -4,6 +4,8 @@
  * the hosted checkout URL. The client redirects to it immediately.
  */
 
+export const dynamic = "force-dynamic";
+
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { stripe, STRIPE_PRO_PRICE_ID } from "@/lib/stripe";
 import { NextResponse } from "next/server";

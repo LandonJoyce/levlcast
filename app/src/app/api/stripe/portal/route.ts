@@ -4,6 +4,8 @@
  * subscription (cancel, update payment method, view invoices).
  */
 
+export const dynamic = "force-dynamic";
+
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { NextResponse } from "next/server";
