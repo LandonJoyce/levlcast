@@ -193,6 +193,7 @@ async function runClipGeneration({
   try {
     console.log(`[clip] Starting generation for "${peak.title}" (${peak.start}s–${peak.end}s)`);
 
+    console.log(`[clip] Stage 1/4: downloading segments from Twitch`);
     const download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end);
 
     // Pull word-level timestamps so cutClip can burn TikTok-style captions.
@@ -208,20 +209,23 @@ async function runClipGeneration({
     try {
       const adjustedStart = peak.start - download.segmentStartSeconds;
       const adjustedEnd = peak.end - download.segmentStartSeconds;
-      console.log(`[clip] Cutting ${adjustedStart}s–${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
+      console.log(`[clip] Stage 2/4: cutting ${adjustedStart.toFixed(2)}s–${adjustedEnd.toFixed(2)}s (segment offset: ${download.segmentStartSeconds.toFixed(2)}s)`);
       buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
         vodWords,
         vodWindow: { start: peak.start, end: peak.end },
         captionStyle,
       });
-      console.log(`[clip] Cut complete: ${buffer.length} bytes`);
+      console.log(`[clip] Stage 2/4: cut complete — ${(buffer.length / 1024 / 1024).toFixed(1)}MB`);
     } finally {
       await download.cleanup();
     }
 
     const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
+    console.log(`[clip] Stage 3/4: uploading to R2 — ${fileName}`);
     const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4");
+    console.log(`[clip] Stage 3/4: upload complete → ${publicUrl}`);
 
+    console.log(`[clip] Stage 4/4: updating DB record`);
     const { error: updateError } = await admin.from("clips").update({
       video_url: publicUrl,
       status: "ready",
@@ -229,10 +233,12 @@ async function runClipGeneration({
 
     if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
 
-    console.log(`[clip] Done: "${peak.title}" → ${publicUrl}`);
+    console.log(`[clip] Done: "${peak.title}" — all 4 stages complete`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`[clip] Failed for ${clipId}:`, message);
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error(`[clip] FAILED clip=${clipId} vod=${vodId} peak="${peak.title}" (${peak.start}s–${peak.end}s):`, message);
+    if (stack) console.error(`[clip] Stack:`, stack);
     await admin.from("clips").update({
       status: "failed",
       failed_reason: message,
