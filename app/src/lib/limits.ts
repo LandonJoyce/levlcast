@@ -33,8 +33,16 @@ export const PRO_LIMITS = {
   clips_per_month: 20,
 };
 
+// Founding members subscribed at the original $9.99 price and keep these
+// limits permanently — even if future Pro tiers are reduced.
+export const FOUNDING_LIMITS = {
+  analyses_per_month: 20,
+  clips_per_month: 20,
+};
+
 export interface UserUsage {
   plan: "free" | "pro";
+  founding_member: boolean;
   analyses_this_month: number;
   clips_this_month: number;
   can_analyze: boolean;
@@ -48,7 +56,7 @@ export async function getUserUsage(
   // Get plan from profile — also check expiry so lapsed subscriptions auto-downgrade
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, subscription_expires_at")
+    .select("plan, subscription_expires_at, founding_member")
     .eq("id", userId)
     .single();
 
@@ -70,7 +78,8 @@ export async function getUserUsage(
   const plan: "free" | "pro" =
     profile?.plan === "pro" && !isExpired ? "pro" : "free";
 
-  const limits = plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
+  const isFoundingMember = profile?.founding_member === true;
+  const limits = isFoundingMember ? FOUNDING_LIMITS : plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
 
   // Count VODs analyzed this month (completed) + any currently in-progress.
   // Including in-progress prevents a race where multiple simultaneous requests
@@ -115,6 +124,7 @@ export async function getUserUsage(
 
   return {
     plan,
+    founding_member: isFoundingMember,
     analyses_this_month,
     clips_this_month,
     can_analyze: analyses_this_month < limits.analyses_per_month,

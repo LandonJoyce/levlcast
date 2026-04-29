@@ -69,10 +69,9 @@ export async function POST(request: Request) {
     }
   }
 
-  // Free users cannot analyze VODs longer than 2 hours, regardless of range selected.
-  // Deepgram transcription costs scale with the full VOD duration — a range selection
-  // doesn't reduce the audio we need to stream through Deepgram for accurate timestamps.
-  if (usage.plan !== "pro") {
+  // Founding members have no stream length cap — they subscribed early with that promise.
+  // Free users cannot analyze VODs longer than 2 hours regardless of range selected.
+  if (!usage.founding_member && usage.plan !== "pro") {
     const { data: vodMeta } = await supabase
       .from("vods")
       .select("duration_seconds")

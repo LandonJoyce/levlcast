@@ -81,10 +81,17 @@ export async function POST(request: Request) {
         const sub = await stripe.subscriptions.retrieve(subId);
         const expiresAt = expiryFromPeriodEnd((sub as any).current_period_end ?? (sub as any).billing_cycle_anchor ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
 
+        // Tag as founding member on first-ever purchase — never cleared even if they cancel/resubscribe.
+        // Founding members keep the original generous limits permanently regardless of future tier changes.
+        const FOUNDING_PRICE_ID = "price_1TRd6WGi6zJVfDzoEIlh5gbL";
+        const items = (sub as any).items?.data ?? [];
+        const isFoundingPrice = items.some((item: any) => item.price?.id === FOUNDING_PRICE_ID);
+
         await admin.from("profiles").update({
           plan: "pro",
           stripe_customer_id: customerId,
           subscription_expires_at: expiresAt,
+          ...(isFoundingPrice ? { founding_member: true } : {}),
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
 
