@@ -26,6 +26,7 @@ import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail } from "@/lib/email";
+import { sendWebPush } from "@/lib/web-push";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -312,7 +313,7 @@ export const analyzeVod = inngest.createFunction(
       await step.run("notify", async () => {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("expo_push_token")
+          .select("expo_push_token, web_push_subscription")
           .eq("id", userId)
           .single();
 
@@ -352,11 +353,26 @@ export const analyzeVod = inngest.createFunction(
           title = "Your stream report is ready";
         }
 
-        await sendPush(profile?.expo_push_token, {
+        const pushPayload = {
           title,
           body: snippet || "Open LevlCast to see your coach report.",
           data: { vodId },
-        });
+        };
+
+        await sendPush(profile?.expo_push_token, pushPayload);
+
+        if (profile?.web_push_subscription) {
+          try {
+            await sendWebPush(profile.web_push_subscription as any, pushPayload);
+          } catch (err) {
+            // 410 = subscription expired — clear it so we don't retry next time
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("410") || msg.includes("expired") || msg.includes("unsubscribed")) {
+              await supabase.from("profiles").update({ web_push_subscription: null }).eq("id", userId);
+            }
+            console.warn(`[notify] web push failed for ${userId.slice(0, 8)}:`, msg);
+          }
+        }
       });
 
       // Send email notification — fire and forget, never block on this

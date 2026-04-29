@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
+import { NotificationPrompt } from "@/components/dashboard/notification-prompt";
 import { getUserUsage } from "@/lib/limits";
 import { scoreColorVar } from "@/lib/score-utils";
 
@@ -107,6 +108,7 @@ export default async function VodsPage({
   return (
     <>
       <VodStatusPoller hasProcessing={hasProcessing} />
+      <NotificationPrompt />
 
       {/* Header */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
