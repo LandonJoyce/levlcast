@@ -10,6 +10,7 @@ import {
   CircleUser,
   LogOut,
   ArrowLeft,
+  Link2,
 } from "lucide-react";
 
 const navGroups = [
@@ -19,6 +20,7 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/dashboard/vods", label: "VODs", icon: Video },
       { href: "/dashboard/clips", label: "Clips", icon: Wand2 },
+      { href: "/dashboard/connections", label: "Connections", icon: Link2 },
       { href: "/dashboard/settings", label: "Account", icon: CircleUser },
     ],
   },
