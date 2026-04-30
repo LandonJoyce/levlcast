@@ -7,7 +7,7 @@ export function getTikTokAuthUrl(state: string) {
     client_key: process.env.TIKTOK_CLIENT_KEY!,
     redirect_uri: TIKTOK_REDIRECT_URI,
     response_type: "code",
-    scope: "user.info.basic,video.upload",
+    scope: "user.info.basic,video.upload,video.publish",
     state,
   });
   return `${TIKTOK_AUTH_URL}?${params}`;
