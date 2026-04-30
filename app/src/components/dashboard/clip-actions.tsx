@@ -272,11 +272,70 @@ export function PostToYouTube({
   );
 }
 
-export function PostToTikTok() {
+export function PostToTikTok({
+  clipId,
+  isConnected,
+  alreadyPosted,
+}: {
+  clipId: string;
+  isConnected: boolean;
+  alreadyPosted?: boolean;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [posted, setPosted] = useState(alreadyPosted ?? false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isConnected) {
+    return (
+      <a
+        href="/dashboard/connections"
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
+      >
+        <Music size={12} />
+        Connect TikTok
+      </a>
+    );
+  }
+
+  if (posted) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-green-400">
+        <Check size={12} />
+        Posted to TikTok
+      </span>
+    );
+  }
+
+  async function handlePost() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/tiktok/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clipId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setPosted(true);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted/50 cursor-not-allowed">
-      <Music size={12} />
-      TikTok — Coming Soon
-    </span>
+    <div className="inline-flex flex-col">
+      <button
+        onClick={handlePost}
+        disabled={loading}
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors disabled:opacity-50"
+      >
+        <Music size={12} />
+        {loading ? "Posting..." : "Post to TikTok"}
+      </button>
+      {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
+    </div>
   );
 }

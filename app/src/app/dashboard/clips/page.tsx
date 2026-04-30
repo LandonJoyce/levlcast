@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { PostToYouTube, DownloadClip } from "@/components/dashboard/clip-actions";
+import { PostToYouTube, PostToTikTok, DownloadClip } from "@/components/dashboard/clip-actions";
 import { ExportClipButton } from "@/components/dashboard/clip-export-modal";
 import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
@@ -96,6 +96,7 @@ export default async function ClipsPage({
     getUserUsage(user.id, supabase),
   ]);
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
+  const isTikTokConnected = connections?.some((c) => c.platform === "tiktok") ?? false;
   const isPro = usage.plan === "pro";
 
   const clipIds = clips.map((c) => c.id);
@@ -105,6 +106,9 @@ export default async function ClipsPage({
 
   const ytPostMap = new Map(
     (socialPosts ?? []).filter((p) => p.platform === "youtube").map((p) => [p.clip_id, p.platform_url])
+  );
+  const ttPostedSet = new Set(
+    (socialPosts ?? []).filter((p) => p.platform === "tiktok").map((p) => p.clip_id)
   );
   const totalPosted = ytPostMap.size;
 
@@ -276,6 +280,7 @@ export default async function ClipsPage({
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
+                      <PostToTikTok clipId={c.id} isConnected={isTikTokConnected} alreadyPosted={ttPostedSet.has(c.id)} />
                       {isPro
                         ? <ExportClipButton clipId={c.id} clipTitle={(c.title as string) || "Clip"} />
                         : <DownloadClip clipId={c.id} />
