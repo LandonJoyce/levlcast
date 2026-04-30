@@ -184,7 +184,7 @@ function buildVerticalFilterComplex(
       cam_tr: `iw*0.25:ih*0.25:iw*0.75:0`,
       cam_tl: `iw*0.25:ih*0.25:0:0`,
     };
-    const camCrop = `crop=${camCorners[layout]},scale=${W}:-2,crop=${W}:${camH}:0:(ih-${camH})/2,setpts=PTS-STARTPTS`;
+    const camCrop = `crop=${camCorners[layout]},scale=${W}:${camH}:force_original_aspect_ratio=increase,crop=${W}:${camH}:(iw-${W})/2:(ih-${camH})/2,setpts=PTS-STARTPTS`;
     const isTop = layout === "cam_tr" || layout === "cam_tl";
 
     if (isTop) {
