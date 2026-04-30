@@ -78,7 +78,7 @@ export default async function ConnectionsPage({
           </div>
           <a
             href="/api/auth/tiktok"
-            className="block w-full text-center bg-[#fe2c55] hover:opacity-85 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-opacity"
+            className="block w-full text-center bg-black hover:opacity-85 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-opacity"
           >
             {isTikTokConnected ? "Reconnect TikTok" : "Connect TikTok"}
           </a>
