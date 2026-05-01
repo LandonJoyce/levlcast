@@ -53,9 +53,14 @@ export async function uploadToTikTok({
 }) {
   // Validate videoUrl is from our R2 bucket before passing to TikTok
   const r2Base = process.env.R2_PUBLIC_URL;
-  if (!r2Base || !videoUrl.startsWith(r2Base)) {
+  const r2Legacy = "https://pub-2c0927d30b4c41609b6a1076e4d7de01.r2.dev";
+  if (!r2Base || (!videoUrl.startsWith(r2Base) && !videoUrl.startsWith(r2Legacy))) {
     throw new Error("Invalid video URL — must be an R2 asset");
   }
+  // Rewrite legacy r2.dev URLs to the verified custom domain so TikTok accepts them
+  const normalizedUrl = videoUrl.startsWith(r2Legacy)
+    ? videoUrl.replace(r2Legacy, r2Base)
+    : videoUrl;
 
   const res = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
     method: "POST",
@@ -74,7 +79,7 @@ export async function uploadToTikTok({
       },
       source_info: {
         source: "PULL_FROM_URL",
-        video_url: videoUrl,
+        video_url: normalizedUrl,
       },
     }),
   });
