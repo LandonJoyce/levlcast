@@ -51,10 +51,53 @@ export default function OutreachPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`/api/outreach/leads?subreddit=${subreddit}`);
+      // Fetch directly from Reddit's public JSON API — works from the browser,
+      // avoids the 403 Reddit throws at Vercel/cloud server IPs.
+      const res = await fetch(
+        `https://www.reddit.com/r/${subreddit}/new.json?limit=50&raw_json=1`,
+        { headers: { "Accept": "application/json" } }
+      );
+      if (!res.ok) { setFetchError(`Reddit returned ${res.status}`); setPosts([]); return; }
       const data = await res.json();
-      if (data.error) { setFetchError(data.error); setPosts([]); return; }
-      setPosts(data.posts ?? []);
+      const children: any[] = data.data?.children ?? [];
+
+      const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
+      const HELP_PHRASES = [
+        "my stream", "my channel", "i stream", "i've been streaming",
+        "started streaming", "just started streaming", "new streamer", "new to streaming",
+        "how do i grow", "how to grow", "can't grow", "struggling to grow",
+        "no viewers", "low viewers", "0 viewers", "zero viewers",
+        "how do i get", "how to get viewers", "how to get followers",
+        "feedback on my", "feedback for my", "roast my", "rate my",
+        "any advice", "any tips", "any help", "need advice", "need help",
+        "what am i doing wrong", "what should i",
+        "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
+        "twitch.tv/",
+      ];
+      const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
+      const isPromo = PROMO_SUBS.has(subreddit.toLowerCase());
+
+      const filtered = children
+        .map((c: any) => ({
+          id: c.data.id as string,
+          title: c.data.title as string,
+          body: (c.data.selftext as string)?.slice(0, 600) ?? "",
+          author: c.data.author as string,
+          subreddit: c.data.subreddit as string,
+          url: `https://reddit.com${c.data.permalink}`,
+          score: c.data.score as number,
+          created: c.data.created_utc as number,
+          flair: c.data.link_flair_text as string | null,
+        }))
+        .filter((p) => {
+          if (SKIP.has(p.author.toLowerCase())) return false;
+          if (p.title === "[deleted]") return false;
+          if (isPromo) return true;
+          const text = `${p.title} ${p.body}`.toLowerCase();
+          return HELP_PHRASES.some((phrase) => text.includes(phrase));
+        });
+
+      setPosts(filtered);
     } catch (e: any) {
       setFetchError(e.message ?? "Network error");
     } finally {
