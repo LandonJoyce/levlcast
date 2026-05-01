@@ -117,57 +117,94 @@ export default async function VodsPage({
           <h1 className="page-title">VODs</h1>
           <p className="page-sub">Your Twitch streams, analyzed and scored.</p>
         </div>
-        <div className="row gap-md">
-          <SyncButton />
-        </div>
+        {vodList.length > 0 && (
+          <div className="row gap-md">
+            <SyncButton />
+          </div>
+        )}
       </div>
 
-      {/* Stat row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-        <div className="card card-pad-sm">
-          <div className="mono-label">Total analyzed</div>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: "var(--ink)" }}>{totalAnalyzed}</div>
-        </div>
-        <div className="card card-pad-sm">
-          <div className="mono-label">Avg score</div>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: scoreColorVar(avgScore) }}>
-            {avgScore}<span style={{ fontSize: 12, color: "var(--ink-3)", fontWeight: 500 }}>/100</span>
+      {/* Stat row — only shown once there are VODs */}
+      {vodList.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+          <div className="card card-pad-sm">
+            <div className="mono-label">Total analyzed</div>
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: "var(--ink)" }}>{totalAnalyzed}</div>
+          </div>
+          <div className="card card-pad-sm">
+            <div className="mono-label">Avg score</div>
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: scoreColorVar(avgScore) }}>
+              {avgScore}<span style={{ fontSize: 12, color: "var(--ink-3)", fontWeight: 500 }}>/100</span>
+            </div>
+          </div>
+          <div className="card card-pad-sm">
+            <div className="mono-label">Clips made</div>
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: "var(--green)" }}>{clipsCount ?? 0}</div>
+          </div>
+          <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--blue) 30%, var(--line))" }}>
+            <div className="mono-label" style={{ color: "var(--blue)" }}>Quota · {usage.plan === "pro" ? "Pro plan" : "Free plan"}</div>
+            <div className="row" style={{ marginTop: 8, alignItems: "center", gap: 10 }}>
+              <div className="prog" style={{ flex: 1 }}><span style={{ width: `${quotaPct}%` }} /></div>
+              <span className="mono" style={{ fontSize: 12, color: "var(--ink-2)" }}>{quotaUsed}/{quotaTotal}</span>
+            </div>
           </div>
         </div>
-        <div className="card card-pad-sm">
-          <div className="mono-label">Clips made</div>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: "var(--green)" }}>{clipsCount ?? 0}</div>
-        </div>
-        <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--blue) 30%, var(--line))" }}>
-          <div className="mono-label" style={{ color: "var(--blue)" }}>Quota · {usage.plan === "pro" ? "Pro plan" : "Free plan"}</div>
-          <div className="row" style={{ marginTop: 8, alignItems: "center", gap: 10 }}>
-            <div className="prog" style={{ flex: 1 }}><span style={{ width: `${quotaPct}%` }} /></div>
-            <span className="mono" style={{ fontSize: 12, color: "var(--ink-2)" }}>{quotaUsed}/{quotaTotal}</span>
+      )}
+
+      {/* Empty onboarding state */}
+      {vodList.length === 0 ? (
+        <div className="card card-pad" style={{ padding: "48px 40px", textAlign: "center" }}>
+          <p className="mono-label" style={{ marginBottom: 20, letterSpacing: ".08em" }}>GET STARTED</p>
+          <div className="row" style={{ justifyContent: "center", gap: 0, marginBottom: 32, flexWrap: "wrap" }}>
+            {[
+              { n: "1", label: "Sync your VODs" },
+              { n: "2", label: "Click Analyze" },
+              { n: "3", label: "Get your report" },
+            ].map(({ n, label }, i, arr) => (
+              <div key={n} className="row" style={{ alignItems: "center", gap: 0 }}>
+                <div style={{ textAlign: "center", padding: "0 20px" }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%",
+                    background: "color-mix(in oklab, var(--blue) 15%, var(--surface))",
+                    border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 8px",
+                    fontSize: 13, fontWeight: 700, color: "var(--blue)",
+                  }}>{n}</div>
+                  <span style={{ fontSize: 12, color: "var(--ink-2)", fontWeight: 500 }}>{label}</span>
+                </div>
+                {i < arr.length - 1 && (
+                  <div style={{ width: 32, height: 1, background: "var(--line)", flexShrink: 0 }} />
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
-
-      {/* Filter row */}
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <div className="tabs">
-          {TAB_LABELS.map(([k, l]) => (
-            <Link key={k} href={`/dashboard/vods${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
-              {l}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* VOD list */}
-      {filtered.length === 0 ? (
-        <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>
-            {vodList.length === 0
-              ? "No VODs synced yet — hit Sync from Twitch to import your stream library."
-              : `No VODs match this filter.`}
+          <p style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 24, maxWidth: 360, margin: "0 auto 24px" }}>
+            Pull in your last 20 Twitch streams in seconds, then pick one to analyze.
           </p>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <SyncButton />
+          </div>
         </div>
       ) : (
+        <>
+        {/* Filter row */}
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <div className="tabs">
+            {TAB_LABELS.map(([k, l]) => (
+              <Link key={k} href={`/dashboard/vods${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
+                {l}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* VOD list */}
+        {filtered.length === 0 ? (
+          <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+            <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No VODs match this filter.</p>
+          </div>
+        ) : (
         <div className="card">
           {filtered.map((v, i) => {
             const score = (v.coach_report as { overall_score?: number } | null)?.overall_score ?? null;
@@ -307,6 +344,8 @@ export default async function VodsPage({
             );
           })}
         </div>
+        )}
+        </>
       )}
     </>
   );
