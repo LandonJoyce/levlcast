@@ -51,62 +51,10 @@ export default function OutreachPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      // Fetch from Reddit's public JSON API directly from the browser.
-      const res = await fetch(
-        `https://www.reddit.com/r/${subreddit}/new.json?limit=50&raw_json=1`,
-        { headers: { "Accept": "application/json" }, credentials: "omit" }
-      );
-      const text = await res.text();
-      if (!res.ok) { setFetchError(`Reddit returned ${res.status}: ${text.slice(0, 120)}`); setPosts([]); return; }
-      let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        setFetchError(`Reddit returned non-JSON: ${text.slice(0, 200)}`);
-        setPosts([]);
-        return;
-      }
-      const children: any[] = data.data?.children ?? [];
-
-      const HELP_PHRASES = [
-        "my stream", "my channel", "i stream", "i've been streaming",
-        "started streaming", "just started streaming", "new streamer", "new to streaming",
-        "how do i grow", "how to grow", "can't grow", "struggling to grow",
-        "no viewers", "low viewers", "0 viewers", "zero viewers",
-        "how do i get", "how to get viewers", "how to get followers",
-        "feedback on my", "feedback for my", "roast my", "rate my",
-        "any advice", "any tips", "any help", "need advice", "need help",
-        "what am i doing wrong", "what should i",
-        "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
-        "twitch.tv/",
-      ];
-      const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
-      const seenAuthors = new Set<string>();
-
-      const filtered = children
-        .map((c: any) => ({
-          id: c.data.id as string,
-          title: c.data.title as string,
-          body: (c.data.selftext as string)?.slice(0, 600) ?? "",
-          author: c.data.author as string,
-          subreddit: c.data.subreddit as string,
-          url: `https://reddit.com${c.data.permalink}`,
-          score: c.data.score as number,
-          created: c.data.created_utc as number,
-          flair: c.data.link_flair_text as string | null,
-        }))
-        .filter((p) => {
-          if (SKIP.has(p.author.toLowerCase())) return false;
-          if (p.title === "[deleted]") return false;
-          // Deduplicate — one post per author
-          if (seenAuthors.has(p.author)) return false;
-          const text = `${p.title} ${p.body}`.toLowerCase();
-          if (!HELP_PHRASES.some((phrase) => text.includes(phrase))) return false;
-          seenAuthors.add(p.author);
-          return true;
-        });
-
-      setPosts(filtered);
+      const res = await fetch(`/api/outreach/leads?subreddit=${subreddit}`);
+      const data = await res.json();
+      if (data.error) { setFetchError(data.error); setPosts([]); return; }
+      setPosts(data.posts ?? []);
     } catch (e: any) {
       setFetchError(e.message ?? "Network error");
     } finally {
