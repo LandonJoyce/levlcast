@@ -50,19 +50,22 @@ export async function GET(req: NextRequest) {
   let data: any = null;
   let lastError = "";
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await fetch(pullpushUrl, { headers: { "Accept": "application/json" } });
-      if (!res.ok) { lastError = `Pullpush returned ${res.status}`; continue; }
+      const res = await fetch(pullpushUrl, {
+        headers: { "Accept": "application/json" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) { lastError = `Pullpush ${res.status}`; continue; }
       const text = await res.text();
       try { data = JSON.parse(text); break; }
-      catch { lastError = `Unexpected response: ${text.slice(0, 100)}`; continue; }
-    } catch {
-      lastError = "Pullpush unreachable";
+      catch { lastError = "Bad JSON from Pullpush"; continue; }
+    } catch (e: any) {
+      lastError = e?.name === "TimeoutError" ? "Pullpush timed out" : "Pullpush unreachable";
     }
   }
 
-  if (!data) return NextResponse.json({ error: lastError, posts: [] });
+  if (!data) return NextResponse.json({ error: `${lastError} — try again`, posts: [] });
 
   // Pullpush returns { data: [...] } where each item is a flat post object
   const children: any[] = (data.data ?? []).map((p: any) => ({ data: p }));
