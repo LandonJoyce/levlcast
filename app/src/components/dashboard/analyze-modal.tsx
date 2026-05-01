@@ -14,7 +14,7 @@ interface AnalyzeModalProps {
   onUpgrade: (reason: string) => void;
 }
 
-const FREE_MAX_SECONDS = 7200; // 2 hours
+const FREE_MAX_SECONDS = 14400; // 4 hours
 
 type Preset = "full" | "first_hour" | "last_hour" | "custom";
 
@@ -258,7 +258,7 @@ export function AnalyzeModal({
               We transcribe the full stream first, then run coaching analysis on your selected section only.
             </div>
           )}
-          {isFull && durationSeconds >= 7200 && !tooLongForFree && (
+          {isFull && durationSeconds >= 14400 && !tooLongForFree && (
             <div style={{ fontSize: 11, color: "#F59E0B", marginTop: 8, lineHeight: 1.5 }}>
               Long stream detected — analysis runs in the background. You can close this page and come back when it's done.
             </div>

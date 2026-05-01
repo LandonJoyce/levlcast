@@ -212,7 +212,7 @@ export default async function VodsPage({
             // Failed VODs need a retry path too — the API accepts both
             // pending and failed for analyze.
             const showAnalyzeButton = v.status === "pending" || v.status === "failed";
-            const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 7200;
+            const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 14400;
 
             return (
               <div

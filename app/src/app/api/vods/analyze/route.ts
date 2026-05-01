@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .single();
 
-    const FREE_MAX_SECONDS = 7200; // 2 hours
+    const FREE_MAX_SECONDS = 14400; // 4 hours
     if (vodMeta?.duration_seconds && vodMeta.duration_seconds > FREE_MAX_SECONDS) {
       return NextResponse.json(
         {
