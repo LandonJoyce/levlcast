@@ -68,7 +68,6 @@ export default function OutreachPage() {
       }
       const children: any[] = data.data?.children ?? [];
 
-      const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
       const HELP_PHRASES = [
         "my stream", "my channel", "i stream", "i've been streaming",
         "started streaming", "just started streaming", "new streamer", "new to streaming",
@@ -82,7 +81,7 @@ export default function OutreachPage() {
         "twitch.tv/",
       ];
       const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
-      const isPromo = PROMO_SUBS.has(subreddit.toLowerCase());
+      const seenAuthors = new Set<string>();
 
       const filtered = children
         .map((c: any) => ({
@@ -99,9 +98,12 @@ export default function OutreachPage() {
         .filter((p) => {
           if (SKIP.has(p.author.toLowerCase())) return false;
           if (p.title === "[deleted]") return false;
-          if (isPromo) return true;
+          // Deduplicate — one post per author
+          if (seenAuthors.has(p.author)) return false;
           const text = `${p.title} ${p.body}`.toLowerCase();
-          return HELP_PHRASES.some((phrase) => text.includes(phrase));
+          if (!HELP_PHRASES.some((phrase) => text.includes(phrase))) return false;
+          seenAuthors.add(p.author);
+          return true;
         });
 
       setPosts(filtered);
