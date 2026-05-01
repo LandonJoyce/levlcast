@@ -44,28 +44,25 @@ export async function GET(req: NextRequest) {
 
   const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
 
-  // Pullpush mirrors Reddit without requiring auth and works from any server
-  let res: Response;
-  try {
-    res = await fetch(
-      `https://api.pullpush.io/reddit/search/submission?subreddit=${subreddit}&size=50&sort_type=created_utc&order=desc&after=${Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60}`,
-      { headers: { "Accept": "application/json" } }
-    );
-  } catch {
-    return NextResponse.json({ error: "Pullpush unreachable", posts: [] });
+  const after = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+  const pullpushUrl = `https://api.pullpush.io/reddit/search/submission?subreddit=${subreddit}&size=50&sort_type=created_utc&order=desc&after=${after}`;
+
+  let data: any = null;
+  let lastError = "";
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(pullpushUrl, { headers: { "Accept": "application/json" } });
+      if (!res.ok) { lastError = `Pullpush returned ${res.status}`; continue; }
+      const text = await res.text();
+      try { data = JSON.parse(text); break; }
+      catch { lastError = `Unexpected response: ${text.slice(0, 100)}`; continue; }
+    } catch {
+      lastError = "Pullpush unreachable";
+    }
   }
 
-  if (!res.ok) {
-    return NextResponse.json({ error: `Pullpush returned ${res.status}`, posts: [] });
-  }
-
-  const text = await res.text();
-  let data: any;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    return NextResponse.json({ error: `Unexpected response: ${text.slice(0, 150)}`, posts: [] });
-  }
+  if (!data) return NextResponse.json({ error: lastError, posts: [] });
 
   // Pullpush returns { data: [...] } where each item is a flat post object
   const children: any[] = (data.data ?? []).map((p: any) => ({ data: p }));

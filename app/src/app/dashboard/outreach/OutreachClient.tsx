@@ -139,8 +139,9 @@ export default function OutreachPage() {
           Fetching leads...
         </div>
       ) : fetchError ? (
-        <div className="card card-pad" style={{ textAlign: "center", color: "#f87171", fontSize: 14, padding: "48px 24px" }}>
-          Error: {fetchError}
+        <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+          <p style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>Failed to load: {fetchError}</p>
+          <button onClick={fetchPosts} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 16px" }}>Try again</button>
         </div>
       ) : visiblePosts.length === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
