@@ -4,9 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 
 const SUBREDDITS = [
   { value: "TwitchStreamers", label: "r/TwitchStreamers" },
+  { value: "Twitch_Startup", label: "r/Twitch_Startup" },
+  { value: "TwitchFollowers", label: "r/TwitchFollowers" },
   { value: "Twitch", label: "r/Twitch" },
+  { value: "NewTwitchStreamers", label: "r/NewTwitchStreamers" },
+  { value: "StreamersCommunity", label: "r/StreamersCommunity" },
+  { value: "GameStreaming", label: "r/GameStreaming" },
   { value: "letsplay", label: "r/letsplay" },
-  { value: "SmallStreamers", label: "r/SmallStreamers" },
 ];
 
 type Post = {
