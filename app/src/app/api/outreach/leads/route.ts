@@ -5,95 +5,83 @@ export const runtime = "edge";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 
-const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
-
-const HELP_INTENT_PHRASES = [
-  "my stream", "my channel", "i stream", "i've been streaming",
-  "started streaming", "just started streaming", "new streamer", "new to streaming",
-  "how do i grow", "how to grow", "can't grow", "struggling to grow",
-  "no viewers", "low viewers", "0 viewers", "zero viewers",
-  "how do i get", "how to get viewers", "how to get followers",
-  "feedback on my", "feedback for my", "roast my", "rate my",
-  "any advice", "any tips", "any help", "need advice", "need help",
-  "what am i doing wrong", "what should i",
-  "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
-  "twitch.tv/",
-];
-
-const SKIP_AUTHORS = new Set(["automoderator", "[deleted]", "reddit"]);
+async function getTwitchToken(): Promise<string> {
+  const res = await fetch("https://id.twitch.tv/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.TWITCH_CLIENT_ID!,
+      client_secret: process.env.TWITCH_CLIENT_SECRET!,
+      grant_type: "client_credentials",
+    }),
+  });
+  if (!res.ok) throw new Error(`Twitch auth failed: ${res.status}`);
+  const data = await res.json();
+  return data.access_token as string;
+}
 
 export async function GET(req: NextRequest) {
-  // Edge-compatible Supabase auth via cookies on the request
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll() {},
-      },
-    }
+    { cookies: { getAll() { return req.cookies.getAll(); }, setAll() {} } }
   );
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
+  const game = req.nextUrl.searchParams.get("game") ?? "";
 
-  const after = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-  const pullpushUrl = `https://api.pullpush.io/reddit/search/submission?subreddit=${subreddit}&size=50&sort_type=created_utc&order=desc&after=${after}`;
-
-  let data: any = null;
-  let lastError = "";
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const res = await fetch(pullpushUrl, {
-        headers: { "Accept": "application/json" },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!res.ok) { lastError = `Pullpush ${res.status}`; continue; }
-      const text = await res.text();
-      try { data = JSON.parse(text); break; }
-      catch { lastError = "Bad JSON from Pullpush"; continue; }
-    } catch (e: any) {
-      lastError = e?.name === "TimeoutError" ? "Pullpush timed out" : "Pullpush unreachable";
-    }
+  let token: string;
+  try {
+    token = await getTwitchToken();
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message, posts: [] });
   }
 
-  if (!data) return NextResponse.json({ error: `${lastError} — try again`, posts: [] });
+  const headers = {
+    "Client-ID": process.env.TWITCH_CLIENT_ID!,
+    Authorization: `Bearer ${token}`,
+  };
 
-  // Pullpush returns { data: [...] } where each item is a flat post object
-  const children: any[] = (data.data ?? []).map((p: any) => ({ data: p }));
-  const isPromoSub = PROMO_SUBS.has(subreddit.toLowerCase());
-  const seenAuthors = new Set<string>();
+  // If a game name was given, resolve it to a game_id first
+  let gameId = "";
+  if (game) {
+    const gRes = await fetch(
+      `https://api.twitch.tv/helix/games?name=${encodeURIComponent(game)}`,
+      { headers }
+    );
+    const gData = await gRes.json();
+    gameId = gData.data?.[0]?.id ?? "";
+  }
 
-  const posts = children
-    .map((c: any) => ({
-      id: c.data.id as string,
-      title: c.data.title as string,
-      body: (c.data.selftext as string)?.slice(0, 600) ?? "",
-      author: c.data.author as string,
-      subreddit: c.data.subreddit as string,
-      url: `https://reddit.com${c.data.permalink}`,
-      score: c.data.score as number,
-      created: c.data.created_utc as number,
-      flair: c.data.link_flair_text as string | null,
-    }))
-    .filter((p) => {
-      if (SKIP_AUTHORS.has(p.author.toLowerCase())) return false;
-      if (p.title === "[deleted]") return false;
-      if (seenAuthors.has(p.author)) return false;
-      const text = `${p.title} ${p.body}`.toLowerCase();
-      const passes = isPromoSub || HELP_INTENT_PHRASES.some((phrase) => text.includes(phrase));
-      if (!passes) return false;
-      seenAuthors.add(p.author);
-      return true;
-    });
+  // Fetch live streams: small viewer counts (no min — Twitch sorts by viewers desc,
+  // so we take the last page by fetching with first=100 then filtering)
+  const url = gameId
+    ? `https://api.twitch.tv/helix/streams?first=100&game_id=${gameId}`
+    : `https://api.twitch.tv/helix/streams?first=100`;
 
-  return NextResponse.json({ posts, total: children.length, filtered: posts.length });
+  const sRes = await fetch(url, { headers });
+  if (!sRes.ok) return NextResponse.json({ error: `Twitch streams failed: ${sRes.status}`, posts: [] });
+  const sData = await sRes.json();
+  const streams: any[] = sData.data ?? [];
+
+  // We want small streamers — under 50 viewers
+  const leads = streams
+    .filter((s) => s.viewer_count <= 50 && s.viewer_count >= 0 && s.language === "en")
+    .map((s) => ({
+      id: s.id,
+      title: s.title,
+      body: `Live now playing ${s.game_name} with ${s.viewer_count} viewer${s.viewer_count === 1 ? "" : "s"}.`,
+      author: s.user_name,
+      subreddit: s.game_name,
+      url: `https://twitch.tv/${s.user_login}`,
+      viewers: s.viewer_count,
+      game: s.game_name,
+      created: Math.floor(new Date(s.started_at).getTime() / 1000),
+      flair: `${s.viewer_count} viewers`,
+    }));
+
+  return NextResponse.json({ posts: leads, total: streams.length });
 }
