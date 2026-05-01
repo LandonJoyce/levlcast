@@ -16,11 +16,11 @@ export async function POST(req: NextRequest) {
 
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 250,
+    max_tokens: 300,
     messages: [
       {
         role: "user",
-        content: `Write a short, personal Reddit DM to a Twitch streamer about LevlCast.
+        content: `Write a short Reddit DM from someone who built LevlCast to a Twitch streamer who posted asking for help.
 
 Their post:
 Title: ${postTitle}
@@ -28,18 +28,36 @@ ${postBody ? `Body: ${postBody}` : ""}
 Username: ${authorName}
 
 Rules:
-- 3 sentences max. Short and genuine.
-- Reference something specific from their post — don't be generic.
-- Explain LevlCast in one sentence: it reads your VOD after a stream and tells you the exact moments where viewers left, with timestamps.
-- Mention it's free to try. End with: levlcast.com
-- No em dashes. No "I hope this message finds you well." No corpo language.
-- Sound like a person, not a marketer. Conversational.
-- Don't start with "Hey" if the post is serious/frustrated — match their tone.
-- Return ONLY the message text. Nothing else.`,
+- First line: SUBJECT: <a short subject line specific to their situation, 4-7 words, no generic phrases like "your stream" or "quick question", make it feel like it's written by a real person who read their post>
+- Then a blank line
+- Then the message body: 3 sentences max
+- Reference something specific from their post
+- Say you built LevlCast, not that you found it or that it's a tool you use
+- Explain what it does in one sentence: it watches your VOD after each stream and shows you the exact timestamps where viewers dropped off
+- Mention it's free. End with levlcast.com
+- No em dashes. No hyphens between words. No corpo language. No "I hope". No "just wanted to".
+- Sound like a real person texting, not a marketer
+- Match their tone: if they're frustrated, be direct; if they're casual, be casual
+- Return ONLY the subject line and message. Nothing else.`,
       },
     ],
   });
 
-  const message = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
-  return NextResponse.json({ message });
+  const raw = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
+
+  // Parse subject and message body
+  const lines = raw.split("\n");
+  let subject = "Saw your post";
+  let message = raw;
+
+  const subjectLine = lines.find((l) => l.toLowerCase().startsWith("subject:"));
+  if (subjectLine) {
+    subject = subjectLine.replace(/^subject:\s*/i, "").trim();
+    message = lines
+      .slice(lines.indexOf(subjectLine) + 1)
+      .join("\n")
+      .trim();
+  }
+
+  return NextResponse.json({ message, subject });
 }

@@ -34,7 +34,7 @@ export default function OutreachPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<Set<string>>(new Set());
-  const [messages, setMessages] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<Record<string, { body: string; subject: string }>>({});
   const [generating, setGenerating] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -71,14 +71,14 @@ export default function OutreachPage() {
         body: JSON.stringify({ postTitle: post.title, postBody: post.body, authorName: post.author }),
       });
       const data = await res.json();
-      setMessages((prev) => ({ ...prev, [post.id]: data.message }));
+      setMessages((prev) => ({ ...prev, [post.id]: { body: data.message, subject: data.subject ?? "Saw your post" } }));
     } finally {
       setGenerating(null);
     }
   }
 
   function copyMessage(postId: string) {
-    navigator.clipboard.writeText(messages[postId]);
+    navigator.clipboard.writeText(messages[postId]?.body ?? "");
     setCopied(postId);
     setTimeout(() => setCopied(null), 2000);
   }
@@ -184,12 +184,15 @@ export default function OutreachPage() {
 
               {messages[post.id] && (
                 <div style={{ marginTop: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid var(--line)" }}>
+                  <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "0 0 6px", fontStyle: "italic" }}>
+                    Subject: {messages[post.id].subject}
+                  </p>
                   <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.7, margin: "0 0 14px", whiteSpace: "pre-wrap" }}>
-                    {messages[post.id]}
+                    {messages[post.id].body}
                   </p>
                   <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
                     <a
-                      href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(post.author)}&subject=${encodeURIComponent("Your stream")}&message=${encodeURIComponent(messages[post.id])}`}
+                      href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(post.author)}&subject=${encodeURIComponent(messages[post.id].subject)}&message=${encodeURIComponent(messages[post.id].body)}`}
                       target="_blank" rel="noopener noreferrer"
                       onClick={() => setTimeout(() => markSent(post.id), 800)}
                       style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
