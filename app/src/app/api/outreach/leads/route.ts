@@ -21,25 +21,6 @@ const HELP_PHRASES = [
 const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
 const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
 
-async function getRedditToken(): Promise<string> {
-  const credentials = btoa(
-    `${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`
-  );
-  const res = await fetch("https://www.reddit.com/api/v1/access_token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": "LevlCast/1.0",
-    },
-    body: "grant_type=client_credentials",
-  });
-  if (!res.ok) throw new Error(`Reddit auth failed: ${res.status}`);
-  const data = await res.json();
-  if (!data.access_token) throw new Error("No access token in Reddit response");
-  return data.access_token as string;
-}
-
 export async function GET(req: NextRequest) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,46 +34,34 @@ export async function GET(req: NextRequest) {
 
   const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
 
-  let token: string;
-  try {
-    token = await getRedditToken();
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message, posts: [] });
-  }
-
+  // Arctic Shift: free Reddit mirror API, no credentials, works from cloud IPs
   const res = await fetch(
-    `https://oauth.reddit.com/r/${subreddit}/new?limit=100&raw_json=1`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "User-Agent": "LevlCast/1.0",
-        Accept: "application/json",
-      },
-    }
+    `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit)}&sort=new&limit=100&fields=id,title,selftext,author,subreddit,permalink,created_utc,link_flair_text`,
+    { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
   );
 
   if (!res.ok) {
-    return NextResponse.json({ error: `Reddit ${res.status} on r/${subreddit}`, posts: [] });
+    return NextResponse.json({ error: `Arctic Shift ${res.status} on r/${subreddit}`, posts: [] });
   }
 
   const data = await res.json();
-  const children: any[] = data.data?.children ?? [];
+  const children: any[] = data.data ?? [];
   const isPromo = PROMO_SUBS.has(subreddit.toLowerCase());
   const seenAuthors = new Set<string>();
 
   const posts = children
     .map((c: any) => ({
-      id: c.data.id,
-      title: c.data.title as string,
-      body: (c.data.selftext as string)?.slice(0, 500) ?? "",
-      author: c.data.author as string,
-      subreddit: c.data.subreddit as string,
-      url: `https://reddit.com${c.data.permalink}`,
-      created: c.data.created_utc as number,
-      flair: c.data.link_flair_text as string | null,
+      id: c.id as string,
+      title: c.title as string,
+      body: ((c.selftext as string) ?? "").slice(0, 500),
+      author: c.author as string,
+      subreddit: c.subreddit as string,
+      url: `https://reddit.com${c.permalink}`,
+      created: typeof c.created_utc === "string" ? parseInt(c.created_utc, 10) : (c.created_utc as number),
+      flair: (c.link_flair_text as string | null) ?? null,
     }))
     .filter((p) => {
-      if (SKIP.has(p.author.toLowerCase())) return false;
+      if (!p.author || SKIP.has(p.author.toLowerCase())) return false;
       if (p.title === "[deleted]") return false;
       if (seenAuthors.has(p.author)) return false;
       const text = `${p.title} ${p.body}`.toLowerCase();
