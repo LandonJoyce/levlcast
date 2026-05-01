@@ -676,7 +676,7 @@ Generate two things:
 1. "insight": One sentence describing what the data shows. Be specific with numbers. Caring tone, not alarmist.
 2. "recommendation": One actionable sentence. What should they do this week?
 
-Talk like a friend who manages their career, not a metrics dashboard.
+Talk like a friend who manages their career, not a metrics dashboard. No em dashes. Short sentences. Use contractions.
 JSON only: { "insight": "...", "recommendation": "..." }`,
                 }],
               });
@@ -816,6 +816,7 @@ Generate two things:
 1. "insight": One sentence about which content is working best and why. Be specific with numbers. Tone: encouraging business manager.
 2. "recommendation": One actionable sentence about their content mix this week.
 
+No em dashes. Short sentences. Use contractions.
 JSON only: { "insight": "...", "recommendation": "..." }`,
               }],
             });
@@ -1172,6 +1173,7 @@ Generate:
 1. "headline": One punchy sentence summarizing the week. Encouraging but honest. No fluff.
 2. "actions": Array of 2-3 short action items for this week. Specific, actionable, based on the data.
 
+No em dashes. Short sentences. Use contractions.
 JSON only: { "headline": "...", "actions": ["...", "..."] }`,
             }],
           });
