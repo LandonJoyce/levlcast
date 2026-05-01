@@ -212,6 +212,7 @@ export default async function VodsPage({
             // Failed VODs need a retry path too — the API accepts both
             // pending and failed for analyze.
             const showAnalyzeButton = v.status === "pending" || v.status === "failed";
+            const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 7200;
 
             return (
               <div
@@ -292,6 +293,11 @@ export default async function VodsPage({
                     </Link>
                     {v.status === "pending" && <span className="chip">queued</span>}
                     {v.status === "failed" && <span className="chip r">failed</span>}
+                    {requiresPro && v.status === "pending" && (
+                      <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "rgba(34,211,238,0.1)", border: "1px solid rgba(34,211,238,0.25)", color: "#22D3EE", fontWeight: 600, letterSpacing: "0.05em" }}>
+                        PRO
+                      </span>
+                    )}
                   </div>
                   <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", letterSpacing: ".04em" }}>
                     {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
