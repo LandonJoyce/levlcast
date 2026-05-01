@@ -2,26 +2,38 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const GAMES = [
-  { value: "", label: "All games" },
-  { value: "Just Chatting", label: "Just Chatting" },
-  { value: "Minecraft", label: "Minecraft" },
-  { value: "Fortnite", label: "Fortnite" },
-  { value: "Valorant", label: "Valorant" },
-  { value: "League of Legends", label: "League of Legends" },
-  { value: "Apex Legends", label: "Apex Legends" },
-  { value: "Call of Duty", label: "Call of Duty" },
-  { value: "Grand Theft Auto V", label: "GTA V" },
+const SUBREDDITS = [
+  { value: "TwitchStreamers", label: "r/TwitchStreamers" },
+  { value: "Twitch_Startup", label: "r/Twitch_Startup" },
+  { value: "TwitchFollowers", label: "r/TwitchFollowers" },
+  { value: "NewTwitchStreamers", label: "r/NewTwitchStreamers" },
+  { value: "StreamersCommunity", label: "r/StreamersCommunity" },
+  { value: "Twitch", label: "r/Twitch" },
 ];
 
-type Lead = {
+const HELP_PHRASES = [
+  "my stream", "my channel", "i stream", "i've been streaming",
+  "started streaming", "just started streaming", "new streamer", "new to streaming",
+  "how do i grow", "how to grow", "can't grow", "struggling to grow",
+  "no viewers", "low viewers", "0 viewers", "zero viewers",
+  "how do i get", "how to get viewers", "how to get followers",
+  "feedback on my", "feedback for my", "roast my", "rate my",
+  "any advice", "any tips", "any help", "need advice", "need help",
+  "what am i doing wrong", "what should i",
+  "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
+  "twitch.tv/",
+];
+
+const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
+const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
+
+type Post = {
   id: string;
   title: string;
   body: string;
   author: string;
+  subreddit: string;
   url: string;
-  viewers: number;
-  game: string;
   created: number;
   flair: string | null;
 };
@@ -33,9 +45,52 @@ function timeAgo(utc: number) {
   return `${Math.round(diff / 86400)}d ago`;
 }
 
+async function fetchSubreddit(subreddit: string): Promise<Post[]> {
+  // Fetch Reddit JSON directly from the browser — works because your browser
+  // is not a cloud IP. Use no-cors mode isn't possible (can't read response),
+  // so we use standard fetch with a proper Accept header.
+  const res = await fetch(
+    `https://www.reddit.com/r/${subreddit}/new.json?limit=50&raw_json=1`,
+    {
+      headers: { Accept: "application/json" },
+      // Include credentials so Reddit sees a logged-in browser request
+      credentials: "include",
+    }
+  );
+  if (!res.ok) throw new Error(`Reddit ${res.status} on r/${subreddit}`);
+  const text = await res.text();
+  const data = JSON.parse(text);
+  const children: any[] = data.data?.children ?? [];
+
+  const isPromo = PROMO_SUBS.has(subreddit.toLowerCase());
+  const seenAuthors = new Set<string>();
+
+  return children
+    .map((c: any) => ({
+      id: c.data.id,
+      title: c.data.title as string,
+      body: (c.data.selftext as string)?.slice(0, 500) ?? "",
+      author: c.data.author as string,
+      subreddit: c.data.subreddit as string,
+      url: `https://reddit.com${c.data.permalink}`,
+      created: c.data.created_utc as number,
+      flair: c.data.link_flair_text as string | null,
+    }))
+    .filter((p) => {
+      if (SKIP.has(p.author.toLowerCase())) return false;
+      if (p.title === "[deleted]") return false;
+      if (seenAuthors.has(p.author)) return false;
+      const text = `${p.title} ${p.body}`.toLowerCase();
+      const passes = isPromo || HELP_PHRASES.some((ph) => text.includes(ph));
+      if (!passes) return false;
+      seenAuthors.add(p.author);
+      return true;
+    });
+}
+
 export default function OutreachPage() {
-  const [game, setGame] = useState("");
-  const [posts, setPosts] = useState<Lead[]>([]);
+  const [subreddit, setSubreddit] = useState("TwitchStreamers");
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<Record<string, string>>({});
@@ -44,38 +99,33 @@ export default function OutreachPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("outreach_sent_v2");
+    const saved = localStorage.getItem("outreach_sent_v1");
     if (saved) setSent(new Set(JSON.parse(saved)));
   }, []);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
+    setPosts([]);
     try {
-      const res = await fetch(`/api/outreach/leads?game=${encodeURIComponent(game)}`);
-      const data = await res.json();
-      if (data.error) { setFetchError(data.error); setPosts([]); return; }
-      setPosts(data.posts ?? []);
+      const results = await fetchSubreddit(subreddit);
+      setPosts(results);
     } catch (e: any) {
-      setFetchError(e.message ?? "Network error");
+      setFetchError(e.message ?? "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [game]);
+  }, [subreddit]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
-  async function generateMessage(post: Lead) {
+  async function generateMessage(post: Post) {
     setGenerating(post.id);
     try {
       const res = await fetch("/api/outreach/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postTitle: post.title,
-          postBody: `${post.author} is live on Twitch playing ${post.game} with ${post.viewers} viewer${post.viewers === 1 ? "" : "s"}. Stream title: "${post.title}"`,
-          authorName: post.author,
-        }),
+        body: JSON.stringify({ postTitle: post.title, postBody: post.body, authorName: post.author }),
       });
       const data = await res.json();
       setMessages((prev) => ({ ...prev, [post.id]: data.message }));
@@ -93,12 +143,12 @@ export default function OutreachPage() {
   function markSent(postId: string) {
     const next = new Set([...sent, postId]);
     setSent(next);
-    localStorage.setItem("outreach_sent_v2", JSON.stringify([...next]));
+    localStorage.setItem("outreach_sent_v1", JSON.stringify([...next]));
   }
 
   function clearSent() {
     setSent(new Set());
-    localStorage.removeItem("outreach_sent_v2");
+    localStorage.removeItem("outreach_sent_v1");
   }
 
   const visiblePosts = posts.filter((p) => !sent.has(p.id));
@@ -107,25 +157,21 @@ export default function OutreachPage() {
     <div>
       <div style={{ marginBottom: 28 }}>
         <span className="page-eyebrow">§ 06 · Growth</span>
-        <h1 className="page-title">Streamer Outreach</h1>
-        <p className="page-sub">Small Twitch streamers live right now. AI writes a personal message — copy it and reach out.</p>
+        <h1 className="page-title">Reddit Outreach</h1>
+        <p className="page-sub">Find streamers asking for help. AI writes a personal message. One click opens Reddit with it pre-filled.</p>
       </div>
 
-      <div className="tabs" style={{ marginBottom: 24, flexWrap: "wrap" }}>
-        {GAMES.map((g) => (
-          <button
-            key={g.value}
-            className={`tab ${game === g.value ? "active" : ""}`}
-            onClick={() => setGame(g.value)}
-          >
-            {g.label}
+      <div className="tabs" style={{ marginBottom: 24 }}>
+        {SUBREDDITS.map((s) => (
+          <button key={s.value} className={`tab ${subreddit === s.value ? "active" : ""}`} onClick={() => setSubreddit(s.value)}>
+            {s.label}
           </button>
         ))}
       </div>
 
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-          {visiblePosts.length} leads · {sent.size} skipped
+          {visiblePosts.length} leads · {sent.size} sent/skipped
         </span>
         <div className="row gap-md">
           {sent.size > 0 && (
@@ -141,16 +187,17 @@ export default function OutreachPage() {
 
       {loading ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
-          Finding streamers...
+          Fetching leads...
         </div>
       ) : fetchError ? (
         <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
           <p style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{fetchError}</p>
+          <p style={{ color: "var(--ink-3)", fontSize: 12, marginBottom: 16 }}>Make sure you're logged into Reddit in this browser, then try again.</p>
           <button onClick={fetchPosts} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 16px" }}>Try again</button>
         </div>
       ) : visiblePosts.length === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
-          No leads. Try a different game or refresh.
+          No leads right now. Try a different subreddit or refresh.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -159,34 +206,35 @@ export default function OutreachPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="row gap-sm" style={{ marginBottom: 5, flexWrap: "wrap" }}>
-                    <a href={post.url} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 13, fontWeight: 700, color: "var(--blue)", textDecoration: "none" }}>
-                      {post.author}
-                    </a>
-                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{post.game}</span>
-                    <span style={{ fontSize: 10, padding: "1px 6px", background: "rgba(34,197,94,0.1)", borderRadius: 4, color: "#4ade80" }}>
-                      {post.viewers} viewer{post.viewers === 1 ? "" : "s"}
-                    </span>
-                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>live {timeAgo(post.created)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>u/{post.author}</span>
+                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>r/{post.subreddit}</span>
+                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{timeAgo(post.created)}</span>
+                    {post.flair && (
+                      <span style={{ fontSize: 10, padding: "1px 6px", background: "rgba(255,255,255,0.06)", borderRadius: 4, color: "var(--ink-3)" }}>
+                        {post.flair}
+                      </span>
+                    )}
                   </div>
-                  <p style={{ fontSize: 13, color: "var(--ink)", margin: 0, lineHeight: 1.4 }}>{post.title}</p>
+                  <a href={post.url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", textDecoration: "none", lineHeight: 1.4, display: "block", marginBottom: post.body ? 6 : 0 }}>
+                    {post.title}
+                  </a>
+                  {post.body && (
+                    <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      {post.body}
+                    </p>
+                  )}
                 </div>
 
                 <div className="row gap-sm" style={{ flexShrink: 0 }}>
                   {!messages[post.id] && (
-                    <button
-                      onClick={() => generateMessage(post)}
-                      disabled={generating === post.id}
-                      className="btn btn-blue"
-                      style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap", opacity: generating === post.id ? 0.6 : 1 }}
-                    >
+                    <button onClick={() => generateMessage(post)} disabled={generating === post.id}
+                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap", opacity: generating === post.id ? 0.6 : 1 }}>
                       {generating === post.id ? "Writing..." : "Write message"}
                     </button>
                   )}
-                  <button
-                    onClick={() => markSent(post.id)}
-                    style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink-3)", cursor: "pointer" }}
-                  >
+                  <button onClick={() => markSent(post.id)}
+                    style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink-3)", cursor: "pointer" }}>
                     Skip
                   </button>
                 </div>
@@ -198,37 +246,23 @@ export default function OutreachPage() {
                     {messages[post.id]}
                   </p>
                   <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
-                    <button
-                      onClick={() => copyMessage(post.id)}
-                      className="btn btn-blue"
-                      style={{ fontSize: 12, padding: "7px 16px" }}
-                    >
-                      {copied === post.id ? "Copied!" : "Copy message"}
-                    </button>
                     <a
-                      href={post.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontSize: 12, padding: "7px 14px",
-                        background: "rgba(145,71,255,0.12)", border: "1px solid rgba(145,71,255,0.3)",
-                        color: "#a78bfa", borderRadius: 8, textDecoration: "none", fontWeight: 600,
-                      }}
-                    >
-                      Open Twitch
+                      href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(post.author)}&subject=${encodeURIComponent("Your stream")}&message=${encodeURIComponent(messages[post.id])}`}
+                      target="_blank" rel="noopener noreferrer"
+                      onClick={() => setTimeout(() => markSent(post.id), 800)}
+                      style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
+                      Send on Reddit
                     </a>
-                    <button
-                      onClick={() => generateMessage(post)}
-                      disabled={generating === post.id}
-                      style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}
-                    >
+                    <button onClick={() => copyMessage(post.id)} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
+                      {copied === post.id ? "Copied!" : "Copy"}
+                    </button>
+                    <button onClick={() => generateMessage(post)} disabled={generating === post.id}
+                      style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
                       Rewrite
                     </button>
-                    <button
-                      onClick={() => markSent(post.id)}
-                      style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}
-                    >
-                      Mark done
+                    <button onClick={() => markSent(post.id)}
+                      style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
+                      Mark sent
                     </button>
                   </div>
                 </div>
