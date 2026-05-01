@@ -3,12 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 
-// These subs are pure streamer self-promotion — every post is a lead, no filter needed
 const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
 
-// These subs mix streamers and viewers — only keep posts where someone is clearly seeking help
 const HELP_INTENT_PHRASES = [
-  "my stream", "my channel", "i stream", "i've been streaming", "i've been streaming",
+  "my stream", "my channel", "i stream", "i've been streaming",
   "started streaming", "just started streaming", "new streamer", "new to streaming",
   "how do i grow", "how to grow", "can't grow", "struggling to grow",
   "no viewers", "low viewers", "0 viewers", "zero viewers",
@@ -22,6 +20,33 @@ const HELP_INTENT_PHRASES = [
 
 const SKIP_AUTHORS = new Set(["automoderator", "[deleted]", "reddit"]);
 
+let cachedToken: { token: string; expires: number } | null = null;
+
+async function getRedditToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expires) return cachedToken.token;
+
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error("REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET not set in env");
+
+  const res = await fetch("https://www.reddit.com/api/v1/access_token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "LevlCastOutreach/1.0 by /u/levlcast",
+    },
+    body: "grant_type=client_credentials",
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(`Reddit OAuth failed: ${res.status}`);
+  const data = await res.json();
+
+  cachedToken = { token: data.access_token, expires: Date.now() + (data.expires_in - 60) * 1000 };
+  return cachedToken.token;
+}
+
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -30,27 +55,32 @@ export async function GET(req: NextRequest) {
   const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
   const sort = req.nextUrl.searchParams.get("sort") ?? "new";
 
-  const url = `https://www.reddit.com/r/${subreddit}/${sort}.json?limit=50&raw_json=1`;
+  let token: string;
+  try {
+    token = await getRedditToken();
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message, posts: [] });
+  }
 
   let res: Response;
   try {
-    res = await fetch(url, {
-      headers: { "User-Agent": "LevlCastOutreach/1.0" },
+    res = await fetch(`https://oauth.reddit.com/r/${subreddit}/${sort}?limit=50&raw_json=1`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "LevlCastOutreach/1.0 by /u/levlcast",
+      },
       cache: "no-store",
     });
   } catch {
     return NextResponse.json({ error: "Reddit unreachable", posts: [] });
   }
 
-  if (!res.ok) {
-    return NextResponse.json({ error: `Reddit returned ${res.status}`, posts: [] });
-  }
+  if (!res.ok) return NextResponse.json({ error: `Reddit returned ${res.status}`, posts: [] });
 
   const data = await res.json();
   const children: any[] = data.data?.children ?? [];
 
-  const subLower = subreddit.toLowerCase();
-  const isPromoSub = PROMO_SUBS.has(subLower);
+  const isPromoSub = PROMO_SUBS.has(subreddit.toLowerCase());
 
   const posts = children
     .map((c: any) => ({
@@ -67,9 +97,7 @@ export async function GET(req: NextRequest) {
     .filter((p) => {
       if (SKIP_AUTHORS.has(p.author.toLowerCase())) return false;
       if (p.title === "[deleted]") return false;
-      // Promo subs: every post is a streamer
       if (isPromoSub) return true;
-      // All other subs: require a phrase that shows they are a streamer seeking help
       const text = `${p.title} ${p.body}`.toLowerCase();
       return HELP_INTENT_PHRASES.some((phrase) => text.includes(phrase));
     });
