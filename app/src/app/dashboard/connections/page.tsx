@@ -63,7 +63,7 @@ export default async function ConnectionsPage({
         </div>
 
         {/* TikTok */}
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        <div className="bg-surface border border-border rounded-2xl p-6 opacity-60">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z"/></svg>
@@ -72,16 +72,11 @@ export default async function ConnectionsPage({
               <h2 className="font-bold">TikTok</h2>
               <p className="text-xs text-muted">Auto-post clips to TikTok</p>
             </div>
-            {isTikTokConnected && (
-              <span className="ml-auto text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded-full">Connected</span>
-            )}
+            <span className="ml-auto text-xs font-semibold text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-full">Pending Approval</span>
           </div>
-          <a
-            href="/api/auth/tiktok"
-            className="block w-full text-center bg-white/10 hover:bg-white/15 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
-          >
-            {isTikTokConnected ? "Reconnect TikTok" : "Connect TikTok"}
-          </a>
+          <div className="w-full text-center bg-white/5 text-muted font-semibold px-4 py-2.5 rounded-xl text-sm cursor-not-allowed">
+            Coming Soon
+          </div>
         </div>
       </div>
     </div>
