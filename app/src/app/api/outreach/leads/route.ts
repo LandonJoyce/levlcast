@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   // Arctic Shift: free Reddit mirror API, no credentials, works from cloud IPs
   const res = await fetch(
-    `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit)}&sort=new&limit=100&fields=id,title,selftext,author,subreddit,permalink,created_utc,link_flair_text`,
+    `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit)}&limit=100`,
     { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
   );
 
@@ -53,11 +53,11 @@ export async function GET(req: NextRequest) {
     .map((c: any) => ({
       id: c.id as string,
       title: c.title as string,
-      body: ((c.selftext as string) ?? "").slice(0, 500),
+      body: ((c.selftext ?? c.body ?? "") as string).slice(0, 500),
       author: c.author as string,
-      subreddit: c.subreddit as string,
-      url: `https://reddit.com${c.permalink}`,
-      created: typeof c.created_utc === "string" ? parseInt(c.created_utc, 10) : (c.created_utc as number),
+      subreddit: (c.subreddit as string) ?? subreddit,
+      url: c.url?.startsWith("https://www.reddit.com") ? c.url : `https://reddit.com/r/${c.subreddit ?? subreddit}/comments/${c.id}/`,
+      created: typeof c.created_utc === "string" ? parseInt(c.created_utc, 10) : (c.created_utc as number) ?? 0,
       flair: (c.link_flair_text as string | null) ?? null,
     }))
     .filter((p) => {
