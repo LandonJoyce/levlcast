@@ -71,7 +71,7 @@ export async function uploadToTikTok({
     body: JSON.stringify({
       post_info: {
         title: title.slice(0, 150),
-        privacy_level: "PUBLIC_TO_EVERYONE",
+        privacy_level: process.env.TIKTOK_SANDBOX === "true" ? "SELF_ONLY" : "PUBLIC_TO_EVERYONE",
         disable_duet: false,
         disable_comment: false,
         disable_stitch: false,
