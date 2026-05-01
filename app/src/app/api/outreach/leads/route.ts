@@ -5,18 +5,38 @@ export const runtime = "edge";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 
-async function getTwitchToken(): Promise<string> {
-  const res = await fetch("https://id.twitch.tv/oauth2/token", {
+const HELP_PHRASES = [
+  "my stream", "my channel", "i stream", "i've been streaming",
+  "started streaming", "just started streaming", "new streamer", "new to streaming",
+  "how do i grow", "how to grow", "can't grow", "struggling to grow",
+  "no viewers", "low viewers", "0 viewers", "zero viewers",
+  "how do i get", "how to get viewers", "how to get followers",
+  "feedback on my", "feedback for my", "roast my", "rate my",
+  "any advice", "any tips", "any help", "need advice", "need help",
+  "what am i doing wrong", "what should i",
+  "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
+  "twitch.tv/",
+];
+
+const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
+const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
+
+async function getRedditToken(): Promise<string> {
+  const credentials = btoa(
+    `${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`
+  );
+  const res = await fetch("https://www.reddit.com/api/v1/access_token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: process.env.TWITCH_CLIENT_ID!,
-      client_secret: process.env.TWITCH_CLIENT_SECRET!,
-      grant_type: "client_credentials",
-    }),
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "LevlCast/1.0",
+    },
+    body: "grant_type=client_credentials",
   });
-  if (!res.ok) throw new Error(`Twitch auth failed: ${res.status}`);
+  if (!res.ok) throw new Error(`Reddit auth failed: ${res.status}`);
   const data = await res.json();
+  if (!data.access_token) throw new Error("No access token in Reddit response");
   return data.access_token as string;
 }
 
@@ -31,57 +51,56 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const game = req.nextUrl.searchParams.get("game") ?? "";
+  const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
 
   let token: string;
   try {
-    token = await getTwitchToken();
+    token = await getRedditToken();
   } catch (e: any) {
     return NextResponse.json({ error: e.message, posts: [] });
   }
 
-  const headers = {
-    "Client-ID": process.env.TWITCH_CLIENT_ID!,
-    Authorization: `Bearer ${token}`,
-  };
+  const res = await fetch(
+    `https://oauth.reddit.com/r/${subreddit}/new?limit=100&raw_json=1`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "LevlCast/1.0",
+        Accept: "application/json",
+      },
+    }
+  );
 
-  // If a game name was given, resolve it to a game_id first
-  let gameId = "";
-  if (game) {
-    const gRes = await fetch(
-      `https://api.twitch.tv/helix/games?name=${encodeURIComponent(game)}`,
-      { headers }
-    );
-    const gData = await gRes.json();
-    gameId = gData.data?.[0]?.id ?? "";
+  if (!res.ok) {
+    return NextResponse.json({ error: `Reddit ${res.status} on r/${subreddit}`, posts: [] });
   }
 
-  // Fetch live streams: small viewer counts (no min — Twitch sorts by viewers desc,
-  // so we take the last page by fetching with first=100 then filtering)
-  const url = gameId
-    ? `https://api.twitch.tv/helix/streams?first=100&game_id=${gameId}`
-    : `https://api.twitch.tv/helix/streams?first=100`;
+  const data = await res.json();
+  const children: any[] = data.data?.children ?? [];
+  const isPromo = PROMO_SUBS.has(subreddit.toLowerCase());
+  const seenAuthors = new Set<string>();
 
-  const sRes = await fetch(url, { headers });
-  if (!sRes.ok) return NextResponse.json({ error: `Twitch streams failed: ${sRes.status}`, posts: [] });
-  const sData = await sRes.json();
-  const streams: any[] = sData.data ?? [];
+  const posts = children
+    .map((c: any) => ({
+      id: c.data.id,
+      title: c.data.title as string,
+      body: (c.data.selftext as string)?.slice(0, 500) ?? "",
+      author: c.data.author as string,
+      subreddit: c.data.subreddit as string,
+      url: `https://reddit.com${c.data.permalink}`,
+      created: c.data.created_utc as number,
+      flair: c.data.link_flair_text as string | null,
+    }))
+    .filter((p) => {
+      if (SKIP.has(p.author.toLowerCase())) return false;
+      if (p.title === "[deleted]") return false;
+      if (seenAuthors.has(p.author)) return false;
+      const text = `${p.title} ${p.body}`.toLowerCase();
+      const passes = isPromo || HELP_PHRASES.some((ph) => text.includes(ph));
+      if (!passes) return false;
+      seenAuthors.add(p.author);
+      return true;
+    });
 
-  // We want small streamers — under 50 viewers
-  const leads = streams
-    .filter((s) => s.viewer_count <= 50 && s.viewer_count >= 0 && s.language === "en")
-    .map((s) => ({
-      id: s.id,
-      title: s.title,
-      body: `Live now playing ${s.game_name} with ${s.viewer_count} viewer${s.viewer_count === 1 ? "" : "s"}.`,
-      author: s.user_name,
-      subreddit: s.game_name,
-      url: `https://twitch.tv/${s.user_login}`,
-      viewers: s.viewer_count,
-      game: s.game_name,
-      created: Math.floor(new Date(s.started_at).getTime() / 1000),
-      flair: `${s.viewer_count} viewers`,
-    }));
-
-  return NextResponse.json({ posts: leads, total: streams.length });
+  return NextResponse.json({ posts });
 }

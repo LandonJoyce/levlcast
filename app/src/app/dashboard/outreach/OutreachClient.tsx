@@ -11,22 +11,6 @@ const SUBREDDITS = [
   { value: "Twitch", label: "r/Twitch" },
 ];
 
-const HELP_PHRASES = [
-  "my stream", "my channel", "i stream", "i've been streaming",
-  "started streaming", "just started streaming", "new streamer", "new to streaming",
-  "how do i grow", "how to grow", "can't grow", "struggling to grow",
-  "no viewers", "low viewers", "0 viewers", "zero viewers",
-  "how do i get", "how to get viewers", "how to get followers",
-  "feedback on my", "feedback for my", "roast my", "rate my",
-  "any advice", "any tips", "any help", "need advice", "need help",
-  "what am i doing wrong", "what should i",
-  "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
-  "twitch.tv/",
-];
-
-const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
-const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
-
 type Post = {
   id: string;
   title: string;
@@ -43,49 +27,6 @@ function timeAgo(utc: number) {
   if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
   return `${Math.round(diff / 86400)}d ago`;
-}
-
-async function fetchSubreddit(subreddit: string): Promise<Post[]> {
-  // Fetch Reddit JSON directly from the browser — works because your browser
-  // is not a cloud IP. Use no-cors mode isn't possible (can't read response),
-  // so we use standard fetch with a proper Accept header.
-  const res = await fetch(
-    `https://www.reddit.com/r/${subreddit}/new.json?limit=50&raw_json=1`,
-    {
-      headers: { Accept: "application/json" },
-      // Include credentials so Reddit sees a logged-in browser request
-      credentials: "include",
-    }
-  );
-  if (!res.ok) throw new Error(`Reddit ${res.status} on r/${subreddit}`);
-  const text = await res.text();
-  const data = JSON.parse(text);
-  const children: any[] = data.data?.children ?? [];
-
-  const isPromo = PROMO_SUBS.has(subreddit.toLowerCase());
-  const seenAuthors = new Set<string>();
-
-  return children
-    .map((c: any) => ({
-      id: c.data.id,
-      title: c.data.title as string,
-      body: (c.data.selftext as string)?.slice(0, 500) ?? "",
-      author: c.data.author as string,
-      subreddit: c.data.subreddit as string,
-      url: `https://reddit.com${c.data.permalink}`,
-      created: c.data.created_utc as number,
-      flair: c.data.link_flair_text as string | null,
-    }))
-    .filter((p) => {
-      if (SKIP.has(p.author.toLowerCase())) return false;
-      if (p.title === "[deleted]") return false;
-      if (seenAuthors.has(p.author)) return false;
-      const text = `${p.title} ${p.body}`.toLowerCase();
-      const passes = isPromo || HELP_PHRASES.some((ph) => text.includes(ph));
-      if (!passes) return false;
-      seenAuthors.add(p.author);
-      return true;
-    });
 }
 
 export default function OutreachPage() {
@@ -108,8 +49,10 @@ export default function OutreachPage() {
     setFetchError(null);
     setPosts([]);
     try {
-      const results = await fetchSubreddit(subreddit);
-      setPosts(results);
+      const res = await fetch(`/api/outreach/leads?subreddit=${encodeURIComponent(subreddit)}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setPosts(data.posts ?? []);
     } catch (e: any) {
       setFetchError(e.message ?? "Failed to load");
     } finally {
@@ -192,7 +135,6 @@ export default function OutreachPage() {
       ) : fetchError ? (
         <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
           <p style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{fetchError}</p>
-          <p style={{ color: "var(--ink-3)", fontSize: 12, marginBottom: 16 }}>Make sure you're logged into Reddit in this browser, then try again.</p>
           <button onClick={fetchPosts} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 16px" }}>Try again</button>
         </div>
       ) : visiblePosts.length === 0 ? (
