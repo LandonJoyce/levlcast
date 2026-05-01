@@ -40,6 +40,7 @@ export default function OutreachPage() {
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("outreach_sent_v1");
@@ -48,10 +49,14 @@ export default function OutreachPage() {
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await fetch(`/api/outreach/leads?subreddit=${subreddit}`);
       const data = await res.json();
+      if (data.error) { setFetchError(data.error); setPosts([]); return; }
       setPosts(data.posts ?? []);
+    } catch (e: any) {
+      setFetchError(e.message ?? "Network error");
     } finally {
       setLoading(false);
     }
@@ -132,6 +137,10 @@ export default function OutreachPage() {
       {loading ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
           Fetching leads...
+        </div>
+      ) : fetchError ? (
+        <div className="card card-pad" style={{ textAlign: "center", color: "#f87171", fontSize: 14, padding: "48px 24px" }}>
+          Error: {fetchError}
         </div>
       ) : visiblePosts.length === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
