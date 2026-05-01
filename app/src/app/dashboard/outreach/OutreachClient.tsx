@@ -51,14 +51,21 @@ export default function OutreachPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      // Fetch directly from Reddit's public JSON API — works from the browser,
-      // avoids the 403 Reddit throws at Vercel/cloud server IPs.
+      // Fetch from Reddit's public JSON API directly from the browser.
       const res = await fetch(
         `https://www.reddit.com/r/${subreddit}/new.json?limit=50&raw_json=1`,
-        { headers: { "Accept": "application/json" } }
+        { headers: { "Accept": "application/json" }, credentials: "omit" }
       );
-      if (!res.ok) { setFetchError(`Reddit returned ${res.status}`); setPosts([]); return; }
-      const data = await res.json();
+      const text = await res.text();
+      if (!res.ok) { setFetchError(`Reddit returned ${res.status}: ${text.slice(0, 120)}`); setPosts([]); return; }
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setFetchError(`Reddit returned non-JSON: ${text.slice(0, 200)}`);
+        setPosts([]);
+        return;
+      }
       const children: any[] = data.data?.children ?? [];
 
       const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
