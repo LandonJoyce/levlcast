@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   let res: Response;
   try {
     res = await fetch(
-      `https://api.pullpush.io/reddit/search/submission?subreddit=${subreddit}&size=50&sort_type=created_utc&order=desc`,
+      `https://api.pullpush.io/reddit/search/submission?subreddit=${subreddit}&size=50&sort_type=created_utc&order=desc&after=${Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60}`,
       { headers: { "Accept": "application/json" } }
     );
   } catch {
