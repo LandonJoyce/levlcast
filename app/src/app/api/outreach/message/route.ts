@@ -2,10 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
+const ADMIN_EMAIL = "landonjoyce@hotmail.com";
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user || user.email !== ADMIN_EMAIL) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { postTitle, postBody, authorName } = await req.json();
   if (!postTitle) return NextResponse.json({ error: "Missing post data" }, { status: 400 });

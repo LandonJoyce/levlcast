@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+const ADMIN_EMAIL = "landonjoyce@hotmail.com";
+
 const GROWTH_KEYWORDS = [
   "grow", "growth", "viewers", "viewer", "no views", "struggling",
   "advice", "feedback", "help", "small", "starting", "started",
@@ -11,7 +13,7 @@ const GROWTH_KEYWORDS = [
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user || user.email !== ADMIN_EMAIL) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
   const sort = req.nextUrl.searchParams.get("sort") ?? "new";

@@ -19,7 +19,6 @@ const navItems = [
   { id: "vods",         label: "VODs",        href: "/dashboard/vods" },
   { id: "clips",        label: "Clips",       href: "/dashboard/clips" },
   { id: "connections",  label: "Connections", href: "/dashboard/connections" },
-  { id: "outreach",     label: "Outreach",    href: "/dashboard/outreach" },
   { id: "account",      label: "Account",     href: "/dashboard/settings" },
 ];
 
@@ -96,8 +95,6 @@ export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSi
     ? "clips"
     : pathname.startsWith("/dashboard/connections")
     ? "connections"
-    : pathname.startsWith("/dashboard/outreach")
-    ? "outreach"
     : pathname.startsWith("/dashboard/settings")
     ? "account"
     : "";
