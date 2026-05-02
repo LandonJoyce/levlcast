@@ -294,7 +294,7 @@ export async function cutClip(
   startSeconds: number,
   endSeconds: number,
   options: CutClipOptions = {}
-): Promise<Buffer> {
+): Promise<{ captioned: Buffer; cleanSource: Buffer }> {
   const safeStart = Math.max(0, startSeconds);
   const safeEnd = endSeconds;
   if (safeEnd <= safeStart) throw new Error(`Invalid clip bounds: start=${safeStart} end=${safeEnd}`);
@@ -305,6 +305,7 @@ export async function cutClip(
 
   const tempDir = await mkdtemp(join(tmpdir(), "levlcast-clip-"));
   const outputPath = join(tempDir, "clip.mp4");
+  const cleanOutputPath = join(tempDir, "clip-clean.mp4");
 
   // Build the optional caption drawtext chain. We do this BEFORE running
   // ffmpeg so any filesystem failure throws cleanly; if the font won't
@@ -387,8 +388,49 @@ export async function cutClip(
     }
     console.log(`[ffmpeg] Remux complete → ${remuxedPath}`);
 
-    // Step 2: cut the clip.
-    // Captions require a decode+encode pass (drawtext filter). Skip stream copy when they are present.
+    // Step 2: stream copy cut → always produced as the clean source for vertical export.
+    const cleanCopyCmd = [
+      `"${ffmpegPath}"`,
+      `-i "${remuxedPath}"`,
+      `-ss ${safeStart}`,
+      `-t ${duration}`,
+      `-c copy`,
+      `-avoid_negative_ts make_zero`,
+      `-movflags +faststart`,
+      `-y`,
+      `"${cleanOutputPath}"`,
+    ].join(" ");
+    let cleanBuffer: Buffer;
+    try {
+      await execAsync(cleanCopyCmd, { timeout: 30000 });
+      console.log(`[ffmpeg] Stream copy cut complete (clean source)`);
+      cleanBuffer = await readFile(cleanOutputPath);
+    } catch (copyErr: any) {
+      // Fallback: re-encode without captions for clean source
+      console.warn("[ffmpeg] Stream copy cut failed, re-encoding clean source:", copyErr.stderr?.slice(-400));
+      const encodeArgs = [
+        `"${ffmpegPath}"`,
+        `-i "${remuxedPath}"`,
+        `-ss ${safeStart}`,
+        `-t ${duration}`,
+        `-c:v libx264 -profile:v main -level 4.0 -preset fast -crf 23 -pix_fmt yuv420p`,
+        `-c:a aac -b:a 128k`,
+        `-vf setpts=PTS-STARTPTS -af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
+        `-avoid_negative_ts make_zero -movflags +faststart -max_muxing_queue_size 9999`,
+        `-y "${cleanOutputPath}"`,
+      ].join(" ");
+      try {
+        await execAsync(encodeArgs, { timeout: 180000 });
+        cleanBuffer = await readFile(cleanOutputPath);
+      } catch (encErr: any) {
+        console.error("[ffmpeg] clean source encode failed:", encErr.stderr?.slice(-800));
+        throw ffmpegError(encErr);
+      }
+    }
+
+    // Step 3: if captions requested, re-encode with drawtext burn for the web player clip.
+    // The clean source is kept separately so the vertical export can re-burn at the correct
+    // 1080px vertical scale without inheriting oversized horizontal captions.
     if (captionFilter) {
       const encodeArgs = [
         `"${ffmpegPath}"`,
@@ -404,53 +446,18 @@ export async function cutClip(
       try {
         await execAsync(encodeArgs, { timeout: 180000 });
         console.log(`[ffmpeg] Caption encode complete`);
+        return { captioned: await readFile(outputPath), cleanSource: cleanBuffer };
       } catch (encErr: any) {
         console.error("[ffmpeg] caption encode failed:", encErr.stderr?.slice(-800));
         throw ffmpegError(encErr);
       }
-    } else {
-      // Fast path: stream copy (no re-encode needed)
-      const copyCmd = [
-        `"${ffmpegPath}"`,
-        `-i "${remuxedPath}"`,
-        `-ss ${safeStart}`,
-        `-t ${duration}`,
-        `-c copy`,
-        `-avoid_negative_ts make_zero`,
-        `-movflags +faststart`,
-        `-y`,
-        `"${outputPath}"`,
-      ].join(" ");
-      try {
-        await execAsync(copyCmd, { timeout: 30000 });
-        console.log(`[ffmpeg] Stream copy cut complete`);
-      } catch (copyErr: any) {
-        // Fallback: re-encode from clean MP4 (only needed for badly corrupted inputs)
-        console.warn("[ffmpeg] Stream copy cut failed, falling back to re-encode:", copyErr.stderr?.slice(-400));
-        const encodeArgs = [
-          `"${ffmpegPath}"`,
-          `-i "${remuxedPath}"`,
-          `-ss ${safeStart}`,
-          `-t ${duration}`,
-          `-c:v libx264 -profile:v main -level 4.0 -preset fast -crf 23 -pix_fmt yuv420p`,
-          `-c:a aac -b:a 128k`,
-          `-vf setpts=PTS-STARTPTS -af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
-          `-avoid_negative_ts make_zero -movflags +faststart -max_muxing_queue_size 9999`,
-          `-y "${outputPath}"`,
-        ].join(" ");
-        try {
-          await execAsync(encodeArgs, { timeout: 180000 });
-        } catch (encErr: any) {
-          console.error("[ffmpeg] re-encode fallback failed:", encErr.stderr?.slice(-800));
-          throw ffmpegError(encErr);
-        }
-      }
     }
 
-    return await readFile(outputPath);
+    return { captioned: cleanBuffer, cleanSource: cleanBuffer };
   } finally {
     await unlink(remuxedPath).catch(() => {});
     await unlink(outputPath).catch(() => {});
+    await unlink(cleanOutputPath).catch(() => {});
     for (const f of captionFiles) await unlink(f).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");

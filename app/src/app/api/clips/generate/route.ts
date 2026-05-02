@@ -142,6 +142,7 @@ export async function POST(request: Request) {
       start_time_seconds: Math.round(peak.start),
       end_time_seconds: Math.round(peak.end),
       caption_text: peak.caption,
+      caption_style: resolvedStyle,
       peak_score: peak.score,
       peak_category: peak.category,
       peak_reason: peak.reason,
@@ -232,29 +233,36 @@ async function runClipGeneration({
       .single();
     const vodWords = (vodData?.word_timestamps as import("@/lib/captions").CaptionWord[] | null) ?? null;
 
-    let buffer: Buffer;
+    let captionedBuffer: Buffer;
+    let cleanSourceBuffer: Buffer;
     try {
       const adjustedStart = peak.start - download.segmentStartSeconds;
       const adjustedEnd = peak.end - download.segmentStartSeconds;
       console.log(`[clip] Stage 2/4: cutting ${adjustedStart.toFixed(2)}s–${adjustedEnd.toFixed(2)}s (segment offset: ${download.segmentStartSeconds.toFixed(2)}s)`);
-      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
+      const result = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
         vodWords,
         vodWindow: { start: peak.start, end: peak.end },
         captionStyle,
       });
-      console.log(`[clip] Stage 2/4: cut complete — ${(buffer.length / 1024 / 1024).toFixed(1)}MB`);
+      captionedBuffer = result.captioned;
+      cleanSourceBuffer = result.cleanSource;
+      console.log(`[clip] Stage 2/4: cut complete — ${(captionedBuffer.length / 1024 / 1024).toFixed(1)}MB captioned, ${(cleanSourceBuffer.length / 1024 / 1024).toFixed(1)}MB clean`);
     } finally {
       await download.cleanup();
     }
 
-    const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
-    console.log(`[clip] Stage 3/4: uploading to R2 — ${fileName}`);
-    const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4");
+    const baseFileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}`;
+    console.log(`[clip] Stage 3/4: uploading to R2 — ${baseFileName}`);
+    const [publicUrl, cleanUrl] = await Promise.all([
+      uploadToR2(`${baseFileName}.mp4`, captionedBuffer!, "video/mp4"),
+      uploadToR2(`${baseFileName}-clean.mp4`, cleanSourceBuffer!, "video/mp4"),
+    ]);
     console.log(`[clip] Stage 3/4: upload complete → ${publicUrl}`);
 
     console.log(`[clip] Stage 4/4: updating DB record`);
     const { error: updateError } = await admin.from("clips").update({
       video_url: publicUrl,
+      source_video_url: cleanUrl,
       status: "ready",
     }).eq("id", clipId);
 

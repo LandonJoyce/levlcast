@@ -11,6 +11,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { exportClipVertical, StreamLayout } from "@/lib/ffmpeg";
+import type { CaptionWord, CaptionStyle } from "@/lib/captions";
 import { writeFile, unlink, mkdtemp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const admin = createAdminClient();
   const { data: clip } = await admin
     .from("clips")
-    .select("id, title, video_url, status, vod_id, start_time_seconds, end_time_seconds")
+    .select("id, title, video_url, source_video_url, status, vod_id, start_time_seconds, end_time_seconds, caption_style")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -48,17 +49,39 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Clip not found or not ready" }, { status: 404 });
   }
 
-  // Captions are already burned into the horizontal R2 clip at generation time.
-  // No need to re-burn here — they carry through the vertical re-encode.
-
   // Prevent SSRF — only fetch from our R2 bucket
   const r2Base = process.env.R2_PUBLIC_URL;
-  if (!r2Base || !(clip.video_url as string).startsWith(r2Base)) {
+  // Use the clean (no-caption) source for vertical export so we can re-burn
+  // captions at the correct 1080px vertical scale without inheriting the
+  // horizontally-sized captions from the web player clip.
+  const sourceUrl = (clip.source_video_url as string | null) ?? (clip.video_url as string);
+  if (!r2Base || !sourceUrl.startsWith(r2Base)) {
     return NextResponse.json({ error: "Invalid clip URL" }, { status: 400 });
   }
 
-  // Download original clip to a temp file for FFmpeg
-  const videoRes = await fetch(clip.video_url as string);
+  // Build caption data for vertical re-burn (correct scale for 1080px wide output)
+  let captionData: Parameters<typeof exportClipVertical>[2] | undefined;
+  try {
+    const { data: vodData } = await admin
+      .from("vods")
+      .select("word_timestamps")
+      .eq("id", clip.vod_id)
+      .single();
+    const vodWords = (vodData?.word_timestamps as CaptionWord[] | null) ?? null;
+    if (vodWords && clip.start_time_seconds != null && clip.end_time_seconds != null) {
+      captionData = {
+        vodWords,
+        clipStart: clip.start_time_seconds as number,
+        clipEnd: clip.end_time_seconds as number,
+        style: ((clip.caption_style as string | null) ?? "bold") as CaptionStyle,
+      };
+    }
+  } catch {
+    // Caption data unavailable — export without captions
+  }
+
+  // Download clean source clip to a temp file for FFmpeg
+  const videoRes = await fetch(sourceUrl);
   if (!videoRes.ok || !videoRes.body) {
     return NextResponse.json({ error: "Failed to fetch clip for processing" }, { status: 502 });
   }
@@ -72,7 +95,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     let outputBuffer: Buffer;
     try {
-      outputBuffer = await exportClipVertical(inputPath, layout);
+      outputBuffer = await exportClipVertical(inputPath, layout, captionData);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[export] FFmpeg failed for clip ${id} layout ${layout}:`, msg);
