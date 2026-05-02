@@ -538,27 +538,48 @@ export const generateClip = inngest.createFunction(
           }
         }
 
-        // Captions are burned at vertical-export time, not here — burning into the
-        // horizontal R2 clip causes double-captions on vertical export.
-        let buffer: Buffer;
+        // Fetch caption data for burn
+        const { data: clipRecord } = await supabase
+          .from("clips")
+          .select("caption_style")
+          .eq("id", clipId)
+          .single();
+        const { data: vodData } = await supabase
+          .from("vods")
+          .select("word_timestamps")
+          .eq("id", vodId)
+          .single();
+        const vodWords = (vodData?.word_timestamps as import("@/lib/captions").CaptionWord[] | null) ?? null;
+        const captionStyle = (clipRecord?.caption_style ?? "bold") as import("@/lib/captions").CaptionStyle;
+
+        let captionedBuffer: Buffer;
+        let cleanSourceBuffer: Buffer;
         try {
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
           console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-          buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd)
-            .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
-          console.log(`[clip] Cut complete: ${buffer.length} bytes`);
+          const result = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
+            vodWords,
+            vodWindow: { start: peak.start, end: peak.end },
+            captionStyle,
+          }).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
+          captionedBuffer = result.captioned;
+          cleanSourceBuffer = result.cleanSource;
+          console.log(`[clip] Cut complete: ${captionedBuffer.length} bytes captioned, ${cleanSourceBuffer.length} bytes clean`);
         } finally {
           await download.cleanup();
         }
 
-        const fileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}.mp4`;
+        const baseFileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}`;
 
-        const publicUrl = await uploadToR2(fileName, buffer!, "video/mp4")
-          .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
+        const [publicUrl, cleanUrl] = await Promise.all([
+          uploadToR2(`${baseFileName}.mp4`, captionedBuffer!, "video/mp4"),
+          uploadToR2(`${baseFileName}-clean.mp4`, cleanSourceBuffer!, "video/mp4"),
+        ]).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
         const { error: updateError } = await supabase.from("clips").update({
           video_url: publicUrl,
+          source_video_url: cleanUrl,
           status: "ready",
         }).eq("id", clipId);
 
