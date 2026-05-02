@@ -11,7 +11,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { exportClipVertical, StreamLayout } from "@/lib/ffmpeg";
-import type { CaptionWord } from "@/lib/captions";
 import { writeFile, unlink, mkdtemp } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -49,16 +48,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Clip not found or not ready" }, { status: 404 });
   }
 
-  // Fetch VOD word timestamps for vertical caption re-burn
-  let vodWords: CaptionWord[] | null = null;
-  if (clip.vod_id) {
-    const { data: vod } = await admin
-      .from("vods")
-      .select("word_timestamps")
-      .eq("id", clip.vod_id)
-      .single();
-    vodWords = (vod?.word_timestamps as CaptionWord[] | null) ?? null;
-  }
+  // Captions are already burned into the horizontal R2 clip at generation time.
+  // No need to re-burn here — they carry through the vertical re-encode.
 
   // Prevent SSRF — only fetch from our R2 bucket
   const r2Base = process.env.R2_PUBLIC_URL;
@@ -81,10 +72,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     let outputBuffer: Buffer;
     try {
-      const captionData = vodWords && clip.start_time_seconds != null && clip.end_time_seconds != null
-        ? { vodWords, clipStart: clip.start_time_seconds as number, clipEnd: clip.end_time_seconds as number }
-        : undefined;
-      outputBuffer = await exportClipVertical(inputPath, layout, captionData);
+      outputBuffer = await exportClipVertical(inputPath, layout);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[export] FFmpeg failed for clip ${id} layout ${layout}:`, msg);

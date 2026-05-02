@@ -224,15 +224,24 @@ async function runClipGeneration({
       }
     }
 
-    // Captions are burned at vertical-export time (exportClipVertical), not here.
-    // Burning into the horizontal R2 clip causes double-captions on export because
-    // the 9:16 center-crop preserves the full frame height, making both layers visible.
+    // Fetch VOD word timestamps for caption burn
+    const { data: vodData } = await admin
+      .from("vods")
+      .select("word_timestamps")
+      .eq("id", vodId)
+      .single();
+    const vodWords = (vodData?.word_timestamps as import("@/lib/captions").CaptionWord[] | null) ?? null;
+
     let buffer: Buffer;
     try {
       const adjustedStart = peak.start - download.segmentStartSeconds;
       const adjustedEnd = peak.end - download.segmentStartSeconds;
       console.log(`[clip] Stage 2/4: cutting ${adjustedStart.toFixed(2)}s–${adjustedEnd.toFixed(2)}s (segment offset: ${download.segmentStartSeconds.toFixed(2)}s)`);
-      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd);
+      buffer = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
+        vodWords,
+        vodWindow: { start: peak.start, end: peak.end },
+        captionStyle,
+      });
       console.log(`[clip] Stage 2/4: cut complete — ${(buffer.length / 1024 / 1024).toFixed(1)}MB`);
     } finally {
       await download.cleanup();
