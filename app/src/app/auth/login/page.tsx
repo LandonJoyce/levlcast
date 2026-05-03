@@ -30,19 +30,26 @@ function LoginForm() {
     setLoading(true);
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    // skipBrowserRedirect gives us the URL so we control the navigation.
+    // Direct window.location.href is more reliable than letting the SDK
+    // redirect internally — fixes black screen in Reddit and other in-app browsers.
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "twitch",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes: "user:read:email user:read:follows",
+        skipBrowserRedirect: true,
       },
     });
 
-    if (error) {
-      console.error("Login failed:", error.message);
+    if (error || !data?.url) {
+      console.error("Login failed:", error?.message);
       setErrorMsg("Something went wrong. Please try again.");
       setLoading(false);
+      return;
     }
+
+    window.location.href = data.url;
   }
 
   return (
@@ -82,6 +89,9 @@ function LoginForm() {
         </svg>
         {loading ? "Connecting..." : "Connect with Twitch"}
       </button>
+      <p className="text-xs text-center mt-3" style={{ color: "rgba(255,255,255,0.35)" }}>
+        Read-only access. We never post to your account.
+      </p>
     </div>
   );
 }
