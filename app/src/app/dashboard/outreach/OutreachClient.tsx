@@ -11,15 +11,26 @@ const SUBREDDITS = [
   { value: "Twitch", label: "r/Twitch" },
 ];
 
-type Post = {
+const COMMENT_PRESETS = [
+  { label: "Any advice", q: "any advice streaming" },
+  { label: "How do I grow", q: "how do i grow twitch" },
+  { label: "No viewers", q: "no viewers twitch" },
+  { label: "Coaching", q: "twitch coaching" },
+  { label: "Feedback", q: "feedback on my stream" },
+  { label: "Affiliate grind", q: "twitch affiliate grind" },
+  { label: "Struggling", q: "struggling to grow stream" },
+];
+
+type Lead = {
   id: string;
-  title: string;
+  title: string | null;
   body: string;
   author: string;
   subreddit: string;
   url: string;
   created: number;
   flair: string | null;
+  isComment?: boolean;
 };
 
 function timeAgo(utc: number) {
@@ -30,8 +41,17 @@ function timeAgo(utc: number) {
 }
 
 export default function OutreachPage() {
+  const [mode, setMode] = useState<"posts" | "comments">("posts");
+
+  // Posts state
   const [subreddit, setSubreddit] = useState("TwitchStreamers");
-  const [posts, setPosts] = useState<Post[]>([]);
+
+  // Comments state
+  const [commentQuery, setCommentQuery] = useState(COMMENT_PRESETS[0].q);
+  const [commentInput, setCommentInput] = useState("");
+
+  // Shared state
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<Record<string, { body: string; subject: string }>>({});
@@ -44,47 +64,60 @@ export default function OutreachPage() {
     if (saved) setSent(new Set(JSON.parse(saved)));
   }, []);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchLeads = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
-    setPosts([]);
+    setLeads([]);
     try {
-      const res = await fetch(`/api/outreach/leads?subreddit=${encodeURIComponent(subreddit)}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setPosts(data.posts ?? []);
+      if (mode === "posts") {
+        const res = await fetch(`/api/outreach/leads?subreddit=${encodeURIComponent(subreddit)}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setLeads(data.posts ?? []);
+      } else {
+        const q = commentInput.trim() || commentQuery;
+        const res = await fetch(`/api/outreach/leads-comments?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setLeads(data.comments ?? []);
+      }
     } catch (e: any) {
       setFetchError(e.message ?? "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [subreddit]);
+  }, [mode, subreddit, commentQuery, commentInput]);
 
-  useEffect(() => { fetchPosts(); }, [fetchPosts]);
+  useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
-  async function generateMessage(post: Post) {
-    setGenerating(post.id);
+  async function generateMessage(lead: Lead) {
+    setGenerating(lead.id);
     try {
       const res = await fetch("/api/outreach/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postTitle: post.title, postBody: post.body, authorName: post.author }),
+        body: JSON.stringify({
+          postTitle: lead.title ?? undefined,
+          postBody: lead.body,
+          authorName: lead.author,
+          context: lead.isComment ? "comment" : "post",
+        }),
       });
       const data = await res.json();
-      setMessages((prev) => ({ ...prev, [post.id]: { body: data.message, subject: data.subject ?? "Saw your post" } }));
+      setMessages((prev) => ({ ...prev, [lead.id]: { body: data.message, subject: data.subject ?? (lead.isComment ? "Saw your comment" : "Saw your post") } }));
     } finally {
       setGenerating(null);
     }
   }
 
-  function copyMessage(postId: string) {
-    navigator.clipboard.writeText(messages[postId]?.body ?? "");
-    setCopied(postId);
+  function copyMessage(id: string) {
+    navigator.clipboard.writeText(messages[id]?.body ?? "");
+    setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   }
 
-  function markSent(postId: string) {
-    const next = new Set([...sent, postId]);
+  function markSent(id: string) {
+    const next = new Set([...sent, id]);
     setSent(next);
     localStorage.setItem("outreach_sent_v1", JSON.stringify([...next]));
   }
@@ -94,7 +127,7 @@ export default function OutreachPage() {
     localStorage.removeItem("outreach_sent_v1");
   }
 
-  const visiblePosts = posts.filter((p) => !sent.has(p.id));
+  const visibleLeads = leads.filter((l) => !sent.has(l.id));
 
   return (
     <div>
@@ -104,17 +137,74 @@ export default function OutreachPage() {
         <p className="page-sub">Find streamers asking for help. AI writes a personal message. One click opens Reddit with it pre-filled.</p>
       </div>
 
-      <div className="tabs" style={{ marginBottom: 24 }}>
-        {SUBREDDITS.map((s) => (
-          <button key={s.value} className={`tab ${subreddit === s.value ? "active" : ""}`} onClick={() => setSubreddit(s.value)}>
-            {s.label}
-          </button>
-        ))}
+      {/* Mode switcher */}
+      <div className="row gap-sm" style={{ marginBottom: 20 }}>
+        <button
+          onClick={() => setMode("posts")}
+          className={`btn ${mode === "posts" ? "btn-blue" : "btn-ghost"}`}
+          style={{ fontSize: 12, padding: "6px 16px" }}
+        >
+          Posts
+        </button>
+        <button
+          onClick={() => setMode("comments")}
+          className={`btn ${mode === "comments" ? "btn-blue" : "btn-ghost"}`}
+          style={{ fontSize: 12, padding: "6px 16px" }}
+        >
+          Comments
+        </button>
       </div>
 
+      {/* Posts: subreddit tabs */}
+      {mode === "posts" && (
+        <div className="tabs" style={{ marginBottom: 24 }}>
+          {SUBREDDITS.map((s) => (
+            <button key={s.value} className={`tab ${subreddit === s.value ? "active" : ""}`} onClick={() => setSubreddit(s.value)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Comments: keyword presets + free input */}
+      {mode === "comments" && (
+        <div style={{ marginBottom: 24 }}>
+          <div className="row gap-sm" style={{ flexWrap: "wrap", marginBottom: 12 }}>
+            {COMMENT_PRESETS.map((p) => (
+              <button
+                key={p.q}
+                onClick={() => { setCommentQuery(p.q); setCommentInput(""); }}
+                className={`tab ${commentQuery === p.q && !commentInput.trim() ? "active" : ""}`}
+                style={{ fontSize: 11 }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="row gap-sm">
+            <input
+              type="text"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") fetchLeads(); }}
+              placeholder="Search comments... (press Enter)"
+              style={{
+                flex: 1, padding: "8px 14px", fontSize: 13, borderRadius: 8,
+                border: "1px solid var(--line)", background: "var(--surface-2)",
+                color: "var(--ink)", outline: "none",
+              }}
+            />
+            <button onClick={fetchLeads} className="btn btn-blue" style={{ fontSize: 12, padding: "6px 16px" }}>
+              Search
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Controls row */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-          {visiblePosts.length} leads · {sent.size} sent/skipped
+          {visibleLeads.length} leads · {sent.size} sent/skipped
         </span>
         <div className="row gap-md">
           {sent.size > 0 && (
@@ -122,7 +212,7 @@ export default function OutreachPage() {
               Clear list
             </button>
           )}
-          <button onClick={fetchPosts} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
+          <button onClick={fetchLeads} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
             Refresh
           </button>
         </div>
@@ -135,77 +225,86 @@ export default function OutreachPage() {
       ) : fetchError ? (
         <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
           <p style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{fetchError}</p>
-          <button onClick={fetchPosts} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 16px" }}>Try again</button>
+          <button onClick={fetchLeads} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 16px" }}>Try again</button>
         </div>
-      ) : visiblePosts.length === 0 ? (
+      ) : visibleLeads.length === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
-          No leads right now. Try a different subreddit or refresh.
+          No leads right now. {mode === "comments" ? "Try a different keyword." : "Try a different subreddit or refresh."}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {visiblePosts.map((post) => (
-            <div key={post.id} className="card" style={{ padding: "18px 22px" }}>
+          {visibleLeads.map((lead) => (
+            <div key={lead.id} className="card" style={{ padding: "18px 22px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="row gap-sm" style={{ marginBottom: 5, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>u/{post.author}</span>
-                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>r/{post.subreddit}</span>
-                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{timeAgo(post.created)}</span>
-                    {post.flair && (
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>u/{lead.author}</span>
+                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>r/{lead.subreddit}</span>
+                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{timeAgo(lead.created)}</span>
+                    {lead.isComment && (
+                      <span style={{ fontSize: 10, padding: "1px 6px", background: "color-mix(in oklab, var(--blue) 12%, var(--surface-2))", borderRadius: 4, color: "var(--blue)", border: "1px solid color-mix(in oklab, var(--blue) 25%, var(--line))" }}>
+                        comment
+                      </span>
+                    )}
+                    {lead.flair && (
                       <span style={{ fontSize: 10, padding: "1px 6px", background: "rgba(255,255,255,0.06)", borderRadius: 4, color: "var(--ink-3)" }}>
-                        {post.flair}
+                        {lead.flair}
                       </span>
                     )}
                   </div>
-                  <a href={post.url} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", textDecoration: "none", lineHeight: 1.4, display: "block", marginBottom: post.body ? 6 : 0 }}>
-                    {post.title}
-                  </a>
-                  {post.body && (
-                    <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                      {post.body}
-                    </p>
+                  {lead.title && (
+                    <a href={lead.url} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", textDecoration: "none", lineHeight: 1.4, display: "block", marginBottom: lead.body ? 6 : 0 }}>
+                      {lead.title}
+                    </a>
+                  )}
+                  {lead.body && (
+                    <a href={lead.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                      <p style={{ fontSize: 12, color: lead.isComment ? "var(--ink-2)" : "var(--ink-3)", margin: 0, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: lead.isComment ? 3 : 2, WebkitBoxOrient: "vertical" }}>
+                        {lead.body}
+                      </p>
+                    </a>
                   )}
                 </div>
 
                 <div className="row gap-sm" style={{ flexShrink: 0 }}>
-                  {!messages[post.id] && (
-                    <button onClick={() => generateMessage(post)} disabled={generating === post.id}
-                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap", opacity: generating === post.id ? 0.6 : 1 }}>
-                      {generating === post.id ? "Writing..." : "Write message"}
+                  {!messages[lead.id] && (
+                    <button onClick={() => generateMessage(lead)} disabled={generating === lead.id}
+                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap", opacity: generating === lead.id ? 0.6 : 1 }}>
+                      {generating === lead.id ? "Writing..." : "Write message"}
                     </button>
                   )}
-                  <button onClick={() => markSent(post.id)}
+                  <button onClick={() => markSent(lead.id)}
                     style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink-3)", cursor: "pointer" }}>
                     Skip
                   </button>
                 </div>
               </div>
 
-              {messages[post.id] && (
+              {messages[lead.id] && (
                 <div style={{ marginTop: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid var(--line)" }}>
                   <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "0 0 6px", fontStyle: "italic" }}>
-                    Subject: {messages[post.id].subject}
+                    Subject: {messages[lead.id].subject}
                   </p>
                   <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.7, margin: "0 0 14px", whiteSpace: "pre-wrap" }}>
-                    {messages[post.id].body}
+                    {messages[lead.id].body}
                   </p>
                   <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
                     <a
-                      href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(post.author)}&subject=${encodeURIComponent(messages[post.id].subject)}&message=${encodeURIComponent(messages[post.id].body)}`}
+                      href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(lead.author)}&subject=${encodeURIComponent(messages[lead.id].subject)}&message=${encodeURIComponent(messages[lead.id].body)}`}
                       target="_blank" rel="noopener noreferrer"
-                      onClick={() => setTimeout(() => markSent(post.id), 800)}
+                      onClick={() => setTimeout(() => markSent(lead.id), 800)}
                       style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
                       Send on Reddit
                     </a>
-                    <button onClick={() => copyMessage(post.id)} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
-                      {copied === post.id ? "Copied!" : "Copy"}
+                    <button onClick={() => copyMessage(lead.id)} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
+                      {copied === lead.id ? "Copied!" : "Copy"}
                     </button>
-                    <button onClick={() => generateMessage(post)} disabled={generating === post.id}
+                    <button onClick={() => generateMessage(lead)} disabled={generating === lead.id}
                       style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
                       Rewrite
                     </button>
-                    <button onClick={() => markSent(post.id)}
+                    <button onClick={() => markSent(lead.id)}
                       style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
                       Mark sent
                     </button>
