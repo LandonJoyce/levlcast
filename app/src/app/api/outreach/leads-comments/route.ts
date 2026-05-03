@@ -6,15 +6,6 @@ export const runtime = "edge";
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
 
-// Subreddits to scope when no subreddit specified
-const STREAMING_SUBS = [
-  "TwitchStreamers",
-  "Twitch_Startup",
-  "NewTwitchStreamers",
-  "StreamersCommunity",
-  "Twitch",
-].join("+");
-
 export async function GET(req: NextRequest) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,14 +19,13 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = req.nextUrl;
   const q = searchParams.get("q")?.trim() || "any tips streaming";
-  const subreddit = searchParams.get("subreddit")?.trim() || STREAMING_SUBS;
+  const subreddit = searchParams.get("subreddit")?.trim() || "";
 
-  const url = new URL("https://arctic-shift.photon-reddit.com/api/comments/search");
-  url.searchParams.set("q", q);
-  url.searchParams.set("subreddit", subreddit);
-  url.searchParams.set("limit", "100");
+  // Build URL manually — URLSearchParams encodes "+" to "%2B" which Arctic Shift rejects
+  let apiUrl = `https://arctic-shift.photon-reddit.com/api/comments/search?q=${encodeURIComponent(q)}&limit=100`;
+  if (subreddit) apiUrl += `&subreddit=${encodeURIComponent(subreddit)}`;
 
-  const res = await fetch(url.toString(), {
+  const res = await fetch(apiUrl, {
     headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" },
   });
 
