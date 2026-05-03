@@ -11,15 +11,6 @@ const SUBREDDITS = [
   { value: "Twitch", label: "r/Twitch" },
 ];
 
-const COMMENT_PRESETS = [
-  { label: "Any advice", q: "any advice streaming" },
-  { label: "How do I grow", q: "how do i grow twitch" },
-  { label: "No viewers", q: "no viewers twitch" },
-  { label: "Coaching", q: "twitch coaching" },
-  { label: "Feedback", q: "feedback on my stream" },
-  { label: "Affiliate grind", q: "twitch affiliate grind" },
-  { label: "Struggling", q: "struggling to grow stream" },
-];
 
 type Lead = {
   id: string;
@@ -43,12 +34,7 @@ function timeAgo(utc: number) {
 export default function OutreachPage() {
   const [mode, setMode] = useState<"posts" | "comments">("posts");
 
-  // Posts state
   const [subreddit, setSubreddit] = useState("TwitchStreamers");
-
-  // Comments state
-  const [commentQuery, setCommentQuery] = useState(COMMENT_PRESETS[0].q);
-  const [commentInput, setCommentInput] = useState("");
 
   // Shared state
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -69,24 +55,17 @@ export default function OutreachPage() {
     setFetchError(null);
     setLeads([]);
     try {
-      if (mode === "posts") {
-        const res = await fetch(`/api/outreach/leads?subreddit=${encodeURIComponent(subreddit)}`);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        setLeads(data.posts ?? []);
-      } else {
-        const q = commentInput.trim() || commentQuery;
-        const res = await fetch(`/api/outreach/leads-comments?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        setLeads(data.comments ?? []);
-      }
+      const endpoint = mode === "posts" ? "/api/outreach/leads" : "/api/outreach/leads-comments";
+      const res = await fetch(`${endpoint}?subreddit=${encodeURIComponent(subreddit)}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setLeads(mode === "posts" ? (data.posts ?? []) : (data.comments ?? []));
     } catch (e: any) {
       setFetchError(e.message ?? "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [mode, subreddit, commentQuery, commentInput]);
+  }, [mode, subreddit]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
@@ -155,51 +134,14 @@ export default function OutreachPage() {
         </button>
       </div>
 
-      {/* Posts: subreddit tabs */}
-      {mode === "posts" && (
-        <div className="tabs" style={{ marginBottom: 24 }}>
-          {SUBREDDITS.map((s) => (
-            <button key={s.value} className={`tab ${subreddit === s.value ? "active" : ""}`} onClick={() => setSubreddit(s.value)}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Comments: keyword presets + free input */}
-      {mode === "comments" && (
-        <div style={{ marginBottom: 24 }}>
-          <div className="row gap-sm" style={{ flexWrap: "wrap", marginBottom: 12 }}>
-            {COMMENT_PRESETS.map((p) => (
-              <button
-                key={p.q}
-                onClick={() => { setCommentQuery(p.q); setCommentInput(""); }}
-                className={`tab ${commentQuery === p.q && !commentInput.trim() ? "active" : ""}`}
-                style={{ fontSize: 11 }}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <div className="row gap-sm">
-            <input
-              type="text"
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") fetchLeads(); }}
-              placeholder="Search comments... (press Enter)"
-              style={{
-                flex: 1, padding: "8px 14px", fontSize: 13, borderRadius: 8,
-                border: "1px solid var(--line)", background: "var(--surface-2)",
-                color: "var(--ink)", outline: "none",
-              }}
-            />
-            <button onClick={fetchLeads} className="btn btn-blue" style={{ fontSize: 12, padding: "6px 16px" }}>
-              Search
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Subreddit tabs — shared by both modes */}
+      <div className="tabs" style={{ marginBottom: 24 }}>
+        {SUBREDDITS.map((s) => (
+          <button key={s.value} className={`tab ${subreddit === s.value ? "active" : ""}`} onClick={() => setSubreddit(s.value)}>
+            {s.label}
+          </button>
+        ))}
+      </div>
 
       {/* Controls row */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
