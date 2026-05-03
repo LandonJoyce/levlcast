@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import DashScoreRing from "@/components/dashboard/DashScoreRing";
 import { scoreColorVar, rankFor } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
+import { MissionsCard } from "@/components/dashboard/missions-card";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, plan, subscription_expires_at")
+    .select("twitch_display_name, plan, subscription_expires_at, mission_checks")
     .eq("id", user.id)
     .single();
 
@@ -93,6 +94,14 @@ export default async function DashboardPage() {
   const previousScore = (recentVods?.[1]?.coach_report as { overall_score?: number } | null)?.overall_score ?? null;
   const latestRecommendation = (latest?.coach_report as { recommendation?: string } | null)?.recommendation ?? null;
   const latestPeaks = Array.isArray(latest?.peak_data) ? latest.peak_data.length : 0;
+
+  // Missions — from the latest coach report's next_stream_goals
+  type MissionChecks = { vod_id: string; checked: number[] } | null;
+  const missionChecks = (profile?.mission_checks as MissionChecks) ?? null;
+  const latestMissions = (latest?.coach_report as { next_stream_goals?: string[] } | null)?.next_stream_goals ?? [];
+  const missionsVodId = latest?.id ?? null;
+  // Restore checked state only if the saved checks are for the current latest VOD
+  const restoredChecked = missionChecks?.vod_id === missionsVodId ? (missionChecks?.checked ?? []) : [];
 
   // Clips this month
   const monthStart = new Date();
@@ -258,6 +267,16 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Missions card — only for Pro users with active missions */}
+      {isPro && latestMissions.length > 0 && missionsVodId && (
+        <MissionsCard
+          missions={latestMissions}
+          vodId={missionsVodId}
+          vodTitle={latest?.title ?? "your last stream"}
+          initialChecked={restoredChecked}
+        />
+      )}
 
       {/* Three column row: trend, stats, upgrade (if not Pro) */}
       <div style={{ display: "grid", gridTemplateColumns: isPro ? "1.4fr 1fr" : "1.4fr 1fr 1fr", gap: 20 }}>
