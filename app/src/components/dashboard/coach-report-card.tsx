@@ -796,6 +796,31 @@ export function CoachReportCard({
           {/* ── 6. LAST STREAM RECAP — how you compared to last time ── */}
           {recapDelta && <LastStreamRecap delta={recapDelta} />}
 
+          {/* ── 6b. LONGITUDINAL TREND — Claude's arc assessment across last 3 streams ── */}
+          {isPro && report.trend_vs_history && report.trend_vs_history.direction !== "first_stream" && (() => {
+            const { direction, note } = report.trend_vs_history!;
+            const isUp = direction === "improving";
+            const isDown = direction === "declining";
+            const color = isUp ? "#A3E635" : isDown ? "#F87171" : "#F59E0B";
+            const bg = isUp ? "rgba(163,230,53,0.04)" : isDown ? "rgba(248,113,113,0.04)" : "rgba(245,158,11,0.04)";
+            const borderColor = isUp ? "rgba(163,230,53,0.22)" : isDown ? "rgba(248,113,113,0.22)" : "rgba(245,158,11,0.22)";
+            const arrow = isUp ? "↗" : isDown ? "↘" : "→";
+            const label = isUp ? "Improving" : isDown ? "Declining" : "Consistent";
+            return (
+              <div style={{ margin: "0 0 28px", padding: "20px 22px", borderRadius: 12, background: bg, border: `1px solid ${borderColor}`, borderLeft: `3px solid ${color}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 20, color, lineHeight: 1 }}>{arrow}</span>
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color }}>
+                    {label} across streams
+                  </span>
+                </div>
+                <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#D4DCF0", lineHeight: 1.6, margin: 0 }}>
+                  {note}
+                </p>
+              </div>
+            );
+          })()}
+
           {/* ── 7. SCORE TRAJECTORY — long-term trend ── */}
           {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
 
