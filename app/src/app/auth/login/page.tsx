@@ -27,12 +27,17 @@ const TWITCH_OAUTH_URL =
 function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showAndroidTip, setShowAndroidTip] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const error = searchParams.get("error");
     if (error && ERROR_MESSAGES[error]) {
       setErrorMsg(ERROR_MESSAGES[error]);
+    }
+    // Detect Android + Twitch app likely installed scenario
+    if (/android/i.test(navigator.userAgent)) {
+      setShowAndroidTip(true);
     }
   }, [searchParams]);
 
@@ -56,6 +61,12 @@ function LoginForm() {
           </li>
         ))}
       </ul>
+
+      {showAndroidTip && (
+        <div className="mb-4 px-4 py-3 rounded-xl text-sm text-center" style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.25)", color: "rgba(255,255,255,0.6)" }}>
+          On Android, if the Twitch app opens instead — tap <strong style={{ color: "rgba(255,255,255,0.85)" }}>Cancel</strong> and select your browser instead.
+        </div>
+      )}
 
       {errorMsg && (
         <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400 text-center">
