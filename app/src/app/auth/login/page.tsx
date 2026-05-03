@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -14,6 +13,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   profile_failed: "Account setup failed. Please try again or contact support.",
 };
 
+// Build the OAuth URL directly — bypasses the SDK entirely.
+// More reliable on mobile (Chrome, Safari, in-app browsers) than
+// async SDK calls that can hang or leave a blank screen.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const CALLBACK_URL = "https://levlcast.com/auth/callback";
+const TWITCH_OAUTH_URL =
+  `${SUPABASE_URL}/auth/v1/authorize` +
+  `?provider=twitch` +
+  `&redirect_to=${encodeURIComponent(CALLBACK_URL)}` +
+  `&scopes=${encodeURIComponent("user:read:email user:read:follows")}`;
+
 function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -25,32 +35,6 @@ function LoginForm() {
       setErrorMsg(ERROR_MESSAGES[error]);
     }
   }, [searchParams]);
-
-  async function handleLogin() {
-    setLoading(true);
-    const supabase = createClient();
-
-    // skipBrowserRedirect gives us the URL so we control the navigation.
-    // Direct window.location.href is more reliable than letting the SDK
-    // redirect internally — fixes black screen in Reddit and other in-app browsers.
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "twitch",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: "user:read:email user:read:follows",
-        skipBrowserRedirect: true,
-      },
-    });
-
-    if (error || !data?.url) {
-      console.error("Login failed:", error?.message);
-      setErrorMsg("Something went wrong. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    window.location.href = data.url;
-  }
 
   return (
     <div className="bg-surface border border-border rounded-2xl p-8">
@@ -79,16 +63,17 @@ function LoginForm() {
         </div>
       )}
 
-      <button
-        onClick={handleLogin}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-3 bg-[#9146FF] hover:bg-[#7B2FE0] text-white font-semibold py-3.5 px-6 rounded-xl transition-all disabled:opacity-60 disabled:cursor-wait"
+      <a
+        href={TWITCH_OAUTH_URL}
+        onClick={() => setLoading(true)}
+        className="w-full flex items-center justify-center gap-3 bg-[#9146FF] hover:bg-[#7B2FE0] text-white font-semibold py-3.5 px-6 rounded-xl transition-all"
+        style={{ textDecoration: "none", opacity: loading ? 0.6 : 1 }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
         </svg>
         {loading ? "Connecting..." : "Connect with Twitch"}
-      </button>
+      </a>
       <p className="text-xs text-center mt-3" style={{ color: "rgba(255,255,255,0.35)" }}>
         Read-only access. We never post to your account.
       </p>
