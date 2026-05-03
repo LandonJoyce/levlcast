@@ -72,6 +72,9 @@ export async function GET(req: NextRequest) {
     .filter((c) => {
       if (!c.author || SKIP.has(c.author.toLowerCase())) return false;
       if (!c.body || c.body.trim() === "[deleted]") return false;
+      // Skip comments that are just a URL or too short to have real context
+      const stripped = c.body.trim().replace(/https?:\/\/\S+/g, "").trim();
+      if (stripped.length < 30) return false;
       if (seenAuthors.has(c.author)) return false;
       const text = c.body.toLowerCase();
       if (!HELP_PHRASES.some((ph) => text.includes(ph))) return false;
