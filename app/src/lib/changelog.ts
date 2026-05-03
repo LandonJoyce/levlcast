@@ -20,6 +20,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.10.1",
+    date: "2026-05-01",
+    title: "Longitudinal Trend Card",
+    items: [
+      { type: "new", text: "Coach reports now include a trend assessment across your last 3 streams — Improving, Declining, or Consistent — with a written note from Claude referencing what changed and why" },
+      { type: "improved", text: "The coaching AI now actively uses your stream history to avoid repeating advice you've already heard and instead focus on new issues or acknowledge real progress" },
+    ],
+  },
+  {
     version: "v0.10.0",
     date: "2026-04-27",
     title: "Chat Pulse — Real Viewer Reaction Data",
