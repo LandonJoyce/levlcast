@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -189,6 +190,7 @@ export default function RootLayout({
       </head>
       <body className={`${plusJakarta.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased`}>
         {children}
+        <Analytics />
 
         {/* Register service worker for PWA */}
         <script
