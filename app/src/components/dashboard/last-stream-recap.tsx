@@ -102,19 +102,31 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
     ? "You slipped a little."
     : "Holding steady.";
 
+  const GRAD = "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)";
+  const gradText: React.CSSProperties = {
+    background: GRAD,
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+  };
+
   return (
     <div style={{
       margin: "0 0 36px",
-      padding: "26px 28px",
       borderRadius: 14,
-      background: "linear-gradient(135deg, rgba(34,211,238,0.06), rgba(167,139,250,0.04))",
-      border: "1px solid rgba(34,211,238,0.22)",
+      background: "linear-gradient(135deg, rgba(148,61,255,0.07), rgba(242,97,121,0.04))",
+      border: "1px solid rgba(242,97,121,0.2)",
+      overflow: "hidden",
+      position: "relative",
     }}>
+      {/* gradient top bar */}
+      <div style={{ height: 2, background: GRAD }} />
+      <div style={{ padding: "26px 28px" }}>
       {/* Eyebrow */}
       <div style={{
         fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
-        textTransform: "uppercase", letterSpacing: "0.32em", color: "#22D3EE",
-        marginBottom: 14,
+        textTransform: "uppercase", letterSpacing: "0.32em", marginBottom: 14,
+        ...gradText,
       }}>
         Since Last Stream
       </div>
@@ -235,7 +247,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
         <div style={{ marginTop: 22 }}>
           <div style={{
             fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.28em", color: "#c4b5fd",
+            textTransform: "uppercase", letterSpacing: "0.28em", ...gradText,
             marginBottom: 12,
           }}>
             Last Stream&apos;s Missions · {achievedMissions.length}/{missions.length} done
@@ -340,6 +352,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

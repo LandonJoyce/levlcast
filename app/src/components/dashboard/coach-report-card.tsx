@@ -536,6 +536,8 @@ export function CoachReportCard({
         WebkitFontSmoothing: "antialiased",
         backgroundImage: `radial-gradient(800px 500px at 75% -80px, rgba(148,61,255,0.08), transparent 60%), radial-gradient(600px 400px at 0% 60%, rgba(242,97,121,0.04), transparent 60%)`,
       }}>
+        {/* gradient bar across the very top of the card */}
+        <div style={{ height: 3, background: GRAD }} />
         <div style={{ padding: "32px 28px 48px" }}>
 
           {/* ── MASTHEAD ── */}
