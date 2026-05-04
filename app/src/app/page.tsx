@@ -229,12 +229,12 @@ export default async function LandingPage() {
               <p className="ll-feat-sub">Connect your channel once. Post from inside the app. Title fills itself from the report.</p>
               <div className="ll-yt-grid">
                 {[
-                  { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/clip1.png" },
-                  { title: "The moment everything went completely wrong at once", meta: "MOMENT · 15:03 · #shorts", thumb: "/la/clip2.png" },
-                  { title: "They got exposed mid-trash talk and had no answer", meta: "MOMENT · 3:29 · #shorts", thumb: "/la/clip3.png" },
+                  { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/clip1.png", pos: "center 30%" },
+                  { title: "The moment everything went completely wrong at once", meta: "MOMENT · 15:03 · #shorts", thumb: "/la/clip2.png", pos: "center 30%" },
+                  { title: "They got exposed mid-trash talk and had no answer", meta: "MOMENT · 3:29 · #shorts", thumb: "/la/clip3.png", pos: "center 70%" },
                 ].map((v) => (
                   <div key={v.title} className="ll-yt">
-                    <div className="ll-yt-thumb" style={{ backgroundImage: `url(${v.thumb})` }}>
+                    <div className="ll-yt-thumb" style={{ backgroundImage: `url(${v.thumb})`, backgroundPosition: v.pos }}>
                       <div className="ll-yt-play">▶</div>
                     </div>
                     <div className="ll-yt-title">{v.title}</div>
