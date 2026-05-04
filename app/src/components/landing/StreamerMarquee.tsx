@@ -7,12 +7,14 @@ import Image from "next/image";
 const STREAMERS = [
   "/la/streamer-1.png",
   "/la/streamer-2.png",
-  "/la/streamer-1.png",
-  "/la/streamer-2.png",
-  "/la/streamer-1.png",
-  "/la/streamer-2.png",
-  "/la/streamer-1.png",
-  "/la/streamer-2.png",
+  "/la/streamer-3.png",
+  "/la/streamer-4.png",
+  "/la/streamer-5.png",
+  "/la/streamer-6.png",
+  "/la/streamer-7.png",
+  "/la/streamer-8.png",
+  "/la/streamer-9.png",
+  "/la/streamer-10.png",
 ];
 
 /* Split into two rows with different orderings */
