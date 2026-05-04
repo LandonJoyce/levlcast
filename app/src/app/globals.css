@@ -1193,15 +1193,20 @@
   border: 1px solid rgba(255,255,255,0.29);
 }
 .ll-page .ll-btn-grad:hover { filter: brightness(1.06); }
-.ll-page .ll-btn-white { background: #fff; color: var(--ll-bg-ink); }
+.ll-page .ll-btn-white {
+  background: #fff; color: #0a0a14;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+  font-weight: 600;
+}
+.ll-page .ll-btn-white:hover { background: #f0f0f5; }
 
 /* ── Nav ── */
 .ll-page .ll-nav-wrap {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(9,11,27,0.75);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-bottom: 1px solid var(--ll-line-soft);
+  background: rgba(9,11,27,0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .ll-page .ll-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
@@ -1220,10 +1225,10 @@
 .ll-page .ll-nav-active { color: rgb(168,85,247) !important; font-weight: 500; }
 .ll-page .ll-nav-cta { display: inline-flex; align-items: center; gap: 8px; }
 .ll-page .ll-nav-arrow-icon {
-  width: 24px; height: 24px; border-radius: 6px;
-  background: #0f0f1a; color: #fff;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #0a0a14; color: #fff;
   display: grid; place-items: center; flex-shrink: 0;
-  font-size: 14px; line-height: 1;
+  font-size: 13px; line-height: 1;
 }
 
 /* ── Hero ── */
