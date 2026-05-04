@@ -8,6 +8,21 @@ import { MissionsCard } from "@/components/dashboard/missions-card";
 
 // ─── helpers ─────────────────────────────────────────────
 
+function GradientWords({ text }: { text: string }) {
+  const parts = text.split(/(\s+)/);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const letters = part.replace(/[^a-zA-Z]/g, "");
+        if (letters.length >= 8) {
+          return <span key={i} className="grad-text">{part}</span>;
+        }
+        return part;
+      })}
+    </>
+  );
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -241,8 +256,8 @@ export default async function DashboardPage() {
           <DashScoreRing value={latestScore ?? 0} size={160} />
           <div className="col gap-sm" style={{ position: "relative" }}>
             <span className="mono-label">Next session goal</span>
-            <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0 }} className="grad-text">
-              {latestRecommendation || "Open your latest report to see what to fix."}
+            <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
+              <GradientWords text={latestRecommendation || "Open your latest report to see what to fix."} />
             </h2>
             <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
               From your latest stream — <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
