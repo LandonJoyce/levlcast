@@ -456,10 +456,9 @@
 /* score ring */
 .dash .score-ring {
   --p: 28;
-  --c: var(--danger);
   width: 132px; height: 132px;
   border-radius: 50%;
-  background: conic-gradient(var(--c) calc(var(--p) * 1%), color-mix(in oklab, var(--ink) 10%, transparent) 0);
+  background: conic-gradient(oklch(0.60 0.22 290) 0%, oklch(0.65 0.18 15) calc(var(--p) * 1%), color-mix(in oklab, var(--ink) 8%, transparent) 0);
   display: grid; place-items: center;
   position: relative;
   flex-shrink: 0;
@@ -472,11 +471,23 @@
 .dash .score-ring b {
   position: relative; z-index: 1;
   font-size: 36px; font-weight: 700; letter-spacing: -0.02em;
-  color: var(--c);
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .dash .score-ring small {
   font-size: 12px; font-weight: 500; color: var(--ink-3); margin-left: 2px;
   font-family: var(--font-geist-mono), monospace;
+  -webkit-text-fill-color: var(--ink-3);
+}
+
+/* gradient text utility for dash */
+.dash .grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* tables */

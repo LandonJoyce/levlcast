@@ -144,7 +144,7 @@ export default async function DashboardPage() {
         <WelcomeModal name={displayName} />
         <div className="page-head">
           <span className="page-eyebrow">§ 01 · Today&apos;s focus</span>
-          <h1 className="page-title">Hey, {displayName}.</h1>
+          <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
           <p className="page-sub">Let&apos;s analyze your first stream.</p>
         </div>
 
@@ -225,7 +225,7 @@ export default async function DashboardPage() {
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
           <span className="page-eyebrow">§ 01 · Today&apos;s focus</span>
-          <h1 className="page-title">Hey, {displayName}.</h1>
+          <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
           <p className="page-sub">One thing to fix before you go live again.</p>
         </div>
         <div className="row gap-md">
@@ -241,7 +241,7 @@ export default async function DashboardPage() {
           <DashScoreRing value={latestScore ?? 0} size={160} />
           <div className="col gap-sm" style={{ position: "relative" }}>
             <span className="mono-label">Next session goal</span>
-            <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
+            <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0 }} className="grad-text">
               {latestRecommendation || "Open your latest report to see what to fix."}
             </h2>
             <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
