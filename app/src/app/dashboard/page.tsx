@@ -235,35 +235,52 @@ export default async function DashboardPage() {
       </div>
 
       {/* Hero focus card */}
-      <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 32, padding: 28, alignItems: "center", position: "relative" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(500px 220px at 0% 0%, color-mix(in oklab, var(--blue) 14%, transparent), transparent 70%)", pointerEvents: "none" }} />
-          <DashScoreRing value={latestScore ?? 0} size={160} />
-          <div className="col gap-sm" style={{ position: "relative" }}>
-            <span className="mono-label">Next session goal</span>
-            <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
-              {latestRecommendation || "Open your latest report to see what to fix."}
-            </h2>
-            <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
-              From your latest stream — <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
-            </p>
-            <div className="row gap-sm" style={{ marginTop: 6, flexWrap: "wrap" }}>
-              {delta !== null && (
-                <span className={`chip ${delta >= 0 ? "g" : "r"}`}>
-                  <Icons.Trend /> {delta >= 0 ? "+" : ""}{delta} vs previous
+      <div className="card" style={{ padding: 0, overflow: "hidden", borderColor: "color-mix(in oklab, var(--blue) 30%, var(--line))" }}>
+        <div style={{ position: "relative" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(600px 300px at 0% 0%, color-mix(in oklab, var(--blue) 12%, transparent), transparent 65%)", pointerEvents: "none" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 36, padding: "32px 32px 28px", alignItems: "center", position: "relative" }}>
+            <DashScoreRing value={latestScore ?? 0} size={152} />
+
+            <div className="col" style={{ gap: 12 }}>
+              {/* Eyebrow */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, width: "fit-content" }}>
+                <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--blue)", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--blue)" }}>
+                  Next Session Goal
                 </span>
-              )}
-              {latestPeaks > 0 && (
-                <span className="chip b">{latestPeaks} moments to clip</span>
-              )}
+              </div>
+
+              {/* Main recommendation */}
+              <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, margin: 0, color: "var(--ink)", maxWidth: "46ch" }}>
+                {latestRecommendation || "Open your latest report to see what to fix."}
+              </h2>
+
+              {/* Attribution */}
+              <p style={{ margin: 0, color: "var(--ink-3)", fontSize: 13, lineHeight: 1.4 }}>
+                From your latest stream{latest?.title ? <> — <span style={{ color: "var(--ink-2)", fontWeight: 500 }}>{latest.title}</span></> : ""}.
+              </p>
+
+              {/* Chips */}
+              <div className="row gap-sm" style={{ marginTop: 2, flexWrap: "wrap" }}>
+                {delta !== null && (
+                  <span className={`chip ${delta >= 0 ? "g" : "r"}`} style={{ fontWeight: 700 }}>
+                    {delta >= 0 ? "+" : ""}{delta} vs previous
+                  </span>
+                )}
+                {latestPeaks > 0 && (
+                  <span className="chip b">{latestPeaks} moment{latestPeaks !== 1 ? "s" : ""} to clip</span>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="col gap-sm" style={{ position: "relative", minWidth: 200 }}>
-            <Link href={`/dashboard/vods/${latest?.id}`} className="btn btn-blue">Open full report <Icons.Arrow /></Link>
-            <Link href="/dashboard/clips" className="btn btn-ghost">See clips <Icons.Play /></Link>
-            <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", textAlign: "center", marginTop: 4, letterSpacing: ".04em" }}>
-              {formatDate(latest?.analyzed_at ?? latest?.created_at ?? null)} · {formatDuration(latest?.duration_seconds ?? null)}
-            </span>
+
+            {/* Actions */}
+            <div className="col gap-sm" style={{ position: "relative", minWidth: 190 }}>
+              <Link href={`/dashboard/vods/${latest?.id}`} className="btn btn-blue">Open full report <Icons.Arrow /></Link>
+              <Link href="/dashboard/clips" className="btn btn-ghost">See clips <Icons.Play /></Link>
+              <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", textAlign: "center", marginTop: 2, letterSpacing: ".04em" }}>
+                {formatDate(latest?.analyzed_at ?? latest?.created_at ?? null)} · {formatDuration(latest?.duration_seconds ?? null)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
