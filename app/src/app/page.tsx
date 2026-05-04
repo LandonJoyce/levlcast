@@ -71,13 +71,15 @@ export default async function LandingPage() {
             that lost viewers. Dead air, slow openings, the parts your chat went quiet.
             Not generic advice. Timestamps.
           </p>
-          <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
-            Get Your First Report Free
-          </Link>
-          <div className="ll-live-counter" style={{ marginTop: 20 }}>
-            <span className="ll-live-dot" />
-            <span className="ll-live-num">{displayCount}</span>
-            <span className="ll-live-label">streams analyzed and counting</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
+              Get Your First Report Free
+            </Link>
+            <div className="ll-live-counter">
+              <span className="ll-live-dot" />
+              <span className="ll-live-num">{displayCount}</span>
+              <span className="ll-live-label">streams analyzed and counting</span>
+            </div>
           </div>
         </div>
       </section>
@@ -380,7 +382,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="report">
         <div className="ll-con">
           <div className="ll-cta-block">
-            <div>
+            <div style={{ alignSelf: "center" }}>
               <h2 className="ll-cta-h">
                 <span className="ll-cta-grad">Go live.</span><br />
                 Own your stream.<br />
