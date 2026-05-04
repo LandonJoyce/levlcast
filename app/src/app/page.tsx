@@ -485,7 +485,23 @@ const faqItems = [
 
 /* ─── Page ─── */
 
-export default function LandingPage() {
+async function getStreamCount(): Promise<number> {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/server");
+    const supabase = createAdminClient();
+    const { count } = await supabase
+      .from("vods")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "ready");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export default async function LandingPage() {
+  const streamCount = await getStreamCount();
+  const displayCount = streamCount > 0 ? `${streamCount}+` : "50+";
   return (
     <div className="landing-v2">
       {/* Fonts for coach report mocks */}
@@ -534,8 +550,8 @@ export default function LandingPage() {
                     <div className="k">Average analysis time</div>
                   </div>
                   <div className="hero-stat">
-                    <div className="v">1 fix</div>
-                    <div className="k">Per session, specific</div>
+                    <div className="v">{displayCount}</div>
+                    <div className="k">Streams analyzed</div>
                   </div>
                 </div>
               </div>
@@ -810,6 +826,41 @@ export default function LandingPage() {
           </div>
 
           <FaqAccordion items={faqItems} />
+        </div>
+      </section>
+
+      {/* ─── Testimonial + Founder ─── */}
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, maxWidth: 860, margin: "0 auto" }}>
+            {/* Testimonial */}
+            <div style={{ padding: "28px 28px 24px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <p style={{ fontSize: 16, lineHeight: 1.6, color: "var(--ink)", margin: "0 0 20px", fontStyle: "italic" }}>
+                &ldquo;This software makes clipping an absolute breeze.&rdquo;
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(145,70,255,0.2)", border: "1px solid rgba(145,70,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#9146FF" }}>C</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Charmbix</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Twitch streamer</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Founder */}
+            <div style={{ padding: "28px 28px 24px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--ink-2)", margin: "0 0 20px" }}>
+                I built LevlCast because I was streaming into the void and had no idea what to change. Every coach report is the feedback I wish I had when I started.
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(34,211,238,0.12)", border: "1px solid rgba(34,211,238,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#22D3EE" }}>L</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Landon</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Founder · twitch.tv/orbitxd</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
