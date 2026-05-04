@@ -75,13 +75,12 @@ export default async function LandingPage() {
           {/* Feature strip */}
           <div className="ll-strip">
             {[
-              { icon: "⚡", title: "Real coaching", sub: "Built on your actual stream" },
-              { icon: "⏱", title: "Track key metrics", sub: "Get actionable feedback" },
-              { icon: "✂️", title: "Share key moments", sub: "Export to social media" },
-              { icon: "📈", title: "Improve content", sub: "Optimize stream quality" },
+              { title: "Real coaching", sub: "Built on your actual stream" },
+              { title: "Track key metrics", sub: "Get actionable feedback" },
+              { title: "Share key moments", sub: "Export to social media" },
+              { title: "Improve content", sub: "Optimize stream quality" },
             ].map((item) => (
               <div key={item.title} className="ll-strip-item">
-                <div className="ll-strip-icon" aria-hidden="true">{item.icon}</div>
                 <div>
                   <div className="ll-strip-title">{item.title}</div>
                   <div className="ll-strip-sub">{item.sub}</div>
@@ -200,7 +199,7 @@ export default async function LandingPage() {
             </article>
 
             {/* Post to YouTube — spans 2 */}
-            <article className="ll-feat ll-feat-span2">
+            <article className="ll-feat ll-feat-span2 ll-feat-yt">
               <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-cyan"></span>Post to YouTube</span>
               <h3 className="ll-feat-h">From clip to Shorts, in 30 seconds</h3>
               <p className="ll-feat-sub">Connect your channel once. Post from inside the app. Title fills itself from the report.</p>
@@ -363,55 +362,10 @@ export default async function LandingPage() {
 
             {/* Phone mockups */}
             <div className="ll-phones" aria-hidden="true">
-              <div className="ll-phone ll-phone-front">
-                <div className="ll-phone-notch"></div>
-                <div className="ll-phone-screen">
-                  <div className="ll-ph-bar"><span>1:54</span><span>●●● 78</span></div>
-                  <div className="ll-ph-title">Dashboard</div>
-                  <div className="ll-ph-hello">
-                    <div className="ll-ph-avatar"></div>
-                    <div>
-                      <div className="ll-ph-name">Hey, OrbitxD</div>
-                      <div className="ll-ph-sub">Here's what's happening</div>
-                    </div>
-                    <span className="ll-ph-pro">PRO</span>
-                  </div>
-                  <div className="ll-ph-card">
-                    <div className="ll-ph-card-lbl">LAST STREAM</div>
-                    <div className="ll-ph-row">
-                      <div className="ll-ph-score">62</div>
-                      <div>
-                        <div className="ll-ph-card-title">Destiny 2 Raid — Flawless Run</div>
-                        <span className="ll-ph-link">View Report</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ll-ph-stats">
-                    <div className="ll-ph-stat"><div className="ll-ph-stat-num">12</div><div className="ll-ph-stat-lbl">VODs Synced</div></div>
-                    <div className="ll-ph-stat"><div className="ll-ph-stat-num">8</div><div className="ll-ph-stat-lbl">Analyzed</div></div>
-                    <div className="ll-ph-stat"><div className="ll-ph-stat-num">48</div><div className="ll-ph-stat-lbl">Peaks Found</div></div>
-                    <div className="ll-ph-stat ll-ph-stat-accent"><div className="ll-ph-stat-num">12</div><div className="ll-ph-stat-lbl">Clips</div></div>
-                  </div>
-                </div>
-              </div>
-              <div className="ll-phone ll-phone-back">
-                <div className="ll-phone-notch"></div>
-                <div className="ll-phone-screen">
-                  <div className="ll-ph-bar"><span>1:54</span><span>●●● 78</span></div>
-                  <div className="ll-ph-title">Dashboard</div>
-                  <div className="ll-ph-hello">
-                    <div className="ll-ph-avatar"></div>
-                    <div><div className="ll-ph-name">Hey, OrbitxD</div></div>
-                    <span className="ll-ph-pro">PRO</span>
-                  </div>
-                  <div className="ll-ph-card">
-                    <div className="ll-ph-row">
-                      <div className="ll-ph-score">62</div>
-                      <div><div className="ll-ph-card-title">Destiny 2 Raid</div></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/la/phone.png" alt="" className="ll-phone-img-front" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/la/phone.png" alt="" className="ll-phone-img-back" />
             </div>
           </div>
         </div>
