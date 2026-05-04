@@ -55,9 +55,7 @@ export default async function LandingPage() {
             </ul>
             <Link href="/auth/login" className="ll-btn ll-btn-white ll-nav-cta">
               Get Started Free
-              <span className="ll-nav-arrow-icon">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-              </span>
+              <span className="ll-nav-arrow-icon">↗</span>
             </Link>
           </nav>
         </div>
