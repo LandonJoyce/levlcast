@@ -471,15 +471,11 @@
 .dash .score-ring b {
   position: relative; z-index: 1;
   font-size: 36px; font-weight: 700; letter-spacing: -0.02em;
-  background: var(--grad);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--c);
 }
 .dash .score-ring small {
   font-size: 12px; font-weight: 500; color: var(--ink-3); margin-left: 2px;
   font-family: var(--font-geist-mono), monospace;
-  -webkit-text-fill-color: var(--ink-3);
 }
 
 /* gradient text utility for dash */
