@@ -1462,10 +1462,6 @@
   border-color: rgba(148,61,255,0.5);
   box-shadow: 0 0 0 1px rgba(148,61,255,0.15), 0 20px 60px -10px rgba(148,61,255,0.4), inset 0 1px 0 rgba(148,61,255,0.2);
 }
-.ll-page .ll-plan-pro .ll-plan-price {
-  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.ll-page .ll-plan-pro .ll-plan-price small { color: rgba(252,208,147,0.7); }
 .ll-page .ll-plan-header-row {
   display: flex; align-items: flex-start; justify-content: space-between;
 }

@@ -296,16 +296,9 @@ export default async function LandingPage() {
           <div className="ll-pricing">
             {/* Free */}
             <article className="ll-plan">
-              <div className="ll-plan-header-row">
-                <div>
-                  <div className="ll-plan-name">For You</div>
-                  <div className="ll-plan-cycle">Free</div>
-                </div>
-                <div className="ll-plan-icon-corner">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                  </svg>
-                </div>
+              <div>
+                <div className="ll-plan-name">For You</div>
+                <div className="ll-plan-cycle">Free</div>
               </div>
               <div className="ll-plan-price">$0 <small>forever</small></div>
               <hr className="ll-plan-sep" />
@@ -331,16 +324,9 @@ export default async function LandingPage() {
             <div className="ll-plan-pro-outer">
               <div className="ll-plan-founding-banner">Founding · locks for life</div>
               <article className="ll-plan ll-plan-pro">
-                <div className="ll-plan-header-row">
-                  <div>
-                    <div className="ll-plan-name">Pro</div>
-                    <div className="ll-plan-cycle">month · founding price</div>
-                  </div>
-                  <div className="ll-plan-icon-corner">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(148,61,255,0.5)" stroke="rgba(200,130,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                    </svg>
-                  </div>
+                <div>
+                  <div className="ll-plan-name">Pro</div>
+                  <div className="ll-plan-cycle">month · founding price</div>
                 </div>
                 <div className="ll-plan-price">$9.99 <small>/ month</small></div>
                 <hr className="ll-plan-sep" />
