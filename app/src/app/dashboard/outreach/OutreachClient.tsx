@@ -98,8 +98,8 @@ export default function OutreachPage() {
     setTimeout(() => setCopied(null), 2000);
   }
 
-  function markSent(id: string) {
-    const next = new Set([...sent, id]);
+  function markSent(id: string, author: string) {
+    const next = new Set([...sent, id, `author:${author}`]);
     setSent(next);
     localStorage.setItem("outreach_sent_v1", JSON.stringify([...next]));
   }
@@ -109,7 +109,7 @@ export default function OutreachPage() {
     localStorage.removeItem("outreach_sent_v1");
   }
 
-  const visibleLeads = leads.filter((l) => !sent.has(l.id));
+  const visibleLeads = leads.filter((l) => !sent.has(l.id) && !sent.has(`author:${l.author}`));
 
   return (
     <div>
@@ -219,7 +219,7 @@ export default function OutreachPage() {
                       {generating === lead.id ? "Writing..." : "Write message"}
                     </button>
                   )}
-                  <button onClick={() => markSent(lead.id)}
+                  <button onClick={() => markSent(lead.id, lead.author)}
                     style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink-3)", cursor: "pointer" }}>
                     Skip
                   </button>
@@ -238,7 +238,7 @@ export default function OutreachPage() {
                     <a
                       href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(lead.author)}&subject=${encodeURIComponent(messages[lead.id].subject)}&message=${encodeURIComponent(messages[lead.id].body)}`}
                       target="_blank" rel="noopener noreferrer"
-                      onClick={() => setTimeout(() => markSent(lead.id), 800)}
+                      onClick={() => setTimeout(() => markSent(lead.id, lead.author), 800)}
                       style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
                       Send on Reddit
                     </a>
@@ -249,7 +249,7 @@ export default function OutreachPage() {
                       style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
                       Rewrite
                     </button>
-                    <button onClick={() => markSent(lead.id)}
+                    <button onClick={() => markSent(lead.id, lead.author)}
                       style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
                       Mark sent
                     </button>
