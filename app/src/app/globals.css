@@ -1422,7 +1422,7 @@
 .ll-page .ll-yt-thumb {
   aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 10px;
   background: linear-gradient(135deg,rgba(148,61,255,0.35),rgba(37,244,244,0.25));
-  background-size: cover; background-position: center bottom;
+  background-size: cover; background-position: center 30%;
   display: grid; place-items: center;
   position: relative; overflow: hidden;
 }
