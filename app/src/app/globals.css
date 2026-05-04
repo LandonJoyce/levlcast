@@ -1262,7 +1262,7 @@
 .ll-page .ll-hero::after {
   content: ""; position: absolute; left: 50%; top: -160px;
   width: min(1800px, 140vw); height: 720px; border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 0%, rgba(148,61,255,0.60) 0%, rgba(148,61,255,0.25) 40%, rgba(148,61,255,0.06) 65%, transparent 80%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(148,61,255,0.42) 0%, rgba(200,70,200,0.18) 35%, rgba(242,97,121,0.08) 60%, transparent 78%);
   transform: translateX(-50%); z-index: -1; filter: blur(72px);
 }
 .ll-page .ll-h1 {
