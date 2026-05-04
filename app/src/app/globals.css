@@ -324,7 +324,7 @@
 }
 .dash .sb-user .av {
   width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, oklch(0.55 0.16 130), oklch(0.65 0.14 90));
+  background: var(--grad);
   border: 2px solid var(--line);
   flex-shrink: 0;
 }
@@ -529,7 +529,7 @@
 }
 .dash .upgrade::before {
   content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--blue), var(--green), transparent);
+  background: var(--grad);
 }
 .dash .upgrade .eb {
   font-family: var(--font-geist-mono), monospace; font-size: 10px;

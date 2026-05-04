@@ -78,15 +78,15 @@ export default async function SettingsPage({
               style={{ width: 72, height: 72, borderRadius: "50%", flexShrink: 0, border: "1px solid var(--line)", objectFit: "cover" }}
             />
           ) : (
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, oklch(0.55 0.16 130), oklch(0.65 0.14 90))", flexShrink: 0 }} />
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--grad)", flexShrink: 0 }} />
           )}
           <div className="col" style={{ flex: 1, gap: 6 }}>
             <div className="row gap-sm">
               <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", margin: 0, color: "var(--ink)" }}>
                 {profile?.twitch_display_name || "Streamer"}
               </h2>
-              <span className={`rank-chip ${usage.plan === "pro" ? "elite" : "fresh"}`}>
-                <Icons.Spark /> {usage.plan === "pro" ? "Pro" : "Free"}
+              <span className={`chip ${usage.plan === "pro" ? "b" : ""}`} style={{ fontFamily: "var(--font-geist-mono), monospace", textTransform: "uppercase", letterSpacing: ".06em", fontSize: 11 }}>
+                {usage.plan === "pro" ? "Pro" : "Free"}
               </span>
             </div>
             <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
@@ -102,7 +102,7 @@ export default async function SettingsPage({
         <div className="card bordered accent-blue">
           <div className="card-head">
             <h3>Plan</h3>
-            <span className={`rank-chip ${usage.plan === "pro" ? "elite" : "rising"}`} style={{ textTransform: "none", letterSpacing: 0 }}>
+            <span className={`chip ${usage.plan === "pro" ? "b" : ""}`} style={{ fontFamily: "var(--font-geist-mono), monospace", textTransform: "uppercase", letterSpacing: ".06em", fontSize: 11 }}>
               {usage.plan === "pro" ? "PRO" : "FREE"}
             </span>
           </div>

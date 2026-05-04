@@ -294,7 +294,7 @@ export default async function VodsPage({
                     {v.status === "pending" && <span className="chip">queued</span>}
                     {v.status === "failed" && <span className="chip r">failed</span>}
                     {requiresPro && v.status === "pending" && (
-                      <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "rgba(34,211,238,0.1)", border: "1px solid rgba(34,211,238,0.25)", color: "#22D3EE", fontWeight: 600, letterSpacing: "0.05em" }}>
+                      <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "color-mix(in oklab, var(--blue) 14%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))", color: "var(--blue)", fontWeight: 600, letterSpacing: "0.05em" }}>
                         PRO
                       </span>
                     )}

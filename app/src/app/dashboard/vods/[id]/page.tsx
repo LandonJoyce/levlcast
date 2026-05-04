@@ -364,17 +364,20 @@ export default async function VodDetailPage({
           {/* Peak Moments */}
           {peaks.length > 0 && (
             <div id="clip-moments">
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}>
                 <span className="page-eyebrow">Clip Moments · {peaks.length}</span>
+                <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, color-mix(in oklab, var(--blue) 30%, transparent), transparent)" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {peaks.map((peak: any, i: number) => {
                   const alreadyClaimed = claimedStarts.has(Math.round(peak.start));
+                  const catLabel = peak.category === "funny" ? "Comedy" : peak.category;
+                  const catClass = peak.category === "hype" ? "m" : peak.category === "funny" ? "w" : peak.category === "emotional" ? "r" : peak.category === "clutch" ? "g" : "b";
                   return (
-                    <div key={i} className="card card-pad-sm">
+                    <div key={i} className="card card-pad-sm" style={{ borderColor: alreadyClaimed ? "color-mix(in oklab, var(--green) 25%, var(--line))" : "var(--line)" }}>
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
                         <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{peak.title}</h3>
-                        <span className="chip" style={{ flexShrink: 0, textTransform: "uppercase", fontSize: 10 }}>{peak.category === "funny" ? "Comedy" : peak.category}</span>
+                        <span className={`chip ${catClass}`} style={{ flexShrink: 0, textTransform: "uppercase", fontSize: 10 }}>{catLabel}</span>
                       </div>
                       <p style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 8, lineHeight: 1.5 }}>{peak.reason}</p>
                       {peak.hook && (

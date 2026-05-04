@@ -316,22 +316,22 @@ export default async function DashboardPage() {
               <svg viewBox={`0 0 ${trendW} ${trendH + 28}`} style={{ width: "100%", height: trendH + 28, marginTop: 14, overflow: "visible" }}>
                 <defs>
                   <linearGradient id="dashTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.66 0.18 245)" stopOpacity="0.32" />
-                    <stop offset="100%" stopColor="oklch(0.66 0.18 245)" stopOpacity="0" />
+                    <stop offset="0%" stopColor="oklch(0.60 0.22 290)" stopOpacity="0.32" />
+                    <stop offset="100%" stopColor="oklch(0.60 0.22 290)" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 <path d={area} fill="url(#dashTrendGradient)" />
-                <path d={path} stroke="oklch(0.66 0.18 245)" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={path} stroke="oklch(0.60 0.22 290)" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                 {points.map((p, i) => {
                   const isLast = i === points.length - 1;
                   const score = trend[i];
                   const prevScore = i > 0 ? trend[i - 1] : null;
                   const up = prevScore !== null && score > prevScore;
                   const down = prevScore !== null && score < prevScore;
-                  const dotColor = isLast ? "oklch(0.66 0.18 245)" : up ? "oklch(0.72 0.18 145)" : down ? "oklch(0.65 0.22 25)" : "oklch(0.55 0.04 245)";
+                  const dotColor = isLast ? "oklch(0.60 0.22 290)" : up ? "oklch(0.72 0.18 145)" : down ? "oklch(0.65 0.22 25)" : "oklch(0.55 0.04 245)";
                   return (
                     <g key={i}>
-                      {isLast && <circle cx={p[0]} cy={p[1]} r="9" fill="oklch(0.66 0.18 245)" opacity="0.25" />}
+                      {isLast && <circle cx={p[0]} cy={p[1]} r="9" fill="oklch(0.60 0.22 290)" opacity="0.25" />}
                       <circle cx={p[0]} cy={p[1]} r={isLast ? 5 : 4} fill={dotColor} />
                       <text
                         x={p[0]}
@@ -339,7 +339,7 @@ export default async function DashboardPage() {
                         textAnchor="middle"
                         fontSize="9"
                         fontFamily="var(--font-geist-mono), monospace"
-                        fill={isLast ? "oklch(0.66 0.18 245)" : "oklch(0.6 0.04 245)"}
+                        fill={isLast ? "oklch(0.60 0.22 290)" : "oklch(0.6 0.04 245)"}
                         fontWeight={isLast ? "700" : "400"}
                       >{score}</text>
                       {trendDates[i] && (
@@ -402,7 +402,7 @@ export default async function DashboardPage() {
           {totalTrackedViews === 0 && (
             <div className="col gap-sm" style={{ paddingTop: 6, borderTop: "1px solid var(--line)" }}>
               <span className="mono-label">Clip performance</span>
-              <span style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>Log views on your clips to see which category performs best.</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>Post clips to YouTube to start tracking which category performs best.</span>
             </div>
           )}
         </div>

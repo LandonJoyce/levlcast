@@ -141,7 +141,7 @@ export default async function LandingPage() {
                 I built LevlCast to give newer streamers an actual path forward. Whether you're pushing for affiliate, chasing partner, or just trying to figure out what's not working, nobody should have to guess their way through it.
               </p>
               <div className="ll-trust-person">
-                <div className="ll-trust-avatar" style={{ background: "rgba(37,244,244,0.12)", color: "var(--ll-cyan)" }}>L</div>
+                <div className="ll-trust-avatar" style={{ background: "rgba(148,61,255,0.15)", color: "rgb(148,61,255)" }}>L</div>
                 <div>
                   <div className="ll-trust-name">Landon</div>
                   <div className="ll-trust-role">Founder · twitch.tv/orbitxd</div>
@@ -156,7 +156,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="features">
         <div className="ll-con">
           <div className="ll-shead">
-            <span className="ll-eyebrow">$9.99/mo locked for life</span>
+            <span className="ll-eyebrow">Features</span>
             <h2 className="ll-h2">Three things, built around the VOD <span className="ll-grad-text">workflow</span></h2>
             <p className="ll-sub">Nothing else. No bloat, no dashboard you'll never open.</p>
           </div>
@@ -260,7 +260,7 @@ export default async function LandingPage() {
           <div className="ll-shead">
             <span className="ll-eyebrow">The Loop</span>
             <h2 className="ll-h2"><span className="ll-grad-text">Four Steps.</span> No New Habits</h2>
-            <p className="ll-sub">Nothing else. No bloat, no dashboard you'll never open.</p>
+            <p className="ll-sub">Stream. Analyze. Get one fix. Repeat. That's the whole thing.</p>
           </div>
           <div className="ll-steps">
             {[
@@ -282,7 +282,7 @@ export default async function LandingPage() {
               {
                 n: "04", title: "Go live again",
                 body: "Take the one thing into your next stream. Analyze it after. That's the whole loop.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>,
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>,
               },
             ].map((s) => (
               <article key={s.n} className="ll-step">
