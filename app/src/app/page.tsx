@@ -47,13 +47,17 @@ export default async function LandingPage() {
           <nav className="ll-nav">
             <Link href="/" className="ll-brand">LevlCast</Link>
             <ul className="ll-nav-links">
+              <li><a href="/" className="ll-nav-active">Home</a></li>
               <li><a href="#how">How it works</a></li>
               <li><a href="#features">Features</a></li>
+              <li><a href="#report">The Report</a></li>
               <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#faq">FAQ</a></li>
             </ul>
             <Link href="/auth/login" className="ll-btn ll-btn-white ll-nav-cta">
               Get Started Free
+              <span className="ll-nav-arrow-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+              </span>
             </Link>
           </nav>
         </div>
@@ -85,7 +89,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-shead">
             <span className="ll-eyebrow">Before / After</span>
-            <h2 className="ll-h2">Most streamers are flying completely blind</h2>
+            <h2 className="ll-h2">Most streamers are flying completely <span className="ll-grad-text">blind</span></h2>
             <p className="ll-sub">You end stream, check the same viewer count, and have no idea what to change. So you do the same thing next stream and wonder why nothing grows.</p>
           </div>
           <div className="ll-compare">
@@ -227,12 +231,14 @@ export default async function LandingPage() {
               <p className="ll-feat-sub">Connect your channel once. Post from inside the app. Title fills itself from the report.</p>
               <div className="ll-yt-grid">
                 {[
-                  { title: "Malenia clear, no-hit run", meta: "DRAFT · 0:42 · #shorts" },
-                  { title: "When chat saw the boss", meta: "QUEUED · 0:31 · #shorts" },
-                  { title: "First kill of the night", meta: "POSTED · 0:55 · 2.4k views" },
+                  { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/streamer-1.png" },
+                  { title: "The moment everything went completely wrong at once", meta: "MOMENT · 15:03 · #shorts", thumb: "/la/streamer-4.png" },
+                  { title: "They got exposed mid-trash talk and had no answer", meta: "MOMENT · 3:29 · #shorts", thumb: "/la/streamer-7.png" },
                 ].map((v) => (
                   <div key={v.title} className="ll-yt">
-                    <div className="ll-yt-thumb">▶</div>
+                    <div className="ll-yt-thumb" style={{ backgroundImage: `url(${v.thumb})` }}>
+                      <div className="ll-yt-play">▶</div>
+                    </div>
                     <div className="ll-yt-title">{v.title}</div>
                     <div className="ll-yt-meta">{v.meta}</div>
                   </div>
