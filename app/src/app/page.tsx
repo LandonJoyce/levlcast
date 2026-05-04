@@ -2,7 +2,6 @@ import Link from "next/link";
 import FaqAccordion from "@/components/FaqAccordion";
 import ChatBarsViz from "@/components/landing/ChatBarsViz";
 import HeatmapViz from "@/components/landing/HeatmapViz";
-import SubscribeForm from "@/components/landing/SubscribeForm";
 import StreamerMarquee from "@/components/landing/StreamerMarquee";
 
 /* ─── Data ─── */
@@ -442,7 +441,6 @@ export default async function LandingPage() {
             <div className="ll-foot-col">
               <Link href="/" className="ll-foot-brand">LevlCast</Link>
               <p className="ll-foot-pitch">Your personal stream coach. Real feedback on your actual stream.</p>
-              <SubscribeForm />
             </div>
             <div className="ll-foot-col">
               <h4>Product</h4>
