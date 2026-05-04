@@ -113,7 +113,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
       padding: "18px 22px 16px",
       borderRadius: 12,
       background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      border: "1px solid rgba(242,97,121,0.18)",
     }}>
       {/* Header — compact single row */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>

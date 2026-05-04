@@ -893,7 +893,7 @@ export function CoachReportCard({
                           const hasEvent = b.subEvents > 0 || b.bitEvents > 0 || b.raidEvents > 0;
                           if (!hasEvent) return null;
                           const pct = ((b.start + (b.end - b.start) / 2) / totalSecs) * 100;
-                          const color = b.raidEvents > 0 ? "#F59E0B" : b.bitEvents > 0 ? "#22D3EE" : PURPLE;
+                          const color = b.raidEvents > 0 ? "#F59E0B" : b.bitEvents > 0 ? "rgb(242,97,121)" : PURPLE;
                           return (
                             <div key={`evt-${i}`} title={
                               (b.raidEvents > 0 ? "Raid · " : "") +
@@ -915,7 +915,6 @@ export function CoachReportCard({
                   {wpmCurve.length >= 3 && (() => {
                     const maxWpm = Math.max(...wpmCurve);
                     if (maxWpm <= 0) return null;
-                    const peakColor = "#22D3EE";
                     const W = 1000; const H = 40;
                     const xFor = (i: number) => wpmCurve.length === 1 ? W / 2 : (i / (wpmCurve.length - 1)) * W;
                     const yFor = (v: number) => H - (v / maxWpm) * (H - 4) - 2;
@@ -931,13 +930,18 @@ export function CoachReportCard({
                       <div style={{ height: H, position: "relative", pointerEvents: "none" }}>
                         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" width="100%" height={H} style={{ display: "block" }}>
                           <defs>
-                            <linearGradient id="energy-fill" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={peakColor} stopOpacity="0.28" />
-                              <stop offset="100%" stopColor={peakColor} stopOpacity="0" />
+                            <linearGradient id="wpm-line-grad" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="rgb(148,61,255)" />
+                              <stop offset="100%" stopColor="rgb(242,97,121)" />
+                            </linearGradient>
+                            <linearGradient id="wpm-area-grad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="rgb(242,97,121)" stopOpacity="0.3" />
+                              <stop offset="60%" stopColor="rgb(148,61,255)" stopOpacity="0.08" />
+                              <stop offset="100%" stopColor="rgb(148,61,255)" stopOpacity="0" />
                             </linearGradient>
                           </defs>
-                          <path d={area} fill="url(#energy-fill)" />
-                          <path d={line} fill="none" stroke={peakColor} strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" opacity={0.6} />
+                          <path d={area} fill="url(#wpm-area-grad)" />
+                          <path d={line} fill="none" stroke="url(#wpm-line-grad)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.75} />
                         </svg>
                       </div>
                     );
@@ -1038,7 +1042,7 @@ export function CoachReportCard({
                     )}
                     {wpmCurve.length >= 3 && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                        <span style={{ display: "inline-block", width: 22, height: 8, background: "linear-gradient(180deg, rgba(34,211,238,0.4), rgba(34,211,238,0.05))", borderTop: "1px solid #22D3EE", borderRadius: 2 }} />
+                        <span style={{ display: "inline-block", width: 22, height: 8, background: "linear-gradient(180deg, rgba(242,97,121,0.35), rgba(148,61,255,0.05))", borderTop: "1px solid rgb(242,97,121)", borderRadius: 2 }} />
                         Words / min
                       </span>
                     )}
