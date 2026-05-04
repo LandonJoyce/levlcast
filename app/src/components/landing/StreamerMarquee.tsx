@@ -24,9 +24,6 @@ function Card({ src }: { src: string }) {
   return (
     <div className="ll-sm-card">
       <Image src={src} alt="" fill style={{ objectFit: "cover" }} sizes="300px" />
-      <div className="ll-sm-overlay">
-        <span className="ll-sm-live">LIVE</span>
-      </div>
     </div>
   );
 }
