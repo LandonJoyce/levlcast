@@ -1,7 +1,5 @@
 import Link from "next/link";
 import FaqAccordion from "@/components/FaqAccordion";
-import ChatBarsViz from "@/components/landing/ChatBarsViz";
-import HeatmapViz from "@/components/landing/HeatmapViz";
 import StreamerMarquee from "@/components/landing/StreamerMarquee";
 
 /* ─── Data ─── */
@@ -161,73 +159,46 @@ export default async function LandingPage() {
             <p className="ll-sub">Nothing else. No bloat, no dashboard you'll never open.</p>
           </div>
 
-          <div className="ll-features">
-            {/* Chat Pulse */}
-            <article className="ll-feat">
-              <span className="ll-chip"><span className="ll-chip-dot"></span>Chat Pulse</span>
-              <h3 className="ll-feat-h">Your chat is telling you what worked</h3>
-              <p className="ll-feat-sub">We link chat volume to every moment. The spike at 1:55 confirms your best clip. The drop at 2:20 tells you what to fix.</p>
-              <div className="ll-viz">
-                <div className="ll-viz-row">
-                  <div>
-                    <div className="ll-viz-label">Messages / minute</div>
-                    <div className="ll-viz-num">96 <span className="ll-viz-sub">peak at 1:55</span></div>
-                  </div>
-                  <div>
-                    <div className="ll-viz-label">Chat score</div>
-                    <div className="ll-viz-num">8.4 <span className="ll-viz-sub">/ 10</span></div>
-                  </div>
+          {/* Product screenshots */}
+          <div className="ll-ss-showcase">
+            {/* Coach report — main value prop */}
+            <div className="ll-ss-main">
+              <div className="ll-ss-label-row">
+                <span className="ll-chip"><span className="ll-chip-dot"></span>Coaching Report</span>
+                <span className="ll-ss-desc">Score 0–100 · stream story · one specific fix</span>
+              </div>
+              <div className="ll-ss-frame">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/la/ss-coach-report.png" alt="LevlCast coaching report showing stream score, story, and #1 fix" />
+              </div>
+            </div>
+
+            {/* Right col: recap + timeline stacked */}
+            <div className="ll-ss-side">
+              <div className="ll-ss-panel">
+                <div className="ll-ss-label-row">
+                  <span className="ll-chip"><span className="ll-chip-dot"></span>Since Last Stream</span>
+                  <span className="ll-ss-desc">stream-to-stream delta tracking</span>
                 </div>
-                <ChatBarsViz />
-              </div>
-              <div className="ll-glow ll-glow-cyan"></div>
-            </article>
-
-            {/* Auto Clips */}
-            <article className="ll-feat">
-              <span className="ll-chip"><span className="ll-chip-dot"></span>Auto Clips</span>
-              <h3 className="ll-feat-h">Hype, comedy, clutch — auto-cut.</h3>
-              <p className="ll-feat-sub">One tap cuts and captions. No timeline scrubbing. No editing software.</p>
-              <div className="ll-clips">
-                {[
-                  { title: "Clutch — Malenia P2", meta: "peak chat · 1:55:14", time: "0:42" },
-                  { title: "Comedy — chat reaction", meta: "laugh detector · 2:18:03", time: "0:31" },
-                  { title: "Hype — first kill", meta: "spike +280% · 0:48:51", time: "0:55" },
-                ].map((c) => (
-                  <div key={c.title} className="ll-clip">
-                    <div className="ll-clip-thumb">▶</div>
-                    <div>
-                      <div className="ll-clip-title">{c.title}</div>
-                      <div className="ll-clip-meta">{c.meta}</div>
-                    </div>
-                    <div className="ll-clip-time">{c.time}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="ll-glow ll-glow-coral"></div>
-            </article>
-
-            {/* Drop-off Detection */}
-            <article className="ll-feat">
-              <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-red"></span>Drop-off Detection</span>
-              <h3 className="ll-feat-h">Know why viewers leave</h3>
-              <p className="ll-feat-sub">Exact moments viewers tuned out — dead air, slow openings, quiet chat. One specific fix per session.</p>
-              <div className="ll-viz">
-                <div className="ll-viz-row">
-                  <div>
-                    <div className="ll-viz-label">Retention by minute</div>
-                    <div className="ll-viz-num" style={{ color: "var(--ll-red)" }}>-34% <span className="ll-viz-sub">at 1:40</span></div>
-                  </div>
-                  <div>
-                    <div className="ll-viz-label">Mission</div>
-                    <div style={{ fontSize: 13, color: "var(--ll-fg-mute)" }}>Cut intro to &lt; 90s</div>
-                  </div>
+                <div className="ll-ss-frame">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/la/ss-stream-recap.png" alt="Since Last Stream — sub-score delta grid" className="ll-ss-crop" />
                 </div>
-                <HeatmapViz />
               </div>
-              <div className="ll-glow ll-glow-purple"></div>
-            </article>
+              <div className="ll-ss-panel">
+                <div className="ll-ss-label-row">
+                  <span className="ll-chip"><span className="ll-chip-dot"></span>Stream Timeline</span>
+                  <span className="ll-ss-desc">silence map + best moments</span>
+                </div>
+                <div className="ll-ss-frame">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/la/ss-timeline.png" alt="Stream timeline showing silence gaps and word-per-minute curve" className="ll-ss-crop" />
+                </div>
+              </div>
+            </div>
+          </div>
 
+          <div className="ll-features" style={{ marginTop: 16 }}>
             {/* Post to YouTube — spans 2 */}
             <article className="ll-feat ll-feat-span2 ll-feat-yt">
               <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-cyan"></span>Post to YouTube</span>

@@ -1348,6 +1348,52 @@
   background-image: url("/la/feat-bg2.png"); background-size: cover; background-position: center;
 }
 .ll-page .ll-feat-span2 { grid-column: span 2; }
+
+/* ── Product screenshot showcase ── */
+.ll-page .ll-ss-showcase {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 20px;
+  margin-top: 56px;
+}
+.ll-page .ll-ss-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ll-page .ll-ss-frame {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(148,61,255,0.22);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 24px 64px rgba(0,0,0,0.6),
+    0 0 48px rgba(148,61,255,0.08);
+}
+.ll-page .ll-ss-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ll-page .ll-ss-crop {
+  max-height: 210px;
+  object-fit: cover;
+  object-position: left top;
+}
+.ll-page .ll-ss-label-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ll-page .ll-ss-desc {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  color: var(--ll-fg-dim);
+  letter-spacing: 0.04em;
+}
+
 .ll-page .ll-chip {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 5px 13px; border-radius: 999px;
@@ -1698,6 +1744,8 @@
   .ll-page .ll-compare { grid-template-columns: 1fr; }
   .ll-page .ll-features { grid-template-columns: 1fr; }
   .ll-page .ll-feat-span2 { grid-column: span 1; }
+  .ll-page .ll-ss-showcase { grid-template-columns: 1fr; }
+  .ll-page .ll-ss-crop { max-height: 160px; }
   .ll-page .ll-yt-grid { grid-template-columns: 1fr; }
   .ll-page .ll-steps { grid-template-columns: 1fr 1fr; }
   .ll-page .ll-pricing { grid-template-columns: 1fr; }
