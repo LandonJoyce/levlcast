@@ -1203,10 +1203,10 @@
 /* ── Nav ── */
 .ll-page .ll-nav-wrap {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(9,11,27,0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(9,11,27,0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-bottom: none;
 }
 .ll-page .ll-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
@@ -1222,7 +1222,10 @@
 }
 .ll-page .ll-nav-links a { color: inherit; text-decoration: none; }
 .ll-page .ll-nav-links a:hover { color: var(--ll-fg); }
-.ll-page .ll-nav-active { color: rgb(168,85,247) !important; font-weight: 500; }
+.ll-page .ll-nav-active {
+  color: rgb(168,85,247) !important; font-weight: 500;
+  text-decoration: underline; text-underline-offset: 4px;
+}
 .ll-page .ll-nav-cta { display: inline-flex; align-items: center; gap: 8px; }
 .ll-page .ll-nav-arrow-icon {
   width: 26px; height: 26px; border-radius: 50%;
