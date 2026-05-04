@@ -405,8 +405,6 @@ export default async function LandingPage() {
             <div className="ll-phones" aria-hidden="true">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/la/newphone.png" alt="" className="ll-phone-front" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/la/newphone.png" alt="" className="ll-phone-back" />
             </div>
           </div>
         </div>

@@ -1548,7 +1548,7 @@
   background-image: url("/la/cta-bg.png"); background-size: cover; background-position: center;
   border: 1px solid rgba(255,255,255,0.12); overflow: hidden;
   padding: 80px; display: grid; grid-template-columns: 1fr 440px;
-  gap: 48px; align-items: center; min-height: 520px;
+  gap: 48px; align-items: end; min-height: 520px;
   box-shadow: inset 0 5px 94px 1px rgba(255,255,255,0.08);
 }
 .ll-page .ll-cta-h {
@@ -1568,22 +1568,13 @@
 .ll-page .ll-badge-top { font-size: 9px; letter-spacing: 0.02em; opacity: 0.85; }
 .ll-page .ll-badge-main { font-size: 15px; font-weight: 600; line-height: 1.05; }
 
-/* Two-phone stacked layout */
-.ll-page .ll-phones { position: relative; width: 440px; height: 520px; flex-shrink: 0; }
-.ll-page .ll-phone-front {
-  position: absolute; left: 0; top: 0; width: 300px;
-  border-radius: 44px;
-  box-shadow:
-    0 40px 80px -20px rgba(0,0,0,0.9),
-    0 0 80px -20px rgba(148,61,255,0.4),
-    0 0 0 1px rgba(255,255,255,0.06);
-  z-index: 2;
+/* Phone mockup — image already contains both phones */
+.ll-page .ll-phones {
+  display: flex; align-items: flex-end; justify-content: center;
+  flex-shrink: 0; align-self: flex-end;
 }
-.ll-page .ll-phone-back {
-  position: absolute; right: 0; top: 70px; width: 250px;
-  border-radius: 36px; opacity: 0.6; z-index: 1;
-  transform: rotate(3deg); filter: blur(0.75px);
-  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8);
+.ll-page .ll-phone-front {
+  width: 100%; max-width: 520px; display: block;
 }
 
 /* ── Footer ── */
