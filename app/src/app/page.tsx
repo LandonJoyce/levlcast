@@ -65,7 +65,7 @@ export default async function LandingPage() {
       <section className="ll-hero">
         <div className="ll-con">
           <span className="ll-eyebrow">$9.99/mo locked for life</span>
-          <h1 className="ll-h1">Stop guessing what killed your stream</h1>
+          <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
           <p className="ll-lede">
             LevlCast reads your VOD after every stream and tells you the exact moments
             that lost viewers. Dead air, slow openings, the parts your chat went quiet.
