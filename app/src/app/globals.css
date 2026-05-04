@@ -1575,6 +1575,7 @@
 }
 .ll-page .ll-phone-front {
   width: 100%; max-width: 520px; display: block;
+  mix-blend-mode: screen;
 }
 
 /* ── Footer ── */
