@@ -61,12 +61,10 @@ export default async function LandingPage() {
       {/* ── Hero ── */}
       <section className="ll-hero">
         <div className="ll-con">
-          <span className="ll-eyebrow">$9.99/mo locked for life</span>
           <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
           <p className="ll-lede">
-            LevlCast reads your VOD after every stream and tells you the exact moments
-            that lost viewers. Dead air, slow openings, the parts your chat went quiet.
-            Not generic advice. Timestamps.
+            LevlCast watches your VODs after every stream and tells you exactly what you need to change.
+            An easy-to-read coaching report and clips ready to ship to your socials.
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
