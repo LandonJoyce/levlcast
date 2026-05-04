@@ -233,18 +233,37 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-shead">
             <span className="ll-eyebrow">The Loop</span>
-            <h2 className="ll-h2">Four steps. No new habits</h2>
-            <p className="ll-sub">Stream the same way you always have. The analysis happens after you end stream.</p>
+            <h2 className="ll-h2"><span className="ll-grad-text">Four Steps.</span> No New Habits</h2>
+            <p className="ll-sub">Nothing else. No bloat, no dashboard you'll never open.</p>
           </div>
           <div className="ll-steps">
             {[
-              { n: "01", title: "Stream normally", body: "Nothing changes about how you go live. No setup, no overlay, no extra software." },
-              { n: "02", title: "Hit Sync after", body: "Open LevlCast, hit Sync. Your VOD shows up. One button to start the analysis." },
-              { n: "03", title: "Read your report", body: "0-100 score with exact timestamps. What worked, what didn't, the one fix to make next." },
-              { n: "04", title: "Go live again", body: "Take the one thing into your next stream. Analyze it after. That's the whole loop." },
+              {
+                n: "01", title: "Stream normally",
+                body: "Nothing changes about how you go live. No setup, no overlay, no extra software.",
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"><path d="M5.636 18.364a9 9 0 010-12.728M18.364 5.636a9 9 0 010 12.728M8.464 15.536a5 5 0 010-7.072M15.536 8.464a5 5 0 010 7.072"/><circle cx="12" cy="12" r="1.5" fill="white"/></svg>,
+              },
+              {
+                n: "02", title: "Hit Sync after",
+                body: "Open LevlCast, hit Sync. Your VOD shows up. One button to start the analysis.",
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg>,
+              },
+              {
+                n: "03", title: "Read your report",
+                body: "0-100 score with exact timestamps. What worked, what didn't, the one fix to make next.",
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>,
+              },
+              {
+                n: "04", title: "Go live again",
+                body: "Take the one thing into your next stream. Analyze it after. That's the whole loop.",
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+              },
             ].map((s) => (
               <article key={s.n} className="ll-step">
-                <span className="ll-step-num">{s.n}</span>
+                <div className="ll-step-top">
+                  <div className="ll-step-icon">{s.icon}</div>
+                  <span className="ll-step-num">{s.n}</span>
+                </div>
                 <h3 className="ll-step-h">{s.title}</h3>
                 <p className="ll-step-body">{s.body}</p>
               </article>
@@ -262,34 +281,74 @@ export default async function LandingPage() {
             <p className="ll-sub">Start free. Every feature is real, no paywalled demo mode.</p>
           </div>
           <div className="ll-pricing">
+            {/* Free */}
             <article className="ll-plan">
-              <div>
-                <div className="ll-plan-name">For You</div>
-                <div className="ll-plan-cycle">Free</div>
+              <div className="ll-plan-header-row">
+                <div>
+                  <div className="ll-plan-name">For You</div>
+                  <div className="ll-plan-cycle">Free</div>
+                </div>
+                <div className="ll-plan-icon-corner">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </div>
               </div>
               <div className="ll-plan-price">$0 <small>forever</small></div>
+              <hr className="ll-plan-sep" />
               <ul className="ll-plan-feats">
                 {["1 full VOD analysis / month", "Full coaching report + score", "5 clips per month", "iOS app + web"].map((f) => (
-                  <li key={f}><span className="ll-check">✓</span>{f}</li>
+                  <li key={f}>
+                    <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
+                    </svg>
+                    {f}
+                  </li>
                 ))}
               </ul>
-              <Link href="/auth/login" className="ll-btn ll-btn-grad">Get Started Free</Link>
+              <Link href="/auth/login" className="ll-btn ll-btn-grad ll-btn-arrow">
+                Get Started Free
+                <span className="ll-btn-arrow-circle">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+              </Link>
             </article>
 
-            <article className="ll-plan ll-plan-pro">
-              <span className="ll-plan-badge">Founding · locks for life</span>
-              <div>
-                <div className="ll-plan-name">Pro</div>
-                <div className="ll-plan-cycle">month · founding price</div>
-              </div>
-              <div className="ll-plan-price">$9.99 <small>/ month</small></div>
-              <ul className="ll-plan-feats">
-                {["20 VOD analyses / month", "20 clips per month", "Post to YouTube Shorts", "Priority processing", "Everything in Free"].map((f) => (
-                  <li key={f}><span className="ll-check">✓</span>{f}</li>
-                ))}
-              </ul>
-              <Link href="/auth/login" className="ll-btn ll-btn-grad">Get Pro</Link>
-            </article>
+            {/* Pro */}
+            <div className="ll-plan-pro-outer">
+              <div className="ll-plan-founding-banner">Founding · locks for life</div>
+              <article className="ll-plan ll-plan-pro">
+                <div className="ll-plan-header-row">
+                  <div>
+                    <div className="ll-plan-name">Pro</div>
+                    <div className="ll-plan-cycle">month · founding price</div>
+                  </div>
+                  <div className="ll-plan-icon-corner">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(252,208,147,0.3)" stroke="rgba(252,208,147,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                  </div>
+                </div>
+                <div className="ll-plan-price">$9.99 <small>/ month</small></div>
+                <hr className="ll-plan-sep" />
+                <ul className="ll-plan-feats">
+                  {["20 VOD analyses / month", "20 clips per month", "Post to YouTube Shorts", "Priority processing", "Everything in Free"].map((f) => (
+                    <li key={f}>
+                      <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/auth/login" className="ll-btn ll-btn-grad ll-btn-arrow">
+                  Get Pro
+                  <span className="ll-btn-arrow-circle">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </span>
+                </Link>
+              </article>
+            </div>
           </div>
         </div>
       </section>
@@ -366,12 +425,35 @@ export default async function LandingPage() {
               </p>
             </div>
 
-            {/* Phone mockups */}
+            {/* CSS phone mockup */}
             <div className="ll-phones" aria-hidden="true">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/la/phone.png" alt="" className="ll-phone-img-front" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/la/phone.png" alt="" className="ll-phone-img-back" />
+              <div className="ll-phone-css">
+                <div className="ll-phone-notch"></div>
+                <div className="ll-phone-inner">
+                  <div className="ll-phone-topbar">
+                    <span className="ll-phone-app-name">LevlCast</span>
+                    <span className="ll-phone-time">9:41</span>
+                  </div>
+                  <div>
+                    <div className="ll-phone-score-tag">Stream Score</div>
+                    <div className="ll-phone-score">28</div>
+                  </div>
+                  <div className="ll-phone-vod">1st person stream wars vs Lucky</div>
+                  <div className="ll-phone-stats">
+                    {[
+                      { v: "8", l: "VODs" },
+                      { v: "5", l: "Analyzed" },
+                      { v: "9", l: "Peaks" },
+                      { v: "5", l: "Clips" },
+                    ].map((s) => (
+                      <div key={s.l} className="ll-phone-stat">
+                        <div className="ll-phone-stat-v">{s.v}</div>
+                        <div className="ll-phone-stat-l">{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
