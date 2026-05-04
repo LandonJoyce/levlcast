@@ -1523,8 +1523,8 @@
   position: relative; border-radius: 16px;
   background-image: url("/la/cta-bg.png"); background-size: cover; background-position: center;
   border: 1px solid rgba(255,255,255,0.12); overflow: hidden;
-  padding: 80px; display: grid; grid-template-columns: 1fr auto;
-  gap: 48px; align-items: center; min-height: 500px;
+  padding: 80px; display: grid; grid-template-columns: 1fr 440px;
+  gap: 48px; align-items: center; min-height: 520px;
   box-shadow: inset 0 5px 94px 1px rgba(255,255,255,0.08);
 }
 .ll-page .ll-cta-h {
@@ -1544,65 +1544,23 @@
 .ll-page .ll-badge-top { font-size: 9px; letter-spacing: 0.02em; opacity: 0.85; }
 .ll-page .ll-badge-main { font-size: 15px; font-weight: 600; line-height: 1.05; }
 
-/* CSS phone mockup */
-.ll-page .ll-phones { position: relative; width: 300px; flex-shrink: 0; }
-.ll-page .ll-phone-css {
-  width: 280px;
-  background: #0a0a12;
+/* Two-phone stacked layout */
+.ll-page .ll-phones { position: relative; width: 440px; height: 520px; flex-shrink: 0; }
+.ll-page .ll-phone-front {
+  position: absolute; left: 0; top: 0; width: 300px;
   border-radius: 44px;
-  border: 2px solid rgba(255,255,255,0.18);
-  overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.05),
-    0 50px 100px -20px rgba(0,0,0,0.95),
-    0 0 80px -15px rgba(148,61,255,0.45),
-    inset 0 1px 0 rgba(255,255,255,0.1);
-  display: flex; flex-direction: column;
+    0 40px 80px -20px rgba(0,0,0,0.9),
+    0 0 80px -20px rgba(148,61,255,0.4),
+    0 0 0 1px rgba(255,255,255,0.06);
+  z-index: 2;
 }
-.ll-page .ll-phone-notch {
-  width: 100px; height: 28px;
-  background: #0a0a12;
-  border-radius: 0 0 18px 18px;
-  border: 2px solid rgba(255,255,255,0.12); border-top: none;
-  margin: 0 auto; flex-shrink: 0;
+.ll-page .ll-phone-back {
+  position: absolute; right: 0; top: 70px; width: 250px;
+  border-radius: 36px; opacity: 0.6; z-index: 1;
+  transform: rotate(3deg); filter: blur(0.75px);
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8);
 }
-.ll-page .ll-phone-inner {
-  padding: 10px 22px 28px;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.ll-page .ll-phone-topbar {
-  display: flex; align-items: center; justify-content: space-between; padding: 2px 0;
-}
-.ll-page .ll-phone-app-name {
-  font-family: var(--ll-display); font-size: 14px; font-weight: 700;
-  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.ll-page .ll-phone-time { font-family: var(--ll-mono); font-size: 11px; color: rgba(255,255,255,0.35); }
-.ll-page .ll-phone-score-area { display: flex; flex-direction: column; gap: 2px; }
-.ll-page .ll-phone-score-tag {
-  font-family: var(--ll-mono); font-size: 9px; letter-spacing: 0.14em;
-  text-transform: uppercase; color: rgba(255,255,255,0.35);
-}
-.ll-page .ll-phone-score {
-  font-family: var(--ll-display); font-size: 80px; font-weight: 700; line-height: 0.95;
-  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.ll-page .ll-phone-divider {
-  height: 1px; background: rgba(255,255,255,0.07);
-}
-.ll-page .ll-phone-vod {
-  font-size: 11px; line-height: 1.4; color: rgba(255,255,255,0.55);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ll-page .ll-phone-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ll-page .ll-phone-stat {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px; padding: 11px 14px;
-}
-.ll-page .ll-phone-stat-v {
-  font-family: var(--ll-display); font-size: 24px; font-weight: 700; line-height: 1;
-}
-.ll-page .ll-phone-stat-l { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 3px; }
 
 /* ── Footer ── */
 .ll-page .ll-footer { border-top: 1px solid var(--ll-line-soft); padding: 60px 0 30px; margin-top: 0; }
@@ -1687,7 +1645,6 @@
   .ll-page .ll-trust { grid-template-columns: 1fr; }
   .ll-page .ll-cta-block { grid-template-columns: 1fr; padding: 40px; min-height: auto; }
   .ll-page .ll-phones { display: none; }
-  .ll-page .ll-phone-css { display: none; }
   .ll-page .ll-foot-socials { flex-direction: column; gap: 16px; align-items: flex-start; }
   .ll-page .ll-foot-main { grid-template-columns: 1fr; }
   .ll-page .ll-hero { padding-block: 80px 60px; }

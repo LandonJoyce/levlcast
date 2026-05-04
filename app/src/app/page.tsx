@@ -397,36 +397,12 @@ export default async function LandingPage() {
               </p>
             </div>
 
-            {/* CSS phone mockup */}
+            {/* Phone mockups */}
             <div className="ll-phones" aria-hidden="true">
-              <div className="ll-phone-css">
-                <div className="ll-phone-notch"></div>
-                <div className="ll-phone-inner">
-                  <div className="ll-phone-topbar">
-                    <span className="ll-phone-app-name">LevlCast</span>
-                    <span className="ll-phone-time">9:41</span>
-                  </div>
-                  <div className="ll-phone-score-area">
-                    <div className="ll-phone-score-tag">Stream Score</div>
-                    <div className="ll-phone-score">28</div>
-                  </div>
-                  <div className="ll-phone-divider"></div>
-                  <div className="ll-phone-vod">1st person stream wars vs Lucky</div>
-                  <div className="ll-phone-stats">
-                    {[
-                      { v: "8", l: "VODs" },
-                      { v: "5", l: "Analyzed" },
-                      { v: "9", l: "Peaks" },
-                      { v: "5", l: "Clips" },
-                    ].map((s) => (
-                      <div key={s.l} className="ll-phone-stat">
-                        <div className="ll-phone-stat-v">{s.v}</div>
-                        <div className="ll-phone-stat-l">{s.l}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/la/phone.png" alt="" className="ll-phone-front" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/la/phone.png" alt="" className="ll-phone-back" />
             </div>
           </div>
         </div>
