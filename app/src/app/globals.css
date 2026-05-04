@@ -508,7 +508,7 @@
 
 /* progress */
 .dash .prog { height: 6px; background: color-mix(in oklab, var(--ink) 8%, transparent); border-radius: 99px; overflow: hidden; }
-.dash .prog span { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: 99px; }
+.dash .prog span { display: block; height: 100%; background: var(--grad); border-radius: 99px; }
 
 /* upgrade card */
 .dash .upgrade {
@@ -568,8 +568,8 @@
 .dash .clip-thumb {
   aspect-ratio: 9/14;
   background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--blue) 18%, transparent), transparent 60%),
-    linear-gradient(180deg, oklch(0.30 0.04 240), oklch(0.18 0.02 240));
+    radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--blue) 22%, transparent), transparent 60%),
+    linear-gradient(180deg, oklch(0.22 0.06 290), oklch(0.11 0.025 265));
   position: relative; display: grid; place-items: center;
 }
 .dash .clip-thumb .play {

@@ -38,7 +38,8 @@ function categoryChipClass(c: string): string {
     case "hype":        return "m"; // magenta
     case "funny":       return "w"; // warn (yellow)
     case "emotional":   return "r"; // danger (red)
-    case "educational": return "b"; // blue
+    case "educational": return "b"; // purple
+    case "clutch":      return "g"; // green
     default:            return "";
   }
 }

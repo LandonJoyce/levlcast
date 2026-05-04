@@ -233,7 +233,7 @@ export default async function VodsPage({
                     width: 120,
                     height: 68,
                     borderRadius: 8,
-                    background: "linear-gradient(135deg, oklch(0.32 0.05 245), oklch(0.18 0.03 245))",
+                    background: "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
                     position: "relative",
                     overflow: "hidden",
                     flexShrink: 0,
