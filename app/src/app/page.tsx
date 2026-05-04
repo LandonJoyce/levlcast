@@ -254,7 +254,7 @@ export default async function LandingPage() {
               {
                 n: "01", title: "Stream normally",
                 body: "Nothing changes about how you go live. No setup, no overlay, no extra software.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"><path d="M5.636 18.364a9 9 0 010-12.728M18.364 5.636a9 9 0 010 12.728M8.464 15.536a5 5 0 010-7.072M15.536 8.464a5 5 0 010 7.072"/><circle cx="12" cy="12" r="1.5" fill="white"/></svg>,
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>,
               },
               {
                 n: "02", title: "Hit Sync after",
@@ -269,7 +269,7 @@ export default async function LandingPage() {
               {
                 n: "04", title: "Go live again",
                 body: "Take the one thing into your next stream. Analyze it after. That's the whole loop.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>,
               },
             ].map((s) => (
               <article key={s.n} className="ll-step">
