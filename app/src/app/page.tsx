@@ -23,7 +23,7 @@ async function getStreamCount(): Promise<number> {
 const faqItems = [
   { q: "How does the analysis work?", a: "You connect your Twitch account, sync your VODs, and hit Analyze. We pull the audio from your stream, run it through our transcription pipeline, and Claude reads the full transcript to find your best moments and weakest points. The whole thing takes about 5 minutes for a 2-hour stream." },
   { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
-  { q: "Is it actually free?", a: "Yeah. One full VOD analysis and 5 clips per month, permanently. No trial period, no credit card, no expiry. If you want more than that, that's what Pro is for." },
+  { q: "Is it actually free?", a: "Yeah. One full VOD analysis and 1 clip per month, permanently. No trial period, no credit card, no expiry. If you want more than that, that's what Pro is for." },
   { q: "Does it work for my channel?", a: "Any public Twitch channel works — partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
   { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast — the title and description come from the report. Edit them if you want, or just tap post." },
 ];
@@ -310,7 +310,7 @@ export default async function LandingPage() {
               <div className="ll-plan-price">$0 <small>forever</small></div>
               <hr className="ll-plan-sep" />
               <ul className="ll-plan-feats">
-                {["1 full VOD analysis / month", "Full coaching report + score", "5 clips per month", "iOS app + web"].map((f) => (
+                {["1 full VOD analysis / month", "Full coaching report + score", "1 clip per month", "iOS app + web"].map((f) => (
                   <li key={f}>
                     <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
