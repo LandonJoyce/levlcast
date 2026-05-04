@@ -63,8 +63,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
           <p className="ll-lede">
-            LevlCast watches your VODs after every stream and tells you exactly what you need to change.
-            An easy-to-read coaching report and clips ready to ship to your socials.
+            LevlCast watches your VODs after every stream and tells you exactly what to fix, with timestamps so you can see it yourself. Not generic advice. Then turns your best moments into clips.
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
