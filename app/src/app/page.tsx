@@ -289,7 +289,7 @@ export default async function LandingPage() {
                   <div className="ll-plan-cycle">Free</div>
                 </div>
                 <div className="ll-plan-icon-corner">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                   </svg>
                 </div>
@@ -324,7 +324,7 @@ export default async function LandingPage() {
                     <div className="ll-plan-cycle">month · founding price</div>
                   </div>
                   <div className="ll-plan-icon-corner">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(252,208,147,0.3)" stroke="rgba(252,208,147,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(148,61,255,0.5)" stroke="rgba(200,130,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
                   </div>
@@ -434,10 +434,11 @@ export default async function LandingPage() {
                     <span className="ll-phone-app-name">LevlCast</span>
                     <span className="ll-phone-time">9:41</span>
                   </div>
-                  <div>
+                  <div className="ll-phone-score-area">
                     <div className="ll-phone-score-tag">Stream Score</div>
                     <div className="ll-phone-score">28</div>
                   </div>
+                  <div className="ll-phone-divider"></div>
                   <div className="ll-phone-vod">1st person stream wars vs Lucky</div>
                   <div className="ll-phone-stats">
                     {[

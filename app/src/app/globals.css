@@ -1459,17 +1459,19 @@
 }
 .ll-page .ll-plan-pro-outer .ll-plan { border-radius: 0 0 16px 16px; border-top: none; }
 .ll-page .ll-plan-pro {
-  border-color: rgba(252,208,147,0.3);
-  box-shadow: 0 20px 60px -20px rgba(148,61,255,0.35), inset 0 1px 0 rgba(252,208,147,0.08);
+  border-color: rgba(148,61,255,0.5);
+  box-shadow: 0 0 0 1px rgba(148,61,255,0.15), 0 20px 60px -10px rgba(148,61,255,0.4), inset 0 1px 0 rgba(148,61,255,0.2);
 }
+.ll-page .ll-plan-pro .ll-plan-price {
+  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.ll-page .ll-plan-pro .ll-plan-price small { color: rgba(252,208,147,0.7); }
 .ll-page .ll-plan-header-row {
   display: flex; align-items: flex-start; justify-content: space-between;
 }
 .ll-page .ll-plan-icon-corner {
-  width: 36px; height: 36px; border-radius: 8px;
+  width: 40px; height: 40px; flex-shrink: 0;
   display: grid; place-items: center;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  flex-shrink: 0;
 }
 .ll-page .ll-plan-name { font-family: var(--ll-display); font-size: 28px; line-height: 1; margin: 0; }
 .ll-page .ll-plan-cycle { color: var(--ll-fg-mute); font-size: 14px; margin-top: 4px; }
@@ -1530,61 +1532,64 @@
 .ll-page .ll-badge-main { font-size: 15px; font-weight: 600; line-height: 1.05; }
 
 /* CSS phone mockup */
-.ll-page .ll-phones { position: relative; width: 280px; flex-shrink: 0; display: flex; justify-content: center; }
+.ll-page .ll-phones { position: relative; width: 300px; flex-shrink: 0; }
 .ll-page .ll-phone-css {
-  width: 260px;
-  background: #08080c;
-  border-radius: 40px;
-  border: 2px solid rgba(255,255,255,0.15);
+  width: 280px;
+  background: #0a0a12;
+  border-radius: 44px;
+  border: 2px solid rgba(255,255,255,0.18);
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.04),
-    0 40px 80px -20px rgba(0,0,0,0.9),
-    0 0 60px -10px rgba(148,61,255,0.3),
-    inset 0 1px 0 rgba(255,255,255,0.08);
+    0 0 0 1px rgba(255,255,255,0.05),
+    0 50px 100px -20px rgba(0,0,0,0.95),
+    0 0 80px -15px rgba(148,61,255,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.1);
   display: flex; flex-direction: column;
 }
 .ll-page .ll-phone-notch {
-  width: 90px; height: 24px;
-  background: #08080c;
-  border-radius: 0 0 16px 16px;
-  border: 2px solid rgba(255,255,255,0.1); border-top: none;
-  margin: 0 auto; position: relative; z-index: 2; flex-shrink: 0;
+  width: 100px; height: 28px;
+  background: #0a0a12;
+  border-radius: 0 0 18px 18px;
+  border: 2px solid rgba(255,255,255,0.12); border-top: none;
+  margin: 0 auto; flex-shrink: 0;
 }
 .ll-page .ll-phone-inner {
-  padding: 8px 20px 24px;
-  display: flex; flex-direction: column; gap: 10px;
+  padding: 10px 22px 28px;
+  display: flex; flex-direction: column; gap: 12px;
 }
 .ll-page .ll-phone-topbar {
-  display: flex; align-items: center; justify-content: space-between; padding: 4px 0;
+  display: flex; align-items: center; justify-content: space-between; padding: 2px 0;
 }
 .ll-page .ll-phone-app-name {
-  font-family: var(--ll-display); font-size: 13px; font-weight: 700;
+  font-family: var(--ll-display); font-size: 14px; font-weight: 700;
   background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.ll-page .ll-phone-time { font-family: var(--ll-mono); font-size: 10px; color: var(--ll-fg-dim); }
+.ll-page .ll-phone-time { font-family: var(--ll-mono); font-size: 11px; color: rgba(255,255,255,0.35); }
+.ll-page .ll-phone-score-area { display: flex; flex-direction: column; gap: 2px; }
 .ll-page .ll-phone-score-tag {
-  font-family: var(--ll-mono); font-size: 8px; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--ll-fg-dim);
+  font-family: var(--ll-mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: rgba(255,255,255,0.35);
 }
 .ll-page .ll-phone-score {
-  font-family: var(--ll-display); font-size: 64px; font-weight: 700; line-height: 1;
+  font-family: var(--ll-display); font-size: 80px; font-weight: 700; line-height: 0.95;
   background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+.ll-page .ll-phone-divider {
+  height: 1px; background: rgba(255,255,255,0.07);
+}
 .ll-page .ll-phone-vod {
-  font-size: 10px; line-height: 1.45; color: var(--ll-fg-mute);
-  border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;
+  font-size: 11px; line-height: 1.4; color: rgba(255,255,255,0.55);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ll-page .ll-phone-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.ll-page .ll-phone-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ll-page .ll-phone-stat {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px; padding: 9px 11px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 11px 14px;
 }
 .ll-page .ll-phone-stat-v {
-  font-family: var(--ll-display); font-size: 20px; font-weight: 700; line-height: 1;
+  font-family: var(--ll-display); font-size: 24px; font-weight: 700; line-height: 1;
 }
-.ll-page .ll-phone-stat-l { font-size: 9px; color: var(--ll-fg-dim); margin-top: 2px; }
+.ll-page .ll-phone-stat-l { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 3px; }
 
 /* ── Footer ── */
 .ll-page .ll-footer { border-top: 1px solid var(--ll-line-soft); padding: 60px 0 30px; margin-top: 0; }
@@ -1631,6 +1636,26 @@
   cursor: pointer; border: 0; white-space: nowrap;
 }
 .ll-page .ll-foot-bottom { padding-top: 28px; text-align: center; color: rgba(255,255,255,0.55); font-size: 13px; }
+
+/* ── FAQ Accordion ── */
+.ll-page .faq-grid { display: flex; flex-direction: column; gap: 10px; }
+.ll-page .faq-item {
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  background: rgba(255,255,255,0.03); overflow: hidden;
+  transition: border-color 0.2s;
+}
+.ll-page .faq-item.open { border-color: rgba(148,61,255,0.4); }
+.ll-page .faq-q {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 18px 22px; background: transparent; border: 0;
+  color: var(--ll-fg); font-size: 15px; font-weight: 500; text-align: left;
+  cursor: pointer; font-family: var(--ll-body);
+}
+.ll-page .faq-q .chev { transition: transform 0.25s ease; color: rgba(255,255,255,0.4); flex-shrink: 0; margin-left: 16px; }
+.ll-page .faq-item.open .faq-q .chev { transform: rotate(180deg); color: rgb(148,61,255); }
+.ll-page .faq-a {
+  padding: 0 22px 18px; color: var(--ll-fg-mute); font-size: 14px; line-height: 1.7;
+}
 
 /* ── Responsive ── */
 @media (max-width: 980px) {
