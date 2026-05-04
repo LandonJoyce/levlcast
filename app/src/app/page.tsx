@@ -396,9 +396,11 @@ export default async function LandingPage() {
                   Get Your First Report Free
                 </Link>
               </div>
-              <p style={{ marginTop: 16, fontSize: 12, color: "var(--ll-fg-dim)" }}>
-                {displayCount} streams analyzed and counting
-              </p>
+              <div className="ll-live-counter">
+                <span className="ll-live-dot" />
+                <span className="ll-live-num">{displayCount}</span>
+                <span className="ll-live-label">streams analyzed and counting</span>
+              </div>
             </div>
 
             {/* Phone mockups */}
