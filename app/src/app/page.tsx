@@ -404,9 +404,9 @@ export default async function LandingPage() {
             {/* Phone mockups */}
             <div className="ll-phones" aria-hidden="true">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/la/phone.png" alt="" className="ll-phone-front" />
+              <img src="/la/newphone.png" alt="" className="ll-phone-front" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/la/phone.png" alt="" className="ll-phone-back" />
+              <img src="/la/newphone.png" alt="" className="ll-phone-back" />
             </div>
           </div>
         </div>
