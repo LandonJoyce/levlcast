@@ -1221,7 +1221,7 @@
 /* ── Hero ── */
 .ll-page .ll-hero {
   position: relative; text-align: center;
-  padding-block: 120px 80px; overflow: hidden; isolation: isolate;
+  padding-block: 120px 48px; overflow: hidden; isolation: isolate;
 }
 .ll-page .ll-hero::before {
   content: "";
@@ -1491,19 +1491,36 @@
   display: grid; place-items: center; flex-shrink: 0;
 }
 
-/* ── Testimonial / Founder ── */
+/* ── Testimonials ── */
 .ll-page .ll-trust { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 860px; margin: 0 auto; }
 .ll-page .ll-trust-card {
-  padding: 28px; border-radius: 14px;
-  background: rgba(255,255,255,0.03); border: 1px solid var(--ll-line-soft);
-  display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
+  padding: 36px; border-radius: 16px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+  display: flex; flex-direction: column; gap: 20px;
+  position: relative; overflow: hidden;
 }
-.ll-page .ll-trust-quote { font-size: 16px; line-height: 1.6; font-style: italic; margin: 0; }
-.ll-page .ll-trust-person { display: flex; align-items: center; gap: 10px; }
+.ll-page .ll-trust-card::before {
+  content: "\201C";
+  position: absolute; top: -10px; left: 20px;
+  font-family: var(--ll-display); font-size: 120px; line-height: 1;
+  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
+  opacity: 0.25; pointer-events: none; user-select: none;
+}
+.ll-page .ll-trust-card-featured {
+  border-color: rgba(148,61,255,0.35);
+  background: rgba(148,61,255,0.06);
+}
+.ll-page .ll-trust-card-featured::before { opacity: 0.4; }
+.ll-page .ll-trust-quote { font-size: 17px; line-height: 1.65; margin: 0; color: var(--ll-fg); position: relative; z-index: 1; padding-top: 24px; }
+.ll-page .ll-trust-body { font-size: 14px; line-height: 1.75; color: var(--ll-fg-mute); margin: 0; position: relative; z-index: 1; padding-top: 24px; }
+.ll-page .ll-trust-person { display: flex; align-items: center; gap: 12px; margin-top: auto; }
 .ll-page .ll-trust-avatar {
-  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
-  display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 15px; font-weight: 700;
+  border: 2px solid rgba(148,61,255,0.5);
 }
+.ll-page .ll-trust-name { font-size: 14px; font-weight: 600; }
+.ll-page .ll-trust-role { font-size: 12px; color: var(--ll-fg-dim); margin-top: 1px; }
 
 /* ── Final CTA ── */
 .ll-page .ll-cta-block {
@@ -1707,10 +1724,10 @@
 .ll-page .ll-sm-track {
   display: flex; gap: 16px;
   width: max-content;
-  animation: ll-scroll-left 28s linear infinite;
+  animation: ll-scroll-left 55s linear infinite;
 }
 .ll-page .ll-sm-reverse .ll-sm-track {
-  animation: ll-scroll-right 32s linear infinite;
+  animation: ll-scroll-right 65s linear infinite;
 }
 
 .ll-page .ll-sm-card {

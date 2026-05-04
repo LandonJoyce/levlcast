@@ -72,23 +72,6 @@ export default async function LandingPage() {
           <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
             Get Your First Report Free
           </Link>
-
-          {/* Feature strip */}
-          <div className="ll-strip">
-            {[
-              { title: "Real coaching", sub: "Built on your actual stream" },
-              { title: "Track key metrics", sub: "Get actionable feedback" },
-              { title: "Share key moments", sub: "Export to social media" },
-              { title: "Improve content", sub: "Optimize stream quality" },
-            ].map((item) => (
-              <div key={item.title} className="ll-strip-item">
-                <div>
-                  <div className="ll-strip-title">{item.title}</div>
-                  <div className="ll-strip-sub">{item.sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -124,6 +107,36 @@ export default async function LandingPage() {
                 <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>Three missions to carry into your next session. That's it.</li>
               </ul>
             </article>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="ll-sec" style={{ paddingTop: 0 }}>
+        <div className="ll-con">
+          <div className="ll-trust">
+            <div className="ll-trust-card ll-trust-card-featured">
+              <p className="ll-trust-quote">"This software makes clipping an absolute breeze."</p>
+              <div className="ll-trust-person">
+                <div className="ll-trust-avatar" style={{ background: "rgba(145,70,255,0.2)", color: "#9146FF" }}>C</div>
+                <div>
+                  <div className="ll-trust-name">Charmbix</div>
+                  <div className="ll-trust-role">Twitch streamer</div>
+                </div>
+              </div>
+            </div>
+            <div className="ll-trust-card">
+              <p className="ll-trust-body">
+                I built LevlCast to give newer streamers an actual path forward. Whether you're pushing for affiliate, chasing partner, or just trying to figure out what's not working, nobody should have to guess their way through it.
+              </p>
+              <div className="ll-trust-person">
+                <div className="ll-trust-avatar" style={{ background: "rgba(37,244,244,0.12)", color: "var(--ll-cyan)" }}>L</div>
+                <div>
+                  <div className="ll-trust-name">Landon</div>
+                  <div className="ll-trust-role">Founder · twitch.tv/orbitxd</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -361,36 +374,6 @@ export default async function LandingPage() {
           </div>
           <div style={{ maxWidth: 680, margin: "0 auto" }}>
             <FaqAccordion items={faqItems} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials + Founder ── */}
-      <section className="ll-sec" style={{ paddingTop: 0 }}>
-        <div className="ll-con">
-          <div className="ll-trust">
-            <div className="ll-trust-card">
-              <p className="ll-trust-quote">"This software makes clipping an absolute breeze."</p>
-              <div className="ll-trust-person">
-                <div className="ll-trust-avatar" style={{ background: "rgba(145,70,255,0.2)", border: "1px solid rgba(145,70,255,0.3)", color: "#9146FF" }}>C</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Charmbix</div>
-                  <div style={{ fontSize: 11, color: "var(--ll-fg-dim)" }}>Twitch streamer</div>
-                </div>
-              </div>
-            </div>
-            <div className="ll-trust-card">
-              <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--ll-fg-mute)", margin: 0 }}>
-                I built LevlCast to give newer streamers an actual path forward. Whether you're pushing for affiliate, chasing partner, or just trying to figure out what's not working, nobody should have to guess their way through it.
-              </p>
-              <div className="ll-trust-person">
-                <div className="ll-trust-avatar" style={{ background: "rgba(37,244,244,0.12)", border: "1px solid rgba(37,244,244,0.25)", color: "var(--ll-cyan)" }}>L</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Landon</div>
-                  <div style={{ fontSize: 11, color: "var(--ll-fg-dim)" }}>Founder · twitch.tv/orbitxd</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
