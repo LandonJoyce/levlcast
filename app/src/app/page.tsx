@@ -74,6 +74,11 @@ export default async function LandingPage() {
           <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
             Get Your First Report Free
           </Link>
+          <div className="ll-live-counter" style={{ marginTop: 20 }}>
+            <span className="ll-live-dot" />
+            <span className="ll-live-num">{displayCount}</span>
+            <span className="ll-live-label">streams analyzed and counting</span>
+          </div>
         </div>
       </section>
 
@@ -395,11 +400,6 @@ export default async function LandingPage() {
                 <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 15, padding: "14px 24px" }}>
                   Get Your First Report Free
                 </Link>
-              </div>
-              <div className="ll-live-counter">
-                <span className="ll-live-dot" />
-                <span className="ll-live-num">{displayCount}</span>
-                <span className="ll-live-label">streams analyzed and counting</span>
               </div>
             </div>
 
