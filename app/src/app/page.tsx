@@ -304,7 +304,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-shead">
             <span className="ll-eyebrow">Pricing</span>
-            <h2 className="ll-h2">Two plans. No tricks</h2>
+            <h2 className="ll-h2"><span className="ll-grad-text">Two plans.</span> No tricks</h2>
             <p className="ll-sub">Start free. Every feature is real, no paywalled demo mode.</p>
           </div>
           <div className="ll-pricing">
