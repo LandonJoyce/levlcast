@@ -158,7 +158,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-shead">
             <span className="ll-eyebrow">$9.99/mo locked for life</span>
-            <h2 className="ll-h2">Three things, built around the VOD workflow</h2>
+            <h2 className="ll-h2">Three things, built around the VOD <span className="ll-grad-text">workflow</span></h2>
             <p className="ll-sub">Nothing else. No bloat, no dashboard you'll never open.</p>
           </div>
 
