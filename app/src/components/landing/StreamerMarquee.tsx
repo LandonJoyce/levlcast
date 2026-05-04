@@ -17,9 +17,8 @@ const STREAMERS = [
   "/la/streamer-10.png",
 ];
 
-/* Split into two rows with different orderings */
-const ROW1 = STREAMERS;
-const ROW2 = [...STREAMERS].reverse();
+const ROW1 = STREAMERS.slice(0, 5);
+const ROW2 = STREAMERS.slice(5);
 
 function Card({ src }: { src: string }) {
   return (
@@ -32,13 +31,11 @@ function Card({ src }: { src: string }) {
   );
 }
 
-function Row({ items, reverse }: { items: string[]; reverse?: boolean }) {
-  /* Duplicate items so the loop is seamless */
-  const all = [...items, ...items];
+function Row({ items }: { items: string[] }) {
   return (
-    <div className={`ll-sm-row-wrap${reverse ? " ll-sm-reverse" : ""}`}>
+    <div className="ll-sm-row-wrap">
       <div className="ll-sm-track">
-        {all.map((src, i) => (
+        {items.map((src, i) => (
           <Card key={i} src={src} />
         ))}
       </div>
@@ -50,9 +47,7 @@ export default function StreamerMarquee() {
   return (
     <div className="ll-sm-wrap" aria-hidden="true">
       <Row items={ROW1} />
-      <Row items={ROW2} reverse />
-      <div className="ll-sm-fade-left" />
-      <div className="ll-sm-fade-right" />
+      <Row items={ROW2} />
     </div>
   );
 }

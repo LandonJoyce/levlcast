@@ -1692,43 +1692,24 @@
   .ll-page .ll-foot-main { grid-template-columns: 1fr; }
   .ll-page .ll-hero { padding-block: 80px 60px; }
   .ll-page .ll-card-ba { padding: 32px; }
-  .ll-page .ll-marquee-wrap { height: 420px; }
-  .ll-page .ll-marquee-cols { grid-template-columns: repeat(3, 1fr); }
+  .ll-page .ll-sm-track { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ── Streamer Marquee wrapper ── */
 .ll-page .ll-page-marquee { width: 100%; overflow: hidden; }
 
-/* ── Streamer Marquee — horizontal 2-row ── */
-@keyframes ll-scroll-left {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-@keyframes ll-scroll-right {
-  from { transform: translateX(-50%); }
-  to   { transform: translateX(0); }
-}
-
+/* ── Streamer Grid — static 2×5 ── */
 .ll-page .ll-sm-wrap {
-  position: relative; overflow: hidden;
   display: flex; flex-direction: column; gap: 16px;
   padding-block: 4px;
 }
-.ll-page .ll-sm-row-wrap { overflow: hidden; }
-
-/* The track is double-wide (items + duplicate) so -50% = one full loop */
+.ll-page .ll-sm-row-wrap { width: 100%; }
 .ll-page .ll-sm-track {
-  display: flex; gap: 16px;
-  width: max-content;
-  animation: ll-scroll-left 55s linear infinite;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
 }
-.ll-page .ll-sm-reverse .ll-sm-track {
-  animation: ll-scroll-right 65s linear infinite;
-}
-
 .ll-page .ll-sm-card {
-  position: relative; flex-shrink: 0;
-  width: 300px; height: 220px;
+  position: relative;
+  aspect-ratio: 4/3;
   border-radius: 12px; overflow: hidden;
   border: 1px solid rgba(255,255,255,0.12);
 }
@@ -1741,16 +1722,4 @@
   font-family: var(--ll-mono); font-size: 9px; letter-spacing: 0.12em;
   background: var(--ll-red); color: #fff;
   padding: 2px 7px; border-radius: 3px; width: fit-content;
-}
-
-/* left + right fade masks */
-.ll-page .ll-sm-fade-left {
-  position: absolute; top: 0; left: 0; bottom: 0; width: 120px;
-  background: linear-gradient(to right, var(--ll-bg), transparent);
-  pointer-events: none; z-index: 2;
-}
-.ll-page .ll-sm-fade-right {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 120px;
-  background: linear-gradient(to left, var(--ll-bg), transparent);
-  pointer-events: none; z-index: 2;
 }

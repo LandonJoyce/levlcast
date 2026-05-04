@@ -114,6 +114,9 @@ export default async function LandingPage() {
       {/* ── Testimonials ── */}
       <section className="ll-sec" style={{ paddingTop: 0 }}>
         <div className="ll-con">
+          <div className="ll-shead" style={{ marginBottom: 48 }}>
+            <h2 className="ll-h2"><span className="ll-grad-text">Testimonials</span></h2>
+          </div>
           <div className="ll-trust">
             <div className="ll-trust-card ll-trust-card-featured">
               <p className="ll-trust-quote">"This software makes clipping an absolute breeze."</p>
