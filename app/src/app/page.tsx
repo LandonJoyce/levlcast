@@ -850,7 +850,7 @@ export default async function LandingPage() {
             {/* Founder */}
             <div style={{ padding: "28px 28px 24px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--ink-2)", margin: "0 0 20px" }}>
-                I built LevlCast to give newer streamers an actual path forward — whether you&apos;re pushing for affiliate, chasing partner, or just trying to figure out what&apos;s not working. Nobody should have to guess their way through it.
+                I built LevlCast to give newer streamers an actual path forward. Whether you&apos;re pushing for affiliate, chasing partner, or just trying to figure out what&apos;s not working, nobody should have to guess their way through it.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(34,211,238,0.12)", border: "1px solid rgba(34,211,238,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#22D3EE" }}>L</div>
