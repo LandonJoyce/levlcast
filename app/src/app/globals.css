@@ -1574,4 +1574,73 @@
   .ll-page .ll-foot-main { grid-template-columns: 1fr; }
   .ll-page .ll-hero { padding-block: 80px 60px; }
   .ll-page .ll-card-ba { padding: 32px; }
+  .ll-page .ll-marquee-wrap { height: 420px; }
+  .ll-page .ll-marquee-cols { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── Streamer Marquee wrapper ── */
+.ll-page .ll-page-marquee { width: 100%; overflow: hidden; }
+
+/* ── Streamer Marquee ── */
+@keyframes ll-scroll-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+@keyframes ll-scroll-down {
+  from { transform: translateY(-50%); }
+  to   { transform: translateY(0); }
+}
+
+.ll-page .ll-marquee-wrap {
+  position: relative; overflow: hidden;
+  height: 560px; width: 100%;
+}
+.ll-page .ll-marquee-cols {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 16px; height: 100%;
+}
+.ll-page .ll-marquee-col {
+  display: flex; flex-direction: column; gap: 16px;
+  animation: ll-scroll-up 22s linear infinite;
+}
+.ll-page .ll-marquee-col.ll-marquee-rev {
+  animation: ll-scroll-down 22s linear infinite;
+}
+.ll-page .ll-marquee-col:nth-child(odd)  { animation-duration: 20s; }
+.ll-page .ll-marquee-col:nth-child(even) { animation-duration: 25s; }
+
+.ll-page .ll-streamer-card {
+  position: relative; flex-shrink: 0;
+  width: 100%; aspect-ratio: 4/5;
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.ll-page .ll-streamer-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 45%);
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 10px 12px;
+}
+.ll-page .ll-streamer-live {
+  font-family: var(--ll-mono); font-size: 9px; letter-spacing: 0.1em;
+  background: var(--ll-red); color: #fff;
+  padding: 2px 7px; border-radius: 3px; align-self: flex-start;
+}
+.ll-page .ll-streamer-stat {
+  font-family: var(--ll-mono); font-size: 9px; letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.8); align-self: flex-start;
+  background: rgba(0,0,0,0.55); padding: 3px 7px; border-radius: 4px;
+  margin-top: auto;
+}
+
+/* fade masks top+bottom */
+.ll-page .ll-marquee-fade-top {
+  position: absolute; top: 0; left: 0; right: 0; height: 140px;
+  background: linear-gradient(to bottom, var(--ll-bg), transparent);
+  pointer-events: none; z-index: 1;
+}
+.ll-page .ll-marquee-fade-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 140px;
+  background: linear-gradient(to top, var(--ll-bg), transparent);
+  pointer-events: none; z-index: 1;
 }

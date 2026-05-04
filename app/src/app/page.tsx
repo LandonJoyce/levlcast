@@ -3,6 +3,7 @@ import FaqAccordion from "@/components/FaqAccordion";
 import ChatBarsViz from "@/components/landing/ChatBarsViz";
 import HeatmapViz from "@/components/landing/HeatmapViz";
 import SubscribeForm from "@/components/landing/SubscribeForm";
+import StreamerMarquee from "@/components/landing/StreamerMarquee";
 
 /* ─── Data ─── */
 async function getStreamCount(): Promise<number> {
@@ -90,6 +91,11 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Streamer Marquee ── */}
+      <div className="ll-page-marquee">
+        <StreamerMarquee />
+      </div>
 
       {/* ── Before / After ── */}
       <section className="ll-sec" id="problem">
