@@ -203,12 +203,12 @@
    Scoped under .dash to avoid affecting landing or anywhere else
    ───────────────────────────────────────────────────────────────────────── */
 .dash {
-  /* surfaces */
-  --bg: oklch(0.16 0.018 240);
-  --bg-2: oklch(0.14 0.018 240);
-  --surface: oklch(0.20 0.020 240);
-  --surface-2: oklch(0.23 0.022 240);
-  --surface-3: oklch(0.26 0.022 240);
+  /* surfaces — deep navy matching landing page */
+  --bg: oklch(0.11 0.025 265);
+  --bg-2: oklch(0.09 0.022 265);
+  --surface: oklch(0.15 0.022 265);
+  --surface-2: oklch(0.18 0.022 265);
+  --surface-3: oklch(0.21 0.022 265);
 
   /* ink */
   --ink: oklch(0.96 0.005 240);
@@ -217,21 +217,22 @@
   --ink-4: oklch(0.45 0.018 240);
 
   /* lines */
-  --line: oklch(0.30 0.020 240);
-  --line-2: oklch(0.36 0.022 240);
+  --line: oklch(0.24 0.022 265);
+  --line-2: oklch(0.30 0.022 265);
 
-  /* accents */
-  --blue: oklch(0.66 0.18 245);
-  --blue-2: oklch(0.55 0.18 245);
-  --blue-soft: oklch(0.30 0.10 245);
+  /* accents — purple primary to match landing gradient */
+  --blue: oklch(0.60 0.22 290);
+  --blue-2: oklch(0.52 0.22 290);
+  --blue-soft: oklch(0.22 0.12 290);
   --green: oklch(0.74 0.15 155);
   --green-2: oklch(0.62 0.15 155);
-  --green-soft: oklch(0.30 0.08 155);
+  --green-soft: oklch(0.22 0.08 155);
   --warn: oklch(0.80 0.13 80);
-  --warn-soft: oklch(0.30 0.10 80);
+  --warn-soft: oklch(0.28 0.10 80);
   --danger: oklch(0.65 0.20 25);
-  --danger-soft: oklch(0.30 0.12 25);
+  --danger-soft: oklch(0.26 0.12 25);
   --magenta: oklch(0.65 0.20 330);
+  --grad: linear-gradient(135deg, oklch(0.60 0.22 290) 0%, oklch(0.65 0.18 15) 100%);
 
   --r-sm: 8px;
   --r-md: 12px;
@@ -274,7 +275,7 @@
 }
 .dash .sb-logo .mark {
   width: 26px; height: 26px; border-radius: 7px;
-  background: linear-gradient(135deg, var(--blue), var(--green));
+  background: var(--grad);
   display: grid; place-items: center;
   box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--blue) 60%, transparent);
 }
@@ -299,7 +300,7 @@
 }
 .dash .sb-link.active::before {
   content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px;
-  background: linear-gradient(180deg, var(--blue), var(--green));
+  background: var(--grad);
   border-radius: 2px;
 }
 .dash .sb-link .ico { width: 18px; height: 18px; flex-shrink: 0; opacity: .9; }
@@ -384,6 +385,7 @@
 .dash .page-title {
   font-size: 30px; font-weight: 700; letter-spacing: -0.025em;
   line-height: 1.05; color: var(--ink); margin: 0;
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
 }
 .dash .page-sub { font-size: 14.5px; color: var(--ink-2); margin-top: 4px; }
 
@@ -398,7 +400,7 @@
 .dash .card.bordered::before {
   content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
 }
-.dash .card.accent-blue::before { background: linear-gradient(90deg, transparent, var(--blue), transparent); }
+.dash .card.accent-blue::before { background: linear-gradient(90deg, transparent, oklch(0.60 0.22 290), oklch(0.65 0.18 15), transparent); }
 .dash .card.accent-green::before { background: linear-gradient(90deg, transparent, var(--green), transparent); }
 .dash .card.accent-warn::before { background: linear-gradient(90deg, transparent, var(--warn), transparent); }
 .dash .card-pad { padding: 22px 24px; }
@@ -447,8 +449,8 @@
 .dash .btn-primary:hover { transform: translateY(-1px); }
 .dash .btn-ghost { background: transparent; border-color: var(--line-2); color: var(--ink); }
 .dash .btn-ghost:hover { background: var(--surface-2); border-color: var(--ink-3); }
-.dash .btn-blue { background: var(--blue); color: #fff; box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--blue) 70%, transparent); }
-.dash .btn-blue:hover { background: var(--blue-2); }
+.dash .btn-blue { background: var(--grad); color: #fff; box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--blue) 60%, transparent); }
+.dash .btn-blue:hover { filter: brightness(1.08); }
 .dash .btn-link { color: var(--blue); padding: 0; background: none; border: 0; }
 
 /* score ring */
