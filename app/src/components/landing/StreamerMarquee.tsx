@@ -5,16 +5,16 @@ import Image from "next/image";
   and adding them to this array. The marquee will loop seamlessly.
 */
 const STREAMERS = [
-  "/la/streamer-1.png",
-  "/la/streamer-2.png",
-  "/la/streamer-3.png",
-  "/la/streamer-4.png",
-  "/la/streamer-5.png",
-  "/la/streamer-6.png",
-  "/la/streamer-7.png",
-  "/la/streamer-8.png",
-  "/la/streamer-9.png",
-  "/la/streamer-10.png",
+  "/la/streamer-1.png?v=2",
+  "/la/streamer-2.png?v=2",
+  "/la/streamer-3.png?v=2",
+  "/la/streamer-4.png?v=2",
+  "/la/streamer-5.png?v=2",
+  "/la/streamer-6.png?v=2",
+  "/la/streamer-7.png?v=2",
+  "/la/streamer-8.png?v=2",
+  "/la/streamer-9.png?v=2",
+  "/la/streamer-10.png?v=2",
 ];
 
 const ROW1 = STREAMERS.slice(0, 5);
