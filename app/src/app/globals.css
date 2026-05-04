@@ -1206,7 +1206,7 @@
   background: rgba(9,11,27,0.05);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  border-bottom: none;
+  border: none !important;
 }
 .ll-page .ll-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
