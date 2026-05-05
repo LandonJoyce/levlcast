@@ -31,7 +31,7 @@ const DEMO_REPORT: CoachReport = {
     description:
       "You'd been quiet through most of the round, so the live callouts landed harder when they came. At 45:12 you talked through every decision in real time and chat felt it instantly. Next time, start narrating your read before you make the move, not as it happens.",
   },
-  punch_line: "You had a moment at 45:12 that could have gone viral and you almost let it die in silence.",
+  punch_line: "You had everything you needed for a viral clip and kept pulling back right before it landed.",
   recommendation:
     "Your best moments happen when you stop reacting and start leading the moment out loud. The 45:12 clutch worked because you were commentating the decision, not just the result. Do that from the first game.",
   next_stream_goals: [
