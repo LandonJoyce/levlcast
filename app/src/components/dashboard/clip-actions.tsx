@@ -285,6 +285,14 @@ export function PostToTikTok({
   const [posted, setPosted] = useState(alreadyPosted ?? false);
   const [error, setError] = useState<string | null>(null);
 
+  // TikTok Content Posting API audit pending — show coming soon until approved
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs opacity-35 cursor-not-allowed select-none">
+      <Music size={12} />
+      TikTok — coming soon
+    </span>
+  );
+
   if (!isConnected) {
     return (
       <a
