@@ -5,7 +5,7 @@ import type { CoachReport } from "@/lib/analyze";
 
 export const metadata: Metadata = {
   title: "Sample Coach Report",
-  description: "See what a LevlCast coaching report looks like — no signup required.",
+  description: "See what a LevlCast coaching report looks like. No signup required.",
   robots: { index: false },
 };
 
@@ -15,24 +15,24 @@ const DEMO_REPORT: CoachReport = {
   energy_trend: "building",
   viewer_retention_risk: "medium",
   stream_story:
-    "You started quiet and found your rhythm around 20 minutes in. The clutch defuse sequence at 45:12 was the best stretch of the stream — chat lit up and your energy matched it. A long dead-air gap during loading screens at 23:40 stalled momentum for nearly 4 minutes, but you recovered well. Strong finish with a clear hook for next session.",
+    "You started quiet and found your rhythm around 20 minutes in. The clutch defuse sequence at 45:12 was the best stretch of the stream. Chat lit up and your energy matched it. A long dead-air gap during loading screens at 23:40 stalled momentum for nearly 4 minutes, but you recovered well. Strong finish with a clear hook for next session.",
   strengths: [
-    "**Clutch Commentary** — You called the 1v3 play-by-play in real time and it was genuinely exciting. That's the moment viewers clip. at 45:12.",
-    "**Personality Under Pressure** — When the round went sideways at 51:30, you stayed funny instead of frustrated. That's rare and viewers notice. at 51:30.",
-    "**Strong Second Half** — After the 23:40 dip, you came back with momentum and held it for the last 35 minutes.",
+    "**Clutch Commentary** - You called the 1v3 play-by-play in real time and it was genuinely exciting. That's the moment viewers clip. at 45:12.",
+    "**Personality Under Pressure** - When the round went sideways at 51:30, you stayed funny instead of frustrated. That's rare and viewers notice. at 51:30.",
+    "**Strong Second Half** - After the 23:40 dip, you came back with momentum and held it for the last 35 minutes.",
   ],
   improvements: [
-    "**Dead Air on Loading Screens** — 4 minutes of near-silence at 23:40. That's the window where viewers drop off. Have a story or question ready for load times. at 23:40.",
-    "**Slow Opening** — The first 8 minutes were setup noise and low-energy mumbling. Viewers who clicked from a clip were expecting what you showed at 45:12. at 8:10.",
-    "**Missed Reactions** — Three big plays went by without any verbal reaction. Say something, even if it's just 'let's go'. The kill at 45:52 especially. at 45:52.",
+    "**Dead Air on Loading Screens** - 4 minutes of near-silence at 23:40. That's the window where viewers drop off. Have a story or question ready for load times. at 23:40.",
+    "**Slow Opening** - The first 8 minutes were setup noise and low-energy mumbling. Viewers who clicked from a clip were expecting what you showed at 45:12. at 8:10.",
+    "**Missed Reactions** - Three big plays went by without any verbal reaction. Say something, even if it's just 'let's go'. The kill at 45:52 especially. at 45:52.",
   ],
   best_moment: {
     time: "45:12",
     description:
-      "1v3 clutch defuse on Bind — you called every step out loud, chat spiked hard. Best sustained energy of the stream.",
+      "1v3 clutch defuse on Bind. You called every step out loud, chat spiked hard. Best sustained energy of the stream.",
   },
   recommendation:
-    "Open your next stream with energy from second one. Watch the 45:12 clip before you go live. Then describe that play to chat like you're reliving it. Start hot — you already proved you can do it.",
+    "Open your next stream with energy from second one. Watch the 45:12 clip before you go live. Then describe that play to chat like you're reliving it. Start hot. You already proved you can do it.",
   next_stream_goals: [
     "Prepare three 30-second stories to fill loading screens. Write them down before you go live.",
     "Open with a specific hook in the first 60 seconds. Tell chat what you're chasing this session.",
@@ -41,12 +41,12 @@ const DEMO_REPORT: CoachReport = {
   cold_open: {
     score: "weak",
     note:
-      "The first 8 minutes were setup noise and low-energy mumbling. You said 'let me just get this loaded' twice. Viewers who arrived early saw nothing compelling. Open with intent — tell them what tonight is about before the first game starts.",
+      "The first 8 minutes were setup noise and low-energy mumbling. You said 'let me just get this loaded' twice. Viewers who arrived early saw nothing compelling. Open with intent. Tell them what tonight is about before the first game starts.",
   },
   closing: {
     score: "strong",
     note:
-      "You ended on a win and called it out specifically. Good close — you gave viewers a reason to come back with 'next session I'm pushing for top of the lobby'.",
+      "You ended on a win and called it out specifically. Good close. You gave viewers a reason to come back with 'next session I'm pushing for top of the lobby'.",
   },
   anti_patterns: [
     {
@@ -54,7 +54,7 @@ const DEMO_REPORT: CoachReport = {
       type: "viewer_count_apology",
       quote: "Sorry there's only like 6 of you watching, this is kind of embarrassing",
       note:
-        "This is one of the most damaging things you can say on stream. It signals to everyone watching that this isn't worth their time. The 6 people there chose to be there — treat them like a packed room.",
+        "This is one of the most damaging things you can say on stream. It signals to everyone watching that this isn't worth their time. The 6 people there chose to be there. Treat them like a packed room.",
     },
   ],
   dead_zones: [
@@ -65,7 +65,7 @@ const DEMO_REPORT: CoachReport = {
   trend_vs_history: {
     direction: "improving",
     note:
-      "Your last 4 streams show a consistent upward trend — scores went 58, 61, 67, now 74. The slow opening is a recurring flag but shorter each time. You're fixing the right things.",
+      "Your last 4 streams show a consistent upward trend. Scores went 58, 61, 67, now 74. The slow opening is a recurring flag but shorter each time. You're fixing the right things.",
   },
   shareable_win: {
     stat: "Chat spiked 4x during your clutch at 45:12",
@@ -86,7 +86,7 @@ export default function DemoPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#080B18", color: "#ECF1FA" }}>
 
-      {/* ── Sticky demo banner ── */}
+      {/* Sticky demo banner */}
       <div style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "linear-gradient(135deg, rgba(148,61,255,0.95), rgba(180,70,200,0.95), rgba(242,97,121,0.95))",
@@ -100,7 +100,7 @@ export default function DemoPage() {
             Sample Report
           </span>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
-            Connect Twitch to get a real report on your actual streams — free.
+            Connect Twitch to get a real report on your actual streams. Free.
           </span>
         </div>
         <Link
@@ -115,7 +115,7 @@ export default function DemoPage() {
         </Link>
       </div>
 
-      {/* ── Page content ── */}
+      {/* Page content */}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 20px 80px" }}>
 
         {/* VOD header (fake) */}
@@ -124,23 +124,19 @@ export default function DemoPage() {
             <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Back to LevlCast
           </Link>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-            <div>
-              <h1 style={{ fontSize: 20, fontWeight: 700, color: "#ECF1FA", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
-                Valorant ranked — finally hit Diamond | !discord
-              </h1>
-              <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "rgba(255,255,255,0.35)", display: "flex", alignItems: "center", gap: 5 }}>
-                  Apr 28, 2026
-                </span>
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "rgba(255,255,255,0.35)", display: "flex", alignItems: "center", gap: 5 }}>
-                  1h 33m
-                </span>
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "#A3E635", background: "rgba(163,230,53,0.1)", border: "1px solid rgba(163,230,53,0.25)", padding: "2px 10px", borderRadius: 999 }}>
-                  74/100
-                </span>
-              </div>
-            </div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#ECF1FA", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
+            Valorant ranked — finally hit Diamond | !discord
+          </h1>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+              Apr 28, 2026
+            </span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+              1h 33m
+            </span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "#A3E635", background: "rgba(163,230,53,0.1)", border: "1px solid rgba(163,230,53,0.25)", padding: "2px 10px", borderRadius: 999 }}>
+              74/100
+            </span>
           </div>
         </div>
 
