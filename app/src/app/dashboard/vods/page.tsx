@@ -204,54 +204,46 @@ export default async function VodsPage({
                 const scoreColor = score !== null ? scoreColorHex(score) : "#A6B3C9";
 
                 return (
-                  <Link
-                    key={v.id}
-                    href={`/dashboard/vods/${v.id}`}
-                    style={{
-                      background: "var(--surface)",
-                      border: "1px solid var(--line)",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      display: "flex",
-                      flexDirection: "column",
-                      textDecoration: "none",
-                      color: "inherit",
-                      transition: "border-color 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "color-mix(in oklab, var(--blue) 40%, var(--line))")}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
-                  >
-                    {/* Clip or thumbnail */}
-                    {clip ? (
-                      <video
-                        controls
-                        preload="metadata"
-                        playsInline
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
-                      >
-                        <source src={clip.video_url} type="video/mp4" />
-                      </video>
-                    ) : (
-                      <div style={{
-                        width: "100%", aspectRatio: "16/9",
-                        background: v.thumbnail_url
-                          ? `url(${(v.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")}) center/cover`
-                          : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "rgba(255,255,255,0.3)",
-                        fontSize: 12,
-                        fontFamily: "var(--font-geist-mono), monospace",
-                        letterSpacing: "0.06em",
-                      }}>
-                        {!v.thumbnail_url && "no clip yet"}
-                      </div>
-                    )}
+                  <div key={v.id} style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}>
+                    {/* Clip or thumbnail — clicking opens punch page */}
+                    <Link href={`/dashboard/vods/${v.id}`} style={{ display: "block", flexShrink: 0 }}>
+                      {clip ? (
+                        <video
+                          controls
+                          preload="metadata"
+                          playsInline
+                          style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
+                        >
+                          <source src={clip.video_url} type="video/mp4" />
+                        </video>
+                      ) : (
+                        <div style={{
+                          width: "100%", aspectRatio: "16/9",
+                          background: v.thumbnail_url
+                            ? `url(${(v.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")}) center/cover`
+                            : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: "rgba(255,255,255,0.3)",
+                          fontSize: 12,
+                          fontFamily: "var(--font-geist-mono), monospace",
+                          letterSpacing: "0.06em",
+                        }}>
+                          {!v.thumbnail_url && "no clip yet"}
+                        </div>
+                      )}
+                    </Link>
 
                     {/* Card body */}
                     <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                      {/* Score + title row */}
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      {/* Score + title row — clicking opens punch page */}
+                      <Link href={`/dashboard/vods/${v.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, textDecoration: "none", color: "inherit" }}>
                         {score !== null && (
                           <div style={{
                             fontFamily: "var(--font-geist-mono), monospace",
@@ -271,7 +263,7 @@ export default async function VodsPage({
                             {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
                           </span>
                         </div>
-                      </div>
+                      </Link>
 
                       {/* Punch line */}
                       {punchLine && (
@@ -288,19 +280,22 @@ export default async function VodsPage({
                       {/* Actions */}
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: "auto", paddingTop: 4 }}>
                         {clip && (
-                          <div onClick={(e) => e.preventDefault()} style={{ display: "contents" }}>
+                          <>
                             <DownloadClip clipId={clip.id} />
                             <CopyCaption caption={clip.caption_text} />
                             <PostToYouTube clipId={clip.id} isConnected={isYouTubeConnected} />
-                          </div>
+                          </>
                         )}
                         <div style={{ flex: 1 }} />
-                        <span style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                        <Link
+                          href={`/dashboard/vods/${v.id}`}
+                          style={{ fontSize: 12, color: "var(--ink-3)", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
+                        >
                           Open <Icons.Arrow />
-                        </span>
+                        </Link>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
