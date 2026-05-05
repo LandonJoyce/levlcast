@@ -64,8 +64,13 @@ export default async function VodReportPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Fetch the VOD first so we have stream_date for chronological filtering
+  const { data: vod } = await supabase.from("vods").select("*, share_token").eq("id", id).eq("user_id", user!.id).single();
+  if (!vod || vod.status !== "ready") notFound();
+
+  const streamDate = (vod.stream_date as string | null) ?? new Date(0).toISOString();
+
   const [
-    { data: vod },
     { data: allClips },
     { data: connections },
     { data: prevVod },
@@ -73,16 +78,15 @@ export default async function VodReportPage({
     { data: priorVodsForStats },
     { data: profileForPlan },
   ] = await Promise.all([
-    supabase.from("vods").select("*, share_token").eq("id", id).eq("user_id", user!.id).single(),
     supabase.from("clips").select("*").eq("user_id", user!.id).eq("vod_id", id).order("created_at", { ascending: false }),
     supabase.from("social_connections").select("platform").eq("user_id", user!.id),
-    supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("stream_date", { ascending: false, nullsFirst: false }).order("analyzed_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle(),
+    // Only streams that happened before this one chronologically
+    supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(1).maybeSingle(),
     supabase.from("vods").select("status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(20),
-    supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).order("stream_date", { ascending: false, nullsFirst: false }).order("analyzed_at", { ascending: false, nullsFirst: false }).limit(50),
+    // Prior stats also filtered to streams before this one
+    supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(50),
     supabase.from("profiles").select("plan, subscription_expires_at").eq("id", user!.id).single(),
   ]);
-
-  if (!vod || vod.status !== "ready") notFound();
 
   const isPro =
     profileForPlan?.plan === "pro" &&

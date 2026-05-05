@@ -50,20 +50,25 @@ export default async function VodPunchPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Fetch the VOD first so we have its stream_date for chronological filtering
+  const { data: vod } = await supabase
+    .from("vods")
+    .select("id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data")
+    .eq("id", id)
+    .eq("user_id", user!.id)
+    .single();
+
+  if (!vod) notFound();
+
+  const streamDate = (vod.stream_date as string | null) ?? new Date(0).toISOString();
+
   const [
-    { data: vod },
     { data: topClip },
     { data: connections },
     { data: prevVod },
     { count: priorAnalyzedCount },
     { data: processingClip },
   ] = await Promise.all([
-    supabase
-      .from("vods")
-      .select("id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data")
-      .eq("id", id)
-      .eq("user_id", user!.id)
-      .single(),
     supabase
       .from("clips")
       .select("id, video_url, title, caption_text, peak_score")
@@ -77,14 +82,15 @@ export default async function VodPunchPage({
       .from("social_connections")
       .select("platform")
       .eq("user_id", user!.id),
-    // Previous VOD ordered by stream_date descending so we compare against the
-    // chronologically most recent stream before this one
+    // Only VODs streamed BEFORE this one so score delta always compares
+    // against a stream that actually happened earlier in time
     supabase
       .from("vods")
       .select("coach_report")
       .eq("user_id", user!.id)
       .eq("status", "ready")
       .neq("id", id)
+      .lt("stream_date", streamDate)
       .order("stream_date", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),
@@ -95,7 +101,8 @@ export default async function VodPunchPage({
       .select("id", { count: "exact", head: true })
       .eq("user_id", user!.id)
       .eq("status", "ready")
-      .neq("id", id),
+      .neq("id", id)
+      .lt("stream_date", streamDate),
     supabase
       .from("clips")
       .select("id")
@@ -105,8 +112,6 @@ export default async function VodPunchPage({
       .limit(1)
       .maybeSingle(),
   ]);
-
-  if (!vod) notFound();
 
   const coachReport = vod.coach_report as any;
   const peaks = (vod.peak_data as any[]) ?? [];

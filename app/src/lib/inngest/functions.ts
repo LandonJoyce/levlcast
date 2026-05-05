@@ -221,24 +221,26 @@ export const analyzeVod = inngest.createFunction(
         const title = vod?.title || "Stream";
         const pulseText = formatPulseForPrompt(vod?.chat_pulse as ChatBucket[] | null | undefined);
 
-        // Last 3 prior reports for longitudinal coaching context
+        // Last 3 prior reports — only VODs streamed BEFORE this one so coaching
+        // advice never references streams that hadn't happened yet at stream time
         const { data: priorVods } = await supabase
           .from("vods")
-          .select("coach_report, analyzed_at")
+          .select("coach_report, stream_date")
           .eq("user_id", userId)
           .eq("status", "ready")
           .neq("id", vodId)
           .not("coach_report", "is", null)
-          .order("analyzed_at", { ascending: false })
+          .lt("stream_date", vod?.stream_date ?? new Date().toISOString())
+          .order("stream_date", { ascending: false })
           .limit(3);
 
-        type VodRow = { coach_report: unknown; analyzed_at: string };
+        type VodRow = { coach_report: unknown; stream_date: string };
         const priorReports: PriorCoachSummary[] = (priorVods ?? [] as VodRow[])
-          .filter((v: VodRow) => v.coach_report && v.analyzed_at)
+          .filter((v: VodRow) => v.coach_report && v.stream_date)
           .map((v: VodRow) => {
             const r = v.coach_report as { overall_score?: number; recommendation?: string; improvements?: string[] };
             return {
-              date: v.analyzed_at.slice(0, 10),
+              date: v.stream_date.slice(0, 10),
               score: r.overall_score ?? 0,
               recommendation: r.recommendation ?? "",
               top_improvement: (r.improvements?.[0] ?? "").replace(/\*\*[^*]+\*\*\s*[—–-]\s*/, ""),
