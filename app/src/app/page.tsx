@@ -54,6 +54,9 @@ export default async function LandingPage() {
               Get Started Free
               <span className="ll-nav-arrow-icon">↗</span>
             </Link>
+            <Link href="/auth/login" className="ll-btn ll-btn-grad ll-nav-cta-mobile" style={{ fontSize: 13, padding: "9px 16px" }}>
+              Get Started
+            </Link>
           </nav>
         </div>
       </header>
