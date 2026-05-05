@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
@@ -9,7 +9,7 @@ import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
 import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebration";
-import { scoreColorVar } from "@/lib/score-utils";
+import { scoreColorVar, scoreColorHex } from "@/lib/score-utils";
 
 const Icons = {
   Back: () => (
@@ -42,22 +42,6 @@ const Icons = {
       <path d="M8.12 8.12L22 22M8.12 15.88L22 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     </svg>
   ),
-  Silence: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-      <path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-      <path d="M17 9l4 4M21 9l-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-    </svg>
-  ),
-  Spark: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
-      <path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-    </svg>
-  ),
-  Arrow: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
   Loader: () => (
     <svg viewBox="0 0 24 24" fill="none" width="15" height="15" style={{ animation: "spin 1s linear infinite" }}>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="28 56" strokeLinecap="round"/>
@@ -66,6 +50,21 @@ const Icons = {
   Trash: () => (
     <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
       <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Arrow: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Spark: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+      <path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Down: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
 };
@@ -116,8 +115,6 @@ export default async function VodDetailPage({
   const previousScore = (prevVod?.coach_report as any)?.overall_score as number | undefined;
   const previousReport = (prevVod?.coach_report as any) ?? undefined;
   const chatPulse = (vod.chat_pulse as any[] | null) ?? null;
-  // word_timestamps powers the per-minute energy curve overlay on the
-  // Silence Map. May be null on legacy VODs analyzed before migration 007.
   const wordTimestamps = (vod.word_timestamps as Array<{ start: number; end: number }> | null) ?? null;
 
   let streak = 0;
@@ -133,9 +130,6 @@ export default async function VodDetailPage({
   const currentScore = coachReport?.overall_score as number | undefined;
   const allTimeBest = priorScores.length > 0 ? Math.max(...priorScores) : 0;
 
-  // Build the score-trajectory points: last 9 prior + the current stream.
-  // Use stream_date when present (the actual stream date) and fall back to
-  // analyzed_at so VODs without recorded stream_date still chart in order.
   type PriorRow = { coach_report: { overall_score?: number } | null; stream_date: string | null; analyzed_at: string | null };
   const priorTrajectoryPoints = (priorVodsForStats as PriorRow[] | null ?? [])
     .map((v): { score: number; date: string } | null => {
@@ -145,7 +139,7 @@ export default async function VodDetailPage({
       return { score, date };
     })
     .filter((p): p is { score: number; date: string } => p !== null)
-    .slice(0, 9); // most recent 9 by actual stream date, not analysis date
+    .slice(0, 9);
 
   const trajectory = currentScore !== undefined && (vod.stream_date || vod.analyzed_at)
     ? [
@@ -175,9 +169,16 @@ export default async function VodDetailPage({
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
   const isFirstScore = vod.status === "ready" && currentScore !== undefined && (priorVodsForStats?.length ?? 0) === 0;
 
-  const thumbnailSrc = vod.thumbnail_url
-    ? (vod.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")
-    : null;
+  const scoreColor = currentScore !== undefined ? scoreColorHex(currentScore) : "#A6B3C9";
+  const scoreDelta = currentScore !== undefined && previousScore !== undefined ? currentScore - previousScore : null;
+
+  // Best clip to feature in the punch view
+  const featuredClip = readyClips[0] ?? null;
+  // Best ungenerated peak to show if no clips yet
+  const topPeak = peaks[0] ?? null;
+  // Brutal one-liner for the punch view: punch_line if available, else first sentence of recommendation
+  const oneSentence = coachReport?.punch_line
+    || (coachReport?.recommendation ? coachReport.recommendation.split(/(?<=[.!?])\s+/)[0] : null);
 
   return (
     <>
@@ -191,35 +192,20 @@ export default async function VodDetailPage({
         </Link>
       </div>
 
-      {/* Header */}
-      <div style={{ display: "grid", gridTemplateColumns: thumbnailSrc ? "auto 1fr" : "1fr", gap: 20, alignItems: "flex-start" }}>
-        {thumbnailSrc && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbnailSrc}
-            alt={vod.title}
-            style={{ width: 200, aspectRatio: "16/9", borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid var(--line)" }}
-          />
-        )}
-        <div className="col gap-sm">
-          <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
-            {vod.title}
-          </h1>
-          <div className="row gap-md" style={{ flexWrap: "wrap" }}>
-            <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 5 }}>
-              <Icons.Calendar />
-              {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            </span>
-            <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 5 }}>
-              <Icons.Clock />
-              {formatDuration(vod.duration_seconds)}
-            </span>
-            {currentScore !== undefined && (
-              <span className="score-pill" style={{ color: scoreColorVar(currentScore), fontSize: 14 }}>
-                {currentScore}<small>/100</small>
-              </span>
-            )}
-          </div>
+      {/* VOD title + meta */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2, margin: "0 0 8px", color: "var(--ink)" }}>
+          {vod.title}
+        </h1>
+        <div className="row gap-md" style={{ flexWrap: "wrap" }}>
+          <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 5 }}>
+            <Icons.Calendar />
+            {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          </span>
+          <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 5 }}>
+            <Icons.Clock />
+            {formatDuration(vod.duration_seconds)}
+          </span>
         </div>
       </div>
 
@@ -242,177 +228,258 @@ export default async function VodDetailPage({
         </div>
       ) : (
         <>
-          {/* Share button */}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <ShareReportButton vodId={vod.id} existingToken={vod.share_token} />
+          {/* ── PUNCH VIEW ─────────────────────────────────────── */}
+          <div style={{
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: 16,
+            overflow: "hidden",
+            marginBottom: 12,
+          }}>
+            {/* Score row */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 20,
+              padding: "24px 28px 20px",
+              borderBottom: "1px solid var(--line)",
+            }}>
+              {currentScore !== undefined && (
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    fontSize: 64, fontWeight: 800, lineHeight: 1,
+                    color: scoreColor,
+                    letterSpacing: "-0.04em",
+                  }}>
+                    {currentScore}
+                  </span>
+                  <span style={{ fontSize: 18, color: "var(--ink-3)", fontWeight: 500 }}>/100</span>
+                  {scoreDelta !== null && (
+                    <span style={{
+                      fontSize: 16, fontWeight: 700,
+                      color: scoreDelta > 0 ? "var(--green)" : scoreDelta < 0 ? "var(--danger)" : "var(--ink-3)",
+                      marginLeft: 4,
+                    }}>
+                      {scoreDelta > 0 ? `+${scoreDelta}` : `${scoreDelta}`}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div style={{ flex: 1 }} />
+              <ShareReportButton vodId={vod.id} existingToken={vod.share_token} />
+            </div>
+
+            {/* Best clip or top peak */}
+            {featuredClip ? (
+              <div>
+                <video
+                  controls
+                  preload="metadata"
+                  playsInline
+                  style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
+                >
+                  <source src={featuredClip.video_url} type="video/mp4" />
+                </video>
+                <div style={{ padding: "16px 28px 20px" }}>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", margin: "0 0 12px" }}>
+                    {featuredClip.title}
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    <DownloadClip clipId={featuredClip.id} />
+                    <CopyCaption caption={featuredClip.caption_text} />
+                    <PostToYouTube clipId={featuredClip.id} isConnected={isYouTubeConnected} />
+                  </div>
+                </div>
+              </div>
+            ) : topPeak ? (
+              <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 10px" }}>
+                  Best moment found
+                </p>
+                <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", margin: "0 0 8px" }}>{topPeak.title}</p>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "0 0 14px", lineHeight: 1.5 }}>{topPeak.reason}</p>
+                <GenerateClipButton vodId={vod.id} peakIndex={0} hasProcessing={hasProcessingClip} />
+              </div>
+            ) : null}
+
+            {/* One sentence */}
+            {oneSentence && (
+              <div style={{
+                padding: "20px 28px",
+                borderTop: featuredClip ? "1px solid var(--line)" : undefined,
+              }}>
+                <p style={{
+                  fontSize: 17, lineHeight: 1.55, color: "var(--ink)",
+                  margin: 0, fontWeight: 500,
+                }}>
+                  {oneSentence}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Coach Report */}
-          {coachReport ? (
-            <CoachReportCard
-              report={coachReport}
-              previousScore={previousScore}
-              previousReport={previousReport}
-              streak={streak}
-              isPersonalBest={isPersonalBest}
-              streamerTitle={streamerTitle}
-              isPro={isPro}
-              streamDurationSeconds={vod.duration_seconds ?? undefined}
-              chatPulse={chatPulse}
-              trajectory={trajectory}
-              wordTimestamps={wordTimestamps}
-              twitchVodId={vod.twitch_vod_id ?? undefined}
-            />
-          ) : (
-            <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
-              Coach report not available for this VOD. Re-analyze to generate one.
+          {/* CTA row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 40 }}>
+            {readyClips.length > 1 && (
+              <Link href="/dashboard/clips" className="btn btn-blue" style={{ fontSize: 13 }}>
+                All {readyClips.length} clips ready <Icons.Arrow />
+              </Link>
+            )}
+            {peaks.length > 0 && readyClips.length === 0 && !hasProcessingClip && (
+              <a href="#clip-moments" className="btn btn-blue" style={{ fontSize: 13 }}>
+                Generate your clips <Icons.Arrow />
+              </a>
+            )}
+            <div style={{ flex: 1 }} />
+            <a
+              href="#full-breakdown"
+              style={{ fontSize: 13, color: "var(--ink-3)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}
+            >
+              Full breakdown <Icons.Down />
+            </a>
+          </div>
+
+          {/* ── FULL BREAKDOWN ─────────────────────────────────── */}
+          <div id="full-breakdown">
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+              <span className="page-eyebrow">Full Breakdown</span>
+              <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, color-mix(in oklab, var(--blue) 30%, transparent), transparent)" }} />
             </div>
-          )}
 
-          {/* Clip nudge */}
-          {peaks.length > 0 && readyClips.length === 0 && processingClips.length === 0 && (
-            <div className="card bordered accent-blue" style={{ padding: "18px 22px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-                <div className="col gap-sm">
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
-                    {peaks.length} clip moment{peaks.length !== 1 ? "s" : ""} found
-                  </span>
-                  <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Turn your best moments into shareable clips. Scroll down.</span>
-                </div>
-                <a href="#clip-moments" className="btn btn-blue" style={{ flexShrink: 0 }}>
-                  Generate Clips <Icons.Arrow />
-                </a>
+            {coachReport ? (
+              <CoachReportCard
+                report={coachReport}
+                previousScore={previousScore}
+                previousReport={previousReport}
+                streak={streak}
+                isPersonalBest={isPersonalBest}
+                streamerTitle={streamerTitle}
+                isPro={isPro}
+                streamDurationSeconds={vod.duration_seconds ?? undefined}
+                chatPulse={chatPulse}
+                trajectory={trajectory}
+                wordTimestamps={wordTimestamps}
+                twitchVodId={vod.twitch_vod_id ?? undefined}
+              />
+            ) : (
+              <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
+                Coach report not available for this VOD. Re-analyze to generate one.
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Generated Clips */}
-          {(readyClips.length > 0 || processingClips.length > 0 || failedClips.length > 0) && (
-            <div>
-              <div className="card-head" style={{ padding: "0 0 12px", marginBottom: 0 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0 }}>
-                  Generated Clips ({readyClips.length})
-                </h3>
-              </div>
-
-              {processingClips.map((clip) => (
-                <div key={clip.id} className="card card-pad-sm" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <Icons.Loader />
-                  <div>
-                    <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{clip.title}</p>
-                    <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "2px 0 0" }}>Generating. Page will update automatically.</p>
-                  </div>
+            {/* All clips */}
+            {(readyClips.length > 0 || processingClips.length > 0 || failedClips.length > 0) && (
+              <div style={{ marginTop: 32 }}>
+                <div className="card-head" style={{ padding: "0 0 12px", marginBottom: 0 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0 }}>
+                    Generated Clips ({readyClips.length})
+                  </h3>
                 </div>
-              ))}
 
-              {failedClips.map((clip) => (
-                <div key={clip.id} className="card card-pad-sm" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10, borderColor: "color-mix(in oklab, var(--danger) 30%, var(--line))" }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{clip.title}</p>
-                    <p style={{ fontSize: 12, color: "var(--danger)", margin: "2px 0 0" }}>
-                      {(clip as { failed_reason?: string | null }).failed_reason || "Generation failed. Delete and try again."}
-                    </p>
-                  </div>
-                  <DeleteClip clipId={clip.id} />
-                </div>
-              ))}
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
-                {readyClips.map((clip) => (
-                  <div key={clip.id} className="card" style={{ overflow: "hidden" }}>
-                    <video controls preload="metadata" playsInline style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}>
-                      <source src={clip.video_url} type="video/mp4" />
-                    </video>
-                    <div style={{ padding: "14px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                        <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0, lineHeight: 1.35 }}>{clip.title}</h3>
-                        <span className="chip g" style={{ flexShrink: 0 }}>
-                          <Icons.Spark />
-                          {Math.round(clip.peak_score * 100)}
-                        </span>
-                      </div>
-                      {clip.caption_text && (
-                        <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.55, marginBottom: 12, padding: "8px 10px", background: "var(--surface-2)", borderRadius: 8 }}>
-                          {clip.caption_text}
-                        </p>
-                      )}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                        <DownloadClip clipId={clip.id} />
-                        <CopyCaption caption={clip.caption_text} />
-                        <PostToYouTube clipId={clip.id} isConnected={isYouTubeConnected} />
-                        <DeleteClip clipId={clip.id} />
-                      </div>
+                {processingClips.map((clip) => (
+                  <div key={clip.id} className="card card-pad-sm" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                    <Icons.Loader />
+                    <div>
+                      <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{clip.title}</p>
+                      <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "2px 0 0" }}>Generating. Page will update automatically.</p>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
 
-          {/* Post to clips nudge */}
-          {readyClips.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "14px 18px", background: "color-mix(in oklab, var(--blue) 8%, var(--surface))", border: "1px solid color-mix(in oklab, var(--blue) 25%, var(--line))", borderRadius: "var(--r-md)" }}>
-              <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>
-                <b style={{ color: "var(--ink)" }}>{readyClips.length} clip{readyClips.length !== 1 ? "s" : ""} ready.</b>{" "}
-                Head to Clips to post them to YouTube.
-              </span>
-              <Link href="/dashboard/clips" className="btn btn-blue" style={{ padding: "7px 14px", fontSize: 12, flexShrink: 0 }}>
-                Go to Clips <Icons.Arrow />
-              </Link>
-            </div>
-          )}
+                {failedClips.map((clip) => (
+                  <div key={clip.id} className="card card-pad-sm" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10, borderColor: "color-mix(in oklab, var(--danger) 30%, var(--line))" }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{clip.title}</p>
+                      <p style={{ fontSize: 12, color: "var(--danger)", margin: "2px 0 0" }}>
+                        {(clip as { failed_reason?: string | null }).failed_reason || "Generation failed. Delete and try again."}
+                      </p>
+                    </div>
+                    <DeleteClip clipId={clip.id} />
+                  </div>
+                ))}
 
-          {/* Peak Moments */}
-          {peaks.length > 0 && (
-            <div id="clip-moments">
-              <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}>
-                <span className="page-eyebrow">Clip Moments · {peaks.length}</span>
-                <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, color-mix(in oklab, var(--blue) 30%, transparent), transparent)" }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {peaks.map((peak: any, i: number) => {
-                  const alreadyClaimed = claimedStarts.has(Math.round(peak.start));
-                  const catLabel = peak.category === "funny" ? "Comedy" : peak.category;
-                  const catClass = peak.category === "hype" ? "m" : peak.category === "funny" ? "w" : peak.category === "emotional" ? "r" : peak.category === "clutch" ? "g" : "b";
-                  return (
-                    <div key={i} className="card card-pad-sm" style={{ borderColor: alreadyClaimed ? "color-mix(in oklab, var(--green) 25%, var(--line))" : "var(--line)" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
-                        <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{peak.title}</h3>
-                        <span className={`chip ${catClass}`} style={{ flexShrink: 0, textTransform: "uppercase", fontSize: 10 }}>{catLabel}</span>
-                      </div>
-                      <p style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 8, lineHeight: 1.5 }}>{peak.reason}</p>
-                      {peak.hook && (
-                        <p style={{ fontSize: 12, color: "var(--blue)", background: "color-mix(in oklab, var(--blue) 8%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 20%, var(--line))", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
-                          Hook: {peak.hook}
-                        </p>
-                      )}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                        <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 6 }}>
-                          <a
-                            href={`https://www.twitch.tv/videos/${vod.twitch_vod_id}?t=${twitchTimestamp(Math.floor(peak.start))}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Watch on Twitch"
-                            style={{ color: "var(--blue)", textDecoration: "none", fontFamily: "inherit" }}
-                          >
-                            {formatDuration(peak.start)} – {formatDuration(peak.end)}
-                          </a>
-                          {" · "}Score {Math.round(peak.score * 100)}
-                        </span>
-                        {alreadyClaimed ? (
-                          <span className="chip g" style={{ gap: 5 }}>
-                            <Icons.Scissors /> Clip generated
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+                  {readyClips.map((clip) => (
+                    <div key={clip.id} className="card" style={{ overflow: "hidden" }}>
+                      <video controls preload="metadata" playsInline style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}>
+                        <source src={clip.video_url} type="video/mp4" />
+                      </video>
+                      <div style={{ padding: "14px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                          <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0, lineHeight: 1.35 }}>{clip.title}</h3>
+                          <span className="chip g" style={{ flexShrink: 0 }}>
+                            <Icons.Spark />
+                            {Math.round(clip.peak_score * 100)}
                           </span>
-                        ) : (
-                          <GenerateClipButton vodId={vod.id} peakIndex={i} hasProcessing={hasProcessingClip} />
+                        </div>
+                        {clip.caption_text && (
+                          <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.55, marginBottom: 12, padding: "8px 10px", background: "var(--surface-2)", borderRadius: 8 }}>
+                            {clip.caption_text}
+                          </p>
                         )}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          <DownloadClip clipId={clip.id} />
+                          <CopyCaption caption={clip.caption_text} />
+                          <PostToYouTube clipId={clip.id} isConnected={isYouTubeConnected} />
+                          <DeleteClip clipId={clip.id} />
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Peak Moments */}
+            {peaks.length > 0 && (
+              <div id="clip-moments" style={{ marginTop: 32 }}>
+                <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}>
+                  <span className="page-eyebrow">Clip Moments · {peaks.length}</span>
+                  <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, color-mix(in oklab, var(--blue) 30%, transparent), transparent)" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {peaks.map((peak: any, i: number) => {
+                    const alreadyClaimed = claimedStarts.has(Math.round(peak.start));
+                    const catLabel = peak.category === "funny" ? "Comedy" : peak.category;
+                    const catClass = peak.category === "hype" ? "m" : peak.category === "funny" ? "w" : peak.category === "emotional" ? "r" : peak.category === "clutch" ? "g" : "b";
+                    return (
+                      <div key={i} className="card card-pad-sm" style={{ borderColor: alreadyClaimed ? "color-mix(in oklab, var(--green) 25%, var(--line))" : "var(--line)" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+                          <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{peak.title}</h3>
+                          <span className={`chip ${catClass}`} style={{ flexShrink: 0, textTransform: "uppercase", fontSize: 10 }}>{catLabel}</span>
+                        </div>
+                        <p style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 8, lineHeight: 1.5 }}>{peak.reason}</p>
+                        {peak.hook && (
+                          <p style={{ fontSize: 12, color: "var(--blue)", background: "color-mix(in oklab, var(--blue) 8%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 20%, var(--line))", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
+                            Hook: {peak.hook}
+                          </p>
+                        )}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                          <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 6 }}>
+                            <a
+                              href={`https://www.twitch.tv/videos/${vod.twitch_vod_id}?t=${twitchTimestamp(Math.floor(peak.start))}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "var(--blue)", textDecoration: "none", fontFamily: "inherit" }}
+                            >
+                              {formatDuration(peak.start)} – {formatDuration(peak.end)}
+                            </a>
+                            {" · "}Score {Math.round(peak.score * 100)}
+                          </span>
+                          {alreadyClaimed ? (
+                            <span className="chip g" style={{ gap: 5 }}>
+                              <Icons.Scissors /> Clip generated
+                            </span>
+                          ) : (
+                            <GenerateClipButton vodId={vod.id} peakIndex={i} hasProcessing={hasProcessingClip} />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
     </>

@@ -532,6 +532,8 @@ export interface CoachReport {
   };
   // Computed metric: average wpm during active speech windows only (excludes gaps)
   commentary_density?: number;
+  // Brutal one-liner shown at the top of the punch view — FOMO-inducing, specific to this stream
+  punch_line?: string;
 }
 
 /** Summary of a prior stream used for longitudinal coaching context. */
@@ -1153,6 +1155,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "time": "<MM:SS>",
     "description": "<EXACTLY 3 sentences, max 20 words each. No em-dashes. Use 'you'. Sentence 1: what was building before (e.g. 'You'd been quiet for three minutes and chat was sitting still.'). Sentence 2: what you did at this moment and why it landed (e.g. 'Then you went on a run that built from setup into a payoff nobody saw coming.'). Sentence 3: how to engineer it next time (e.g. 'Frame the rivalry before the match starts so the trash talk has context when it hits.'). Actions only, no reconstructed words.>"
   },
+  "punch_line": "<ONE sentence. Brutal, specific, FOMO-inducing. This is the first thing the streamer sees when they open their report. It must make them feel something — either 'shit I missed that' or 'I knew it' or 'I need to fix that right now'. Reference the single most impactful moment or pattern from this specific stream. No softening, no encouragement, no praise. Just the truth that stings a little. Example tone: 'You had a moment at 45:12 that could have gone viral and you let it die in silence.' or 'Four minutes of dead air at 23:40 and you never noticed it was happening.' No em dashes. Under 20 words. No quoted words.>",
   "recommendation": "<1-2 short sentences addressed to 'you'. Reference this specific stream. Most impactful change. No buildup. Use contractions.>",
   "next_stream_goals": [
     "<one sentence. A specific behavior to do next stream that fixes the biggest problem. No timestamps. No em dashes. Sounds like a coach, not a report. Use contractions.>",
