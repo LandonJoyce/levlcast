@@ -238,6 +238,16 @@ export default async function VodPunchPage({
                 </div>
               </div>
             </>
+          ) : hasProcessingClip ? (
+            <div style={{ padding: "28px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 14 }}>
+              <svg viewBox="0 0 24 24" fill="none" width="18" height="18" style={{ flexShrink: 0, animation: "spin 1s linear infinite", color: "var(--blue)" }}>
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="28 56" strokeLinecap="round"/>
+              </svg>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 2px" }}>Generating your clip...</p>
+                <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0 }}>This usually takes 1 to 3 minutes. The page will update automatically.</p>
+              </div>
+            </div>
           ) : topPeak ? (
             <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)" }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>
