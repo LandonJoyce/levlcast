@@ -112,9 +112,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="problem">
         <div className="ll-con">
           <div className="ll-shead">
-            <span className="ll-eyebrow">Before / After</span>
             <h2 className="ll-h2">Most streamers are flying completely <span className="ll-grad-text">blind</span></h2>
-            <p className="ll-sub">You end stream, check the same viewer count, and have no idea what to change. So you do the same thing next stream and wonder why nothing grows.</p>
           </div>
           <div className="ll-compare">
             <article className="ll-card-ba">
@@ -176,9 +174,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="features">
         <div className="ll-con">
           <div className="ll-shead">
-            <span className="ll-eyebrow">Features</span>
             <h2 className="ll-h2">Three things, built around the VOD <span className="ll-grad-text">workflow</span></h2>
-            <p className="ll-sub">Nothing else. No bloat, no dashboard you'll never open.</p>
           </div>
 
           {/* Product screenshots */}
@@ -251,9 +247,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="how">
         <div className="ll-con">
           <div className="ll-shead">
-            <span className="ll-eyebrow">The Loop</span>
-            <h2 className="ll-h2"><span className="ll-grad-text">Four Steps.</span> No New Habits</h2>
-            <p className="ll-sub">Stream. Analyze. Get one fix. Repeat. That's the whole thing.</p>
+            <h2 className="ll-h2"><span className="ll-grad-text">Four steps.</span> No new habits</h2>
           </div>
           <div className="ll-steps">
             {[
@@ -295,9 +289,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="pricing">
         <div className="ll-con">
           <div className="ll-shead">
-            <span className="ll-eyebrow">Pricing</span>
             <h2 className="ll-h2"><span className="ll-grad-text">Two plans.</span> No tricks</h2>
-            <p className="ll-sub">Start free. Every feature is real, no paywalled demo mode.</p>
           </div>
           <div className="ll-pricing">
             {/* Free */}
