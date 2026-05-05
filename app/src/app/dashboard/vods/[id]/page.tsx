@@ -279,7 +279,7 @@ export default async function VodPunchPage({
                 borderLeft: `3px solid ${scoreColor}`,
                 paddingLeft: 14,
               }}>
-                {coachReport.recommendation}
+                {(coachReport.recommendation as string).replace(/ — /g, ". ").replace(/—/g, " ")}
               </p>
             </div>
           ) : null}

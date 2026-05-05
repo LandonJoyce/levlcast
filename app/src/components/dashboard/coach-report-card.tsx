@@ -417,6 +417,11 @@ export function CoachReportCard({
   wordTimestamps?: Array<{ start: number; end: number }> | null;
   twitchVodId?: string;
 }) {
+  // Strip em dashes from stored report text — old records in the DB may have them
+  // even though new reports are cleaned at parse time in lib/analyze.ts
+  const clean = (s: string | null | undefined) =>
+    s ? s.replace(/ — /g, ". ").replace(/—/g, " ") : s;
+
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
 
@@ -645,7 +650,7 @@ export function CoachReportCard({
               </div>
               {report.stream_story ? (
                 <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.7, color: "#D4DCF0", margin: 0 }}>
-                  {report.stream_story}
+                  {clean(report.stream_story)}
                 </p>
               ) : (
                 <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.7, color: "#A6B3C9", margin: 0 }}>
@@ -662,7 +667,7 @@ export function CoachReportCard({
                 The #1 Fix
               </div>
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.65, color: "#ECF1FA", margin: 0 }}>
-                {report.recommendation}
+                {clean(report.recommendation)}
               </p>
             </div>
           ) : !isPro ? (
@@ -825,7 +830,8 @@ export function CoachReportCard({
 
           {/* ── 6b. LONGITUDINAL TREND ── */}
           {isPro && report.trend_vs_history && report.trend_vs_history.direction !== "first_stream" && (() => {
-            const { direction, note } = report.trend_vs_history!;
+            const { direction } = report.trend_vs_history!;
+            const note = clean(report.trend_vs_history!.note);
             const isUp = direction === "improving";
             const isDown = direction === "declining";
             const color = isUp ? "#A3E635" : isDown ? "#F87171" : "#F59E0B";
@@ -1097,7 +1103,7 @@ export function CoachReportCard({
                           ) : report.best_moment.time}
                         </div>
                         <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.55 }}>
-                          {report.best_moment.description}
+                          {clean(report.best_moment.description)}
                         </div>
                       </div>
                     )}
