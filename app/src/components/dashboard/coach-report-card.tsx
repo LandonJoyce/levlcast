@@ -232,7 +232,7 @@ function InsightCard({
           </span>
         )
       )}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: label && body ? 6 : 0, paddingRight: ts ? 56 : 0 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: label && body ? 6 : 0, paddingRight: ts ? 72 : 0 }}>
         <span style={{
           fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
           color: "#4D5876", letterSpacing: "0.16em",
