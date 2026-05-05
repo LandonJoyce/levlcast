@@ -280,8 +280,7 @@ export default async function ClipsPage({
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
-                      {/* TikTok posting re-enabled once production app is approved */}
-                      {/* <PostToTikTok clipId={c.id} isConnected={isTikTokConnected} alreadyPosted={ttPostedSet.has(c.id)} /> */}
+                      <PostToTikTok clipId={c.id} isConnected={isTikTokConnected} alreadyPosted={ttPostedSet.has(c.id)} />
                       {isPro
                         ? <ExportClipButton clipId={c.id} clipTitle={(c.title as string) || "Clip"} />
                         : <DownloadClip clipId={c.id} />
