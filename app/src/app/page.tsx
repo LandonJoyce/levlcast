@@ -221,7 +221,6 @@ export default async function LandingPage() {
             <article className="ll-feat ll-feat-span2 ll-feat-yt">
               <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-cyan"></span>Post to YouTube</span>
               <h3 className="ll-feat-h">From clip to Shorts, in 30 seconds</h3>
-              <p className="ll-feat-sub">Connect your channel once. Post from inside the app. Title fills itself from the report.</p>
               <div className="ll-yt-grid">
                 {[
                   { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/clip1.png", pos: "center 30%" },
