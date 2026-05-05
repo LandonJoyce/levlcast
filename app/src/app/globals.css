@@ -1659,7 +1659,7 @@
   color: #A3E635; line-height: 1; letter-spacing: -0.03em;
 }
 .ll-page .ll-live-label {
-  font-size: 15px; color: var(--ll-fg-mute);
+  font-size: 20px; color: rgba(255,255,255,0.55);
 }
 
 /* ── Footer ── */

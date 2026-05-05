@@ -106,7 +106,7 @@ export default async function LandingPage() {
       {/* ── Live counter ── */}
       <div className="ll-live-counter">
         <span className="ll-live-num">{displayCount}</span>
-        <span className="ll-live-label">streams analyzed and counting</span>
+        <span className="ll-live-label">streams <span className="ll-grad-text">analyzed</span> and counting</span>
       </div>
 
       {/* ── Before / After ── */}
