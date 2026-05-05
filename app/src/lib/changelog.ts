@@ -20,6 +20,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.10.2",
+    date: "2026-05-05",
+    title: "Streams Page Redesign + Clip Quality Lift",
+    items: [
+      { type: "new", text: "Your streams page now shows the best clip and a one-sentence coaching takeaway for each VOD right in the list. No need to open the full report to get value." },
+      { type: "improved", text: "Clip moment detection now requires a stronger emotional arc before scoring a moment as clippable. Moments that only look good in context have been cut. Fewer clips, better clips." },
+      { type: "improved", text: "Clip titles now follow TikTok-proven patterns that create curiosity gaps, emotional frames, and contrast instead of generic labels. Captions are now required to be specific to the exact clip situation." },
+      { type: "improved", text: "Comedy clip detection now checks that the humor is in the content, not just the streamer's laugh. Delivery-only moments that don't translate to video get filtered out." },
+    ],
+  },
+  {
     version: "v0.10.1",
     date: "2026-05-01",
     title: "Longitudinal Trend Card",

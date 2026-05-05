@@ -280,10 +280,18 @@ Be harsh. Most streams have 1-3 real clips. Padding with weak moments makes the 
 
 - 0.85-1.0: Mid-scroll stopper. Hook is immediate. No context needed. Universal emotion. Could perform on any account.
 - 0.70-0.84: Strong clip. Clear arc, clear payoff. Works standalone with minor context.
-- 0.60-0.69: Decent clip. Has a genuine moment but hook is softer or needs mild context.
-- Below 0.60: Do not include.
+- 0.65-0.69: Decent clip. Has a genuine moment but hook is softer or needs mild context.
+- Below 0.65: Do not include.
 
-Ask yourself for every candidate: "Would I stop scrolling for this if I had never heard of this streamer?" If the honest answer is no, the score is below 0.60.
+Ask yourself for every candidate: "Would I stop scrolling for this if I had never heard of this streamer?" If the honest answer is no, the score is below 0.65.
+
+COMEDY CLIP TEST — apply before flagging anything as the "funny" category:
+Comedy clips work because of CONTENT, not because of delivery. You cannot hear this streamer's voice — you only see the transcript. A moment is genuinely clippable comedy only if:
+- The setup and punchline are clear from the words alone (an absurd observation, a self-own that escalates, an unexpected reversal)
+- A deaf viewer reading captions would still find it funny or weird
+If the only evidence of comedy is "haha" or "that was funny" or similar laughter reactions with no clear verbal punchline, the moment is NOT a comedy clip — it was a delivery moment that doesn't translate to text-based detection. Score it honestly.
+
+NO-CHAT RULE: Assume zero chat data unless a CHAT PULSE section is explicitly provided. All clip scores must be defensible based on the streamer's own delivery and content alone. A moment that only matters because "chat went crazy" is invisible without that data — score it as if chat was empty.
 
 CHAT PULSE SCORING: If a chat pulse section is present in the input above, match its timestamps to your clip candidates. Any clip whose window overlaps a notable chat activity spike earns +0.05 to +0.10 to its score. Chat spikes are the most reliable external signal that a moment actually landed with a live audience — even a verbally understated moment that lit up chat is worth more than a high-energy moment that got no response. A chat spike with no obvious verbal signal is a high-priority candidate: something happened that the streamer may have undersold.
 
@@ -327,14 +335,25 @@ Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
 
 [
   {
-    "title": "<hook-style title under 60 chars — reads like a TikTok title, not a label. NEVER a quote. Describe the moment, not the words.>",
+    "title": "<TikTok title under 60 chars. The title creates an information gap — someone who hasn't seen the clip must feel curious enough to tap. Use one of these 5 proven patterns:
+(1) CONSEQUENCE: 'This one mistake ended the whole run' / 'I didn't see this coming and it cost me'
+(2) EMOTION STATE: 'The most tilted I've been all week' / 'I genuinely thought it was over'
+(3) CONTRAST: 'From dead in 3 seconds to that' / 'Worst position possible then this happened'
+(4) SPECIFICITY: 'The shot that had no right to connect' / 'When your aim just switches on for 20 seconds'
+(5) AFTERMATH: 'I sat in silence for 5 seconds after this' / 'My brain stopped working'
+BANNED: 'Clutch play', 'Crazy moment', 'Insane gaming', any title that fits any clip from any stream. A title you could paste onto a random clip is a failed title. NEVER a quote.>",
     "start": <integer seconds — exact utterance timestamp from transcript>,
     "end": <integer seconds — exact utterance timestamp from transcript>,
     "score": <0.0-1.0>,
     "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
     "reason": "<2-3 sentences: what is the arc, what emotional beats anchor it, why a stranger would care. No quoted dialogue.>",
     "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue. No em dashes.>",
-    "caption": "<TikTok/Shorts caption under 150 chars. Use one of these proven formats: (1) Relatability: 'when the game does this to you 💀' or 'POV: [specific situation]'; (2) Escalation tease: 'it started as [mild thing] then...'; (3) Statement hook: '[what happened] and I am not okay'. Hashtags at the end only — 3-4 max. Never quote the streamer. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title. Use #gaming #Twitch #clutch #PVP #FPS etc. instead of a game you are not certain of.>"
+    "caption": "<TikTok/Shorts caption under 150 chars. The caption must describe THIS specific clip's situation — not a generic template. If you could paste the same caption onto a different clip and it would still fit, it's too generic. Rewrite it around what specifically happens here.
+Pick ONE of these as a base format, then make it specific:
+(1) Specific setup: 'POV: [the exact bad situation this streamer was in] and then...'
+(2) Specific escalation tease: 'It started as [the specific thing] and ended as [the unexpected result]'
+(3) Specific reaction: '[The specific outcome] and I need a minute'
+Hashtags at the end only — 3-4 max. Never quote the streamer. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title. Use #gaming #Twitch #clutch #FPS etc. if game is uncertain.>"
   }
 ]
 
@@ -381,8 +400,8 @@ const MAX_PEAKS = 6;
 // Top candidates to consider during the re-ranking pass on long VODs.
 const RERANK_CANDIDATE_LIMIT = 18;
 
-// Minimum virality score. 0.60 = decent clip with some context.
-const MIN_PEAK_SCORE = 0.60;
+// Minimum virality score. 0.65 = clip with clear emotional arc and real payoff.
+const MIN_PEAK_SCORE = 0.65;
 
 export async function detectPeaks(
   segments: TranscriptSegment[],
