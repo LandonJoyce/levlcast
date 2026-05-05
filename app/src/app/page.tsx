@@ -72,6 +72,9 @@ export default async function LandingPage() {
             <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
               Get Your First Report Free
             </Link>
+            <Link href="/demo" style={{ fontSize: 13, color: "var(--ll-fg-mute)", textDecoration: "underline", textUnderlineOffset: 3, opacity: 0.7 }}>
+              See a sample report first
+            </Link>
             <div className="ll-live-counter">
               <span className="ll-live-dot" />
               <span className="ll-live-num">{displayCount}</span>
