@@ -465,24 +465,21 @@ export async function detectPeaks(
   const rerankResponse = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 512,
-    system: `You are a viral content strategist selecting the best clips from a Twitch stream for TikTok. You are ruthlessly selective — you would rather return fewer clips than include mediocre ones.`,
+    system: `You are a viral content editor. Your only job is to find the one clip from this stream that could actually go viral. You are not building a clip reel — you are finding the single best moment. Everything else gets cut.`,
     messages: [{
       role: "user",
-      content: `From these ${topCandidates.length} candidate clips, pick the BEST 1-3 clips for TikTok. Most streams have 1 real clip. If only 1 or 2 clear the bar, return only those.
+      content: `These ${topCandidates.length} candidates came from the same stream. They are competing against each other. Only the best survive.
 
-SELECTION CRITERIA — in order of importance:
-1. Works standalone with ZERO context — a stranger who never watched this streamer would still care
-2. Strong hook in the first 3 seconds — exclamation, reaction, or unexpected statement
-3. Clear emotional payoff — the clip builds to something and delivers
-4. The "reason" describes a genuine peak moment, not just normal conversation
+KNOCKOUT RULES:
+1. Ask for each candidate: "Would a stranger who has never heard of this streamer stop scrolling for this?" If the honest answer is no, it is eliminated.
+2. If two candidates are from the same emotional category (both hype, both rage, both funny), only the stronger one survives. Never return duplicates of the same type.
+3. A clip that needs 30 seconds of context to land is eliminated. Hook must hit in the first 3 seconds.
+4. If the #1 candidate is clearly better than all others, return only that one. Do not pad.
+5. Return 0 if nothing genuinely clears the bar. An empty array is the honest answer when the stream had no viral moment.
 
-REJECT candidates where:
-- The reason describes normal conversation or generic commentary, not a real reaction
-- The moment only matters with full stream context
-- The streamer sounds flat or monotone based on the description
-- The score is barely above 0.60 and the reason is weak
+Most streams have 1 viral clip. Occasionally 2. Almost never 3. Return 1 unless #2 is genuinely as strong.
 
-Return ONLY a JSON array of their 1-based numbers, e.g. [2, 5, 7, 11, 14, 16]. No explanation.
+Return ONLY a JSON array of 1-based numbers, e.g. [3] or [2, 7]. No explanation.
 
 Candidates:
 ${candidateSummary}`,
