@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SyncButton } from "@/components/dashboard/sync-button";
@@ -6,7 +6,8 @@ import { AnalyzeButton } from "@/components/dashboard/analyze-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { NotificationPrompt } from "@/components/dashboard/notification-prompt";
 import { getUserUsage } from "@/lib/limits";
-import { scoreColorVar } from "@/lib/score-utils";
+import { scoreColorHex } from "@/lib/score-utils";
+import { DownloadClip, CopyCaption, PostToYouTube } from "@/components/dashboard/clip-actions";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "...";
@@ -14,10 +15,7 @@ function formatDate(iso: string | null): string {
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
   return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+    month: "short", day: "numeric",
     ...(sameYear ? {} : { year: "numeric" }),
   });
 }
@@ -30,15 +28,14 @@ function formatDuration(seconds: number | null): string {
 }
 
 const Icons = {
-  Search: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+  Play: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <path d="M7 5l12 7-12 7V5z" fill="currentColor"/>
     </svg>
   ),
-  Play: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <path d="M7 5l12 7-12 7V5z" fill="currentColor"/>
+  Arrow: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
   Chev: () => (
@@ -46,14 +43,14 @@ const Icons = {
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
+  Scissors: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+      <circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="1.6"/>
+      <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M8.12 8.12L22 22M8.12 15.88L22 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  ),
 };
-
-const TAB_LABELS: Array<[string, string]> = [
-  ["all", "All"],
-  ["ready", "Analyzed"],
-  ["pending", "Queued"],
-  ["analyzing", "Analyzing"],
-];
 
 export default async function VodsPage({
   searchParams,
@@ -69,41 +66,49 @@ export default async function VodsPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: vods } = await supabase
-    .from("vods")
-    .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report, thumbnail_url, failed_reason")
-    .eq("user_id", user.id)
-    .order("stream_date", { ascending: false });
+  const [{ data: vods }, { data: allClips }, { data: connections }] = await Promise.all([
+    supabase
+      .from("vods")
+      .select("id, title, duration_seconds, status, stream_date, analyzed_at, created_at, coach_report, thumbnail_url, failed_reason")
+      .eq("user_id", user.id)
+      .order("stream_date", { ascending: false }),
+    supabase
+      .from("clips")
+      .select("id, vod_id, video_url, title, caption_text, peak_score, status")
+      .eq("user_id", user.id)
+      .eq("status", "ready")
+      .order("peak_score", { ascending: false }),
+    supabase
+      .from("social_connections")
+      .select("platform")
+      .eq("user_id", user.id),
+  ]);
 
   const vodList = vods ?? [];
   const hasProcessing = vodList.some((v) => v.status === "transcribing" || v.status === "analyzing");
   const analyzedList = vodList.filter((v) => v.status === "ready");
-  const totalAnalyzed = analyzedList.length;
-  const avgScore = totalAnalyzed > 0
-    ? Math.round(
-        analyzedList.reduce((acc, v) => acc + ((v.coach_report as { overall_score?: number } | null)?.overall_score ?? 0), 0) / totalAnalyzed
-      )
-    : 0;
 
-  // Clips count (lifetime ready)
-  const { count: clipsCount } = await supabase
-    .from("clips")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "ready");
+  // Best clip per VOD (clips are ordered by peak_score desc, so first match wins)
+  const bestClipByVod: Record<string, typeof allClips extends (infer T)[] | null ? T : never> = {};
+  for (const clip of allClips ?? []) {
+    if (!bestClipByVod[clip.vod_id]) bestClipByVod[clip.vod_id] = clip;
+  }
 
-  // Quota (analyses this month)
+  const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
+
   const usage = await getUserUsage(user.id, supabase);
   const quotaUsed = usage.analyses_this_month;
   const quotaTotal = usage.plan === "pro" ? 20 : 1;
   const quotaPct = Math.min(100, Math.round((quotaUsed / quotaTotal) * 100));
 
-  // Filter VODs by tab — group transcribing+analyzing under "analyzing"
   const filtered = vodList.filter((v) => {
     if (tab === "all") return true;
     if (tab === "analyzing") return v.status === "transcribing" || v.status === "analyzing";
     return v.status === tab;
   });
+
+  const filteredReady = filtered.filter((v) => v.status === "ready");
+  const filteredOther = filtered.filter((v) => v.status !== "ready");
 
   return (
     <>
@@ -114,44 +119,28 @@ export default async function VodsPage({
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
           <span className="page-eyebrow">§ 02 · Library</span>
-          <h1 className="page-title">VODs</h1>
-          <p className="page-sub">Your Twitch streams, analyzed and scored.</p>
+          <h1 className="page-title">Your Streams</h1>
+          <p className="page-sub">Best clip and key takeaway from each stream.</p>
         </div>
-        {vodList.length > 0 && (
-          <div className="row gap-md">
-            <SyncButton />
-          </div>
-        )}
+        {vodList.length > 0 && <SyncButton />}
       </div>
 
-      {/* Stat row — only shown once there are VODs */}
+      {/* Quota strip */}
       {vodList.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-          <div className="card card-pad-sm">
-            <div className="mono-label">Total analyzed</div>
-            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: "var(--ink)" }}>{totalAnalyzed}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 16px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+          <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+            {usage.plan === "pro" ? "Pro plan" : "Free plan"} · {quotaUsed}/{quotaTotal} analyses this month
+          </span>
+          <div className="prog" style={{ flex: 1, maxWidth: 160 }}>
+            <span style={{ width: `${quotaPct}%` }} />
           </div>
-          <div className="card card-pad-sm">
-            <div className="mono-label">Avg score</div>
-            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: scoreColorVar(avgScore) }}>
-              {avgScore}<span style={{ fontSize: 12, color: "var(--ink-3)", fontWeight: 500 }}>/100</span>
-            </div>
-          </div>
-          <div className="card card-pad-sm">
-            <div className="mono-label">Clips made</div>
-            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 4, color: "var(--green)" }}>{clipsCount ?? 0}</div>
-          </div>
-          <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--blue) 30%, var(--line))" }}>
-            <div className="mono-label" style={{ color: "var(--blue)" }}>Quota · {usage.plan === "pro" ? "Pro plan" : "Free plan"}</div>
-            <div className="row" style={{ marginTop: 8, alignItems: "center", gap: 10 }}>
-              <div className="prog" style={{ flex: 1 }}><span style={{ width: `${quotaPct}%` }} /></div>
-              <span className="mono" style={{ fontSize: 12, color: "var(--ink-2)" }}>{quotaUsed}/{quotaTotal}</span>
-            </div>
-          </div>
+          <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+            {analyzedList.length} analyzed
+          </span>
         </div>
       )}
 
-      {/* Empty onboarding state */}
+      {/* Empty state */}
       {vodList.length === 0 ? (
         <div className="card card-pad" style={{ padding: "48px 40px", textAlign: "center" }}>
           <p className="mono-label" style={{ marginBottom: 20, letterSpacing: ".08em" }}>GET STARTED</p>
@@ -159,7 +148,7 @@ export default async function VodsPage({
             {[
               { n: "1", label: "Sync your VODs" },
               { n: "2", label: "Click Analyze" },
-              { n: "3", label: "Get your report" },
+              { n: "3", label: "Get your clip" },
             ].map(({ n, label }, i, arr) => (
               <div key={n} className="row" style={{ alignItems: "center", gap: 0 }}>
                 <div style={{ textAlign: "center", padding: "0 20px" }}>
@@ -168,19 +157,16 @@ export default async function VodsPage({
                     background: "color-mix(in oklab, var(--blue) 15%, var(--surface))",
                     border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    margin: "0 auto 8px",
-                    fontSize: 13, fontWeight: 700, color: "var(--blue)",
+                    margin: "0 auto 8px", fontSize: 13, fontWeight: 700, color: "var(--blue)",
                   }}>{n}</div>
                   <span style={{ fontSize: 12, color: "var(--ink-2)", fontWeight: 500 }}>{label}</span>
                 </div>
-                {i < arr.length - 1 && (
-                  <div style={{ width: 32, height: 1, background: "var(--line)", flexShrink: 0 }} />
-                )}
+                {i < arr.length - 1 && <div style={{ width: 32, height: 1, background: "var(--line)", flexShrink: 0 }} />}
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 24, maxWidth: 360, margin: "0 auto 24px" }}>
-            Pull in your last 20 Twitch streams in seconds, then pick one to analyze.
+          <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 auto 24px", maxWidth: 360 }}>
+            Pull in your last 20 Twitch streams, pick one to analyze, and get your best clip ready to post.
           </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <SyncButton />
@@ -188,169 +174,223 @@ export default async function VodsPage({
         </div>
       ) : (
         <>
-        {/* Filter row */}
-        <div className="row" style={{ justifyContent: "space-between" }}>
+          {/* Filter tabs */}
           <div className="tabs">
-            {TAB_LABELS.map(([k, l]) => (
+            {([["all", "All"], ["ready", "Analyzed"], ["pending", "Queued"], ["analyzing", "Analyzing"]] as const).map(([k, l]) => (
               <Link key={k} href={`/dashboard/vods${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
                 {l}
               </Link>
             ))}
           </div>
-        </div>
 
-        {/* VOD list */}
-        {filtered.length === 0 ? (
-          <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-            <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No VODs match this filter.</p>
-          </div>
-        ) : (
-        <div className="card">
-          {filtered.map((v, i) => {
-            const score = (v.coach_report as { overall_score?: number } | null)?.overall_score ?? null;
-            const isProcessing = v.status === "transcribing" || v.status === "analyzing";
-            // Failed VODs need a retry path too — the API accepts both
-            // pending and failed for analyze.
-            const showAnalyzeButton = v.status === "pending" || v.status === "failed";
-            const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 14400;
+          {filtered.length === 0 && (
+            <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+              <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No VODs match this filter.</p>
+            </div>
+          )}
 
-            return (
-              <div
-                key={v.id}
-                style={{
-                  padding: "16px 22px",
-                  borderBottom: i === filtered.length - 1 ? "none" : "1px solid var(--line)",
-                  display: "grid",
-                  gridTemplateColumns: "120px 1fr auto",
-                  gap: 20,
-                  alignItems: "center",
-                }}
-              >
-                {/* thumb */}
-                <Link
-                  href={v.status === "ready" ? `/dashboard/vods/${v.id}` : `/dashboard/vods`}
-                  style={{
-                    width: 120,
-                    height: 68,
-                    borderRadius: 8,
-                    background: "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
-                    position: "relative",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    display: "block",
-                  }}
-                >
-                  {v.thumbnail_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={(v.thumbnail_url as string).replace("%{width}", "320").replace("%{height}", "180")}
-                      alt=""
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  )}
-                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "rgba(255,255,255,.6)" }}>
-                    <Icons.Play />
-                  </div>
-                  <span className="mono" style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, padding: "1px 5px", background: "rgba(0,0,0,.6)", borderRadius: 3, color: "#fff" }}>
-                    {formatDuration(v.duration_seconds)}
-                  </span>
-                  {isProcessing && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 6,
-                        left: 6,
-                        fontSize: 10,
+          {/* Analyzed VODs — card grid with clip + punch line */}
+          {filteredReady.length > 0 && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gap: 20,
+            }}>
+              {filteredReady.map((v) => {
+                const report = v.coach_report as any;
+                const score = report?.overall_score as number | null ?? null;
+                const punchLine = report?.punch_line as string | null ?? null;
+                const clip = bestClipByVod[v.id] ?? null;
+                const scoreColor = score !== null ? scoreColorHex(score) : "#A6B3C9";
+
+                return (
+                  <Link
+                    key={v.id}
+                    href={`/dashboard/vods/${v.id}`}
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                      textDecoration: "none",
+                      color: "inherit",
+                      transition: "border-color 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "color-mix(in oklab, var(--blue) 40%, var(--line))")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
+                  >
+                    {/* Clip or thumbnail */}
+                    {clip ? (
+                      <video
+                        controls
+                        preload="metadata"
+                        playsInline
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
+                      >
+                        <source src={clip.video_url} type="video/mp4" />
+                      </video>
+                    ) : (
+                      <div style={{
+                        width: "100%", aspectRatio: "16/9",
+                        background: v.thumbnail_url
+                          ? `url(${(v.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")}) center/cover`
+                          : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "rgba(255,255,255,0.3)",
+                        fontSize: 12,
                         fontFamily: "var(--font-geist-mono), monospace",
-                        padding: "2px 6px",
-                        background: "var(--blue)",
-                        borderRadius: 3,
-                        color: "#fff",
-                        textTransform: "uppercase",
-                        letterSpacing: ".06em",
-                      }}
-                    >
-                      analyzing…
-                    </div>
-                  )}
-                </Link>
-
-                {/* metadata */}
-                <div className="col" style={{ gap: 6, minWidth: 0 }}>
-                  <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
-                    <Link
-                      href={v.status === "ready" ? `/dashboard/vods/${v.id}` : `/dashboard/vods`}
-                      style={{
-                        fontSize: 14.5,
-                        fontWeight: 600,
-                        color: "var(--ink)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {v.title}
-                    </Link>
-                    {v.status === "pending" && <span className="chip">queued</span>}
-                    {v.status === "failed" && <span className="chip r">failed</span>}
-                    {requiresPro && v.status === "pending" && (
-                      <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "color-mix(in oklab, var(--blue) 14%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))", color: "var(--blue)", fontWeight: 600, letterSpacing: "0.05em" }}>
-                        PRO
-                      </span>
+                        letterSpacing: "0.06em",
+                      }}>
+                        {!v.thumbnail_url && "no clip yet"}
+                      </div>
                     )}
-                  </div>
-                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", letterSpacing: ".04em" }}>
-                    {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
-                  </span>
-                  {v.status === "failed" && v.failed_reason && (
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: "var(--red, #ef4444)",
-                        lineHeight: 1.4,
-                        marginTop: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                      }}
-                      title={v.failed_reason as string}
-                    >
-                      {v.failed_reason as string}
-                    </span>
-                  )}
-                </div>
 
-                {/* right side — score / progress / analyze */}
-                <div className="row gap-md">
-                  {score !== null ? (
-                    <div className="score-pill" style={{ color: scoreColorVar(score), fontSize: 22 }}>
-                      {score}<small style={{ fontSize: 11 }}>/100</small>
+                    {/* Card body */}
+                    <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                      {/* Score + title row */}
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                        {score !== null && (
+                          <div style={{
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 36, fontWeight: 800, lineHeight: 1,
+                            color: scoreColor, letterSpacing: "-0.03em", flexShrink: 0,
+                          }}>
+                            {score}
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 2px", lineHeight: 1.3,
+                            overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box",
+                            WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}>
+                            {v.title}
+                          </p>
+                          <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                            {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Punch line */}
+                      {punchLine && (
+                        <p style={{
+                          fontSize: 14, lineHeight: 1.5, color: "var(--ink)",
+                          margin: 0, fontWeight: 500,
+                          borderLeft: `3px solid ${scoreColor}`,
+                          paddingLeft: 12,
+                        }}>
+                          {punchLine}
+                        </p>
+                      )}
+
+                      {/* Actions */}
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: "auto", paddingTop: 4 }}>
+                        {clip && (
+                          <div onClick={(e) => e.preventDefault()} style={{ display: "contents" }}>
+                            <DownloadClip clipId={clip.id} />
+                            <CopyCaption caption={clip.caption_text} />
+                            <PostToYouTube clipId={clip.id} isConnected={isYouTubeConnected} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1 }} />
+                        <span style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                          Open <Icons.Arrow />
+                        </span>
+                      </div>
                     </div>
-                  ) : isProcessing ? (
-                    <div className="mono" style={{ fontSize: 12, color: "var(--blue)" }}>processing…</div>
-                  ) : showAnalyzeButton ? (
-                    <AnalyzeButton
-                      vodId={v.id}
-                      status={v.status}
-                      vodTitle={v.title}
-                      durationSeconds={v.duration_seconds ?? 0}
-                      hasProcessing={hasProcessing}
-                      userPlan={usage.plan}
-                    />
-                  ) : null}
-                  {v.status === "ready" && (
-                    <Link href={`/dashboard/vods/${v.id}`} style={{ color: "var(--ink-3)" }}>
-                      <Icons.Chev />
-                    </Link>
-                  )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Unanalyzed VODs — compact list */}
+          {filteredOther.length > 0 && (
+            <div>
+              {filteredReady.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "8px 0 16px" }}>
+                  <span className="page-eyebrow">Not yet analyzed</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
                 </div>
+              )}
+              <div className="card">
+                {filteredOther.map((v, i) => {
+                  const isProcessing = v.status === "transcribing" || v.status === "analyzing";
+                  const showAnalyzeButton = v.status === "pending" || v.status === "failed";
+                  const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 14400;
+
+                  return (
+                    <div key={v.id} style={{
+                      padding: "14px 18px",
+                      borderBottom: i === filteredOther.length - 1 ? "none" : "1px solid var(--line)",
+                      display: "grid",
+                      gridTemplateColumns: "80px 1fr auto",
+                      gap: 14,
+                      alignItems: "center",
+                    }}>
+                      {/* thumb */}
+                      <div style={{
+                        width: 80, height: 45, borderRadius: 6,
+                        background: v.thumbnail_url
+                          ? `url(${(v.thumbnail_url as string).replace("%{width}", "320").replace("%{height}", "180")}) center/cover`
+                          : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
+                        flexShrink: 0, position: "relative", overflow: "hidden",
+                      }}>
+                        {isProcessing && (
+                          <div style={{
+                            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                            background: "rgba(0,0,0,0.55)", fontSize: 9,
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase",
+                          }}>
+                            analyzing
+                          </div>
+                        )}
+                      </div>
+
+                      {/* meta */}
+                      <div className="col" style={{ gap: 4, minWidth: 0 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {v.title}
+                        </span>
+                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                          {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
+                        </span>
+                        {v.status === "failed" && v.failed_reason && (
+                          <span style={{ fontSize: 11, color: "var(--danger)", lineHeight: 1.4 }}>
+                            {v.failed_reason as string}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* action */}
+                      <div>
+                        {isProcessing ? (
+                          <span className="mono" style={{ fontSize: 11, color: "var(--blue)" }}>processing…</span>
+                        ) : showAnalyzeButton ? (
+                          <AnalyzeButton
+                            vodId={v.id}
+                            status={v.status}
+                            vodTitle={v.title}
+                            durationSeconds={v.duration_seconds ?? 0}
+                            hasProcessing={hasProcessing}
+                            userPlan={usage.plan}
+                          />
+                        ) : null}
+                        {requiresPro && v.status === "pending" && (
+                          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "color-mix(in oklab, var(--blue) 14%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))", color: "var(--blue)", fontWeight: 600, display: "block", marginTop: 4 }}>
+                            PRO
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-        )}
+            </div>
+          )}
         </>
       )}
     </>
