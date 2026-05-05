@@ -136,6 +136,7 @@ Previously removed and not coming back: `/dashboard/analytics`, `/dashboard/grow
 ## Conventions
 - No emojis in AI-generated content (explicitly instructed in all Claude prompts)
 - No emojis in UI unless user explicitly requests
+- **No em dashes anywhere — ever.** Not in UI copy, not in AI-generated coach reports, not in clip titles or captions. The `stripEmDashes()` function in `lib/analyze.ts` enforces this at parse time on all AI output. Any new AI output pipeline must call it before storing or displaying results.
 - Server-side Supabase uses service role only in API routes, never exposed to client
 - Client-side uses anon key with RLS
 - API routes in `app/src/app/api/` follow Next.js App Router conventions

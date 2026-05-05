@@ -385,7 +385,7 @@ async function runPeakDetection(
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    const peaks: Peak[] = JSON.parse(cleaned);
+    const peaks: Peak[] = stripEmDashes(JSON.parse(cleaned));
     return peaks
       .filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE)
       .map((p) => snapToUtteranceBoundaries(p, segments));
@@ -1204,7 +1204,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
 
   try {
     const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    const report = JSON.parse(cleaned) as CoachReport;
+    const report = stripEmDashes(JSON.parse(cleaned)) as CoachReport;
     // Attach computed metrics directly — no need to re-derive from AI text
     report.commentary_density = commentaryDensity;
     if (worstGaps.length > 0) {
@@ -1215,6 +1215,29 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     console.error("Failed to parse coach report:", text);
     return null;
   }
+}
+
+/**
+ * Recursively strip em dashes from all string values in a parsed AI object.
+ * The prompt instructs the model not to use em dashes but it occasionally ignores
+ * the rule. This post-processing pass makes it impossible for one to reach the UI.
+ * Replaces " — " with ". " and bare "—" with " " to preserve sentence structure.
+ */
+function stripEmDashes<T>(obj: T): T {
+  if (typeof obj === "string") {
+    return obj.replace(/ — /g, ". ").replace(/—/g, " ") as unknown as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(stripEmDashes) as unknown as T;
+  }
+  if (obj !== null && typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      result[k] = stripEmDashes(v);
+    }
+    return result as T;
+  }
+  return obj;
 }
 
 function formatTime(seconds: number): string {
