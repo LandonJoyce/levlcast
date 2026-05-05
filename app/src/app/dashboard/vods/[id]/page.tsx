@@ -261,6 +261,7 @@ export default async function VodDetailPage({
               chatPulse={chatPulse}
               trajectory={trajectory}
               wordTimestamps={wordTimestamps}
+              twitchVodId={vod.twitch_vod_id ?? undefined}
             />
           ) : (
             <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>

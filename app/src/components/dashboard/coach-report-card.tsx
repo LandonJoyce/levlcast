@@ -33,6 +33,17 @@ function parseTimeSecs(t: string): number {
   return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
 }
 
+function twitchTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`;
+}
+
+function vodUrl(vodId: string, ts: string): string {
+  return `https://www.twitch.tv/videos/${vodId}?t=${twitchTimestamp(parseTimeSecs(ts))}`;
+}
+
 function fmtDur(s: number) {
   if (s >= 60) return `${Math.floor(s / 60)}m${s % 60 > 0 ? ` ${s % 60}s` : ""}`;
   return `${s}s`;
@@ -179,14 +190,16 @@ function ArcCard({
 // ─── Insight Card ─────────────────────────────────────────────────────────────
 
 function InsightCard({
-  accent, label, body, ts, index,
+  accent, label, body, ts, index, vodId,
 }: {
   accent: string;
   label: string;
   body: string;
   ts: string | null;
   index: number;
+  vodId?: string;
 }) {
+  const tsHref = ts && vodId ? vodUrl(vodId, ts) : null;
   return (
     <div style={{
       position: "relative",
@@ -197,13 +210,27 @@ function InsightCard({
       borderLeft: `3px solid ${accent}`,
     }}>
       {ts && (
-        <span style={{
-          position: "absolute", top: 10, right: 12,
-          fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
-          color: accent, opacity: 0.8, letterSpacing: "0.04em",
-        }}>
-          {ts}
-        </span>
+        tsHref ? (
+          <a href={tsHref} target="_blank" rel="noopener noreferrer" style={{
+            position: "absolute", top: 10, right: 12,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+            color: accent, opacity: 0.8, letterSpacing: "0.04em",
+            textDecoration: "none",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+          onMouseLeave={e => (e.currentTarget.style.opacity = "0.8")}
+          title="Watch on Twitch">
+            {ts} ↗
+          </a>
+        ) : (
+          <span style={{
+            position: "absolute", top: 10, right: 12,
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+            color: accent, opacity: 0.8, letterSpacing: "0.04em",
+          }}>
+            {ts}
+          </span>
+        )
       )}
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: label && body ? 6 : 0, paddingRight: ts ? 56 : 0 }}>
         <span style={{
@@ -375,7 +402,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -388,6 +415,7 @@ export function CoachReportCard({
   chatPulse?: ChatPulseBucket[] | null;
   trajectory?: TrajectoryPoint[];
   wordTimestamps?: Array<{ start: number; end: number }> | null;
+  twitchVodId?: string;
 }) {
   const { ps, play, pause, stop } = useAudio(report, previousScore);
   const delta = previousScore !== undefined ? report.overall_score - previousScore : null;
@@ -675,7 +703,7 @@ export function CoachReportCard({
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => {
                     const { label, body, ts } = parseItem(s);
-                    return <InsightCard key={i} accent="#A3E635" label={label} body={body} ts={ts} index={i + 1} />;
+                    return <InsightCard key={i} accent="#A3E635" label={label} body={body} ts={ts} index={i + 1} vodId={twitchVodId} />;
                   })}
                 </div>
                 {!isPro && (report.strengths ?? []).length > 1 && (
@@ -693,7 +721,7 @@ export function CoachReportCard({
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {(report.improvements ?? []).map((s, i) => {
                       const { label, body, ts } = parseItem(s);
-                      return <InsightCard key={i} accent="#F59E0B" label={label} body={body} ts={ts} index={i + 1} />;
+                      return <InsightCard key={i} accent="#F59E0B" label={label} body={body} ts={ts} index={i + 1} vodId={twitchVodId} />;
                     })}
                   </div>
                 </div>
@@ -786,7 +814,14 @@ export function CoachReportCard({
                     <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, color: "#F87171", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                       {ANTI_PATTERN_LABELS[ap.type] ?? ap.type}
                     </span>
-                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95" }}>{ap.time}</span>
+                    {twitchVodId ? (
+                      <a href={vodUrl(twitchVodId, ap.time)} target="_blank" rel="noopener noreferrer" style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", textDecoration: "none" }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "#F87171")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "#6F7C95")}
+                      >{ap.time} ↗</a>
+                    ) : (
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95" }}>{ap.time}</span>
+                    )}
                   </div>
                   <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "rgba(248,113,113,0.75)", lineHeight: 1.55, margin: "0 0 10px", padding: "8px 14px", background: "rgba(248,113,113,0.06)", borderRadius: 6, borderLeft: "2px solid rgba(248,113,113,0.4)" }}>
                     &ldquo;{ap.quote}&rdquo;
@@ -1067,7 +1102,13 @@ export function CoachReportCard({
                     {report.best_moment && (
                       <div style={{ flex: 1, minWidth: 180, padding: "12px 16px", borderRadius: 8, background: "rgba(163,230,53,0.05)", border: "1px solid rgba(163,230,53,0.18)" }}>
                         <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
-                          Best moment · {report.best_moment.time}
+                          Best moment ·{" "}
+                          {twitchVodId ? (
+                            <a href={vodUrl(twitchVodId, report.best_moment.time)} target="_blank" rel="noopener noreferrer" style={{ color: "#A3E635", textDecoration: "none" }}
+                              onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
+                              onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}
+                            >{report.best_moment.time} ↗</a>
+                          ) : report.best_moment.time}
                         </div>
                         <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.55 }}>
                           {report.best_moment.description}
