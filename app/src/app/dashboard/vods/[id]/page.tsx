@@ -232,10 +232,32 @@ export default async function VodPunchPage({
               <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "0 0 14px", lineHeight: 1.5 }}>{topPeak.reason}</p>
               <GenerateClipButton vodId={vod.id} peakIndex={0} hasProcessing={hasProcessingClip} />
             </div>
-          ) : null}
+          ) : (
+            <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 8, flexShrink: 0, marginTop: 2,
+                background: "color-mix(in oklab, var(--ink-3) 10%, var(--surface-2))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                  <circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="1.6"/>
+                  <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.6"/>
+                  <path d="M8.12 8.12L22 22M8.12 15.88L22 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 4px" }}>
+                  No viral clip found this stream
+                </p>
+                <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
+                  The AI analyzed this stream and didn't find a moment strong enough to clip. Your full coaching breakdown is below.
+                </p>
+              </div>
+            </div>
+          )}
 
-          {/* Punch line */}
-          {punchLine && (
+          {/* Punch line — or fallback from recommendation for older reports */}
+          {punchLine ? (
             <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)" }}>
               <p style={{
                 fontSize: 16, lineHeight: 1.6, color: "var(--ink)",
@@ -246,7 +268,21 @@ export default async function VodPunchPage({
                 {punchLine}
               </p>
             </div>
-          )}
+          ) : coachReport?.recommendation ? (
+            <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)" }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 10px" }}>
+                Coach note
+              </p>
+              <p style={{
+                fontSize: 15, lineHeight: 1.6, color: "var(--ink)",
+                margin: 0, fontWeight: 500,
+                borderLeft: `3px solid ${scoreColor}`,
+                paddingLeft: 14,
+              }}>
+                {coachReport.recommendation}
+              </p>
+            </div>
+          ) : null}
 
           {/* Full analysis link */}
           <div style={{ padding: "16px 28px", display: "flex", justifyContent: "flex-end" }}>
