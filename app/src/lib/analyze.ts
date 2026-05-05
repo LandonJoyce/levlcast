@@ -357,7 +357,14 @@ Hashtags at the end only — 3-4 max. Never quote the streamer. HASHTAG RULE: on
   }
 ]
 
-Return 1-6 clips sorted by score descending. Fewer great clips beats more mediocre ones every time.`;
+Return 0-3 clips sorted by score descending.
+
+REALITY CHECK — apply this before returning:
+- A 4-hour stream typically has 1 real clip. Occasionally 2. Almost never 3.
+- 0 clips is a valid and honest result. If nothing clears the bar, return an empty array. Do not invent clips.
+- Returning 3 mediocre clips to fill a quota is worse than returning 1 great one.
+- If you have 1 strong clip and 2 weak ones, return 1.
+- The streamer would rather have 1 clip they're proud to post than 3 they skip past.`;
 }
 
 async function runPeakDetection(
@@ -371,7 +378,7 @@ async function runPeakDetection(
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 3000,
-    system: `You are a senior clip editor who has spent years cutting Twitch VODs into viral TikToks and YouTube Shorts. You know the difference between a moment that excites the streamer's existing fans and a moment that will stop a complete stranger mid-scroll. You think in terms of clip arcs — setup, build, payoff — and you are ruthless about quality. You would rather return two perfect clips than six mediocre ones. You understand that the first 2-3 seconds of a clip determine everything, and you select boundaries with surgical precision so every clip starts on a hook and ends on a resolution.`,
+    system: `You are a senior clip editor who has spent years cutting Twitch VODs into viral TikToks and YouTube Shorts. You know the difference between a moment that excites the streamer's existing fans and a moment that will stop a complete stranger mid-scroll. You think in terms of clip arcs — setup, build, payoff — and you are ruthless about quality. Most streams have exactly one real clip. You would rather return zero clips than one mediocre one. You understand that the first 2-3 seconds of a clip determine everything, and you select boundaries with surgical precision so every clip starts on a hook and ends on a resolution.`,
     messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript, chatPulse) }],
   }), 3, 1000);
 
@@ -394,8 +401,9 @@ const CHUNK_SECONDS = 20 * 60;
 // Overlap between adjacent chunks so moments on boundaries aren't split.
 const CHUNK_OVERLAP = 2 * 60;
 
-// Maximum peaks returned per VOD.
-const MAX_PEAKS = 6;
+// Maximum peaks returned per VOD. Most streams have 1-2 real clips.
+// 3 is the hard ceiling — returning 4-6 almost always means padding.
+const MAX_PEAKS = 3;
 
 // Top candidates to consider during the re-ranking pass on long VODs.
 const RERANK_CANDIDATE_LIMIT = 18;
@@ -460,7 +468,7 @@ export async function detectPeaks(
     system: `You are a viral content strategist selecting the best clips from a Twitch stream for TikTok. You are ruthlessly selective — you would rather return fewer clips than include mediocre ones.`,
     messages: [{
       role: "user",
-      content: `From these ${topCandidates.length} candidate clips, pick the BEST ${MAX_PEAKS} (or fewer if quality drops off) for TikTok.
+      content: `From these ${topCandidates.length} candidate clips, pick the BEST 1-3 clips for TikTok. Most streams have 1 real clip. If only 1 or 2 clear the bar, return only those.
 
 SELECTION CRITERIA — in order of importance:
 1. Works standalone with ZERO context — a stranger who never watched this streamer would still care
