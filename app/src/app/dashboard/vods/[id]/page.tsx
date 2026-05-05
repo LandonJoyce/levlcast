@@ -6,7 +6,7 @@ import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { ShareReportButton } from "@/components/dashboard/share-report-button";
-import { DownloadClip, CopyCaption, PostToYouTube } from "@/components/dashboard/clip-actions";
+import { DownloadClip, CopyCaption, PostToYouTube, ChangeStyleButton } from "@/components/dashboard/clip-actions";
 import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebration";
 import { scoreColorHex } from "@/lib/score-utils";
 
@@ -71,7 +71,7 @@ export default async function VodPunchPage({
   ] = await Promise.all([
     supabase
       .from("clips")
-      .select("id, video_url, title, caption_text, peak_score")
+      .select("id, video_url, title, caption_text, peak_score, caption_style, start_time_seconds")
       .eq("user_id", user!.id)
       .eq("vod_id", id)
       .eq("status", "ready")
@@ -225,10 +225,16 @@ export default async function VodPunchPage({
                 <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: "0 0 12px" }}>
                   {topClip.title}
                 </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
                   <DownloadClip clipId={topClip.id} />
                   <CopyCaption caption={topClip.caption_text} />
                   <PostToYouTube clipId={topClip.id} isConnected={isYouTubeConnected} />
+                  <ChangeStyleButton
+                    clipId={topClip.id}
+                    vodId={id}
+                    startSeconds={topClip.start_time_seconds ?? 0}
+                    currentStyle={(topClip.caption_style as any) ?? "bold"}
+                  />
                 </div>
               </div>
             </>

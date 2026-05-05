@@ -307,6 +307,119 @@ export const analyzeVod = inngest.createFunction(
         ]);
       });
 
+      // Auto-generate the best clip immediately after analysis — clip is ready
+      // when the VOD is ready. Uses bold (default) style; user can change style
+      // from the VOD page and regenerate.
+      const autoClipData = await step.run("auto-generate-clip", async () => {
+        if (peaks.length === 0) return null;
+
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+        // Mirror getUserUsage clip quota check
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan, subscription_expires_at, founding_member")
+          .eq("id", userId)
+          .single();
+
+        const isExpired = profile?.plan === "pro" && profile?.subscription_expires_at &&
+          new Date(profile.subscription_expires_at) < new Date();
+        const plan = profile?.plan === "pro" && !isExpired ? "pro" : "free";
+        const clipLimit = (profile?.founding_member === true || plan === "pro") ? 20 : 5;
+
+        const { count: clipsThisMonth } = await supabase
+          .from("clips")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .in("status", ["ready", "deleted"])
+          .gte("created_at", monthStart)
+          .lt("created_at", monthEnd);
+
+        if ((clipsThisMonth ?? 0) >= clipLimit) {
+          console.log(`[analyze] Auto-generate skipped — clip limit reached (${clipsThisMonth}/${clipLimit})`);
+          return null;
+        }
+
+        const topPeak = peaks[0];
+
+        // Expand short peaks to a minimum 30s window (mirrors API route logic)
+        let start = Number(topPeak.start);
+        let end = Number(topPeak.end);
+        const peakDuration = end - start;
+        if (peakDuration < 30) {
+          const pad = (30 - peakDuration) / 2;
+          start = Math.max(0, start - pad);
+          end = end + pad;
+        }
+        const peakForClip = { ...topPeak, start, end };
+
+        const { data: vodRow } = await supabase
+          .from("vods")
+          .select("twitch_vod_id")
+          .eq("id", vodId)
+          .single();
+
+        if (!vodRow?.twitch_vod_id) return null;
+
+        // Guard against duplicate (e.g. Inngest retry after a partial run)
+        const { data: existing } = await supabase
+          .from("clips")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("vod_id", vodId)
+          .eq("start_time_seconds", Math.round(start))
+          .in("status", ["processing", "ready"])
+          .maybeSingle();
+
+        if (existing) {
+          console.log(`[analyze] Auto-generate skipped — clip already exists for this peak`);
+          return null;
+        }
+
+        const { data: clipRecord, error: insertError } = await supabase
+          .from("clips")
+          .insert({
+            user_id: userId,
+            vod_id: vodId,
+            title: topPeak.title,
+            description: topPeak.reason,
+            start_time_seconds: Math.round(start),
+            end_time_seconds: Math.round(end),
+            caption_text: topPeak.caption,
+            caption_style: "bold",
+            peak_score: topPeak.score,
+            peak_category: topPeak.category,
+            peak_reason: topPeak.reason,
+            status: "processing",
+          })
+          .select("id")
+          .single();
+
+        if (insertError || !clipRecord) {
+          console.error(`[analyze] Auto-generate insert failed:`, insertError?.message);
+          return null;
+        }
+
+        console.log(`[analyze] Auto-generate: queued clip ${clipRecord.id} for "${topPeak.title}"`);
+        return { clipId: clipRecord.id, twitchVodId: vodRow.twitch_vod_id as string, peak: peakForClip };
+      });
+
+      if (autoClipData) {
+        await step.sendEvent("fire-clip-gen", {
+          name: "clip/generate",
+          data: {
+            clipId: autoClipData.clipId,
+            vodId,
+            twitchVodId: autoClipData.twitchVodId,
+            userId,
+            peakIndex: 0,
+            peak: autoClipData.peak,
+          },
+        });
+      }
+
       // Send push notification — fire and forget, never block on this.
       // Prefers "your score improved by N" framing when this stream beat the
       // prior stream, since progress messaging pulls people back way more

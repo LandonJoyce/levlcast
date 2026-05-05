@@ -3,6 +3,44 @@
 import React, { useState } from "react";
 import { Download, Copy, Check, Youtube, Music, ExternalLink, Trash2, RotateCcw, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { CaptionStyle } from "@/lib/captions";
+
+const CAPTION_STYLES: {
+  value: CaptionStyle;
+  label: string;
+  tag?: string;
+  bg: string;
+  render: () => React.ReactNode;
+}[] = [
+  {
+    value: "bold", label: "Bold", tag: "Popular", bg: "#0e0e0e",
+    render: () => <span style={{ fontWeight: 900, fontSize: 17, color: "#fff", textTransform: "uppercase", textShadow: "-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000", letterSpacing: ".03em", lineHeight: 1.1 }}>CAPTION</span>,
+  },
+  {
+    value: "classic", label: "Classic", bg: "#0e0e0e",
+    render: () => <span style={{ fontWeight: 900, fontSize: 17, color: "#FFE600", textTransform: "uppercase", textShadow: "-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000", letterSpacing: ".03em" }}>CAPTION</span>,
+  },
+  {
+    value: "fire", label: "Fire", bg: "#0e0e0e",
+    render: () => <span style={{ fontWeight: 900, fontSize: 17, color: "#FF6B00", textTransform: "uppercase", textShadow: "-3px -3px 0 #1A0000,3px -3px 0 #1A0000,-3px 3px 0 #1A0000,3px 3px 0 #1A0000,0 0 12px rgba(255,107,0,0.4)", letterSpacing: ".03em" }}>CAPTION</span>,
+  },
+  {
+    value: "neon", label: "Neon", bg: "#050f11",
+    render: () => <span style={{ fontWeight: 900, fontSize: 17, color: "#00EEFF", textTransform: "uppercase", textShadow: "-2px -2px 0 #003344,2px -2px 0 #003344,-2px 2px 0 #003344,2px 2px 0 #003344,0 0 14px rgba(0,238,255,0.45)", letterSpacing: ".03em" }}>CAPTION</span>,
+  },
+  {
+    value: "impact", label: "Impact", bg: "#0e0e0e",
+    render: () => <span style={{ fontWeight: 900, fontSize: 21, color: "#fff", textTransform: "uppercase", textShadow: "-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000", letterSpacing: "-.01em", lineHeight: 1 }}>CAPTION</span>,
+  },
+  {
+    value: "boxed", label: "Boxed", bg: "#0e0e0e",
+    render: () => <span style={{ fontWeight: 700, fontSize: 14, color: "#fff", textTransform: "uppercase", background: "rgba(0,0,0,0.6)", padding: "4px 10px", borderRadius: 5, letterSpacing: ".02em" }}>CAPTION</span>,
+  },
+  {
+    value: "minimal", label: "Minimal", bg: "#0e0e0e",
+    render: () => <span style={{ fontWeight: 500, fontSize: 13, color: "rgba(255,255,255,0.92)", textShadow: "-1px -1px 0 rgba(0,0,0,0.8),1px 1px 0 rgba(0,0,0,0.8)" }}>Caption text</span>,
+  },
+];
 
 export function CopyCaption({ caption }: { caption: string }) {
   const [copied, setCopied] = useState(false);
@@ -269,6 +307,126 @@ export function PostToYouTube({
       </div>
       {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
     </div>
+  );
+}
+
+export function ChangeStyleButton({
+  clipId,
+  vodId,
+  startSeconds,
+  currentStyle = "bold",
+}: {
+  clipId: string;
+  vodId: string;
+  startSeconds: number;
+  currentStyle?: CaptionStyle;
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [style, setStyle] = useState<CaptionStyle>(currentStyle);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleApply() {
+    setLoading(true);
+    setError(null);
+    setModalOpen(false);
+    try {
+      const delRes = await fetch(`/api/clips/${clipId}`, { method: "DELETE" });
+      if (!delRes.ok) throw new Error("Failed to remove old clip");
+
+      const genRes = await fetch("/api/clips/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vodId, startSeconds, captionStyle: style }),
+      });
+      const json = await genRes.json();
+      if (!genRes.ok) throw new Error(json.message || json.error || "Generate failed");
+
+      setDone(true);
+      router.refresh();
+    } catch (e: any) {
+      setError(e.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (done) {
+    return <span style={{ fontSize: 12, color: "var(--blue)" }}>Regenerating with new style...</span>;
+  }
+
+  const selectedStyle = CAPTION_STYLES.find((s) => s.value === style) ?? CAPTION_STYLES[0];
+
+  return (
+    <>
+      <button
+        onClick={() => setModalOpen(true)}
+        disabled={loading}
+        style={{
+          background: "none", border: "none", cursor: "pointer",
+          fontSize: 12, color: "var(--ink-3)", padding: 0,
+          display: "inline-flex", alignItems: "center", gap: 5,
+        }}
+      >
+        {loading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+        {loading ? "Regenerating..." : "Change style"}
+      </button>
+
+      {error && <span style={{ fontSize: 11, color: "var(--danger)", marginLeft: 6 }}>{error}</span>}
+
+      {modalOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}
+        >
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 64px rgba(0,0,0,0.6)", overflow: "hidden" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p style={{ margin: 0, fontSize: 11, color: "var(--ink-3)", letterSpacing: ".08em", textTransform: "uppercase", fontFamily: "var(--font-geist-mono), monospace" }}>Change Caption Style</p>
+              <button onClick={() => setModalOpen(false)} style={{ background: "none", border: "none", color: "var(--ink-3)", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 4 }}>×</button>
+            </div>
+
+            <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {CAPTION_STYLES.map((s) => {
+                const selected = style === s.value;
+                return (
+                  <button
+                    key={s.value}
+                    onClick={() => setStyle(s.value)}
+                    style={{
+                      background: selected ? "color-mix(in oklab, var(--blue) 10%, var(--surface-2))" : "var(--surface-2)",
+                      border: selected ? "2px solid var(--blue)" : "2px solid var(--line)",
+                      borderRadius: 10, padding: 0, cursor: "pointer", overflow: "hidden",
+                      display: "flex", flexDirection: "column", position: "relative", transition: "border-color 0.12s",
+                    }}
+                  >
+                    {s.tag && (
+                      <span style={{ position: "absolute", top: 5, right: 5, zIndex: 1, fontSize: 8, fontWeight: 700, letterSpacing: ".06em", color: "#fff", background: "var(--blue)", padding: "2px 5px", borderRadius: 4, textTransform: "uppercase" }}>{s.tag}</span>
+                    )}
+                    <div style={{ background: s.bg, height: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 8px", textAlign: "center" }}>
+                      {s.render()}
+                    </div>
+                    <div style={{ padding: "6px 4px", fontSize: 10, fontWeight: selected ? 700 : 500, color: selected ? "var(--blue)" : "var(--ink-3)", letterSpacing: ".04em", textAlign: "center", background: "var(--surface-2)" }}>
+                      {s.label}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ background: "#111", borderRadius: 10, height: 56, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--line)" }}>
+                {selectedStyle.render()}
+              </div>
+              <button onClick={handleApply} className="btn btn-blue" style={{ width: "100%", justifyContent: "center", fontSize: 13, padding: "11px 0" }}>
+                Apply {selectedStyle.label}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
