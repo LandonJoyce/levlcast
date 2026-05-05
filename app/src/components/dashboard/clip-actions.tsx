@@ -301,7 +301,7 @@ export function PostToTikTok({
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-green-400">
         <Check size={12} />
-        Posted to TikTok
+        Saved to TikTok drafts
       </span>
     );
   }
@@ -333,7 +333,7 @@ export function PostToTikTok({
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors disabled:opacity-50"
       >
         <Music size={12} />
-        {loading ? "Posting..." : "Post to TikTok"}
+        {loading ? "Posting..." : "Save to TikTok drafts"}
       </button>
       {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
     </div>
