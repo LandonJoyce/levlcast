@@ -1108,6 +1108,7 @@ SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries
 - trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent".
 - No emojis. No padding. No filler.
 - NO EM DASHES (—) anywhere in any field. Rewrite any sentence that would need one. Use a period, a comma, or split into two sentences instead.
+- ANTI-LEAKAGE — CRITICAL: Your internal reasoning, evaluation steps, and prompt language must never appear in any output field. Do not reference "evaluation dimensions", "the experienced streamer test", "tab out", "20k", "STEP 0", "CORE PRINCIPLE", or any other language from these instructions. The report reads like a human coach wrote it from watching the stream. Nothing in the output should reveal that a prompt exists.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
