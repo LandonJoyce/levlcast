@@ -177,46 +177,48 @@ export default async function LandingPage() {
           <div className="ll-shead">
             <h2 className="ll-h2">Three things, built around the VOD <span className="ll-grad-text">workflow</span></h2>
           </div>
+        </div>
 
-          {/* Product screenshots */}
-          <div className="ll-ss-showcase">
-            {/* Coach report — main value prop */}
-            <div className="ll-ss-main">
-              <div className="ll-ss-label-row">
-                <span className="ll-chip"><span className="ll-chip-dot"></span>Coaching Report</span>
-                <span className="ll-ss-desc">Score 0–100 · stream story · one specific fix</span>
-              </div>
-              <div className="ll-ss-frame">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/la/ss-coach-report.png" alt="LevlCast coaching report showing stream score, story, and #1 fix" />
-              </div>
+        {/* Product screenshots — full-bleed wider than ll-con */}
+        <div className="ll-ss-showcase">
+          {/* Coach report — main value prop */}
+          <div className="ll-ss-main">
+            <div className="ll-ss-label-row">
+              <span className="ll-chip"><span className="ll-chip-dot"></span>Coaching Report</span>
+              <span className="ll-ss-desc">Score 0–100 · stream story · one specific fix</span>
             </div>
-
-            {/* Right col: recap + timeline stacked */}
-            <div className="ll-ss-side">
-              <div className="ll-ss-panel">
-                <div className="ll-ss-label-row">
-                  <span className="ll-chip"><span className="ll-chip-dot"></span>Since Last Stream</span>
-                  <span className="ll-ss-desc">stream-to-stream delta tracking</span>
-                </div>
-                <div className="ll-ss-frame">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/la/ss-stream-recap.png" alt="Since Last Stream — sub-score delta grid" className="ll-ss-crop" />
-                </div>
-              </div>
-              <div className="ll-ss-panel">
-                <div className="ll-ss-label-row">
-                  <span className="ll-chip"><span className="ll-chip-dot"></span>Stream Timeline</span>
-                  <span className="ll-ss-desc">silence map + best moments</span>
-                </div>
-                <div className="ll-ss-frame">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/la/ss-timeline.png" alt="Stream timeline showing silence gaps and word-per-minute curve" className="ll-ss-crop" />
-                </div>
-              </div>
+            <div className="ll-ss-frame">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/la/ss-coach-report.png" alt="LevlCast coaching report showing stream score, story, and #1 fix" />
             </div>
           </div>
 
+          {/* Right col: recap + timeline stacked */}
+          <div className="ll-ss-side">
+            <div className="ll-ss-panel">
+              <div className="ll-ss-label-row">
+                <span className="ll-chip"><span className="ll-chip-dot"></span>Since Last Stream</span>
+                <span className="ll-ss-desc">stream-to-stream delta tracking</span>
+              </div>
+              <div className="ll-ss-frame">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/la/ss-stream-recap.png" alt="Since Last Stream — sub-score delta grid" className="ll-ss-crop" />
+              </div>
+            </div>
+            <div className="ll-ss-panel">
+              <div className="ll-ss-label-row">
+                <span className="ll-chip"><span className="ll-chip-dot"></span>Stream Timeline</span>
+                <span className="ll-ss-desc">silence map + best moments</span>
+              </div>
+              <div className="ll-ss-frame">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/la/ss-timeline.png" alt="Stream timeline showing silence gaps and word-per-minute curve" className="ll-ss-crop" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="ll-con">
           <div className="ll-features" style={{ marginTop: 16 }}>
             {/* Post to YouTube — spans 2 */}
             <article className="ll-feat ll-feat-span2 ll-feat-yt">
