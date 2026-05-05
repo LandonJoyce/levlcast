@@ -1781,8 +1781,6 @@
   .ll-page .ll-steps { grid-template-columns: 1fr; }
   .ll-page .ll-card-ba { padding: 24px; min-height: auto; gap: 20px; }
   .ll-page .ll-ss-showcase { gap: 12px; }
-  .ll-page .ll-ss-side { display: none; }
-  .ll-page .ll-ss-frame img { max-height: 320px; object-fit: cover; object-position: top; }
   .ll-page .ll-cta-block { padding: 28px 24px; }
   .ll-page .ll-plan { padding: 28px 24px; }
   .ll-page .ll-plan-pro-outer { margin-top: 0; }
