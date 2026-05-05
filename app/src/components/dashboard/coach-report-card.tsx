@@ -631,23 +631,9 @@ export function CoachReportCard({
                   : <span style={{ fontSize: 13, color: "#4D5876" }}>First report</span>
                 }
               </div>
-              {/* Status pills */}
-              <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 999, fontSize: 11, border: `1px solid ${energyPill.border}`, color: energyPill.color }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{energyLabel}
-                </span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 999, fontSize: 11, border: `1px solid ${retPill.border}`, color: retPill.color }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{retLabel}
-                </span>
-                {coldLabel && coldPill && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 999, fontSize: 11, border: `1px solid ${coldPill.border}`, color: coldPill.color }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{coldLabel}
-                  </span>
-                )}
-              </div>
               {isPersonalBest && draw && (
-                <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 7, padding: "4px 12px", borderRadius: 999, background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24", fontSize: 10, fontFamily: '"JetBrains Mono", monospace', letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                  ★ New Personal Best
+                <div style={{ marginTop: 14, fontSize: 12, color: "#fbbf24", letterSpacing: "0.04em" }}>
+                  New personal best
                 </div>
               )}
             </div>
