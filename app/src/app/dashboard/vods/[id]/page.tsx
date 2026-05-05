@@ -55,7 +55,7 @@ export default async function VodPunchPage({
     { data: topClip },
     { data: connections },
     { data: prevVod },
-    { data: priorCountResult },
+    { count: priorAnalyzedCount },
     { data: processingClip },
   ] = await Promise.all([
     supabase
@@ -77,6 +77,8 @@ export default async function VodPunchPage({
       .from("social_connections")
       .select("platform")
       .eq("user_id", user!.id),
+    // Previous VOD ordered by stream_date descending so we compare against the
+    // chronologically most recent stream before this one
     supabase
       .from("vods")
       .select("coach_report")
@@ -86,6 +88,8 @@ export default async function VodPunchPage({
       .order("stream_date", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),
+    // Count uses { count: "exact", head: true } — data is always null for head
+    // queries so we destructure count directly, not data
     supabase
       .from("vods")
       .select("id", { count: "exact", head: true })
@@ -113,7 +117,7 @@ export default async function VodPunchPage({
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
   const isVodProcessing = vod.status === "transcribing" || vod.status === "analyzing";
   const hasProcessingClip = !!processingClip;
-  const isFirstScore = vod.status === "ready" && currentScore !== undefined && (priorCountResult ?? 0) === 0;
+  const isFirstScore = vod.status === "ready" && currentScore !== undefined && (priorAnalyzedCount ?? 1) === 0;
   const scoreColor = currentScore !== undefined ? scoreColorHex(currentScore) : "#A6B3C9";
   const topPeak = peaks[0] ?? null;
 
