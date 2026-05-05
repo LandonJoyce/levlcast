@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Loader2, CheckCircle2, Circle } from "lucide-react";
 
@@ -45,12 +45,12 @@ export function VodProgress({ status, durationSeconds, compact = false }: VodPro
         <div className="flex items-center gap-1.5">
           <Loader2 size={11} className="animate-spin text-yellow-400 flex-shrink-0" />
           <span className="text-xs text-yellow-400 font-medium">
-            Step {currentStepIdx + 1} of {STEPS.length} — {current.label}
+            Step {currentStepIdx + 1} of {STEPS.length}: {current.label}
           </span>
         </div>
         <span className="text-xs text-muted pl-4">
           {isLongVod
-            ? `Long VOD — ${formatEstimate(estimate)} for this step`
+            ? `Long VOD: ${formatEstimate(estimate)} for this step`
             : `Est. ${formatEstimate(estimate)} for this step`}
         </span>
       </div>
@@ -70,7 +70,7 @@ export function VodProgress({ status, durationSeconds, compact = false }: VodPro
           <h3 className="font-bold text-sm mb-0.5">Analyzing your stream</h3>
           <p className="text-xs text-muted">
             {isLongVod
-              ? `This is a long VOD — total estimated time is ${formatEstimate(totalEstimate)}. You can leave this page and come back.`
+              ? `This is a long VOD. Total estimated time is ${formatEstimate(totalEstimate)}. You can leave this page and come back.`
               : `Estimated ${formatEstimate(totalEstimate)} remaining. You can leave this page and come back.`}
           </p>
         </div>
@@ -117,7 +117,7 @@ export function VodProgress({ status, durationSeconds, compact = false }: VodPro
       {isLongVod && (
         <div className="mt-5 pt-4 border-t border-border">
           <p className="text-xs text-muted">
-            Streams over 1 hour take longer to process. Deepgram transcribes the full audio before Claude analyzes it — this is normal and the results will be worth the wait.
+            Streams over 1 hour take longer to process. Deepgram transcribes the full audio before Claude analyzes it. This is normal and the results will be worth the wait.
           </p>
         </div>
       )}

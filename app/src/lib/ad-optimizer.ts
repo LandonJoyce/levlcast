@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/ad-optimizer.ts — Ad placement and revenue optimization engine.
  *
  * Works entirely from existing VOD data (peak_data + duration) — no
@@ -180,7 +180,7 @@ function buildInsight(
   tier: "low" | "mid" | "high"
 ): string {
   if (windows.length === 0) {
-    return `Your ${durationMin}-minute stream had peak moments back-to-back with no clear ad breaks. Running ads during high-energy segments drives viewers away — wait for natural lulls.`;
+    return `Your ${durationMin}-minute stream had peak moments back-to-back with no clear ad breaks. Running ads during high-energy segments drives viewers away. Wait for natural lulls.`;
   }
   const idealWindows = windows.filter((w) => w.quality === "ideal");
   const hasEnough = windows.length >= optimalBreaks;
@@ -191,7 +191,7 @@ function buildInsight(
   if (hasEnough) {
     return `Your ${durationMin}-minute stream has ${idealWindows.length > 0 ? idealWindows.length + " ideal" : windows.length} natural ad window${windows.length !== 1 ? "s" : ""} where viewers are least likely to leave.${communityNote}`;
   }
-  return `Your ${durationMin}-minute stream has only ${windows.length} clear ad window${windows.length !== 1 ? "s" : ""} but ideally you'd have ${optimalBreaks}. Your peaks are packed close together — good for engagement, tight for ad revenue.${communityNote}`;
+  return `Your ${durationMin}-minute stream has only ${windows.length} clear ad window${windows.length !== 1 ? "s" : ""} but ideally you'd have ${optimalBreaks}. Your peaks are packed close together. Good for engagement, tight for ad revenue.${communityNote}`;
 }
 
 function buildRecommendation(
@@ -200,7 +200,7 @@ function buildRecommendation(
   optimalBreaks: number
 ): string {
   if (windows.length === 0) {
-    return "Structure your next stream with deliberate breather segments — game loading screens, setup moments, or viewer Q&A — so you have natural spots to run ads without hurting retention.";
+    return "Structure your next stream with deliberate breather segments (game loading screens, setup moments, or viewer Q&A) so you have natural spots to run ads without hurting retention.";
   }
 
   const bestWindows = [...windows]
@@ -291,14 +291,14 @@ function buildPatternInsight(
   };
 
   const communityStr = topCat
-    ? ` Your community spikes most during ${catLabel[topCat] || topCat} moments — these are your best opportunities for gifted subs and raids, so never run ads there.`
+    ? ` Your community spikes most during ${catLabel[topCat] || topCat} moments. These are your best opportunities for gifted subs and raids, so never run ads there.`
     : "";
 
   if (coveragePct >= 80) {
-    return `Across ${streamCount} stream${streamCount !== 1 ? "s" : ""}, you consistently have ${avgWindows} natural ad window${avgWindows !== 1 ? "s" : ""} — enough to hit your optimal ${avgOptimal} break${avgOptimal !== 1 ? "s" : ""} without interrupting peak moments.${communityStr}`;
+    return `Across ${streamCount} stream${streamCount !== 1 ? "s" : ""}, you consistently have ${avgWindows} natural ad windows${avgWindows !== 1 ? "s" : ""}. Enough to hit your optimal ${avgOptimal} break${avgOptimal !== 1 ? "s" : ""} without interrupting peak moments.${communityStr}`;
   }
   if (coveragePct >= 50) {
-    return `Your streams average ${avgWindows} usable ad window${avgWindows !== 1 ? "s" : ""} out of an ideal ${avgOptimal}. You're leaving some revenue on the table — try adding deliberate pauses (loading screens, setup, chat reading) to create more natural break points.${communityStr}`;
+    return `Your streams average ${avgWindows} usable ad window${avgWindows !== 1 ? "s" : ""} out of an ideal ${avgOptimal}. You're leaving some revenue on the table. Try adding deliberate pauses (loading screens, setup, chat reading) to create more natural break points.${communityStr}`;
   }
-  return `Your content is dense — peaks come in rapid succession leaving few safe ad spots. That's great for engagement but hurts ad revenue. Consider one intentional breather segment per hour to create ad-friendly windows without hurting the flow.${communityStr}`;
+  return `Your content is dense. Peaks come in rapid succession leaving few safe ad spots. That's great for engagement but hurts ad revenue. Consider one intentional breather segment per hour to create ad-friendly windows without hurting the flow.${communityStr}`;
 }

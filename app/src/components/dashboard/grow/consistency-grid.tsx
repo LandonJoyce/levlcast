@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 const DAYS = 28;
 
@@ -87,7 +87,7 @@ export function ConsistencyGrid({ streamDates }: { streamDates: Set<string> }) {
                   return (
                     <div
                       key={day}
-                      title={`${new Date(day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${didStream ? " — streamed" : ""}`}
+                      title={`${new Date(day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${didStream ? ": streamed" : ""}` }
                       className={`h-4 rounded-[3px] transition-all ${didStream ? "" : "bg-white/[0.04]"} ${isToday ? "ring-1 ring-violet-400/60" : ""}`}
                       style={didStream ? { background: `linear-gradient(135deg, ${pulseHex}, ${pulseHex}cc)`, boxShadow: `0 0 6px ${pulseHex}55` } : undefined}
                     />
@@ -129,7 +129,7 @@ export function ConsistencyGrid({ streamDates }: { streamDates: Set<string> }) {
             }}
           >
             {streamed >= 20
-              ? "Streaming consistently — the algorithm loves you."
+              ? "Streaming consistently. The algorithm loves you."
               : streamed >= 12
               ? "Good pace. Push for 5+ days/week to hit the sweet spot."
               : "Consistency is the biggest factor for growth. Even 3x/week makes a big difference."}

@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+﻿import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -24,8 +24,8 @@ export async function sendNewVodEmail(
     : "Your stream is ready for its first coach report.";
 
   const subhead = hasPriorAnalyses
-    ? "One report is a snapshot. The change between streams is where coaching actually lives — your last report set the baseline, this one shows what moved."
-    : "5 minutes to a full coach report — score, peak moments, and exactly what to change next stream.";
+    ? "One report is a snapshot. The change between streams is where coaching actually lives. Your last report set the baseline, this one shows what moved."
+    : "5 minutes to a full coach report: score, peak moments, and exactly what to change next stream.";
 
   await resend.emails.send({
     from: "LevlCast <hello@levlcast.com>",
@@ -92,7 +92,7 @@ export async function sendVodReadyEmail(to: string, name: string, vodId: string,
   await resend.emails.send({
     from: "LevlCast <hello@levlcast.com>",
     to,
-    subject: scoreText ? `Your stream scored ${scoreText} — report ready` : "Your stream report is ready",
+    subject: scoreText ? `Your stream scored ${scoreText}: report ready` : "Your stream report is ready",
     html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your stream report is ready</title></head>
@@ -169,11 +169,11 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
           <p style="margin:0 0 20px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Hey ${name},</p>
 
           <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
-            I'm Landon, the founder of LevlCast. I just wanted to personally say — thank you for signing up and giving this a shot. It genuinely means a lot.
+            I'm Landon, the founder of LevlCast. I just wanted to personally say: thank you for signing up and giving this a shot. It genuinely means a lot.
           </p>
 
           <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
-            I built LevlCast because I wanted a tool that actually helps streamers grow — not just gives them vague numbers, but tells them what to fix and shows them their best moments. Every person who joins is part of a community of streamers who are serious about improving together, and I'm glad you're one of them.
+            I built LevlCast because I wanted a tool that actually helps streamers grow. Not just giving them vague numbers, but tells them what to fix and shows them their best moments. Every person who joins is part of a community of streamers who are serious about improving together, and I'm glad you're one of them.
           </p>
 
           <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
@@ -232,7 +232,7 @@ export async function sendActivationEmail(to: string, name: string): Promise<voi
           <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;">Hey ${name}</p>
           <h1 style="margin:0 0 16px;font-size:26px;font-weight:800;color:#ffffff;line-height:1.2;">Your first stream analysis is one click away.</h1>
           <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.55);line-height:1.6;">
-            You signed up for LevlCast but haven't analyzed a stream yet. In about 5 minutes, you'll get a full coach report — score, peak moments, and exactly what to improve next stream.
+            You signed up for LevlCast but haven't analyzed a stream yet. In about 5 minutes, you'll get a full coach report: score, peak moments, and exactly what to improve next stream.
           </p>
 
           <!-- CTA -->

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+﻿import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
@@ -277,7 +277,7 @@ export default async function VodDetailPage({
                   <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
                     {peaks.length} clip moment{peaks.length !== 1 ? "s" : ""} found
                   </span>
-                  <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Turn your best moments into shareable clips — scroll down.</span>
+                  <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Turn your best moments into shareable clips. Scroll down.</span>
                 </div>
                 <a href="#clip-moments" className="btn btn-blue" style={{ flexShrink: 0 }}>
                   Generate Clips <Icons.Arrow />
@@ -300,7 +300,7 @@ export default async function VodDetailPage({
                   <Icons.Loader />
                   <div>
                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{clip.title}</p>
-                    <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "2px 0 0" }}>Generating — page will update automatically.</p>
+                    <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "2px 0 0" }}>Generating. Page will update automatically.</p>
                   </div>
                 </div>
               ))}
@@ -310,7 +310,7 @@ export default async function VodDetailPage({
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", margin: 0 }}>{clip.title}</p>
                     <p style={{ fontSize: 12, color: "var(--danger)", margin: "2px 0 0" }}>
-                      {(clip as { failed_reason?: string | null }).failed_reason || "Generation failed — delete and try again."}
+                      {(clip as { failed_reason?: string | null }).failed_reason || "Generation failed. Delete and try again."}
                     </p>
                   </div>
                   <DeleteClip clipId={clip.id} />

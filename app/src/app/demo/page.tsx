@@ -15,38 +15,38 @@ const DEMO_REPORT: CoachReport = {
   energy_trend: "building",
   viewer_retention_risk: "medium",
   stream_story:
-    "You started quiet and found your rhythm around 20 minutes in. The clutch defuse sequence at 45:12 was the best stretch of the stream. Chat lit up and your energy matched it. A long dead-air gap during loading screens at 23:40 stalled momentum for nearly 4 minutes, but you recovered well. Strong finish with a clear hook for next session.",
+    "This stream had a clear turning point. The first half was drift. Then 45:12 happened and everything shifted.",
   strengths: [
-    "**Clutch Commentary** - You called the 1v3 play-by-play in real time and it was genuinely exciting. That's the moment viewers clip. at 45:12.",
-    "**Personality Under Pressure** - When the round went sideways at 51:30, you stayed funny instead of frustrated. That's rare and viewers notice. at 51:30.",
-    "**Strong Second Half** - After the 23:40 dip, you came back with momentum and held it for the last 35 minutes.",
+    "**Clutch Commentary** - You narrated the 1v3 in real time as it was happening. Chat spiked immediately. That's exactly what gets clipped and sent around. at 45:12.",
+    "**Staying Loose** - Round collapsed at 51:30 and you stayed funny instead of going quiet. That's harder than it looks. Regulars notice that. at 51:30.",
+    "**Late Hold** - You locked back in after the 23:40 dip and held energy for the last 30 minutes. Most people don't recover that cleanly.",
   ],
   improvements: [
-    "**Dead Air on Loading Screens** - 4 minutes of near-silence at 23:40. That's the window where viewers drop off. Have a story or question ready for load times. at 23:40.",
-    "**Slow Opening** - The first 8 minutes were setup noise and low-energy mumbling. Viewers who clicked from a clip were expecting what you showed at 45:12. at 8:10.",
-    "**Missed Reactions** - Three big plays went by without any verbal reaction. Say something, even if it's just 'let's go'. The kill at 45:52 especially. at 45:52.",
+    "**Wasted Downtime** - Four minutes of near-silence during loading at 23:40. Have one story ready for every load screen. That gap is where people leave. at 23:40.",
+    "**Cold Start** - Still warming up at 8:10 with no hook. Viewers who clicked from a clip expect what you showed at 45:12. Give it to them sooner. at 8:10.",
+    "**Silent Plays** - Three big moments passed with no verbal reaction. Just say something. Anything. The kill at 45:52 especially needed a callout. at 45:52.",
   ],
   best_moment: {
     time: "45:12",
     description:
-      "1v3 clutch defuse on Bind. You called every step out loud, chat spiked hard. Best sustained energy of the stream.",
+      "You'd been quiet through most of the round, so the live callouts landed harder when they came. At 45:12 you talked through every decision in real time and chat felt it instantly. Next time, start narrating your read before you make the move, not as it happens.",
   },
   recommendation:
-    "Open your next stream with energy from second one. Watch the 45:12 clip before you go live. Then describe that play to chat like you're reliving it. Start hot. You already proved you can do it.",
+    "Your best moments happen when you stop reacting and start leading the moment out loud. The 45:12 clutch worked because you were commentating the decision, not just the result. Do that from the first game.",
   next_stream_goals: [
-    "Prepare three 30-second stories to fill loading screens. Write them down before you go live.",
-    "Open with a specific hook in the first 60 seconds. Tell chat what you're chasing this session.",
-    "React out loud to every kill and every death. No silent plays.",
+    "Write down two stories before you go live. Use one during every loading screen.",
+    "In the first 60 seconds, tell chat exactly what you're chasing tonight.",
+    "Narrate your read before you make the play. Not after.",
   ],
   cold_open: {
     score: "weak",
     note:
-      "The first 8 minutes were setup noise and low-energy mumbling. You said 'let me just get this loaded' twice. Viewers who arrived early saw nothing compelling. Open with intent. Tell them what tonight is about before the first game starts.",
+      "Eight minutes of setup and low-energy warmup with no real hook. By the time you engaged, some early arrivals had already left.",
   },
   closing: {
     score: "strong",
     note:
-      "You ended on a win and called it out specifically. Good close. You gave viewers a reason to come back with 'next session I'm pushing for top of the lobby'.",
+      "Ended on a win with clear energy and gave chat a specific reason to come back. Clean finish.",
   },
   anti_patterns: [
     {
@@ -54,7 +54,7 @@ const DEMO_REPORT: CoachReport = {
       type: "viewer_count_apology",
       quote: "Sorry there's only like 6 of you watching, this is kind of embarrassing",
       note:
-        "This is one of the most damaging things you can say on stream. It signals to everyone watching that this isn't worth their time. The 6 people there chose to be there. Treat them like a packed room.",
+        "Those 6 people chose to show up. Calling it out makes them feel like they made a bad call. Never do this.",
     },
   ],
   dead_zones: [
@@ -65,10 +65,10 @@ const DEMO_REPORT: CoachReport = {
   trend_vs_history: {
     direction: "improving",
     note:
-      "Your last 4 streams show a consistent upward trend. Scores went 58, 61, 67, now 74. The slow opening is a recurring flag but shorter each time. You're fixing the right things.",
+      "Four streams in a row trending up. The cold start keeps showing up but it's getting shorter each time. You're fixing the right things.",
   },
   shareable_win: {
-    stat: "Chat spiked 4x during your clutch at 45:12",
+    stat: "Chat spiked 4x during the clutch at 45:12",
     context:
       "That's the moment your viewers remember. Build your next title around it.",
   },
@@ -125,7 +125,7 @@ export default function DemoPage() {
             Back to LevlCast
           </Link>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#ECF1FA", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
-            Valorant ranked — finally hit Diamond | !discord
+            Valorant ranked, finally hit Diamond | !discord
           </h1>
           <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "rgba(255,255,255,0.35)" }}>

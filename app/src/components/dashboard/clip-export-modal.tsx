@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 
@@ -278,7 +278,7 @@ export function ClipExportModal({
         {/* Beta notice */}
         <div style={{ padding: "12px 16px", borderRadius: 8, background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.2)", marginBottom: exportError ? 12 : 20 }}>
           <div style={{ fontSize: 12, color: "rgb(251,191,36)", fontWeight: 600, marginBottom: 4 }}>
-            Beta — facecam detection is estimated
+            Beta: facecam detection is estimated
           </div>
           <div style={{ fontSize: 12, color: "#6F7C95", lineHeight: 1.5 }}>
             The crop assumes a typical streamer layout (webcam in the corner). If your webcam is in a different spot, the cut may be off. Caption text from your clip moment is burned in automatically.

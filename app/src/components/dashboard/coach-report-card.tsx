@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Lock } from "lucide-react";
@@ -297,7 +297,7 @@ function LockedSection({
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: PURPLE }}>{label}</span>
         </div>
         <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.55, maxWidth: "36ch" }}>
-          {hint ?? "Pro unlocks the full report — every fix, every mission, every flagged moment."}
+          {hint ?? "Pro unlocks the full report every fix, every mission, every flagged moment."}
         </p>
         <button
           onClick={onUpgrade}
@@ -669,7 +669,7 @@ export function CoachReportCard({
             <div style={{ marginBottom: 32 }}>
               <LockedSection
                 label="#1 Priority Fix"
-                hint="Pro reveals the single most important fix for next stream — pulled from this report's biggest weakness."
+                hint="Pro reveals the single most important fix for next stream pulled from this report's biggest weakness."
                 height={100}
                 onUpgrade={openUpgrade}
               />
@@ -694,7 +694,7 @@ export function CoachReportCard({
                 </div>
                 {!isPro && (report.strengths ?? []).length > 1 && (
                   <button onClick={openUpgrade} style={{ fontSize: 11, fontFamily: '"JetBrains Mono", monospace', color: PURPLE, paddingLeft: 4, marginTop: 12, background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", letterSpacing: "0.04em" }}>
-                    + {(report.strengths ?? []).length - 1} more strength{(report.strengths ?? []).length - 1 !== 1 ? "s" : ""} — unlock with Pro
+                    + {(report.strengths ?? []).length - 1} more strength{(report.strengths ?? []).length - 1 !== 1 ? "s" : ""} unlock with Pro
                   </button>
                 )}
               </div>
@@ -718,7 +718,7 @@ export function CoachReportCard({
                   </h2>
                   <LockedSection
                     label={fixCount > 0 ? `${fixCount} Specific Fix${fixCount !== 1 ? "es" : ""}` : "Fix For Next"}
-                    hint={fixCount > 0 ? `${fixCount} actionable fix${fixCount !== 1 ? "es" : ""} for next stream — with timestamps.` : undefined}
+                    hint={fixCount > 0 ? `${fixCount} actionable fix${fixCount !== 1 ? "es" : ""} for next stream with timestamps.` : undefined}
                     height={140}
                     onUpgrade={openUpgrade}
                   />
@@ -758,7 +758,7 @@ export function CoachReportCard({
               <div style={{ margin: "0 0 32px" }}>
                 <LockedSection
                   label={`Your Missions · ${missionCount} next-stream goal${missionCount !== 1 ? "s" : ""}`}
-                  hint={missionCount > 0 ? `${missionCount} concrete mission${missionCount !== 1 ? "s" : ""} to commit to — checkable, built from this stream's data.` : undefined}
+                  hint={missionCount > 0 ? `${missionCount} concrete mission${missionCount !== 1 ? "s" : ""} to commit to checkable, built from this stream's data.` : undefined}
                   height={140}
                   onUpgrade={openUpgrade}
                 />
@@ -1140,7 +1140,7 @@ export function CoachReportCard({
               </div>
 
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 20px" }}>
-                One report tells you where you stand. The longitudinal track — score deltas across streams, recurring weaknesses, what you fixed and what you didn&apos;t — is where the actual coaching lives.
+                One report tells you where you stand. The longitudinal track score deltas across streams, recurring weaknesses, what you fixed and what you didn&apos;t is where the actual coaching lives.
               </p>
 
               <button
@@ -1169,7 +1169,7 @@ export function CoachReportCard({
                 Your <strong style={{ color: PURPLE, fontWeight: 600 }}>next stream</strong> is the one that matters.
               </p>
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: 0 }}>
-                One report is a snapshot. The delta between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t — that&apos;s how coaching actually works.
+                One report is a snapshot. The delta between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t that&apos;s how coaching actually works.
               </p>
             </div>
           )}
@@ -1186,7 +1186,7 @@ export function CoachReportCard({
                 <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>Level up.</strong>
               </p>
               <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#A6B3C9", letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-4px)", lineHeight: 1, marginTop: 12, display: "inline-block" }}>
-                — LevlCast
+                LevlCast
               </p>
             </div>
             <div style={{ textAlign: "right", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4D5876", lineHeight: 1.8 }}>

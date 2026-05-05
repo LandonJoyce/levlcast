@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
@@ -21,7 +21,7 @@ const TACTICS: Tactic[] = [
     tag: "Biggest Opportunity",
     tagColor: "text-green-400",
     title: "Multistream to TikTok, YouTube, and Kick simultaneously",
-    body: "Twitch won't push you to new viewers — its discovery is nearly dead for small channels. TikTok Live, YouTube Live, and Kick all have active recommendation engines. Use Restream.io or OBS to broadcast everywhere at once. 37% of top creators already do this.",
+    body: "Twitch won't push you to new viewers. Its discovery is nearly dead for small channels. TikTok Live, YouTube Live, and Kick all have active recommendation engines. Use Restream.io or OBS to broadcast everywhere at once. 37% of top creators already do this.",
     stat: "37%",
     statLabel: "of top creators now multistream",
     href: "https://restream.io",
@@ -31,7 +31,7 @@ const TACTICS: Tactic[] = [
     tag: "Clips",
     tagColor: "text-accent-light",
     title: "Post clips 3–5x per week, not once",
-    body: "Channels that post consistently 3–5 times per week get 1.5x more recommendations than irregular posters. On TikTok and YouTube Shorts, every 59,000 views converts to roughly 1,000 new Twitch followers. Your clips are already made — just post them.",
+    body: "Channels that post consistently 3–5 times per week get 1.5x more recommendations than irregular posters. On TikTok and YouTube Shorts, every 59,000 views converts to roughly 1,000 new Twitch followers. Your clips are already made. Just post them.",
     stat: "59K",
     statLabel: "views = ~1,000 new Twitch followers",
     href: "/dashboard/clips",
@@ -42,14 +42,14 @@ const TACTICS: Tactic[] = [
     tag: "Consistency",
     tagColor: "text-yellow-400",
     title: "Stream 3–5 days a week at the same time",
-    body: "The data shows 3–5 days per week is the sweet spot. Streaming the same days and times trains viewers to show up — people who know your schedule convert to regulars at much higher rates. Cancellations do more damage than missing a day.",
+    body: "The data shows 3–5 days per week is the sweet spot. Streaming the same days and times trains viewers to show up. People who know your schedule convert to regulars at much higher rates. Cancellations do more damage than missing a day.",
     stat: "3–5x",
     statLabel: "per week is the data-backed sweet spot",
   },
   {
     tag: "Discoverability",
     tagColor: "text-blue-400",
-    title: "Stream off-peak hours — 47% less competition",
+    title: "Stream off-peak hours: 47% less competition",
     body: "Streaming between 10 AM–3 PM local time results in 47% less competition in the Twitch directory. For small channels, being visible on page 1 of a game category matters more than streaming when the most people are online.",
     stat: "47%",
     statLabel: "less competition streaming 10AM–3PM",
@@ -74,15 +74,15 @@ const TACTICS: Tactic[] = [
     tag: "Stream Length",
     tagColor: "text-orange-400",
     title: "2–4 hour streams hit the algorithm sweet spot",
-    body: "Streams under 1 hour don't give enough discovery time. Streams over 4 hours tend to see engagement drop-off. The 2–4 hour range maximizes both retention rate and total watch time — the two signals Twitch's algorithm cares most about.",
+    body: "Streams under 1 hour don't give enough discovery time. Streams over 4 hours tend to see engagement drop-off. The 2–4 hour range maximizes both retention rate and total watch time, the two signals Twitch's algorithm cares most about.",
     stat: "2–4hrs",
     statLabel: "optimal stream length per session",
   },
   {
     tag: "Chat Engagement",
     tagColor: "text-pink-400",
-    title: "Respond to chat — viewers who chat return 50% more",
-    body: "Twitch data shows viewers who chat during their first visit are 50% more likely to return. Streams with high chat activity see up to 30% higher viewer retention. For small channels under 50 viewers, you have an advantage — you can respond to everyone.",
+    title: "Respond to chat: viewers who chat return 50% more",
+    body: "Twitch data shows viewers who chat during their first visit are 50% more likely to return. Streams with high chat activity see up to 30% higher viewer retention. For small channels under 50 viewers, you have an advantage: you can respond to everyone.",
     stat: "50%",
     statLabel: "more likely to return if they chatted once",
   },
@@ -90,7 +90,7 @@ const TACTICS: Tactic[] = [
     tag: "Energy Match",
     tagColor: "text-accent-light",
     title: "Stream like your best clips every single time",
-    body: "When someone finds your clip on TikTok and visits your Twitch, they expect that version of you. If your stream energy doesn't match your clips, they leave and don't follow. Your peak moments define your brand — replicate them live.",
+    body: "When someone finds your clip on TikTok and visits your Twitch, they expect that version of you. If your stream energy doesn't match your clips, they leave and don't follow. Your peak moments define your brand. Replicate them live.",
     href: "/dashboard/clips",
     hrefLabel: "See your top clips",
     internal: true,
@@ -98,7 +98,7 @@ const TACTICS: Tactic[] = [
   {
     tag: "Raids",
     tagColor: "text-muted",
-    title: "Raids are networking, not growth — adjust your expectations",
+    title: "Raids are networking, not growth. Adjust your expectations",
     body: "Data shows even large raids of 500+ viewers typically convert to just 1–2 new followers. Raids work as relationship-building tools with other small streamers, not as growth engines. Use them to network, not to spike your numbers.",
     stat: "1–2",
     statLabel: "average new followers per raid",

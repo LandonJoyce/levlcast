@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LevlCast patch notes — add new entries at the top.
  * Keep entries user-facing only. No backend details, API names, or implementation info.
  * Write from the streamer's perspective: what changed for them, not how it works.
@@ -24,18 +24,18 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-05-01",
     title: "Longitudinal Trend Card",
     items: [
-      { type: "new", text: "Coach reports now include a trend assessment across your last 3 streams — Improving, Declining, or Consistent — with a written note from Claude referencing what changed and why" },
+      { type: "new", text: "Coach reports now include a trend assessment across your last 3 streams (Improving, Declining, or Consistent) with a written note from Claude referencing what changed and why" },
       { type: "improved", text: "The coaching AI now actively uses your stream history to avoid repeating advice you've already heard and instead focus on new issues or acknowledge real progress" },
     ],
   },
   {
     version: "v0.10.0",
     date: "2026-04-27",
-    title: "Chat Pulse — Real Viewer Reaction Data",
+    title: "Chat Pulse: Real Viewer Reaction Data",
     items: [
-      { type: "new", text: "Coach reports now include a Chat Pulse — a timeline of your viewers' actual reactions: volume, laughs, hype, sad/cringe moments, sub events, bit cheers, and raid arrivals" },
-      { type: "new", text: "Coaching insights now cite real chat behavior alongside transcript signals — moments that looked great in audio but had quiet chat get called out as missed connections; audio dips with chat surges get scored as clip-worthy" },
-      { type: "improved", text: "Clip moment detection now factors in chat reaction — if your chat exploded somewhere, that location is far more likely to make it into your clip moments" },
+      { type: "new", text: "Coach reports now include a Chat Pulse: a timeline of your viewers' actual reactions: volume, laughs, hype, sad/cringe moments, sub events, bit cheers, and raid arrivals" },
+      { type: "new", text: "Coaching insights now cite real chat behavior alongside transcript signals. Moments that looked great in audio but had quiet chat get called out as missed connections; audio dips with chat surges get scored as clip-worthy" },
+      { type: "improved", text: "Clip moment detection now factors in chat reaction. If your chat exploded somewhere, that location is far more likely to make it into your clip moments" },
     ],
   },
   {
@@ -43,8 +43,8 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-27",
     title: "Last Stream Recap",
     items: [
-      { type: "new", text: "Coach reports now open with a Last Stream Recap — score delta, sub-score moves, dead-air change, and which of last stream's missions you actually pulled off" },
-      { type: "new", text: "Recurring weaknesses across streams get explicitly flagged: 'still happening this stream AND last' — the system remembers what you've been working on" },
+      { type: "new", text: "Coach reports now open with a Last Stream Recap: score delta, sub-score moves, dead-air change, and which of last stream's missions you actually pulled off" },
+      { type: "new", text: "Recurring weaknesses across streams get explicitly flagged: 'still happening this stream AND last'. The system remembers what you've been working on" },
       { type: "new", text: "Cleared anti-patterns are surfaced as wins ('was flagged last stream, gone this stream')" },
       { type: "improved", text: "Mission status pills (Done / Slipped / Ongoing) match each prior goal against the actual numbers from this stream" },
     ],
@@ -54,10 +54,10 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-27",
     title: "Coach Report Pro Unlocks + Auto-Sync",
     items: [
-      { type: "new", text: "Coach report now shows exactly what Pro unlocks for THIS report — concrete counts of fixes, missions, and growth killers, not generic feature lists" },
-      { type: "improved", text: "Upgrade buttons go straight to checkout from anywhere on the report — no more settings detour" },
+      { type: "new", text: "Coach report now shows exactly what Pro unlocks for THIS report: concrete counts of fixes, missions, and growth killers, not generic feature lists" },
+      { type: "improved", text: "Upgrade buttons go straight to checkout from anywhere on the report. No more settings detour" },
       { type: "new", text: "We auto-detect new streams on your Twitch channel every 6 hours and email you when one's ready to analyze. Never miss a stream's coaching window again." },
-      { type: "fix", text: "Clip generation reliability — tighter Twitch segment tolerance plus a remux fallback for VODs whose timestamps trip up FFmpeg's encoder" },
+      { type: "fix", text: "Clip generation reliability: tighter Twitch segment tolerance plus a remux fallback for VODs whose timestamps trip up FFmpeg's encoder" },
       { type: "fix", text: "Failed VODs now show the actual failure reason and a one-click retry button" },
     ],
   },
@@ -66,9 +66,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-26",
     title: "Word-Synced Captions on Every Clip",
     items: [
-      { type: "new", text: "Every generated clip now has TikTok-style word-synced captions burned in — Free and Pro, no extra step" },
+      { type: "new", text: "Every generated clip now has TikTok-style word-synced captions burned in (Free and Pro), no extra step" },
       { type: "improved", text: "Captions read what you actually said (from the transcript), grouped 1–3 words at a time, synced to your voice" },
-      { type: "improved", text: "Vertical export no longer re-encodes captions — faster, no quality loss between encode passes" },
+      { type: "improved", text: "Vertical export no longer re-encodes captions. Faster, no quality loss between encode passes" },
     ],
   },
   {
@@ -77,12 +77,12 @@ export const changelog: ChangelogEntry[] = [
     title: "New Landing + Dashboard Redesign",
     items: [
       { type: "new", text: "Brand-new landing page with editorial layout, founding member tag, App Store card, and live coach-report mock" },
-      { type: "new", text: "Brand-new dashboard shell — sidebar with rank, plan-aware upgrade card, breadcrumb topbar" },
-      { type: "improved", text: "Dashboard home redesigned around your latest stream — score ring with reveal animation, next-session goal, score-over-time chart, recent streams table" },
+      { type: "new", text: "Brand-new dashboard shell: sidebar with rank, plan-aware upgrade card, breadcrumb topbar" },
+      { type: "improved", text: "Dashboard home redesigned around your latest stream: score ring with reveal animation, next-session goal, score-over-time chart, recent streams table" },
       { type: "improved", text: "VODs page redesigned with quota meter, filter tabs, and cleaner status states" },
       { type: "improved", text: "Clips page redesigned with filter tabs, ready/posted/pending grouping, and a 4-up grid of vertical cards" },
-      { type: "improved", text: "Account page rebuilt — profile, plan with quotas, real-only connections (Twitch + YouTube)" },
-      { type: "new", text: "Free tier now shows a partial coach report — score, streamer type, stream story, and one strength visible. Priority fix, missions, anti-patterns, and best moment unlock with Pro" },
+      { type: "improved", text: "Account page rebuilt: profile, plan with quotas, real-only connections (Twitch + YouTube)" },
+      { type: "new", text: "Free tier now shows a partial coach report: score, streamer type, stream story, and one strength visible. Priority fix, missions, anti-patterns, and best moment unlock with Pro" },
     ],
   },
   {
@@ -90,9 +90,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-24",
     title: "Sharper Coach Reports",
     items: [
-      { type: "new", text: "Closing score — the coach now grades how the stream ended, not just how it opened" },
-      { type: "new", text: "Anti-patterns detection — flags specific growth-killing phrases if you actually said them (viewer-count apologies, follow begging, self-deprecation). Every flag quotes the exact moment so you can verify" },
-      { type: "new", text: "Shareable win — every report now surfaces one screenshot-worthy stat from your stream" },
+      { type: "new", text: "Closing score: the coach now grades how the stream ended, not just how it opened" },
+      { type: "new", text: "Anti-patterns detection: flags specific growth-killing phrases if you actually said them (viewer-count apologies, follow begging, self-deprecation). Every flag quotes the exact moment so you can verify" },
+      { type: "new", text: "Shareable win: every report now surfaces one screenshot-worthy stat from your stream" },
       { type: "improved", text: "Cold-open scoring no longer penalizes the first 3–5 minutes of normal warm-up time" },
     ],
   },
@@ -101,9 +101,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-24",
     title: "Faster, More Reliable Clip Generation",
     items: [
-      { type: "improved", text: "Clip generation now downloads Twitch VOD segments in parallel — typically 3–5x faster, especially for longer clips" },
+      { type: "improved", text: "Clip generation now downloads Twitch VOD segments in parallel, typically 3–5x faster, especially for longer clips" },
       { type: "fix", text: "Transient Twitch CDN hiccups now retry automatically instead of producing a broken clip or timing out" },
-      { type: "improved", text: "Clearer error message when a clip fails — tells you to regenerate instead of making you guess" },
+      { type: "improved", text: "Clearer error message when a clip fails. It tells you to regenerate instead of making you guess" },
     ],
   },
   {
@@ -111,7 +111,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-24",
     title: "New Marketing Pages",
     items: [
-      { type: "new", text: "Launched dedicated pages for the VOD Analyzer, Clip Generator, and AI Stream Coach — each with deep explanations of what the tool does" },
+      { type: "new", text: "Launched dedicated pages for the VOD Analyzer, Clip Generator, and AI Stream Coach, each with deep explanations of what the tool does" },
       { type: "new", text: "Added a 'How to Grow on Twitch in 2026' guide with the honest version of what actually works" },
       { type: "improved", text: "Footer now links to every tool page so you can find what you need from anywhere on the site" },
     ],
@@ -122,10 +122,10 @@ export const changelog: ChangelogEntry[] = [
     title: "Clips: Downloads, Duration, and Reliability",
     items: [
       { type: "fix", text: "Clip download button now actually downloads the file instead of opening the video in a new tab" },
-      { type: "fix", text: "Clip generation now correctly handles Twitch VODs with large timestamp offsets — the cutter no longer produces zero-frame outputs on long streams" },
+      { type: "fix", text: "Clip generation now correctly handles Twitch VODs with large timestamp offsets. The cutter no longer produces zero-frame outputs on long streams" },
       { type: "improved", text: "Clip cards now show the real clip duration instead of an em dash" },
       { type: "improved", text: "Regenerating a failed clip on mobile now clears the old one instead of leaving it on the list" },
-      { type: "improved", text: "Clip generation has more headroom — longer VODs no longer time out mid-cut" },
+      { type: "improved", text: "Clip generation has more headroom. Longer VODs no longer time out mid-cut" },
     ],
   },
   {
@@ -133,7 +133,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-21",
     title: "Clip Generation Stability",
     items: [
-      { type: "fix", text: "Fixed FFmpeg 'Invalid data' failures on clip generation — the cutter now handles stitched-together Twitch VOD segments without choking on timestamp discontinuities" },
+      { type: "fix", text: "Fixed FFmpeg 'Invalid data' failures on clip generation. The cutter now handles stitched-together Twitch VOD segments without choking on timestamp discontinuities" },
       { type: "improved", text: "When a clip fails to generate, you now see the actual reason instead of a generic error" },
     ],
   },
@@ -142,7 +142,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-21",
     title: "Clip Generation Fix",
     items: [
-      { type: "fix", text: "Clip generation now reliably completes — fixed a timeout issue that caused clips to silently fail on cold starts" },
+      { type: "fix", text: "Clip generation now reliably completes. Fixed a timeout issue that caused clips to silently fail on cold starts" },
     ],
   },
   {
@@ -150,10 +150,10 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-18",
     title: "Streaks, Rivals Polish & Animated Wrapped",
     items: [
-      { type: "new", text: "Analysis streak badge — your consecutive-stream streak is now front and center on the VODs page" },
-      { type: "new", text: "Head-to-head record — rival card now shows your wins, losses, and ties across your last 5 streams" },
-      { type: "new", text: "Weekly challenge streak — see how many weeks in a row you've hit your target" },
-      { type: "improved", text: "Rivals now auto-link when your rival joins LevlCast — no need to re-add them" },
+      { type: "new", text: "Analysis streak badge: your consecutive-stream streak is now front and center on the VODs page" },
+      { type: "new", text: "Head-to-head record: rival card now shows your wins, losses, and ties across your last 5 streams" },
+      { type: "new", text: "Weekly challenge streak: see how many weeks in a row you've hit your target" },
+      { type: "improved", text: "Rivals now auto-link when your rival joins LevlCast. No need to re-add them" },
       { type: "improved", text: "Monthly Wrapped average score animates up from zero when you open it" },
       { type: "improved", text: "Weekly challenge resets cleanly on Monday with clearer 'this week' wording" },
       { type: "fix", text: "Can no longer set yourself as your own rival" },
@@ -165,11 +165,11 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-18",
     title: "Rivals, Wrapped & Challenges",
     items: [
-      { type: "new", text: "Rival system — pick any LevlCast streamer as your rival and track your score vs theirs after every stream" },
-      { type: "new", text: "Monthly Wrapped — your full month in review: average score, best stream, best clip moment, score arc, and shareable card" },
-      { type: "new", text: "Weekly challenge — a new score target every week shown on your VODs page" },
-      { type: "new", text: "Next stream target — a personalized score to beat displayed before every stream" },
-      { type: "new", text: "Streak protection push — get notified on mobile when your analysis streak is at risk" },
+      { type: "new", text: "Rival system: pick any LevlCast streamer as your rival and track your score vs theirs after every stream" },
+      { type: "new", text: "Monthly Wrapped: your full month in review: average score, best stream, best clip moment, score arc, and shareable card" },
+      { type: "new", text: "Weekly challenge: a new score target every week shown on your VODs page" },
+      { type: "new", text: "Next stream target: a personalized score to beat displayed before every stream" },
+      { type: "new", text: "Streak protection push: get notified on mobile when your analysis streak is at risk" },
     ],
   },
   {
@@ -177,9 +177,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-18",
     title: "Score Reveal + Titles",
     items: [
-      { type: "new", text: "Your stream score now counts up from zero when you open a report — the arc and color animate live as the number rises" },
-      { type: "new", text: "Personal best detection — a gold badge flashes when you beat your all-time high score" },
-      { type: "new", text: "Streamer title earned from your last 5 stream average — Fresh Streamer, Rising Talent, Consistent Creator, Crowd Favorite, Elite Entertainer, or LevlCast Legend" },
+      { type: "new", text: "Your stream score now counts up from zero when you open a report. The arc and color animate live as the number rises" },
+      { type: "new", text: "Personal best detection: a gold badge flashes when you beat your all-time high score" },
+      { type: "new", text: "Streamer title earned from your last 5 stream average: Fresh Streamer, Rising Talent, Consistent Creator, Crowd Favorite, Elite Entertainer, or LevlCast Legend" },
     ],
   },
   {
@@ -187,7 +187,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-18",
     title: "Stream Report Emails",
     items: [
-      { type: "new", text: "Get an email when your stream report is ready — includes your score and top coaching recommendation with a direct link back to the full report" },
+      { type: "new", text: "Get an email when your stream report is ready: includes your score and top coaching recommendation with a direct link back to the full report" },
     ],
   },
   {
@@ -195,7 +195,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-17",
     title: "No Fake Quotes",
     items: [
-      { type: "improved", text: "Clip titles and captions no longer invent dialogue — if the AI isn't certain what you said, it describes the moment instead of quoting you" },
+      { type: "improved", text: "Clip titles and captions no longer invent dialogue. If the AI isn't certain what you said, it describes the moment instead of quoting you" },
       { type: "improved", text: "Stricter no-quote rules across every clip field so your posts never put the wrong words in your mouth" },
     ],
   },
@@ -204,11 +204,11 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-17",
     title: "Dashboard & VODs Redesign",
     items: [
-      { type: "improved", text: "Home dashboard now opens with a big Latest Stream hero — your score, trend, and next action all in one card" },
+      { type: "improved", text: "Home dashboard now opens with a big Latest Stream hero: your score, trend, and next action all in one card" },
       { type: "improved", text: "Recent streams list got progress bars and bigger score readouts so you can scan your history in seconds" },
-      { type: "improved", text: "Onboarding checklist redesigned as a featured violet card — clear, glowing, and impossible to miss" },
+      { type: "improved", text: "Onboarding checklist redesigned as a featured violet card: clear, glowing, and impossible to miss" },
       { type: "improved", text: "VODs page now starts with a clean status strip (total / analyzed / processing) and a Start Here spotlight for your first analysis" },
-      { type: "improved", text: "VOD rows show thumbnails with a score badge, a progress bar, and a status accent stripe — one layout that works on every screen size" },
+      { type: "improved", text: "VOD rows show thumbnails with a score badge, a progress bar, and a status accent stripe, one layout that works on every screen size" },
     ],
   },
   {
@@ -216,7 +216,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-17",
     title: "Analytics & Growth Redesign",
     items: [
-      { type: "improved", text: "Analytics page now opens with a full Performance Pulse — your average coach score, trend, and streak all at a glance" },
+      { type: "improved", text: "Analytics page now opens with a full Performance Pulse: your average coach score, trend, and streak all at a glance" },
       { type: "improved", text: "Best Stream and Hottest Moment get their own featured cards so your wins don't get buried" },
       { type: "improved", text: "Category breakdown shows your #1 archetype front and center, with every category ranked on glowing bars" },
       { type: "improved", text: "Growth page now leads with a Growth Pulse card that tells you plainly if you're trending up, flat, or slipping" },
@@ -229,7 +229,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-17",
     title: "Retention & Onboarding",
     items: [
-      { type: "improved", text: "Welcome screen now sends you straight to your VODs — no dead ends after sign up" },
+      { type: "improved", text: "Welcome screen now sends you straight to your VODs. No dead ends after sign up" },
       { type: "new",      text: "After your first analysis, a banner shows exactly how many clip moments are ready and takes you straight there" },
       { type: "new",      text: "If you sign up but don't analyze a stream within 24 hours, LevlCast emails you a reminder" },
     ],
@@ -239,9 +239,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-16",
     title: "Clip Accuracy Overhaul",
     items: [
-      { type: "improved", text: "Clips now match their descriptions much more accurately — timestamps are snapped to real speech boundaries with strict drift limits" },
+      { type: "improved", text: "Clips now match their descriptions much more accurately. Timestamps are snapped to real speech boundaries with strict drift limits" },
       { type: "improved", text: "Long streams (2+ hours) no longer miss great moments that happen on chunk boundaries" },
-      { type: "improved", text: "Stricter clip selection — fewer mediocre clips, only moments that actually stop someone scrolling" },
+      { type: "improved", text: "Stricter clip selection: fewer mediocre clips, only moments that actually stop someone scrolling" },
       { type: "improved", text: "Coach no longer penalizes silence during intros, movie reactions, or intense gameplay" },
       { type: "fix",      text: "Clips can no longer balloon past 90 seconds from timestamp snapping" },
       { type: "fix",      text: "More precise video segment timing on long VODs prevents gradual timestamp drift" },
@@ -252,10 +252,10 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-15",
     title: "The Honest Coach Patch",
     items: [
-      { type: "improved", text: "Landing page now leads with what the coach actually does — specific fixes for dead air, slow openings, and the habits you can't see while you're live" },
-      { type: "improved", text: "Gaming VODs are now correctly classified even when the transcript is quiet (game audio is stripped by speaker filtering) — the coach reads the stream title to know what you're actually playing" },
+      { type: "improved", text: "Landing page now leads with what the coach actually does: specific fixes for dead air, slow openings, and the habits you can't see while you're live" },
+      { type: "improved", text: "Gaming VODs are now correctly classified even when the transcript is quiet (game audio is stripped by speaker filtering). The coach reads the stream title to know what you're actually playing" },
       { type: "new",      text: "Sharper positioning: real coaching on your actual stream, so every session makes you sharper than the last" },
-      { type: "new",      text: "Twitch Panel — download a 'Coached by LevlCast' panel to put under your Twitch stream. Takes 30 seconds and shows your viewers you take growth seriously" },
+      { type: "new",      text: "Twitch Panel: download a 'Coached by LevlCast' panel to put under your Twitch stream. Takes 30 seconds and shows your viewers you take growth seriously" },
     ],
   },
   {
@@ -263,8 +263,8 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-12",
     title: "The Visibility Patch",
     items: [
-      { type: "improved", text: "Streamer Health (burnout score) now lives in the sidebar — always visible alongside your stats, not buried at the bottom" },
-      { type: "improved", text: "Coach report now shows a prominent retention alert when drop-off risk is medium or high — easy to see before digging into the breakdown" },
+      { type: "improved", text: "Streamer Health (burnout score) now lives in the sidebar, always visible alongside your stats, not buried at the bottom" },
+      { type: "improved", text: "Coach report now shows a prominent retention alert when drop-off risk is medium or high. Easy to see before digging into the breakdown" },
       { type: "improved", text: "VOD detail page now shows a 'clips ready' nudge after generating clips, pointing you straight to the Clips page to post them" },
     ],
   },
@@ -273,13 +273,13 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-11",
     title: "The Planner + Flow Patch",
     items: [
-      { type: "new",      text: "Title Generator — select what you're streaming and get 3 title ideas per content type, each with a short explanation of why it works" },
-      { type: "new",      text: "Silence Gap detector — your coach report now highlights the longest quiet stretches in your stream so you know where energy dropped off" },
-      { type: "new",      text: "Cold Open score — each report now rates how strong your first 5 minutes were: Strong, Slow Start, or Cold Open" },
-      { type: "improved", text: "Analytics top section redesigned — stream score, best stream, hottest moment, best content type, and sweet spot length are now front and center" },
-      { type: "improved", text: "Navigation is now grouped into Create, Grow, and Account — easier to know where you are and what to do next" },
+      { type: "new",      text: "Title Generator: select what you're streaming and get 3 title ideas per content type, each with a short explanation of why it works" },
+      { type: "new",      text: "Silence Gap detector: your coach report now highlights the longest quiet stretches in your stream so you know where energy dropped off" },
+      { type: "new",      text: "Cold Open score: each report now rates how strong your first 5 minutes were: Strong, Slow Start, or Cold Open" },
+      { type: "improved", text: "Analytics top section redesigned: stream score, best stream, hottest moment, best content type, and sweet spot length are now front and center" },
+      { type: "improved", text: "Navigation is now grouped into Create, Grow, and Account. Easier to know where you are and what to do next" },
       { type: "improved", text: "Clips page now nudges you to connect YouTube or TikTok if you haven't yet, so you can actually post what you've generated" },
-      { type: "fix",      text: "Clip cards were showing the same caption text twice — now shown once" },
+      { type: "fix",      text: "Clip cards were showing the same caption text twice. Now shown once" },
     ],
   },
   {
@@ -287,10 +287,10 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-10",
     title: "The Coaching Patch",
     items: [
-      { type: "improved", text: "Coach feedback now references specific moments from your stream — no more advice that could apply to any streamer" },
-      { type: "improved", text: "Game audio and background sounds are filtered out before your stream is analyzed — feedback is based only on what you actually said" },
+      { type: "improved", text: "Coach feedback now references specific moments from your stream. No more advice that could apply to any streamer" },
+      { type: "improved", text: "Game audio and background sounds are filtered out before your stream is analyzed. Feedback is based only on what you actually said" },
       { type: "fix",      text: "Removed filler sections from the coach report that weren't adding useful information" },
-      { type: "fix",      text: "Coach report layout fixed on mobile — sections no longer squeeze into an unreadable two-column grid" },
+      { type: "fix",      text: "Coach report layout fixed on mobile. Sections no longer squeeze into an unreadable two-column grid" },
       { type: "new",      text: "First-time users now see a clear 'Start Here' prompt on their most recent stream so the first step is obvious" },
     ],
   },
@@ -301,7 +301,7 @@ export const changelog: ChangelogEntry[] = [
     items: [
       { type: "improved", text: "iOS and Android subscriptions now renew automatically without needing to open the app" },
       { type: "improved", text: "Settings page now shows exactly when your Pro access expires after cancellation" },
-      { type: "improved", text: "Subscription status is clearer throughout the app — you always know what plan you're on and when it changes" },
+      { type: "improved", text: "Subscription status is clearer throughout the app. You always know what plan you're on and when it changes" },
     ],
   },
   {
@@ -309,9 +309,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-06",
     title: "The Debrief Patch",
     items: [
-      { type: "new",      text: "Quick Listen — tap to hear your full coaching report read aloud, useful when you don't want to read" },
+      { type: "new",      text: "Quick Listen: tap to hear your full coaching report read aloud, useful when you don't want to read" },
       { type: "new",      text: "Score badge now shows how much you went up or down from your last stream" },
-      { type: "improved", text: "Coaching style now adapts to your stream type — gaming, just chatting, IRL, variety, and educational each get different feedback" },
+      { type: "improved", text: "Coaching style now adapts to your stream type: gaming, just chatting, IRL, variety, and educational each get different feedback" },
       { type: "improved", text: "Clip selection quality improved across the board" },
       { type: "improved", text: "Energy tracking now shows how your talking pace changed across the stream" },
     ],
@@ -321,9 +321,9 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-05",
     title: "The Mobile Patch",
     items: [
-      { type: "new",      text: "iOS app — analyze VODs, generate clips, and view your coach report from your phone" },
+      { type: "new",      text: "iOS app: analyze VODs, generate clips, and view your coach report from your phone" },
       { type: "new",      text: "Live progress updates while your stream is being analyzed on mobile" },
-      { type: "improved", text: "Clip start and end points are more accurate — clips no longer cut off mid-sentence" },
+      { type: "improved", text: "Clip start and end points are more accurate. Clips no longer cut off mid-sentence" },
     ],
   },
   {
@@ -331,10 +331,10 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-03-30",
     title: "Launch",
     items: [
-      { type: "new", text: "VOD analysis — AI watches your stream, finds your peak moments, and scores your performance out of 100" },
-      { type: "new", text: "Clip generation — your best moments cut into short-form video, ready to post" },
+      { type: "new", text: "VOD analysis: AI watches your stream, finds your peak moments, and scores your performance out of 100" },
+      { type: "new", text: "Clip generation: your best moments cut into short-form video, ready to post" },
       { type: "new", text: "YouTube posting directly from your clip library" },
-      { type: "new", text: "Pro subscription — 20 analyses and 20 clips per month" },
+      { type: "new", text: "Pro subscription: 20 analyses and 20 clips per month" },
     ],
   },
 ];

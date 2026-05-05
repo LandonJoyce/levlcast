@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+﻿import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SyncButton } from "@/components/dashboard/sync-button";
@@ -9,7 +9,7 @@ import { getUserUsage } from "@/lib/limits";
 import { scoreColorVar } from "@/lib/score-utils";
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "...";
   const d = new Date(iso);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
@@ -23,7 +23,7 @@ function formatDate(iso: string | null): string {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (!seconds) return "—";
+  if (!seconds) return "...";
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;

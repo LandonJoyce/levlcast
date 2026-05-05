@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import DashScoreRing from "@/components/dashboard/DashScoreRing";
@@ -24,7 +24,7 @@ function GradientWords({ text }: { text: string }) {
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "...";
   const d = new Date(iso);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
@@ -36,7 +36,7 @@ function formatDate(iso: string | null): string {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (!seconds) return "—";
+  if (!seconds) return "...";
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                 Start Here
               </div>
               <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.1, margin: "0 0 10px", color: "var(--ink)" }}>
-                Get your first coaching report — free.
+                Get your first coaching report, free.
               </h2>
               <p style={{ margin: "0 auto 24px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
                 Sync your Twitch VODs, pick one, and our AI will score your stream 0–100 with a coaching report that tells you exactly what to fix.
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
           {[
-            { n: "01", t: "Sync from Twitch", b: "One click. We pull your VOD library — read-only, no setup." },
+            { n: "01", t: "Sync from Twitch", b: "One click. We pull your VOD library, read-only, no setup." },
             { n: "02", t: "AI watches every minute", b: "Scored on energy, engagement, consistency, and content." },
             { n: "03", t: "Get your coach report", b: "Stream story, priority fix, 3 strengths, 3 missions for next stream." },
           ].map((s) => (
@@ -260,7 +260,7 @@ export default async function DashboardPage() {
               <GradientWords text={latestRecommendation || "Open your latest report to see what to fix."} />
             </h2>
             <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
-              From your latest stream — <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
+              From your latest stream: <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
             </p>
             <div className="row gap-sm" style={{ marginTop: 6, flexWrap: "wrap" }}>
               {delta !== null && (
@@ -358,7 +358,7 @@ export default async function DashboardPage() {
               </svg>
             ) : (
               <p style={{ marginTop: 14, fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: "20px 0" }}>
-                One stream analyzed — analyze a few more to see your trend.
+                One stream analyzed. analyze a few more to see your trend.
               </p>
             )}
           </div>
@@ -458,7 +458,7 @@ export default async function DashboardPage() {
                   </td>
                   <td className="mono" style={{ fontSize: 12 }}>{formatDate(s.analyzed_at ?? s.created_at)}</td>
                   <td className="mono" style={{ fontSize: 12 }}>{formatDuration(s.duration_seconds)}</td>
-                  <td>{moments > 0 ? <span className="chip b">{moments} clips</span> : <span style={{ color: "var(--ink-3)" }}>—</span>}</td>
+                  <td>{moments > 0 ? <span className="chip b">{moments} clips</span> : <span style={{ color: "var(--ink-3)" }}>...</span>}</td>
                   <td style={{ textAlign: "right" }}>
                     <div className="score-pill" style={{ color: scoreColorVar(score), justifyContent: "flex-end" }}>
                       {score}<small>/100</small>

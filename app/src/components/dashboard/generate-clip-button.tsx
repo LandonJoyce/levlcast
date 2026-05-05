@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -145,7 +145,7 @@ export function GenerateClipButton({
   }
 
   if (done) {
-    return <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Queued — generating…</span>;
+    return <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Queued, generating…</span>;
   }
 
   if (hasProcessing && !generating) {

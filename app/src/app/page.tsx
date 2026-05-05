@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import FaqAccordion from "@/components/FaqAccordion";
 import StreamerMarquee from "@/components/landing/StreamerMarquee";
 
@@ -21,8 +21,8 @@ const faqItems = [
   { q: "How does the analysis work?", a: "You connect your Twitch account, sync your VODs, and hit Analyze. We pull the audio from your stream, run it through our transcription pipeline, and Claude reads the full transcript to find your best moments and weakest points. The whole thing takes about 5 minutes for a 2-hour stream." },
   { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
   { q: "Is it actually free?", a: "Yeah. One full VOD analysis and 1 clip per month, permanently. No trial period, no credit card, no expiry. If you want more than that, that's what Pro is for." },
-  { q: "Does it work for my channel?", a: "Any public Twitch channel works — partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
-  { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast — the title and description come from the report. Edit them if you want, or just tap post." },
+  { q: "Does it work for my channel?", a: "Any public Twitch channel works: partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
+  { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast. The title and description come from the report. Edit them if you want, or just tap post." },
 ];
 
 /* ─── Page ─── */
@@ -202,7 +202,7 @@ export default async function LandingPage() {
               </div>
               <div className="ll-ss-frame">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/la/ss-stream-recap.png" alt="Since Last Stream — sub-score delta grid" className="ll-ss-crop" />
+                <img src="/la/ss-stream-recap.png" alt="Since Last Stream: sub-score delta grid" className="ll-ss-crop" />
               </div>
             </div>
             <div className="ll-ss-panel">

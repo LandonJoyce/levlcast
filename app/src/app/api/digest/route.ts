@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET  /api/digest — returns the user's latest weekly digest + history.
  * POST /api/digest — generates a digest for the current user immediately.
  *
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
     }
 
     const healthSummary = burnout?.insight || (burnout?.score !== undefined
-      ? (burnout.score <= 25 ? "You're in good shape." : burnout.score <= 45 ? "A few minor signals, nothing concerning." : "Some fatigue signals — check your Health card.")
+      ? (burnout.score <= 25 ? "You're in good shape." : burnout.score <= 45 ? "A few minor signals, nothing concerning." : "Some fatigue signals. Check your Health card.")
       : null);
     const contentSummary = content?.insight || (content?.top_category ? `Your ${content.top_category} content performed best recently.` : null);
     const collabSummary = collabCount > 0 ? `${collabCount} new collab match${collabCount > 1 ? "es" : ""} waiting for you.` : null;
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
           content: `You are a streamer's personal manager writing their weekly digest.
 
 Data:
-- Streams this week: ${streamsCount}${usingFallback ? " (none this week — context from recent past streams below)" : `, total ${totalDurationMin} minutes`}
+- Streams this week: ${streamsCount}${usingFallback ? " (none this week, using context from recent past streams below)" : `, total ${totalDurationMin} minutes`}
 ${usingFallback ? `- Recent stream context: avg score ${avgScore || "N/A"}, ${peaksFound} peaks found across last ${vodsForDigest.length} streams` : `- Avg coach score: ${avgScore || "N/A"}, best: ${bestScore || "N/A"}\n- Peaks found: ${peaksFound}`}
 - Clips generated this week: ${clipsGenerated}
 - Follower change: ${followerDelta >= 0 ? "+" : ""}${followerDelta}
@@ -175,7 +175,7 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
       if (parsed.actions) actionItems = parsed.actions;
     } catch {
       if (avgScore && avgScore < 70) actionItems.push("Review your latest coach report for quick wins.");
-      if (peaksFound > 0 && clipsGenerated === 0) actionItems.push("You have peaks waiting — generate some clips.");
+      if (peaksFound > 0 && clipsGenerated === 0) actionItems.push("You have peaks waiting. Generate some clips.");
     }
 
     await admin.from("weekly_digests").upsert(

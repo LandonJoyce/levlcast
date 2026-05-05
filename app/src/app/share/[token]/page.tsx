@@ -19,10 +19,10 @@ export async function generateMetadata(
 
   const report = vod.coach_report as any;
   const name = (vod.profiles as any)?.twitch_display_name ?? "Streamer";
-  const score = report?.overall_score ?? "—";
+  const score = report?.overall_score ?? "?";
 
   return {
-    title: `${name}'s Stream Report — ${score}/100 | LevlCast`,
+    title: `${name}'s Stream Report: ${score}/100 | LevlCast`,
     description: report?.recommendation ?? "AI-powered stream coaching report.",
     openGraph: {
       title: `${name} scored ${score}/100 on LevlCast`,
@@ -150,7 +150,7 @@ export default async function SharePage({
               color: report.viewer_retention_risk === "low" ? "#22c55e"
                 : report.viewer_retention_risk === "medium" ? "#eab308" : "#ef4444"
             }}>
-              {report.viewer_retention_risk ?? "—"}
+              {report.viewer_retention_risk ?? "unknown"}
             </p>
             <p className="text-xs text-muted mt-1">Retention Risk</p>
           </div>
@@ -183,7 +183,7 @@ export default async function SharePage({
         {/* CTA */}
         <div className="text-center border border-border rounded-2xl p-6 bg-surface">
           <p className="font-bold mb-1">Want a report like this?</p>
-          <p className="text-sm text-muted mb-4">LevlCast analyzes your Twitch VODs and finds your best clip moments — free to try.</p>
+          <p className="text-sm text-muted mb-4">LevlCast analyzes your Twitch VODs and finds your best clip moments, free to try.</p>
           <a
             href="https://www.levlcast.com"
             className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-opacity"

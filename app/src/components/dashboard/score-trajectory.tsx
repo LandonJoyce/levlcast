@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 interface TrajectoryPoint {
   score: number;
@@ -85,7 +85,7 @@ export function ScoreTrajectory({ points }: { points: TrajectoryPoint[] }) {
           fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
           color: "#6F7C95", letterSpacing: "0.1em", textTransform: "uppercase",
         }}>
-          {N} streams — <span style={{ color: trendColor }}>{trendItalic}</span>
+          {N} streams, <span style={{ color: trendColor }}>{trendItalic}</span>
         </span>
       </div>
 

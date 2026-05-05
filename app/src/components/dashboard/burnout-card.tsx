@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { HeartPulse, TrendingDown, TrendingUp, Minus, ChevronDown, ChevronUp, Lock } from "lucide-react";
@@ -69,7 +69,7 @@ function signalExplain(label: string, value: number): string {
     "Viewer Retention": "Are viewers at risk of dropping off?",
     "Follower Growth": "Is your follower count still growing?",
   };
-  return `${status} — ${descriptions[label] || ""}`;
+  return `${status} ${descriptions[label] || ""}`;
 }
 
 export function BurnoutCard() {
@@ -108,7 +108,7 @@ export function BurnoutCard() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white mb-1">Burnout Monitoring is Pro</p>
-              <p className="text-xs text-muted leading-relaxed">Your manager tracks energy, frequency, and health signals weekly — upgrade to see your report.</p>
+              <p className="text-xs text-muted leading-relaxed">Your manager tracks energy, frequency, and health signals weekly upgrade to see your report.</p>
             </div>
             <button
               onClick={() => setUpgradeOpen(true)}
@@ -121,7 +121,7 @@ export function BurnoutCard() {
         <UpgradeModal
           isOpen={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
-          reason="Upgrade to Pro to unlock Burnout Monitoring — your manager will track your energy, stream frequency, and health signals every week."
+          reason="Upgrade to Pro to unlock Burnout Monitoring your manager will track your energy, stream frequency, and health signals every week."
         />
       </>
     );
@@ -165,7 +165,7 @@ export function BurnoutCard() {
         />
       </div>
 
-      {/* Insight — always visible */}
+      {/* Insight always visible */}
       <p className="text-sm text-white/80 leading-relaxed">{insight}</p>
 
       {/* Expanded */}
@@ -177,7 +177,7 @@ export function BurnoutCard() {
             <p className="text-sm text-white/90 leading-relaxed">{recommendation}</p>
           </div>
 
-          {/* Signal breakdown — human readable */}
+          {/* Signal breakdown human readable */}
           <div>
             <p className="text-xs font-medium text-muted mb-3">What We're Watching</p>
             <div className="space-y-2">

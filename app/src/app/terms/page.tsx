@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -55,7 +55,7 @@ export default function TermsPage() {
               LevlCast offers a free tier and a paid Pro tier at $9.99/month. Subscriptions renew automatically unless cancelled before the renewal date.
             </p>
             <p>
-              Payments are processed securely via PayPal (web) and RevenueCat (iOS). We do not store your payment details. Refunds are handled on a case-by-case basis — contact us at support@levlcast.com.
+              Payments are processed securely via PayPal (web) and RevenueCat (iOS). We do not store your payment details. Refunds are handled on a case-by-case basis contact us at support@levlcast.com.
             </p>
           </section>
 

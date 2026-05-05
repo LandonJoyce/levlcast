@@ -1,26 +1,26 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Twitch VOD Analyzer — AI Reviews Your Stream Automatically",
+  title: "Twitch VOD Analyzer AI Reviews Your Stream Automatically",
   description:
-    "Upload your Twitch VOD and get a scored AI breakdown in minutes. Dead air, slow openings, weak engagement — exact timestamps, honest feedback. Free to start.",
+    "Upload your Twitch VOD and get a scored AI breakdown in minutes. Dead air, slow openings, weak engagement exact timestamps, honest feedback. Free to start.",
   alternates: { canonical: "/twitch-vod-analyzer" },
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com/twitch-vod-analyzer",
-    title: "Twitch VOD Analyzer — AI Reviews Your Stream Automatically",
+    title: "Twitch VOD Analyzer AI Reviews Your Stream Automatically",
     description:
-      "AI transcribes your VOD, scores every moment, and tells you specifically what to fix. Not generic tips — real notes on your actual stream.",
+      "AI transcribes your VOD, scores every moment, and tells you specifically what to fix. Not generic tips real notes on your actual stream.",
     siteName: "LevlCast",
     images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Twitch VOD Analyzer — AI Reviews Your Stream",
+    title: "Twitch VOD Analyzer AI Reviews Your Stream",
     description:
       "AI transcribes your VOD, scores every moment, and tells you exactly what to fix.",
     images: ["/opengraph-image"],
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 const capabilities = [
   {
     title: "Audio transcription",
-    desc: "Deepgram nova-3 transcribes your full stream with speaker diarization — so game NPCs, music, and co-streamer audio don't pollute the analysis.",
+    desc: "Deepgram nova-3 transcribes your full stream with speaker diarization so game NPCs, music, and co-streamer audio don't pollute the analysis.",
     accent: "bg-purple-500",
   },
   {
@@ -40,7 +40,7 @@ const capabilities = [
   },
   {
     title: "Dead-air detection",
-    desc: "Silence gaps are flagged with exact timestamps. You see the ones your viewers felt — and the habits behind them.",
+    desc: "Silence gaps are flagged with exact timestamps. You see the ones your viewers felt and the habits behind them.",
     accent: "bg-red-500",
   },
   {
@@ -55,11 +55,11 @@ const differentiators = [
   "Speaker diarization strips background audio before AI review",
   "Specific timestamps, not vague advice",
   "Scored 0–100 so you can track progress stream over stream",
-  "Works on any Twitch channel — no overlay or setup needed",
+  "Works on any Twitch channel no overlay or setup needed",
 ];
 
 const steps = [
-  { num: "01", label: "Connect Twitch", desc: "One-tap OAuth. We read your VOD library only — no chat bot, no overlay install." },
+  { num: "01", label: "Connect Twitch", desc: "One-tap OAuth. We read your VOD library only no chat bot, no overlay install." },
   { num: "02", label: "Pick a VOD", desc: "Choose any past broadcast. The analyzer streams audio directly from Twitch." },
   { num: "03", label: "Get your report", desc: "In 2–5 minutes you get a scored breakdown with timestamps, moments, and a priority to fix." },
   { num: "04", label: "Act on it", desc: "Take one specific goal into your next stream. Analyze again. Watch the score climb." },
@@ -68,7 +68,7 @@ const steps = [
 const faqs = [
   {
     q: "How accurate is a Twitch VOD analyzer if your stream has game audio?",
-    a: "Most analyzers choke on background audio — game NPCs, music, co-streamers. LevlCast runs Deepgram with speaker diarization and filters to the dominant speaker before the AI reviews anything. Your voice gets analyzed, not the game.",
+    a: "Most analyzers choke on background audio game NPCs, music, co-streamers. LevlCast runs Deepgram with speaker diarization and filters to the dominant speaker before the AI reviews anything. Your voice gets analyzed, not the game.",
   },
   {
     q: "What does the VOD analyzer actually check?",
@@ -76,7 +76,7 @@ const faqs = [
   },
   {
     q: "Is the Twitch VOD analyzer really free?",
-    a: "Yes — no credit card required. The free plan includes one VOD analysis per month. Pro is $9.99/month for 20 analyses and 20 clips, founding-member pricing.",
+    a: "Yes no credit card required. The free plan includes one VOD analysis per month. Pro is $9.99/month for 20 analyses and 20 clips, founding-member pricing.",
   },
   {
     q: "How long does VOD analysis take?",
@@ -142,7 +142,7 @@ export default function VodAnalyzerPage() {
                   <span className="text-gradient">Tells you what to fix.</span>
                 </h1>
                 <p className="text-base text-muted max-w-[520px] mb-8 leading-relaxed">
-                  LevlCast is a Twitch VOD analyzer that transcribes your stream, scores every moment, and gives you a coaching report with exact timestamps. Dead air, slow openings, weak engagement — specific to your actual broadcast, not generic tips.
+                  LevlCast is a Twitch VOD analyzer that transcribes your stream, scores every moment, and gives you a coaching report with exact timestamps. Dead air, slow openings, weak engagement specific to your actual broadcast, not generic tips.
                 </p>
                 <div className="flex flex-col sm:flex-row items-start gap-4 mb-4">
                   <Link
@@ -206,7 +206,7 @@ export default function VodAnalyzerPage() {
                   Most &ldquo;analyzers&rdquo; just read your chat.
                 </h2>
                 <p className="text-muted text-sm mb-6 leading-relaxed">
-                  Chat-only tools miss the entire point. The moments that grow a channel — a clean clutch, a funny aside, a genuine reaction — often happen with zero chat activity. You need a tool that hears what actually happened.
+                  Chat-only tools miss the entire point. The moments that grow a channel a clean clutch, a funny aside, a genuine reaction often happen with zero chat activity. You need a tool that hears what actually happened.
                 </p>
                 <ul className="space-y-3">
                   {differentiators.map((d) => (
@@ -281,7 +281,7 @@ export default function VodAnalyzerPage() {
               </Link>
               <Link href="/twitch-stream-coach" className="card p-6 hover:border-accent/25 transition-colors block">
                 <h3 className="font-bold text-base mb-2">AI Stream Coach &rarr;</h3>
-                <p className="text-sm text-muted leading-relaxed">Go deeper on the coaching side — what your weekly brief looks like.</p>
+                <p className="text-sm text-muted leading-relaxed">Go deeper on the coaching side what your weekly brief looks like.</p>
               </Link>
               <Link href="/how-to-grow-on-twitch" className="card p-6 hover:border-accent/25 transition-colors block">
                 <h3 className="font-bold text-base mb-2">How to Grow on Twitch &rarr;</h3>

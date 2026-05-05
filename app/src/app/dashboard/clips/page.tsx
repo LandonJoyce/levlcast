@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+﻿import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
@@ -174,7 +174,7 @@ export default async function ClipsPage({
       {/* Header */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
-          <span className="page-eyebrow">§ 03 · Highlights</span>
+          <span className="page-eyebrow">Â§ 03 Â· Highlights</span>
           <h1 className="page-title">Clips</h1>
           <p className="page-sub">Auto-detected moments, ready to clip and post.</p>
         </div>
@@ -213,7 +213,7 @@ export default async function ClipsPage({
             <div className="tabs">
               {TAB_ITEMS.map(([k, l, c]) => (
                 <Link key={k} href={`/dashboard/clips${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
-                  {l} · {c}
+                  {l} Â· {c}
                 </Link>
               ))}
             </div>
@@ -234,7 +234,7 @@ export default async function ClipsPage({
                     <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--blue) 8%, var(--surface))" }}>
                       <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
                       <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-                        <span className="mono" style={{ fontSize: 11, color: "var(--blue)", letterSpacing: ".06em" }}>generating…</span>
+                        <span className="mono" style={{ fontSize: 11, color: "var(--blue)", letterSpacing: ".06em" }}>generatingâ€¦</span>
                       </span>
                     </div>
                     <div className="clip-meta">
@@ -242,7 +242,7 @@ export default async function ClipsPage({
                       <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
                     </div>
                     <div style={{ padding: "0 12px 12px" }}>
-                      <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Processing…</span>
+                      <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Processingâ€¦</span>
                     </div>
                   </div>
                 ))}
@@ -296,7 +296,7 @@ export default async function ClipsPage({
           {(tab === "all" || tab === "ready") && failedClips.length > 0 && (
             <>
               <div className="row" style={{ alignItems: "center", gap: 14 }}>
-                <span className="mono-label" style={{ color: "var(--danger)" }}>Failed — tap to retry</span>
+                <span className="mono-label" style={{ color: "var(--danger)" }}>Failed â€” tap to retry</span>
                 <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
@@ -320,13 +320,13 @@ export default async function ClipsPage({
             <>
               {showReadyAndPending && filteredReady.length > 0 && (
                 <div className="row" style={{ alignItems: "center", gap: 14, marginTop: 8 }}>
-                  <span className="mono-label">Pending — moments to clip</span>
+                  <span className="mono-label">Pending â€” moments to clip</span>
                   <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
                 </div>
               )}
               {ungeneratedPeaks.length === 0 && showPending ? (
                 <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-                  <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No pending moments — all detected clips have been generated.</p>
+                  <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No pending moments â€” all detected clips have been generated.</p>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
@@ -338,7 +338,7 @@ export default async function ClipsPage({
                       </div>
                       <div className="clip-meta">
                         <b>{p.title}</b>
-                        <span>{categoryLabel(p.category)} · {p.vodTitle}</span>
+                        <span>{categoryLabel(p.category)} Â· {p.vodTitle}</span>
                       </div>
                       <div style={{ padding: "0 12px 12px" }}>
                         <GenerateClipButton vodId={p.vodId} peakIndex={p.peakIndex} hasProcessing={hasProcessing} clipTitle={p.title} />
@@ -354,3 +354,4 @@ export default async function ClipsPage({
     </>
   );
 }
+

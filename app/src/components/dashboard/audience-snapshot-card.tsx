@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * AudienceSnapshotCard — shown in place of ChatPulseCard when chat
@@ -56,7 +56,7 @@ export function AudienceSnapshotCard({ buckets }: { buckets: ChatBucket[] }) {
   let headline: string;
   let body: string;
   if (totalMessages === 0) {
-    headline = "Quiet stream — no chat caught.";
+    headline = "Quiet stream. No chat caught.";
     body = "Either chat was empty or replay didn't capture it. Build chat habits early: ask a direct question every 15-20 minutes, and pause for an answer.";
   } else if (totalMessages < 10) {
     headline = "A few real viewers showed up.";

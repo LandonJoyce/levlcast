@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "How to Grow on Twitch in 2026 — The Honest Guide",
+  title: "How to Grow on Twitch in 2026 The Honest Guide",
   description:
-    "The honest version of how to grow on Twitch in 2026. No gimmicks, no bots, no follow-for-follow. Just the tactics that actually move the needle — and the ones that don't.",
+    "The honest version of how to grow on Twitch in 2026. No gimmicks, no bots, no follow-for-follow. Just the tactics that actually move the needle and the ones that don't.",
   alternates: { canonical: "/how-to-grow-on-twitch" },
   openGraph: {
     type: "article",
     url: "https://www.levlcast.com/how-to-grow-on-twitch",
-    title: "How to Grow on Twitch in 2026 — The Honest Guide",
+    title: "How to Grow on Twitch in 2026 The Honest Guide",
     description:
       "Five things that actually work for honest Twitch growth in 2026. Real tactics, not gimmicks.",
     siteName: "LevlCast",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "How to Grow on Twitch in 2026",
     description:
-      "The honest guide to Twitch growth — real tactics, no gimmicks.",
+      "The honest guide to Twitch growth real tactics, no gimmicks.",
     images: ["/opengraph-image"],
   },
 };
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "How long does it realistically take to grow on Twitch?",
-    a: "Affiliate status (50 followers, 3 average viewers) is achievable in 2–4 months of consistent streaming. Partner is a 1–3 year arc for most who make it. If you're trying to go full-time in under a year without an existing audience, the odds are against you — and that's not a you problem, that's the math.",
+    a: "Affiliate status (50 followers, 3 average viewers) is achievable in 2–4 months of consistent streaming. Partner is a 1–3 year arc for most who make it. If you're trying to go full-time in under a year without an existing audience, the odds are against you and that's not a you problem, that's the math.",
   },
   {
     q: "Is it better to stream every day or on a schedule?",
@@ -45,16 +45,16 @@ const faqs = [
   },
   {
     q: "What's the fastest way to find out what's holding my stream back?",
-    a: "Get feedback on your actual VOD — not generic advice. Most streamers plateau because they can't see their own blind spots (dead air, weak openings, not responding to chat). An AI stream coach or an honest friend watching a VOD is faster than 50 more broadcasts.",
+    a: "Get feedback on your actual VOD not generic advice. Most streamers plateau because they can't see their own blind spots (dead air, weak openings, not responding to chat). An AI stream coach or an honest friend watching a VOD is faster than 50 more broadcasts.",
   },
 ];
 
 const articleStructuredData = {
   "@context": "https://schema.org",
   "@type": "Article",
-  headline: "How to Grow on Twitch in 2026 — The Honest Guide",
+  headline: "How to Grow on Twitch in 2026 The Honest Guide",
   description:
-    "The honest version of how to grow on Twitch in 2026. No gimmicks, no bots — the tactics that actually move the needle, and the ones that don't.",
+    "The honest version of how to grow on Twitch in 2026. No gimmicks, no bots the tactics that actually move the needle, and the ones that don't.",
   datePublished: "2026-04-24",
   dateModified: "2026-04-24",
   author: {
@@ -110,7 +110,7 @@ export default function HowToGrowPage() {
               <span className="text-gradient">in 2026.</span>
             </h1>
             <p className="text-lg text-muted/90 leading-relaxed">
-              The honest version. No gimmicks, no bots, no follow-for-follow. Five things that actually move the needle — and the ones that don&apos;t, so you stop wasting cycles on them.
+              The honest version. No gimmicks, no bots, no follow-for-follow. Five things that actually move the needle and the ones that don&apos;t, so you stop wasting cycles on them.
             </p>
           </div>
         </section>
@@ -125,7 +125,7 @@ export default function HowToGrowPage() {
                 Most Twitch growth advice is either recycled from 2019 or written by people who&apos;ve never streamed. The reality in 2026: the algorithm doesn&apos;t save you, the raid train is mostly dead, and the streamers actually climbing are doing a handful of unglamorous things consistently.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                Here&apos;s what those things are — in the order of what moves the needle most.
+                Here&apos;s what those things are in the order of what moves the needle most.
               </p>
             </section>
 
@@ -139,7 +139,7 @@ export default function HowToGrowPage() {
                 The streamers who grow are the ones who watch their VODs and fix what they find. The streamers who plateau are the ones who never watch back because &ldquo;that was a rough one.&rdquo; Especially then.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                If watching three-hour VODs back isn&apos;t realistic, use a <Link href="/twitch-vod-analyzer" className="text-accent-light hover:text-white underline">Twitch VOD analyzer</Link> or <Link href="/twitch-stream-coach" className="text-accent-light hover:text-white underline">AI stream coach</Link> to surface the specific moments that hurt you — dead air with timestamps, weak openings, retention drops. Five minutes of focused review beats three hours of self-critique.
+                If watching three-hour VODs back isn&apos;t realistic, use a <Link href="/twitch-vod-analyzer" className="text-accent-light hover:text-white underline">Twitch VOD analyzer</Link> or <Link href="/twitch-stream-coach" className="text-accent-light hover:text-white underline">AI stream coach</Link> to surface the specific moments that hurt you dead air with timestamps, weak openings, retention drops. Five minutes of focused review beats three hours of self-critique.
               </p>
             </section>
 
@@ -167,7 +167,7 @@ export default function HowToGrowPage() {
                 Three predictable sessions a week beats seven chaotic ones. Especially because the seven-a-week schedule gets you burnt out in three months and then you disappear for two, and your small audience finds someone else.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                Burnout is growth&apos;s biggest enemy and it&apos;s invisible until you&apos;re already in it. Watch your energy curve across streams. If it&apos;s dropping session over session, you&apos;re not lazy — you&apos;re overextending. Pull back before the break is forced on you.
+                Burnout is growth&apos;s biggest enemy and it&apos;s invisible until you&apos;re already in it. Watch your energy curve across streams. If it&apos;s dropping session over session, you&apos;re not lazy you&apos;re overextending. Pull back before the break is forced on you.
               </p>
             </section>
 
@@ -175,13 +175,13 @@ export default function HowToGrowPage() {
             <section className="mb-14">
               <h2 className="text-3xl font-extrabold tracking-tight mb-4">4. Stop guessing. Use your own data.</h2>
               <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The streamer who can&apos;t tell you their best-performing content category is leaving growth on the table. You have data — you just haven&apos;t looked at it. Which streams scored your highest moments? What category were they? What time of day? How long into the session?
+                The streamer who can&apos;t tell you their best-performing content category is leaving growth on the table. You have data you just haven&apos;t looked at it. Which streams scored your highest moments? What category were they? What time of day? How long into the session?
               </p>
               <p className="text-base text-muted/90 leading-[1.8] mb-4">
                 The pattern is usually there. Your best content is probably concentrated in 2–3 categories, at a specific point in your stream, when your energy is at a certain level. Lean into it.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                This doesn&apos;t mean abandoning what you love streaming. It means noticing which things resonate and giving them more oxygen — more airtime, more clips, more room to breathe in your scene.
+                This doesn&apos;t mean abandoning what you love streaming. It means noticing which things resonate and giving them more oxygen more airtime, more clips, more room to breathe in your scene.
               </p>
             </section>
 
@@ -189,10 +189,10 @@ export default function HowToGrowPage() {
             <section className="mb-14">
               <h2 className="text-3xl font-extrabold tracking-tight mb-4">5. Show up like you&apos;re already bigger</h2>
               <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                This sounds vague but it&apos;s specific. The streamer at 10 average viewers who opens the stream like it&apos;s a real show — clean intro, energy up, engaging the three people there — reads like a 500-viewer channel having a slow day. They get treated that way. They grow faster.
+                This sounds vague but it&apos;s specific. The streamer at 10 average viewers who opens the stream like it&apos;s a real show clean intro, energy up, engaging the three people there reads like a 500-viewer channel having a slow day. They get treated that way. They grow faster.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                The streamer at 10 average viewers who waits for an audience before performing — who does the &ldquo;empty chat today&rdquo; joke in the first minute, who doesn&apos;t bother with a proper opening because &ldquo;no one&apos;s watching yet&rdquo; — stays at 10. Forever. The person who would have been your 11th viewer clicked away in the first 20 seconds.
+                The streamer at 10 average viewers who waits for an audience before performing who does the &ldquo;empty chat today&rdquo; joke in the first minute, who doesn&apos;t bother with a proper opening because &ldquo;no one&apos;s watching yet&rdquo; stays at 10. Forever. The person who would have been your 11th viewer clicked away in the first 20 seconds.
               </p>
             </section>
 
@@ -207,10 +207,10 @@ export default function HowToGrowPage() {
                   <strong className="text-white">Chasing trending games.</strong> Unless you&apos;re genuinely good at it or genuinely interested, you&apos;re competing against 10,000 streamers for the same spillover audience. Better to be top 20 in a smaller category than bottom 1,000 in the biggest one.
                 </li>
                 <li>
-                  <strong className="text-white">Raid swaps with streamers nobody watches.</strong> Raiding each other back and forth doesn&apos;t produce new followers. The raid audience has to actually like what they see when they land on your channel — which loops back to sections 1–5.
+                  <strong className="text-white">Raid swaps with streamers nobody watches.</strong> Raiding each other back and forth doesn&apos;t produce new followers. The raid audience has to actually like what they see when they land on your channel which loops back to sections 1–5.
                 </li>
                 <li>
-                  <strong className="text-white">Asking for follows instead of earning them.</strong> &ldquo;Drop a follow if you&apos;re enjoying the stream&rdquo; is fine. Begging mid-clutch for a follow is a retention killer. People follow because they want to come back — make them want to come back first.
+                  <strong className="text-white">Asking for follows instead of earning them.</strong> &ldquo;Drop a follow if you&apos;re enjoying the stream&rdquo; is fine. Begging mid-clutch for a follow is a retention killer. People follow because they want to come back make them want to come back first.
                 </li>
               </ul>
             </section>
@@ -222,10 +222,10 @@ export default function HowToGrowPage() {
                 The hard part about these five tactics is that doing them consistently requires a system. Watching VODs back. Clipping highlights. Tracking what resonated. Noticing burnout. Holding a schedule.
               </p>
               <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                LevlCast is built for exactly this. It&apos;s an AI Twitch stream manager — it analyzes your VODs, generates clips from your best moments, scores every stream 0–100, tracks burnout, and tells you specifically what to fix before your next broadcast. The five things above, done for you, every session.
+                LevlCast is built for exactly this. It&apos;s an AI Twitch stream manager it analyzes your VODs, generates clips from your best moments, scores every stream 0–100, tracks burnout, and tells you specifically what to fix before your next broadcast. The five things above, done for you, every session.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                It&apos;s free to start. One VOD analysis a month, five clips — enough to try the system on your actual streams before committing.
+                It&apos;s free to start. One VOD analysis a month, five clips enough to try the system on your actual streams before committing.
               </p>
               <div className="mt-8">
                 <Link

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { X, Check, Lock } from "lucide-react";
@@ -152,7 +152,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
               boxShadow: loading ? "none" : "0 6px 20px -6px color-mix(in oklab, var(--blue) 60%, transparent)",
             }}
           >
-            {loading ? "Redirecting to checkout..." : "Upgrade to Pro — $9.99/month"}
+            {loading ? "Redirecting to checkout..." : "Upgrade to Pro: $9.99/month"}
           </button>
 
           {/* Stripe badge */}

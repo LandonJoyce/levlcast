@@ -1,11 +1,11 @@
-import { changelog, ChangeType } from "@/lib/changelog";
+﻿import { changelog, ChangeType } from "@/lib/changelog";
 import { ChangelogSeen } from "./changelog-seen";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
   title: "Patch Notes | LevlCast",
-  description: "LevlCast patch notes — what's new, fixed, and improved.",
+  description: "LevlCast patch notes: what's new, fixed, and improved.",
 };
 
 const TYPE_CONFIG: Record<ChangeType, { label: string; color: string; bg: string }> = {

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -98,7 +98,7 @@ export function SubscriptionSection({
               onClick={() => setUpgradeOpen(true)}
               className="bg-accent hover:opacity-85 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-opacity"
             >
-              Upgrade to Pro — $9.99/month
+              Upgrade to Pro $9.99/month
             </button>
           </div>
         ) : (
@@ -114,7 +114,7 @@ export function SubscriptionSection({
               <>
                 <p className="text-sm text-muted">You are on the Pro plan. Thank you for your support.</p>
 
-                {/* Stripe subscribers — Customer Portal */}
+                {/* Stripe subscribers Customer Portal */}
                 {hasStripeSubscription && (
                   <>
                     {portalError && <p className="text-xs text-red-400">{portalError}</p>}
@@ -129,7 +129,7 @@ export function SubscriptionSection({
                   </>
                 )}
 
-                {/* PayPal subscribers — manual instructions */}
+                {/* PayPal subscribers manual instructions */}
                 {hasPaypalSubscription && !hasStripeSubscription && (
                   <p className="text-sm text-muted">
                     You subscribed via PayPal. To cancel, go to{" "}

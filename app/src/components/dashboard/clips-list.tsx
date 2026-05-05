@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Sparkles, Clock } from "lucide-react";
@@ -74,7 +74,7 @@ export function ReadyClipsList({
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs text-muted flex-shrink-0">
                   <Clock size={11} />
-                  {clip.duration_seconds ?? "—"}s
+                  {clip.duration_seconds ?? "?"}s
                 </span>
               </div>
               <div className="bg-bg/50 rounded-lg px-3 py-2 mb-3">
@@ -122,7 +122,7 @@ export function FailedClipsList({ clips }: { clips: ClipRow[] }) {
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-sm">{clip.title}</p>
               <p className="text-xs text-red-400 mt-0.5">
-                {clip.failed_reason || "Generation failed — regenerate or delete."}
+                {clip.failed_reason || "Generation failed. Regenerate or delete."}
               </p>
             </div>
             <div className="flex items-center gap-3">

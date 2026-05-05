@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+﻿import { createClient } from "@/lib/supabase/server";
 import { getUserUsage, FREE_LIMITS, PRO_LIMITS } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
@@ -90,7 +90,7 @@ export default async function SettingsPage({
               </span>
             </div>
             <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-              @{profile?.twitch_login || "—"}{profile?.twitch_login && ` · twitch.tv/${profile.twitch_login}`}
+              @{profile?.twitch_login || "?"}{profile?.twitch_login && ` · twitch.tv/${profile.twitch_login}`}
             </span>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default async function SettingsPage({
               <div className="col" style={{ flex: 1, gap: 2 }}>
                 <b style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>Twitch</b>
                 <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  twitch.tv/{profile?.twitch_login || "—"} · auto-import on
+                  twitch.tv/{profile?.twitch_login || "?"} · auto-import on
                 </span>
               </div>
               <span className="chip g"><span className="d" /> connected</span>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/twitch.ts — Twitch API integration and VOD audio handling.
  *
  * WHAT THIS FILE DOES:
@@ -225,7 +225,7 @@ export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: stri
     console.error(`[twitch] getTwitchVodAudioUrl GQL errors:`, JSON.stringify(gqlData.errors).slice(0, 400));
   }
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
+  if (!token) throw new Error("Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or Twitch API may be temporarily down. Try again in a few minutes.");
 
   const usherParams = new URLSearchParams({
     allow_source: "true",
@@ -308,7 +308,7 @@ export async function downloadTwitchVodAudio(
   }
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
+  if (!token) throw new Error("Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or Twitch API may be temporarily down. Try again in a few minutes.");
 
   // Step 2: Get M3U8 master playlist
   const usherParams = new URLSearchParams({
@@ -669,7 +669,7 @@ export async function downloadTwitchVodVideo(
       // Tolerate at most 5% missing (effectively 0-1 segments for typical
       // 7-segment clip windows); above that, fail and let the user retry.
       if (missingPct > 5) {
-        throw new Error(`Twitch CDN dropped ${missing}/${buffers.length} segments (${missingPct.toFixed(0)}%) — clip would have timestamp gaps that break encoding. Try Regenerate; if it persists, the VOD source is incomplete.`);
+        throw new Error(`Twitch CDN dropped ${missing}/${buffers.length} segments (${missingPct.toFixed(0)}%). The clip would have timestamp gaps that break encoding. Try Regenerate; if it persists, the VOD source is incomplete.`);
       }
     }
 
@@ -734,7 +734,7 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
       console.error(`[twitch] streamTwitchVodAudio GQL errors for VOD ${vodId}:`, JSON.stringify(gqlData.errors).slice(0, 400));
     }
     const token = gqlData.data?.videoPlaybackAccessToken;
-    if (!token) throw new Error("Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or Twitch's API may be temporarily down. Try again in a few minutes.");
+    if (!token) throw new Error("Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or Twitch API may be temporarily down. Try again in a few minutes.");
 
     const usherParams = new URLSearchParams({
       allow_source: "true",
@@ -820,7 +820,7 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
       if (!success) {
         const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
         throw new Error(
-          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries — ${msg}. ` +
+          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries. ${msg}. ` +
           `Skipping it would misalign every subsequent caption timestamp; please retry.`
         );
       }
@@ -868,7 +868,7 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) {
     throw new Error(
-      "Twitch did not return a playback token — the VOD may be deleted, subscriber-only, or DMCA restricted. " +
+      "Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or DMCA restricted. " +
       "Check Twitch Video Producer to confirm the VOD is publicly accessible."
     );
   }
@@ -971,7 +971,7 @@ export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough 
       if (!success) {
         const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
         throw new Error(
-          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries — ${msg}. ` +
+          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries. ${msg}. ` +
           `Skipping it would misalign every subsequent caption timestamp; please retry.`
         );
       }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -112,7 +112,7 @@ export function WeeklyDigestSection() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <StatTile
               icon={<Sparkles size={12} className={scoreColor} />}
-              value={avgScore != null ? String(avgScore) : "—"}
+              value={avgScore != null ? String(avgScore) : "?"}
               label="Avg Score"
               valueClass={scoreColor}
               bgClass={`bg-gradient-to-b ${scoreBg}`}

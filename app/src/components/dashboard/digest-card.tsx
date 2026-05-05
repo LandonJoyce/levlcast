@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Newspaper, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, TrendingDown, Lock, RefreshCw } from "lucide-react";
@@ -69,7 +69,7 @@ export function DigestCard() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white mb-1">Weekly Digest is Pro</p>
-              <p className="text-xs text-muted leading-relaxed">Every Monday your manager sends a full week recap — streams, clips, follower growth, and your action plan.</p>
+              <p className="text-xs text-muted leading-relaxed">Every Monday your manager sends a full week recap streams, clips, follower growth, and your action plan.</p>
             </div>
             <button
               onClick={() => setUpgradeOpen(true)}
@@ -82,7 +82,7 @@ export function DigestCard() {
         <UpgradeModal
           isOpen={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
-          reason="Upgrade to Pro to unlock the Weekly Digest — every Monday your manager sends a full recap with your action plan for the week."
+          reason="Upgrade to Pro to unlock the Weekly Digest every Monday your manager sends a full recap with your action plan for the week."
         />
       </>
     );

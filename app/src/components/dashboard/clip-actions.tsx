@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { Download, Copy, Check, Youtube, Music, ExternalLink, Trash2, RotateCcw, Loader2 } from "lucide-react";
@@ -289,7 +289,7 @@ export function PostToTikTok({
   return (
     <span className="inline-flex items-center gap-1.5 text-xs opacity-35 cursor-not-allowed select-none">
       <Music size={12} />
-      TikTok — coming soon
+      TikTok coming soon
     </span>
   );
 

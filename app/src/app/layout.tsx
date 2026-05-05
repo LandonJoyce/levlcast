@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -24,11 +24,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.levlcast.com"),
   title: {
-    default: "LevlCast — Your Personal Streaming Manager",
+    default: "LevlCast â€” Your Personal Streaming Manager",
     template: "%s | LevlCast",
   },
   description:
-    "LevlCast watches your Twitch VODs and tells you exactly what to fix — dead air, slow openings, weak engagement. Real coaching for streamers growing the honest way. Free to start.",
+    "LevlCast watches your Twitch VODs and tells you exactly what to fix â€” dead air, slow openings, weak engagement. Real coaching for streamers growing the honest way. Free to start.",
   keywords: [
     "twitch stream manager",
     "personal streaming manager",
@@ -57,22 +57,22 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast — AI Stream Coach for Twitch Streamers",
+    title: "LevlCast â€” AI Stream Coach for Twitch Streamers",
     description:
-      "AI coach that reviews your Twitch VODs and tells you specifically what to fix — dead air, slow openings, weak engagement. Real feedback, real growth.",
+      "AI coach that reviews your Twitch VODs and tells you specifically what to fix â€” dead air, slow openings, weak engagement. Real feedback, real growth.",
     siteName: "LevlCast",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "LevlCast — Your Personal Stream Manager",
+        alt: "LevlCast â€” Your Personal Stream Manager",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "LevlCast — AI Stream Coach for Twitch Streamers",
+    title: "LevlCast â€” AI Stream Coach for Twitch Streamers",
     description:
       "AI coach that reviews your Twitch VODs and tells you specifically what to fix. Real feedback, real growth.",
     site: "@levlcast",
@@ -118,7 +118,7 @@ const faqStructuredData = {
       name: "How long does Twitch VOD analysis take?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Most VODs are analyzed within 2–5 minutes depending on stream length. We process audio transcription and AI peak detection in parallel so you're not waiting long.",
+        text: "Most VODs are analyzed within 2â€“5 minutes depending on stream length. We process audio transcription and AI peak detection in parallel so you're not waiting long.",
       },
     },
     {
@@ -142,7 +142,7 @@ const faqStructuredData = {
       name: "Is LevlCast free to use?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes — no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips total. Upgrade to Pro for 20 VOD analyses and 20 clips per month.",
+        text: "Yes â€” no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips total. Upgrade to Pro for 20 VOD analyses and 20 clips per month.",
       },
     },
     {
@@ -172,7 +172,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        {/* PWA — iOS splash screens & icons */}
+        {/* PWA â€” iOS splash screens & icons */}
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
@@ -208,3 +208,4 @@ export default function RootLayout({
     </html>
   );
 }
+

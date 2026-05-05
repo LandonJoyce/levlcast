@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET /api/burnout — returns the user's burnout history.
  *
  * Response: { latest: BurnoutSnapshot | null, history: BurnoutSnapshot[] }

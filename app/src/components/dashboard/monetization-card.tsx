@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { TrendingUp, ChevronDown, ChevronUp, Zap } from "lucide-react";
@@ -56,7 +56,7 @@ function fallbackRecommendation(report: ContentReport): string {
   const top = cats[0];
   const label = CATEGORY_LABELS[top.category] || top.category;
   if (cats.length === 1) return `You've been consistent with ${label.toLowerCase()} content. Try mixing in a different style to see how your audience responds.`;
-  return `Double down on ${label.toLowerCase()} content this week — it's driving the most growth for your channel.`;
+  return `Double down on ${label.toLowerCase()} content this week. It's driving the most growth for your channel.`;
 }
 
 export function MonetizationCard() {

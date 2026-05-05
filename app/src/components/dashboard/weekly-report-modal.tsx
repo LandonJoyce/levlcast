@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -93,7 +93,7 @@ export function WeeklyReportModal() {
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-2.5">
             <StatBox label="Streams" value={String(digest.streams_count || 0)} />
-            <StatBox label="Avg Score" value={digest.avg_score != null ? String(digest.avg_score) : "—"} />
+            <StatBox label="Avg Score" value={digest.avg_score != null ? String(digest.avg_score) : "?"} />
             <StatBox
               label="Followers"
               value={`${followerDelta >= 0 ? "+" : ""}${followerDelta}`}

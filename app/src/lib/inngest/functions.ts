@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/inngest/functions.ts — background jobs for LevlCast.
  *
  * FUNCTIONS:
@@ -130,7 +130,7 @@ export const analyzeVod = inngest.createFunction(
       const segments = ((): TranscriptSegment[] => {
         const merged = allChunkSegments.flat();
         console.log(`[analyze] Transcription complete: ${merged.length} segments, ${allWords.length} words across ${chunks.length} chunks`);
-        if (merged.length === 0) throw new Error("No speech detected in VOD — the video may be muted or silent");
+        if (merged.length === 0) throw new Error("No speech detected in VOD. The video may be muted or silent.");
 
         // Validate coverage — if the last word ends suspiciously early the audio
         // stream was likely truncated, which would shift all subsequent caption timestamps.
@@ -145,7 +145,7 @@ export const analyzeVod = inngest.createFunction(
         if (vodDuration > 0 && lastWordEnd > 0 && lastWordEnd < vodDuration * 0.85) {
           console.warn(
             `[analyze] Transcript ends at ${Math.round(lastWordEnd)}s but VOD is ${Math.round(vodDuration)}s ` +
-            `(${Math.round((lastWordEnd / vodDuration) * 100)}% coverage) — captions for late moments may be absent`
+            `(${Math.round((lastWordEnd / vodDuration) * 100)}% coverage). Captions for late moments may be absent`
           );
         }
         return merged;
@@ -204,7 +204,7 @@ export const analyzeVod = inngest.createFunction(
         ? segments.filter(s => s.start < endSeconds && s.end > startSeconds)
         : segments;
       if (filtered.length === 0) {
-        throw new Error("No speech found in the selected time range — try a wider range");
+        throw new Error("No speech found in the selected time range. Try a wider range.");
       }
 
       const peaks = await step.run("detect-peaks", async () => {
@@ -248,7 +248,7 @@ export const analyzeVod = inngest.createFunction(
         console.log(`[analyze] Stage 3/4: generating coach report (${peaks.length} peaks, ${priorReports.length} prior reports)`);
         const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined);
         if (!report) {
-          throw new Error("Failed to generate coaching report — AI returned invalid response");
+          throw new Error("Failed to generate coaching report. AI returned invalid response.");
         }
         console.log(`[analyze] Coach report generated: score=${report.overall_score}`);
         return report;
@@ -344,7 +344,7 @@ export const analyzeVod = inngest.createFunction(
         let title: string;
         if (score !== undefined && priorScore !== null && score > priorScore) {
           const delta = score - priorScore;
-          title = `Your score climbed ${delta > 0 ? "+" : ""}${delta} — now ${score}/100`;
+          title = `Your score climbed ${delta > 0 ? "+" : ""}${delta}, now ${score}/100`;
         } else if (score !== undefined && priorScore !== null && score < priorScore) {
           title = `New stream graded: ${score}/100`;
         } else if (score !== undefined) {
@@ -434,7 +434,7 @@ export const cleanupStuckVods = inngest.createFunction(
 
     await supabase
       .from("vods")
-      .update({ status: "failed", failed_reason: "Analysis timed out — please try again" })
+      .update({ status: "failed", failed_reason: "Analysis timed out. Please try again." })
       .in("id", stuck.map((v: { id: string }) => v.id));
 
     console.log(`[cleanup] Marked ${stuck.length} stuck VODs as failed`);
@@ -461,7 +461,7 @@ export const cleanupStuckClips = inngest.createFunction(
 
     await supabase
       .from("clips")
-      .update({ status: "failed", failed_reason: "Clip generation stalled — Twitch's CDN may be slow for this VOD. Hit Regenerate to try again." })
+      .update({ status: "failed", failed_reason: "Clip generation stalled. Twitch CDN may be slow for this VOD. Hit Regenerate to try again." })
       .in("id", stuck.map((c: { id: string }) => c.id));
 
     console.log(`[cleanup] Marked ${stuck.length} stuck clips as failed`);
@@ -532,7 +532,7 @@ export const generateClip = inngest.createFunction(
             download = await downloadTwitchVodVideo(twitchVodId, peak.start, peak.end, twitchUserToken)
               .catch((e) => { throw new NonRetriableError(e instanceof Error ? e.message : String(e)); });
           } else if (err instanceof TwitchAuthError) {
-            throw new NonRetriableError("Twitch connection expired and refresh token missing — user must log out and back in.");
+            throw new NonRetriableError("Twitch connection expired and refresh token missing. User must log out and back in.");
           } else {
             throw new NonRetriableError(err instanceof Error ? err.message : String(err));
           }
@@ -1153,7 +1153,7 @@ export const compileWeeklyDigest = inngest.createFunction(
         }
 
         const healthSummary = burnout?.insight || (burnout?.score !== undefined
-          ? (burnout.score <= 25 ? "You're in good shape this week." : burnout.score <= 45 ? "A few minor signals, nothing concerning." : "Some fatigue signals — check your Health card.")
+          ? (burnout.score <= 25 ? "You're in good shape this week." : burnout.score <= 45 ? "A few minor signals, nothing concerning." : "Some fatigue signals. Check your Health card.")
           : null);
 
         const contentSummary = content?.insight || (content?.top_category
@@ -1206,7 +1206,7 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
         } catch (err) {
           console.warn(`[digest] Claude failed for ${userId}:`, err);
           if (avgScore && avgScore < 70) actionItems.push("Review your latest coach report for quick wins.");
-          if (peaksFound > 0 && clipsGenerated === 0) actionItems.push("You have peaks waiting — generate some clips.");
+          if (peaksFound > 0 && clipsGenerated === 0) actionItems.push("You have peaks waiting. Generate some clips.");
           if (collabCount > 0) actionItems.push("Check your new collab matches.");
         }
 

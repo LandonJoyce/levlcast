@@ -1,20 +1,20 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "AI Twitch Stream Coach — Personal Feedback After Every Stream",
+  title: "AI Twitch Stream Coach Personal Feedback After Every Stream",
   description:
     "Stop getting generic advice. LevlCast is an AI Twitch stream coach that reviews your actual VODs and gives you one specific priority to fix before your next stream.",
   alternates: { canonical: "/twitch-stream-coach" },
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com/twitch-stream-coach",
-    title: "AI Twitch Stream Coach — Real Feedback, Real Growth",
+    title: "AI Twitch Stream Coach Real Feedback, Real Growth",
     description:
-      "Your AI stream coach reviews every VOD and gives you a scored report with specific fixes. Not 'be more engaging' — actual notes on what happened.",
+      "Your AI stream coach reviews every VOD and gives you a scored report with specific fixes. Not 'be more engaging' actual notes on what happened.",
     siteName: "LevlCast",
     images: ["/opengraph-image"],
   },
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
 };
 
 const reportFields = [
-  { title: "Overall score (0–100)", desc: "A single number that reflects how the stream actually went — not vanity metrics, not viewer count. You can track it stream over stream." },
-  { title: "Streamer type", desc: "Your dominant archetype — entertainer, educator, strategist, community host. Coaching adapts to who you actually are." },
+  { title: "Overall score (0–100)", desc: "A single number that reflects how the stream actually went not vanity metrics, not viewer count. You can track it stream over stream." },
+  { title: "Streamer type", desc: "Your dominant archetype entertainer, educator, strategist, community host. Coaching adapts to who you actually are." },
   { title: "Energy trend", desc: "How your energy moved across the stream. Slow start? Late slump? The shape of your session, visualized." },
   { title: "One priority fix", desc: "Not a list of twelve things. One specific thing to focus on before your next broadcast." },
   { title: "Strengths & improvements", desc: "What worked well and should keep doing. What cost you retention and how to avoid it next time." },
@@ -38,10 +38,10 @@ const reportFields = [
 
 const whyDifferent = [
   "Feedback on your actual VOD, not generic advice",
-  "Audio-aware — it knows what you said, not just what chat typed",
+  "Audio-aware it knows what you said, not just what chat typed",
   "One priority to fix, not twelve suggestions you'll ignore",
   "Score tracks stream over stream so progress is visible",
-  "Adapts to your streamer archetype — no one-size-fits-all tips",
+  "Adapts to your streamer archetype no one-size-fits-all tips",
 ];
 
 const comparisonRows = [
@@ -55,7 +55,7 @@ const comparisonRows = [
 const faqs = [
   {
     q: "What makes this different from a human Twitch coach?",
-    a: "A good human coach is invaluable but costs $60–$150/hour and can't review every stream you do. LevlCast reviews every stream, stays consistent, and scores you against your own past broadcasts. Most streamers will still benefit from a human coach occasionally — this fills the 95% of time you can't afford one.",
+    a: "A good human coach is invaluable but costs $60–$150/hour and can't review every stream you do. LevlCast reviews every stream, stays consistent, and scores you against your own past broadcasts. Most streamers will still benefit from a human coach occasionally this fills the 95% of time you can't afford one.",
   },
   {
     q: "How does the AI coach know what to tell me?",
@@ -63,15 +63,15 @@ const faqs = [
   },
   {
     q: "Is the coaching report actually specific, or just boilerplate?",
-    a: "Specific. The coach quotes exact timestamps, references what you actually said, and gives feedback tied to your archetype — an entertainer gets different notes than an educator. No 'be more engaging' generics.",
+    a: "Specific. The coach quotes exact timestamps, references what you actually said, and gives feedback tied to your archetype an entertainer gets different notes than an educator. No 'be more engaging' generics.",
   },
   {
     q: "How often should I get a coaching report?",
-    a: "Every stream you care about improving. Free plan gives you one per month to try it out. Pro gives you 20/month — enough to cover almost every broadcast.",
+    a: "Every stream you care about improving. Free plan gives you one per month to try it out. Pro gives you 20/month enough to cover almost every broadcast.",
   },
   {
     q: "Does the coach give advice on growth tactics too?",
-    a: "The coach focuses on your stream quality — that's where the durable growth comes from. For growth tactics specifically (archetypes, content mix, consistency), check the Grow dashboard after your first analysis.",
+    a: "The coach focuses on your stream quality that's where the durable growth comes from. For growth tactics specifically (archetypes, content mix, consistency), check the Grow dashboard after your first analysis.",
   },
 ];
 
@@ -129,7 +129,7 @@ export default function StreamCoachPage() {
                   <span className="text-gradient">you couldn&apos;t afford.</span>
                 </h1>
                 <p className="text-base text-muted max-w-[520px] mb-8 leading-relaxed">
-                  Real coaches charge $60–$150 an hour. LevlCast is an AI Twitch stream coach that reviews every broadcast you do — scored 0–100, tied to specific timestamps, with one priority to fix. Not generic tips. Actual notes on your stream.
+                  Real coaches charge $60–$150 an hour. LevlCast is an AI Twitch stream coach that reviews every broadcast you do scored 0–100, tied to specific timestamps, with one priority to fix. Not generic tips. Actual notes on your stream.
                 </p>
                 <div className="flex flex-col sm:flex-row items-start gap-4 mb-4">
                   <Link
@@ -167,7 +167,7 @@ export default function StreamCoachPage() {
               Six things your coach notices<br />that you can&apos;t.
             </h2>
             <p className="text-muted text-sm max-w-[520px] mb-14 leading-relaxed md:text-left">
-              You&apos;re too close to your own stream. These are the observations a good manager would make — surfaced automatically after every broadcast.
+              You&apos;re too close to your own stream. These are the observations a good manager would make surfaced automatically after every broadcast.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {reportFields.map((f, i) => (
@@ -193,7 +193,7 @@ export default function StreamCoachPage() {
                   &ldquo;Be more engaging&rdquo; isn&apos;t coaching.
                 </h2>
                 <p className="text-muted text-sm mb-6 leading-relaxed">
-                  Generic advice is what you get from articles and streaming Discord servers. Real coaching references your specific stream, cites timestamps, and gives you one concrete thing to change next time — which is how actual behavior changes.
+                  Generic advice is what you get from articles and streaming Discord servers. Real coaching references your specific stream, cites timestamps, and gives you one concrete thing to change next time which is how actual behavior changes.
                 </p>
                 <ul className="space-y-3">
                   {whyDifferent.map((d) => (
@@ -269,7 +269,7 @@ export default function StreamCoachPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link href="/twitch-vod-analyzer" className="card p-6 hover:border-accent/25 transition-colors block">
                 <h3 className="font-bold text-base mb-2">VOD Analyzer &rarr;</h3>
-                <p className="text-sm text-muted leading-relaxed">The technical layer underneath — transcription, moment detection, diarization.</p>
+                <p className="text-sm text-muted leading-relaxed">The technical layer underneath transcription, moment detection, diarization.</p>
               </Link>
               <Link href="/twitch-clip-generator" className="card p-6 hover:border-accent/25 transition-colors block">
                 <h3 className="font-bold text-base mb-2">Clip Generator &rarr;</h3>
@@ -290,7 +290,7 @@ export default function StreamCoachPage() {
               Get coached on<br /><span className="text-gradient">your next stream.</span>
             </h2>
             <p className="text-muted text-sm mb-10 max-w-[440px] mx-auto leading-relaxed">
-              Connect Twitch. Analyze a VOD. Get your first coaching report — free, specific, and tied to your actual stream.
+              Connect Twitch. Analyze a VOD. Get your first coaching report free, specific, and tied to your actual stream.
             </p>
             <Link
               href="/auth/login"

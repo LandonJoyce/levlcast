@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -63,8 +63,8 @@ export default function PrivacyPage() {
               LevlCast uses third-party AI services to process your stream data:
             </p>
             <ul className="list-disc list-inside space-y-1.5 pl-2">
-              <li><span className="text-white font-medium">Anthropic (Claude)</span> — AI peak detection and coaching report generation</li>
-              <li><span className="text-white font-medium">Deepgram</span> — Audio transcription</li>
+              <li><span className="text-white font-medium">Anthropic (Claude)</span> AI peak detection and coaching report generation</li>
+              <li><span className="text-white font-medium">Deepgram</span> Audio transcription</li>
             </ul>
             <p className="mt-3">
               Your audio and transcription data may be processed by these services subject to their respective privacy policies. We do not share personally identifiable information beyond what is necessary for processing.
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold text-white mb-3">6. Data Storage</h2>
             <p>
-              Your data is stored in Supabase (PostgreSQL + file storage) hosted in the United States. Access is protected by Row Level Security — you can only access your own data.
+              Your data is stored in Supabase (PostgreSQL + file storage) hosted in the United States. Access is protected by Row Level Security you can only access your own data.
             </p>
           </section>
 

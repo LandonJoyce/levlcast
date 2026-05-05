@@ -1,18 +1,18 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Twitch Clip Generator — AI Makes Clips From Your VODs",
+  title: "Twitch Clip Generator AI Makes Clips From Your VODs",
   description:
-    "LevlCast's AI Twitch clip generator finds your best moments — hype, comedy, clutch — and turns them into ready-to-post clips. Auto-post to YouTube Shorts. Free to start.",
+    "LevlCast's AI Twitch clip generator finds your best moments hype, comedy, clutch and turns them into ready-to-post clips. Auto-post to YouTube Shorts. Free to start.",
   alternates: { canonical: "/twitch-clip-generator" },
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com/twitch-clip-generator",
-    title: "Twitch Clip Generator — AI Makes Clips From Your VODs",
+    title: "Twitch Clip Generator AI Makes Clips From Your VODs",
     description:
       "AI finds your best moments and turns them into ready-to-post clips. No scrubbing, no editing, no manual picking.",
     siteName: "LevlCast",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Twitch Clip Generator — AI-Powered",
+    title: "Twitch Clip Generator AI-Powered",
     description:
       "AI finds your best Twitch moments and turns them into ready-to-post clips.",
     images: ["/opengraph-image"],
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 const categories = [
   { title: "Hype moments", desc: "Chat spikes, hype trains, and energy surges. The clips your biggest fans rewatch.", accent: "bg-purple-500" },
   { title: "Comedy", desc: "Real laughter, reactions, and the unscripted bits that make your channel feel human.", accent: "bg-yellow-500" },
-  { title: "Clutch plays", desc: "Key gameplay moments — the last-second saves and the wins worth bragging about.", accent: "bg-blue-500" },
+  { title: "Clutch plays", desc: "Key gameplay moments the last-second saves and the wins worth bragging about.", accent: "bg-blue-500" },
   { title: "Educational drops", desc: "The tip or insight you casually dropped mid-stream that deserves its own clip.", accent: "bg-green-500" },
 ];
 
@@ -63,7 +63,7 @@ const steps = [
 const faqs = [
   {
     q: "How does an AI Twitch clip generator pick moments?",
-    a: "LevlCast transcribes the audio with Deepgram, scores every segment with Claude Sonnet, and ranks moments by category — hype, comedy, clutch, educational. Up to six clip-worthy moments surface per VOD, with a confidence score for each.",
+    a: "LevlCast transcribes the audio with Deepgram, scores every segment with Claude Sonnet, and ranks moments by category hype, comedy, clutch, educational. Up to six clip-worthy moments surface per VOD, with a confidence score for each.",
   },
   {
     q: "Do I still need to edit the clips?",
@@ -71,7 +71,7 @@ const faqs = [
   },
   {
     q: "How is this different from Streamladder or manual clipping?",
-    a: "Manual tools make you find the moment first. LevlCast finds the moment for you — that's the whole pitch. You go from three hours of VOD to a ranked list of six clips without scrubbing a timeline.",
+    a: "Manual tools make you find the moment first. LevlCast finds the moment for you that's the whole pitch. You go from three hours of VOD to a ranked list of six clips without scrubbing a timeline.",
   },
   {
     q: "Can I post the clips to YouTube Shorts automatically?",
@@ -175,7 +175,7 @@ export default function ClipGeneratorPage() {
               Four categories.<br />Up to six clips per VOD.
             </h2>
             <p className="text-muted text-sm max-w-[520px] mb-14 leading-relaxed md:text-left">
-              The AI ranks every moment in your stream and surfaces the top candidates. Not just chat spikes — the actual clip-worthy content.
+              The AI ranks every moment in your stream and surfaces the top candidates. Not just chat spikes the actual clip-worthy content.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {categories.map((c) => (

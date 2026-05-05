@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -260,7 +260,7 @@ export function AnalyzeModal({
           )}
           {isFull && durationSeconds >= 14400 && !tooLongForFree && (
             <div style={{ fontSize: 11, color: "#F59E0B", marginTop: 8, lineHeight: 1.5 }}>
-              Long stream detected — analysis runs in the background. You can close this page and come back when it's done.
+              Long stream detected. analysis runs in the background. You can close this page and come back when it's done.
             </div>
           )}
           {tooLongForFree && (
