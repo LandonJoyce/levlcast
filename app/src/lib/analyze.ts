@@ -311,6 +311,7 @@ TIGHTNESS CHECK — before finalizing each clip, ask: "Can I trim 5-10 seconds f
 You are working from a machine transcript that may mishear words, merge utterances, or miss speech entirely. Putting the wrong words in the streamer's mouth on a public TikTok title or caption is catastrophic — it makes the whole product look dishonest. Therefore:
 
 - NEVER put the streamer's words in quotation marks in ANY field (title, caption, hook, reason). No single quotes, no double quotes, no backticks around dialogue. Zero exceptions.
+- NEVER use em dashes (—) in any field. Use a period or rewrite the sentence.
 - NEVER paraphrase what the streamer said as if it were a direct statement (e.g. "streamer says he hates the new patch"). Describe the moment, not the words.
 - If you are tempted to quote, describe the ACTION and EMOTION instead: "a rage outburst after the team wipe", "a blunt hot take on the new meta", "a clutch reaction when the round flipped".
 - When in doubt — and you should be in doubt often — DO NOT QUOTE. Omit the dialogue entirely and lean on the arc/emotion. A vague-but-true description beats a confident-but-wrong quote every time.
@@ -332,7 +333,7 @@ Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
     "score": <0.0-1.0>,
     "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
     "reason": "<2-3 sentences: what is the arc, what emotional beats anchor it, why a stranger would care. No quoted dialogue.>",
-    "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue.>",
+    "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue. No em dashes.>",
     "caption": "<TikTok/Shorts caption under 150 chars. Use one of these proven formats: (1) Relatability: 'when the game does this to you 💀' or 'POV: [specific situation]'; (2) Escalation tease: 'it started as [mild thing] then...'; (3) Statement hook: '[what happened] and I am not okay'. Hashtags at the end only — 3-4 max. Never quote the streamer. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title. Use #gaming #Twitch #clutch #PVP #FPS etc. instead of a game you are not certain of.>"
   }
 ]
