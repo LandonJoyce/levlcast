@@ -94,13 +94,6 @@ export default async function LandingPage() {
               <span style={{ fontSize: 11, padding: "2px 7px", background: "rgba(255,255,255,0.07)", borderRadius: 4, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>no signup</span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
-            <div className="ll-live-counter">
-              <span className="ll-live-num">{displayCount}</span>
-              <span className="ll-live-label">
-                <span className="ll-live-dot" />
-                streams analyzed and counting
-              </span>
-            </div>
           </div>
         </div>
       </section>
@@ -108,6 +101,12 @@ export default async function LandingPage() {
       {/* ── Streamer Marquee ── */}
       <div className="ll-page-marquee">
         <StreamerMarquee />
+      </div>
+
+      {/* ── Live counter ── */}
+      <div className="ll-live-counter">
+        <span className="ll-live-num">{displayCount}</span>
+        <span className="ll-live-label">streams analyzed and counting</span>
       </div>
 
       {/* ── Before / After ── */}
