@@ -203,6 +203,10 @@ export default async function VodsPage({
                 const clip = bestClipByVod[v.id] ?? null;
                 const scoreColor = score !== null ? scoreColorHex(score) : "#A6B3C9";
 
+                const thumbBg = v.thumbnail_url
+                  ? `url(${(v.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")}) center/cover`
+                  : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))";
+
                 return (
                   <div key={v.id} style={{
                     background: "var(--surface)",
@@ -212,37 +216,51 @@ export default async function VodsPage({
                     display: "flex",
                     flexDirection: "column",
                   }}>
-                    {/* Clip or thumbnail — clicking opens punch page */}
-                    <Link href={`/dashboard/vods/${v.id}`} style={{ display: "block", flexShrink: 0 }}>
-                      {clip ? (
-                        <video
-                          controls
-                          preload="metadata"
-                          playsInline
-                          style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
-                        >
-                          <source src={clip.video_url} type="video/mp4" />
-                        </video>
-                      ) : (
-                        <div style={{
-                          width: "100%", aspectRatio: "16/9",
-                          background: v.thumbnail_url
-                            ? `url(${(v.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")}) center/cover`
-                            : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          color: "rgba(255,255,255,0.3)",
-                          fontSize: 12,
-                          fontFamily: "var(--font-geist-mono), monospace",
-                          letterSpacing: "0.06em",
-                        }}>
-                          {!v.thumbnail_url && "no clip yet"}
-                        </div>
-                      )}
+                    {/* Thumbnail — static, always. Click to go to punch page. */}
+                    <Link href={`/dashboard/vods/${v.id}`} style={{ display: "block", flexShrink: 0, position: "relative" }}>
+                      <div style={{
+                        width: "100%", aspectRatio: "16/9",
+                        background: thumbBg,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        position: "relative",
+                      }}>
+                        {/* Clip ready badge */}
+                        {clip && (
+                          <div style={{
+                            position: "absolute", bottom: 10, left: 10,
+                            background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
+                            borderRadius: 6, padding: "4px 10px",
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 11, fontWeight: 600, color: "#A3E635",
+                            letterSpacing: "0.04em",
+                          }}>
+                            Clip ready
+                          </div>
+                        )}
+                        {/* No clip label */}
+                        {!clip && !v.thumbnail_url && (
+                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.06em" }}>
+                            no clip found
+                          </span>
+                        )}
+                        {!clip && v.thumbnail_url && (
+                          <div style={{
+                            position: "absolute", bottom: 10, left: 10,
+                            background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
+                            borderRadius: 6, padding: "4px 10px",
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 11, color: "rgba(255,255,255,0.45)",
+                            letterSpacing: "0.04em",
+                          }}>
+                            no clip found
+                          </div>
+                        )}
+                      </div>
                     </Link>
 
                     {/* Card body */}
                     <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                      {/* Score + title row — clicking opens punch page */}
+                      {/* Score + title */}
                       <Link href={`/dashboard/vods/${v.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, textDecoration: "none", color: "inherit" }}>
                         {score !== null && (
                           <div style={{
@@ -265,8 +283,8 @@ export default async function VodsPage({
                         </div>
                       </Link>
 
-                      {/* Punch line */}
-                      {punchLine && (
+                      {/* Punch line — or fallback for old reports */}
+                      {punchLine ? (
                         <p style={{
                           fontSize: 14, lineHeight: 1.5, color: "var(--ink)",
                           margin: 0, fontWeight: 500,
@@ -274,6 +292,10 @@ export default async function VodsPage({
                           paddingLeft: 12,
                         }}>
                           {punchLine}
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
+                          Open for your full coaching breakdown.
                         </p>
                       )}
 
