@@ -303,16 +303,26 @@ Step by step:
 1. Find the PAYOFF utterance — the exact line where the peak moment lands
 2. Find the BUILD — go back 2-4 utterances to where the setup begins
 3. Set START = timestamp of the first utterance of the build
-4. Set END = timestamp 1-2 utterances after the payoff (let the reaction breathe)
+4. Set END = the utterance where the energy returns to baseline — see END CHECK below
 5. Check: does the clip arc have setup, build, and payoff within your start/end window? If not, adjust.
 
-Duration: 30-90 seconds. Sweet spot is 45-75 seconds.
+Duration: 30-90 seconds. Sweet spot is 40-60 seconds.
 Never cut mid-utterance. Land on complete sentences.
 Timestamps are plain seconds (e.g. 234 = 234 seconds into the stream).
 Output start and end as plain integers. Minimum clip: 20 seconds.
 No emojis. Clean text only.
 
-TIGHTNESS CHECK — before finalizing each clip, ask: "Can I trim 5-10 seconds from the front without losing the hook or context?" Start the clip at the FIRST moment a stranger would feel something — confusion, curiosity, or energy — not the first moment of calm setup narration. A 40s clip that hooks in 2 seconds beats a 65s clip with 20s of context preamble. Trim aggressively from the front. Be more generous at the end — let the reaction breathe.
+START CHECK — before finalizing: "Can I trim 5-10 seconds from the front without losing the hook?" Start at the FIRST moment a stranger would feel something. Trim aggressively from the front.
+
+END CHECK — this is equally critical. The clip ends the moment the payoff is fully delivered and the immediate reaction has landed. It does NOT continue past that point. Signs the clip should have already ended:
+- The streamer moves to the next game action or topic ("ok let's go next round", "alright", "now I'm going to...")
+- Energy drops back to calm narration after the reaction peak
+- The streamer says anything that would feel like an anti-climax to a first-time viewer
+- More than 3-4 seconds of silence after the payoff with no escalation following it
+
+The end of a great clip is the last beat of the payoff or the one-line reaction to it. NOT the wind-down. NOT the transition to what's next. Cut there and stop.
+
+Ask yourself: "If I ended the clip 5-10 seconds earlier, would anything be lost?" If the answer is no, move the end timestamp back. Trim from the end just as aggressively as from the front.
 
 ━━━ NO QUOTES — GLOBAL RULE (CRITICAL) ━━━
 
