@@ -27,6 +27,7 @@ import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
+import { generateCoachingArc } from "@/lib/coaching-arc";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -508,6 +509,30 @@ export const analyzeVod = inngest.createFunction(
           report.overall_score,
           report.recommendation ?? "",
         );
+      });
+
+      // Coaching arc — generates after every analysis, cached by vod ID so it
+      // never re-runs for the same stream. Needs 3+ analyzed VODs to produce output.
+      await step.run("generate-coaching-arc", async () => {
+        try {
+          const { data: existing } = await supabase
+            .from("profiles")
+            .select("coaching_arc")
+            .eq("id", userId)
+            .single();
+
+          const cached = existing?.coaching_arc as { generated_for_vod_id?: string } | null;
+          if (cached?.generated_for_vod_id === vodId) return;
+
+          const arc = await generateCoachingArc(userId, vodId, supabase);
+          if (arc) {
+            await supabase.from("profiles").update({ coaching_arc: arc }).eq("id", userId);
+            console.log(`[analyze] Coaching arc saved (${arc.score_history.length} streams)`);
+          }
+        } catch (err) {
+          // Never block the main analysis result on arc generation
+          console.warn("[analyze] Coaching arc generation failed (non-fatal):", err instanceof Error ? err.message : String(err));
+        }
       });
 
       return { peaks: peaks.length, segments: segments.length };

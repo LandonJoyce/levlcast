@@ -5,6 +5,8 @@ import DashScoreRing from "@/components/dashboard/DashScoreRing";
 import { scoreColorVar, rankFor } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import { MissionsCard } from "@/components/dashboard/missions-card";
+import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
+import type { CoachingArcData } from "@/lib/coaching-arc";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -85,7 +87,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, plan, subscription_expires_at, mission_checks")
+    .select("twitch_display_name, plan, subscription_expires_at, mission_checks, coaching_arc")
     .eq("id", user.id)
     .single();
 
@@ -291,6 +293,11 @@ export default async function DashboardPage() {
           vodTitle={latest?.title ?? "your last stream"}
           initialChecked={restoredChecked}
         />
+      )}
+
+      {/* Coaching Arc — shows once 3+ streams analyzed */}
+      {profile?.coaching_arc && (
+        <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
       )}
 
       {/* Three column row: trend, stats, upgrade (if not Pro) */}
