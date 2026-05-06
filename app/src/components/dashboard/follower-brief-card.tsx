@@ -19,18 +19,21 @@ export function FollowerBriefCard({ snapshots, streamDates }: Props) {
   const latest = sorted[sorted.length - 1];
   const current = latest.follower_count;
 
-  // Delta from yesterday
+  const todayKey = dayKey(new Date().toISOString());
+  const hasTodaySnap = dayKey(latest.snapped_at) === todayKey;
+
+  // Delta from yesterday — only show if today's snapshot exists
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayKey = dayKey(yesterday.toISOString());
-  const yesterdaySnap = sorted.findLast((s) => dayKey(s.snapped_at) <= yesterdayKey);
-  const deltaDay = yesterdaySnap ? current - yesterdaySnap.follower_count : null;
+  const yesterdaySnap = sorted.filter((s) => dayKey(s.snapped_at) <= yesterdayKey).pop();
+  const deltaDay = hasTodaySnap && yesterdaySnap ? current - yesterdaySnap.follower_count : null;
 
-  // Delta from 7 days ago
+  // Delta from 7 days ago — always show as "this week" even without today's snap
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekAgoKey = dayKey(weekAgo.toISOString());
-  const weekSnap = sorted.findLast((s) => dayKey(s.snapped_at) <= weekAgoKey);
+  const weekSnap = sorted.filter((s) => dayKey(s.snapped_at) <= weekAgoKey).pop();
   const deltaWeek = weekSnap ? current - weekSnap.follower_count : null;
 
   // Stream day correlation — need 14+ days and 3+ stream days
