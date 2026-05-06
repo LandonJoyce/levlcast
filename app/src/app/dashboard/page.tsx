@@ -205,50 +205,7 @@ export default async function DashboardPage() {
   // ─── Populated state ───────────────────────────────────
   const rank = rankFor(latestScore ?? 0);
   const delta = latestScore !== null && previousScore !== null ? latestScore - previousScore : null;
-  const trend = (recentVods ?? [])
-    .map((v) => (v.coach_report as { overall_score?: number } | null)?.overall_score ?? 0)
-    .reverse();
-  const avgScore = trend.length > 0 ? Math.round(trend.reduce((a, b) => a + b, 0) / trend.length) : 0;
-  const trendingUp = trend.length >= 4 && trend.slice(-4).reduce((a, b) => a + b, 0) > trend.slice(-8, -4).reduce((a, b) => a + b, 0);
-
   const tableStreams = (recentVods ?? []).slice(0, 5);
-
-  // SVG trend chart — smooth bezier curves
-  const trendW = 320;
-  const trendH = 110;
-  const PAD_T = 18;
-  const PAD_B = 20;
-  const chartH = trendH - PAD_T - PAD_B;
-
-  const minScore = trend.length ? Math.max(0, Math.min(...trend) - 8) : 0;
-  const maxScore = trend.length ? Math.min(100, Math.max(minScore + 25, Math.max(...trend) + 8)) : 100;
-  const toY = (v: number) => PAD_T + chartH * (1 - (v - minScore) / (maxScore - minScore));
-  const toX = (i: number) => trend.length <= 1 ? trendW / 2 : (i / (trend.length - 1)) * trendW;
-  const pts: [number, number][] = trend.map((v, i) => [toX(i), toY(v)]);
-
-  let linePath = pts.length ? `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}` : "";
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
-    const dx = (x1 - x0) * 0.42;
-    linePath += ` C${(x0+dx).toFixed(1)},${y0.toFixed(1)} ${(x1-dx).toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
-  }
-  const areaPath = pts.length > 1
-    ? `${linePath} L${pts[pts.length-1][0].toFixed(1)},${trendH} L${pts[0][0].toFixed(1)},${trendH} Z`
-    : "";
-
-  const gridScores = [25, 50, 75].filter(g => g > minScore && g < maxScore);
-  const pbScore = trend.length ? Math.max(...trend) : 0;
-  const pbIndex = trend.lastIndexOf(pbScore);
-  const latestDotColor = (latestScore ?? 0) >= 75 ? "#22c55e" : (latestScore ?? 0) >= 50 ? "#eab308" : "#ef4444";
-
-  // Dates for chart x-axis — first and last only
-  const trendDates = (recentVods ?? [])
-    .slice(0, 12)
-    .map((v) => {
-      const d = new Date(v.stream_date ?? v.analyzed_at ?? v.created_at ?? "");
-      return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    })
-    .reverse();
 
   return (
     <>
@@ -316,93 +273,8 @@ export default async function DashboardPage() {
         <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
       )}
 
-      {/* Three column row: trend (hidden when arc is shown), stats, upgrade (if not Pro) */}
-      <div style={{ display: "grid", gridTemplateColumns: profile?.coaching_arc ? (isPro ? "1fr" : "1fr 1fr") : (isPro ? "1.4fr 1fr" : "1.4fr 1fr 1fr"), gap: 20 }}>
-        {/* Trend — only shown when coaching arc is not yet available */}
-        {!profile?.coaching_arc && <div className="card">
-          <div className="card-head">
-            <h3>Score over time</h3>
-            <span className="label-mono">last {trend.length} streams</span>
-          </div>
-          <div style={{ padding: "20px 22px 22px" }}>
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-              <div>
-                <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--ink)" }}>
-                  {avgScore}<span style={{ fontSize: 16, color: "var(--ink-3)", fontWeight: 500 }}> / 100 avg</span>
-                </div>
-                {trendingUp && (
-                  <span className="mono" style={{ fontSize: 11, color: "var(--green)", letterSpacing: ".04em" }}>↑ trending up · last 4 streams</span>
-                )}
-              </div>
-            </div>
-            {trend.length > 1 ? (
-              <svg viewBox={`0 0 ${trendW} ${trendH}`} style={{ width: "100%", height: trendH, marginTop: 10, overflow: "visible" }}>
-                <defs>
-                  <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.28" />
-                    <stop offset="85%" stopColor="#7c3aed" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {/* Grid lines */}
-                {gridScores.map(g => (
-                  <g key={g}>
-                    <line x1={0} y1={toY(g)} x2={trendW} y2={toY(g)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-                    <text x={-6} y={toY(g) + 3.5} textAnchor="end" fontSize="8" fontFamily="monospace" fill="rgba(255,255,255,0.18)">{g}</text>
-                  </g>
-                ))}
-                {/* Area + line */}
-                <path d={areaPath} fill="url(#trendFill)" />
-                <path d={linePath} stroke="#7c3aed" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                {/* Dots */}
-                {pts.map((p, i) => {
-                  const isLast = i === pts.length - 1;
-                  const isPB = i === pbIndex && trend.length > 2;
-                  return (
-                    <g key={i}>
-                      {isLast && <circle cx={p[0]} cy={p[1]} r="11" fill={latestDotColor} opacity="0.12" />}
-                      {isLast && <circle cx={p[0]} cy={p[1]} r="6.5" fill={latestDotColor} opacity="0.22" />}
-                      <circle cx={p[0]} cy={p[1]} r={isLast ? 4 : isPB ? 3.5 : 2.5}
-                        fill={isLast ? latestDotColor : isPB ? "#f59e0b" : "rgba(255,255,255,0.3)"}
-                        stroke={isLast ? "none" : isPB ? "rgba(245,158,11,0.4)" : "none"}
-                        strokeWidth="1"
-                      />
-                      {/* Score label only on latest */}
-                      {isLast && (
-                        <text x={p[0]} y={p[1] - 13} textAnchor="middle" fontSize="10"
-                          fontFamily="var(--font-geist-mono), monospace"
-                          fill={latestDotColor} fontWeight="700"
-                        >{trend[i]}</text>
-                      )}
-                      {/* PB label */}
-                      {isPB && !isLast && (
-                        <text x={p[0]} y={p[1] - 10} textAnchor="middle" fontSize="8"
-                          fontFamily="var(--font-geist-mono), monospace"
-                          fill="rgba(245,158,11,0.7)"
-                        >PB</text>
-                      )}
-                    </g>
-                  );
-                })}
-                {/* Date labels — first and last only */}
-                {trendDates[0] && (
-                  <text x={Math.max(10, pts[0]?.[0] ?? 0)} y={trendH - 2} textAnchor="middle" fontSize="8"
-                    fontFamily="var(--font-geist-mono), monospace" fill="rgba(255,255,255,0.22)"
-                  >{trendDates[0]}</text>
-                )}
-                {trendDates.length > 1 && trendDates[trendDates.length - 1] && (
-                  <text x={Math.min(trendW - 10, pts[pts.length - 1]?.[0] ?? trendW)} y={trendH - 2} textAnchor="middle" fontSize="8"
-                    fontFamily="var(--font-geist-mono), monospace" fill="rgba(255,255,255,0.22)"
-                  >{trendDates[trendDates.length - 1]}</text>
-                )}
-              </svg>
-            ) : (
-              <p style={{ marginTop: 14, fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: "20px 0" }}>
-                Analyze a few more streams to see your trend.
-              </p>
-            )}
-          </div>
-        </div>}
-
+      {/* Stats + upgrade row */}
+      <div style={{ display: "grid", gridTemplateColumns: isPro ? "1fr" : "1fr 1fr", gap: 20 }}>
         {/* Stats */}
         <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 14, justifyContent: "center" }}>
           <div className="col gap-sm">
