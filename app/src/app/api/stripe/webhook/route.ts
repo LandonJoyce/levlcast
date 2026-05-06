@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { sendProWelcomeEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
@@ -104,6 +105,18 @@ export async function POST(request: Request) {
         }, { onConflict: "user_id" });
 
         console.log(`[webhook/stripe] checkout.completed — user ${userId} upgraded to Pro (expires ${expiresAt})`);
+
+        // Welcome email — fire and forget
+        try {
+          const { data: { user: authUser } } = await admin.auth.admin.getUserById(userId);
+          const { data: profile } = await admin.from("profiles").select("twitch_display_name").eq("id", userId).single();
+          if (authUser?.email) {
+            const name = profile?.twitch_display_name ?? authUser.email.split("@")[0];
+            await sendProWelcomeEmail(authUser.email, name);
+          }
+        } catch (emailErr) {
+          console.warn("[webhook/stripe] Pro welcome email failed:", emailErr instanceof Error ? emailErr.message : String(emailErr));
+        }
         break;
       }
 

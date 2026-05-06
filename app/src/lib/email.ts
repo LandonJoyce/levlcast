@@ -208,6 +208,94 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   });
 }
 
+export async function sendProWelcomeEmail(to: string, name: string): Promise<void> {
+  await resend.emails.send({
+    from: "Landon @ LevlCast <hello@levlcast.com>",
+    to,
+    subject: "Welcome to Pro — you're in",
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome to Pro</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+
+          <p style="margin:0 0 20px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Hey ${name},</p>
+
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            You're officially a Pro member. Seriously, thank you. Every person who goes Pro is what keeps LevlCast getting better, and I don't take that lightly.
+          </p>
+
+          <p style="margin:0 0 24px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            Here's what's unlocked for you now:
+          </p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a22;border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0;font-size:14px;font-weight:600;color:#a78bfa;">20 stream analyses / month</p>
+                <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.4);">Run a report after every stream, track your score over time</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0;font-size:14px;font-weight:600;color:#a78bfa;">20 clips / month</p>
+                <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.4);">Auto-generated from your best moments, ready to post</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0;font-size:14px;font-weight:600;color:#a78bfa;">Full coaching breakdown</p>
+                <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.4);">Strengths, improvements, energy trend, and your streamer archetype</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;">
+                <p style="margin:0;font-size:14px;font-weight:600;color:#a78bfa;">Post directly to YouTube</p>
+                <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.4);">Connect your channel and publish clips without leaving LevlCast</p>
+              </td>
+            </tr>
+          </table>
+
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+            <tr><td style="background:#7C3AED;border-radius:12px;">
+              <a href="https://levlcast.com/dashboard/vods" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
+                Go to Dashboard →
+              </a>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            If you ever have questions, run into anything weird, or just want to share feedback — reply directly to this email. I read every one.
+          </p>
+
+          <p style="margin:0 0 6px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Talk soon,</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#ffffff;">Landon</p>
+          <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.35);">Founder, LevlCast</p>
+
+        </td></tr>
+
+        <tr><td style="padding-top:24px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">
+            LevlCast · <a href="https://levlcast.com/dashboard/settings" style="color:rgba(255,255,255,0.2);text-decoration:underline;">Manage subscription</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendClipReadyEmail(
   to: string,
   name: string,

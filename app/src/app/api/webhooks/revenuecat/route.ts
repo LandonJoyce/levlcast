@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
+import { sendProWelcomeEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 /**
@@ -110,6 +111,20 @@ export async function POST(request: Request) {
       ]);
 
       console.log(`[webhook/rc] Pro extended for ${appUserId} until ${expiresAt} (${eventType})`);
+
+      // Welcome email on first purchase only — not renewals
+      if (eventType === "INITIAL_PURCHASE") {
+        try {
+          const { data: { user: authUser } } = await admin.auth.admin.getUserById(appUserId);
+          const { data: profile } = await admin.from("profiles").select("twitch_display_name").eq("id", appUserId).single();
+          if (authUser?.email) {
+            const name = profile?.twitch_display_name ?? authUser.email.split("@")[0];
+            await sendProWelcomeEmail(authUser.email, name);
+          }
+        } catch (emailErr) {
+          console.warn("[webhook/rc] Pro welcome email failed:", emailErr instanceof Error ? emailErr.message : String(emailErr));
+        }
+      }
       break;
     }
 
