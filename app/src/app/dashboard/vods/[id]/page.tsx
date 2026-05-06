@@ -245,7 +245,10 @@ export default async function VodPunchPage({
               </svg>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 2px" }}>Generating your clip...</p>
-                <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0 }}>This usually takes 1 to 3 minutes. The page will update automatically.</p>
+                <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0 }}>
+                  This usually takes 1 to 3 minutes. Stay on this page and it will appear automatically, or{" "}
+                  <Link href="/dashboard/clips" style={{ color: "var(--blue)", textDecoration: "none" }}>check the clips page</Link>.
+                </p>
               </div>
             </div>
           ) : topPeak ? (

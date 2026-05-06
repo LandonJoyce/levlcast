@@ -354,7 +354,15 @@ export function ChangeStyleButton({
   }
 
   if (done) {
-    return <span style={{ fontSize: 12, color: "var(--blue)" }}>Regenerating with new style...</span>;
+    return (
+      <span style={{ fontSize: 12, color: "var(--ink-3)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <svg viewBox="0 0 24 24" fill="none" width="11" height="11" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }}>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="28 56" strokeLinecap="round"/>
+        </svg>
+        Generating...
+        <a href="/dashboard/clips" style={{ color: "var(--blue)", textDecoration: "none" }}>View on clips page</a>
+      </span>
+    );
   }
 
   const selectedStyle = CAPTION_STYLES.find((s) => s.value === style) ?? CAPTION_STYLES[0];
