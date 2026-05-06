@@ -316,10 +316,10 @@ export default async function DashboardPage() {
         <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
       )}
 
-      {/* Three column row: trend, stats, upgrade (if not Pro) */}
-      <div style={{ display: "grid", gridTemplateColumns: isPro ? "1.4fr 1fr" : "1.4fr 1fr 1fr", gap: 20 }}>
-        {/* Trend */}
-        <div className="card">
+      {/* Three column row: trend (hidden when arc is shown), stats, upgrade (if not Pro) */}
+      <div style={{ display: "grid", gridTemplateColumns: profile?.coaching_arc ? (isPro ? "1fr" : "1fr 1fr") : (isPro ? "1.4fr 1fr" : "1.4fr 1fr 1fr"), gap: 20 }}>
+        {/* Trend — only shown when coaching arc is not yet available */}
+        {!profile?.coaching_arc && <div className="card">
           <div className="card-head">
             <h3>Score over time</h3>
             <span className="label-mono">last {trend.length} streams</span>
@@ -401,7 +401,7 @@ export default async function DashboardPage() {
               </p>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* Stats */}
         <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 14, justifyContent: "center" }}>
