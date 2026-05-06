@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import DashScoreRing from "@/components/dashboard/DashScoreRing";
 import { scoreColorVar, rankFor } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
-import { MissionsCard } from "@/components/dashboard/missions-card";
+import { UnpostedClipsCard } from "@/components/dashboard/unposted-clips-card";
 import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
 import type { CoachingArcData } from "@/lib/coaching-arc";
 import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
@@ -88,7 +88,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, plan, subscription_expires_at, mission_checks, coaching_arc")
+    .select("twitch_display_name, plan, subscription_expires_at, coaching_arc")
     .eq("id", user.id)
     .single();
 
@@ -113,13 +113,29 @@ export default async function DashboardPage() {
   const latestRecommendation = (latest?.coach_report as { recommendation?: string } | null)?.recommendation ?? null;
   const latestPeaks = Array.isArray(latest?.peak_data) ? latest.peak_data.length : 0;
 
-  // Missions — from the latest coach report's next_stream_goals
-  type MissionChecks = { vod_id: string; checked: number[] } | null;
-  const missionChecks = (profile?.mission_checks as MissionChecks) ?? null;
-  const latestMissions = (latest?.coach_report as { next_stream_goals?: string[] } | null)?.next_stream_goals ?? [];
-  const missionsVodId = latest?.id ?? null;
-  // Restore checked state only if the saved checks are for the current latest VOD
-  const restoredChecked = missionChecks?.vod_id === missionsVodId ? (missionChecks?.checked ?? []) : [];
+  // Unposted ready clips — up to 10 most recent
+  const { data: readyClips } = await supabase
+    .from("clips")
+    .select("id, title, peak_category")
+    .eq("user_id", user.id)
+    .eq("status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const readyClipIds = (readyClips ?? []).map((c) => c.id);
+  const { data: postedClips } = readyClipIds.length > 0
+    ? await supabase.from("social_posts").select("clip_id").eq("user_id", user.id).eq("platform", "youtube").in("clip_id", readyClipIds)
+    : { data: [] };
+  const postedSet = new Set((postedClips ?? []).map((p) => p.clip_id));
+  const unpostedClips = (readyClips ?? []).filter((c) => !postedSet.has(c.id));
+
+  const { data: ytConnection } = await supabase
+    .from("social_connections")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("platform", "youtube")
+    .maybeSingle();
+  const isYouTubeConnected = !!ytConnection;
 
   // Clips this month
   const monthStart = new Date();
@@ -274,14 +290,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Missions card — only for Pro users with active missions */}
-      {isPro && latestMissions.length > 0 && missionsVodId && (
-        <MissionsCard
-          missions={latestMissions}
-          vodId={missionsVodId}
-          vodTitle={latest?.title ?? "your last stream"}
-          initialChecked={restoredChecked}
-        />
+      {/* Unposted clips nudge */}
+      {unpostedClips.length > 0 && (
+        <UnpostedClipsCard clips={unpostedClips} isYouTubeConnected={isYouTubeConnected} />
       )}
 
       {/* Coaching Arc — shows once 3+ streams analyzed */}
