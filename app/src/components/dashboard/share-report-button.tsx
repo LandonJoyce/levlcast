@@ -160,29 +160,12 @@ export function ShareReportButton({ vodId, existingToken, score, variant = "comp
 
   // Compact (used on /vods/[id])
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={shareToX}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-        style={{ background: "#000", color: "#fff", border: "1px solid rgba(255,255,255,0.18)" }}
-      >
-        <XIcon size={11} /> Post to X
-      </button>
-      <button
-        onClick={copy}
-        className="inline-flex items-center gap-1.5 bg-accent/10 hover:bg-accent/20 text-accent-light text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-      >
-        {copied ? <Check size={12} /> : <LinkIcon size={12} />}
-        {copied ? "Copied!" : "Copy link"}
-      </button>
-      <button
-        onClick={revoke}
-        disabled={revoking}
-        className="inline-flex items-center gap-1 text-xs text-muted hover:text-red-400 transition-colors disabled:opacity-50"
-        title="Revoke link"
-      >
-        <Trash2 size={12} />
-      </button>
-    </div>
+    <button
+      onClick={copy}
+      className="inline-flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-muted hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+    >
+      {copied ? <Check size={12} /> : <Share2 size={12} />}
+      {copied ? "Copied!" : "Share"}
+    </button>
   );
 }
