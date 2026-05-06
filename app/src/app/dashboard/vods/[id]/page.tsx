@@ -207,7 +207,7 @@ export default async function VodPunchPage({
               </div>
             )}
             <div style={{ flex: 1 }} />
-            <ShareReportButton vodId={vod.id} existingToken={vod.share_token} />
+            <ShareReportButton vodId={vod.id} existingToken={vod.share_token} score={currentScore} />
           </div>
 
           {/* Best clip */}

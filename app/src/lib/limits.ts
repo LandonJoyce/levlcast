@@ -2,8 +2,9 @@
  * lib/limits.ts — subscription plan limits and usage enforcement.
  *
  * PLAN LIMITS:
- *   Free: 1 VOD analysis/month, 5 clips/month
- *   Pro:  20 VOD analyses/month, 20 clips/month
+ *   Free:           1 VOD analysis/month, 5 clips/month
+ *   Pro:            15 VOD analyses/month, 20 clips/month
+ *   Founding (20/20): grandfathered users who subscribed before the limit drop
  *
  * HOW USAGE IS COUNTED:
  *   - Analyses: completed VODs (analyzed_at not null) + in-progress VODs
@@ -29,12 +30,12 @@ export const FREE_LIMITS = {
 };
 
 export const PRO_LIMITS = {
-  analyses_per_month: 20,
+  analyses_per_month: 15,
   clips_per_month: 20,
 };
 
-// Founding members subscribed at the original $9.99 price and keep these
-// limits permanently — even if future Pro tiers are reduced.
+// Founding members subscribed before the Pro limit was dropped to 15/20 and
+// keep the original 20/20 cap permanently as a thank-you for early support.
 export const FOUNDING_LIMITS = {
   analyses_per_month: 20,
   clips_per_month: 20,

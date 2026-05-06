@@ -7,13 +7,21 @@
 export const dynamic = "force-dynamic";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { stripe, STRIPE_PRO_PRICE_ID } from "@/lib/stripe";
+import { stripe, priceIdForPlan, type CheckoutPlan } from "@/lib/stripe";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let plan: CheckoutPlan = "monthly";
+  try {
+    const body = await request.json().catch(() => ({}));
+    if (body?.plan === "annual") plan = "annual";
+  } catch {
+    // No body — default to monthly
+  }
 
   const admin = createAdminClient();
   const { data: profile } = await admin
@@ -40,13 +48,13 @@ export async function POST() {
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: STRIPE_PRO_PRICE_ID, quantity: 1 }],
+    line_items: [{ price: priceIdForPlan(plan), quantity: 1 }],
     success_url: `${appUrl}/dashboard/settings?success=stripe`,
     cancel_url: `${appUrl}/dashboard/settings`,
     subscription_data: {
-      metadata: { user_id: user.id },
+      metadata: { user_id: user.id, plan },
     },
-    metadata: { user_id: user.id },
+    metadata: { user_id: user.id, plan },
     allow_promotion_codes: true,
   });
 

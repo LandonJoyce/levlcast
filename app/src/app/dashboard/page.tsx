@@ -412,7 +412,7 @@ export default async function DashboardPage() {
           <div className="upgrade" style={{ padding: 20 }}>
             <div className="eb">Founding Member · 100 spots</div>
             <h4 style={{ fontSize: 18 }}>Get a report on every stream.</h4>
-            <p>20 VOD analyses + 20 clips a month. Lock in $9.99/mo for life before the price goes up.</p>
+            <p>15 VOD analyses + 20 clips a month. $9.99/mo or $99/yr, cancel anytime.</p>
             <Link href="/dashboard/settings" className="btn btn-blue" style={{ padding: "8px 14px", fontSize: 12.5 }}>
               Upgrade to Pro <Icons.Arrow />
             </Link>

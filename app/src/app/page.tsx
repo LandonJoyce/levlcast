@@ -322,16 +322,16 @@ export default async function LandingPage() {
 
             {/* Pro */}
             <div className="ll-plan-pro-outer">
-              <div className="ll-plan-founding-banner">Founding · locks for life</div>
+              <div className="ll-plan-founding-banner">Annual saves 17%</div>
               <article className="ll-plan ll-plan-pro">
                 <div>
                   <div className="ll-plan-name">Pro</div>
-                  <div className="ll-plan-cycle">month · founding price</div>
+                  <div className="ll-plan-cycle">monthly or annual</div>
                 </div>
-                <div className="ll-plan-price">$9.99 <small>/ month</small></div>
+                <div className="ll-plan-price">$9.99 <small>/ mo · or $99/yr</small></div>
                 <hr className="ll-plan-sep" />
                 <ul className="ll-plan-feats">
-                  {["20 VOD analyses / month", "20 clips per month", "Post to YouTube Shorts", "Priority processing", "Everything in Free"].map((f) => (
+                  {["15 VOD analyses / month", "20 clips per month", "Post to YouTube Shorts", "Priority processing", "Everything in Free"].map((f) => (
                     <li key={f}>
                       <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>

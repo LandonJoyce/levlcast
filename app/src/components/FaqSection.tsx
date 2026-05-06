@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     q: "Is it really free to start?",
-    a: "Yes, no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips total. Upgrade to Pro for 20 VOD analyses and 20 clips per month.",
+    a: "Yes, no credit card required. The free plan includes 1 VOD analysis per month and up to 5 clips. Upgrade to Pro for 15 VOD analyses and 20 clips per month.",
   },
   {
     q: "Does it work with any Twitch streamer?",

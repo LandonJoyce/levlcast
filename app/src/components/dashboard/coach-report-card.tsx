@@ -660,6 +660,74 @@ export function CoachReportCard({
             </div>
           </section>
 
+          {/* ── DELTA TEASE (free only, top-of-report Pro hook) ── */}
+          {!isPro && (
+            <div style={{
+              margin: "0 0 36px",
+              padding: "24px 26px 22px",
+              borderRadius: 14,
+              background: `linear-gradient(135deg, rgba(148,61,255,0.08), rgba(242,97,121,0.04))`,
+              border: `1px solid ${PURPLE_BORDER}`,
+              position: "relative",
+              overflow: "hidden",
+            }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: GRAD }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <Lock size={11} style={{ color: PURPLE }} />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: PURPLE }}>
+                  Locked for Free
+                </span>
+              </div>
+              <h3 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.2, color: "#ECF1FA", margin: "0 0 6px", fontWeight: 400, letterSpacing: "-0.01em" }}>
+                One report is a snapshot.{" "}
+                <em style={{ fontStyle: "italic", ...gradText }}>The delta is the coaching.</em>
+              </h3>
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 18px" }}>
+                Free is 1 stream/month. You can't see what changed because there's nothing to compare to. Pro tracks every stream so you can prove what's working.
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
+                {[
+                  { label: "Score delta", value: "+6", color: "#A3E635" },
+                  { label: "Mic energy", value: "+12%", color: "#A3E635" },
+                  { label: "Dead air", value: "-3min", color: "#A3E635" },
+                ].map((m) => (
+                  <div key={m.label} style={{
+                    position: "relative", padding: "14px 12px", borderRadius: 10,
+                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                    textAlign: "center", overflow: "hidden",
+                  }}>
+                    <div style={{ filter: "blur(4px)", opacity: 0.55 }}>
+                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 24, lineHeight: 1, color: m.color, fontStyle: "italic" }}>
+                        {m.value}
+                      </div>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6F7C95", marginTop: 6 }}>
+                        {m.label}
+                      </div>
+                    </div>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Lock size={14} style={{ color: "rgba(255,255,255,0.35)" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={openUpgrade}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 10,
+                  fontSize: 13, fontWeight: 700, padding: "11px 22px",
+                  borderRadius: 10, border: "none",
+                  background: GRAD, color: "#fff",
+                  cursor: "pointer", letterSpacing: "0.01em",
+                }}
+              >
+                Unlock Pro · $9.99/month{" "}
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
+              </button>
+            </div>
+          )}
+
           {/* ── 1. THE #1 FIX ── */}
           {isPro && report.recommendation ? (
             <div style={{ margin: "0 0 32px", padding: "22px 24px", borderRadius: 12, background: "rgba(248,113,113,0.05)", border: "1px solid rgba(248,113,113,0.2)", borderLeft: "3px solid #F87171" }}>
@@ -1141,7 +1209,7 @@ export function CoachReportCard({
                 {lockedStrengths > 0 && (
                   <UnlockStat n={lockedStrengths} label={`More strength${lockedStrengths !== 1 ? "s" : ""} to keep doing`} color="#A3E635" />
                 )}
-                <UnlockStat n={20} label="VOD analyses per month" color={PURPLE} />
+                <UnlockStat n={15} label="VOD analyses per month" color={PURPLE} />
                 <UnlockStat n={20} label="Clips per month with captions" color={PURPLE} />
               </div>
 
@@ -1207,7 +1275,7 @@ export function CoachReportCard({
       <UpgradeModal
         isOpen={upgradeOpen}
         onClose={() => setUpgradeOpen(false)}
-        reason="Unlock all fixes, missions, growth-killer flags, and 20 VOD analyses per month with full clip generation."
+        reason="Unlock all fixes, missions, growth-killer flags, and 15 VOD analyses per month with full clip generation."
       />
     </>
   );

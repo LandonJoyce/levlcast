@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: "limit_reached",
-        message: "You've used your 1 free analysis this month. Upgrade to Pro for 20 analyses per month.",
+        message: "You've used your 1 free analysis this month. Upgrade to Pro for 15 analyses per month.",
         upgrade: true,
       },
       { status: 403 }

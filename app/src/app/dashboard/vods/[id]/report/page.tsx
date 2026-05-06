@@ -6,6 +6,7 @@ import { CoachReportCard } from "@/components/dashboard/coach-report-card";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
+import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { scoreColorHex } from "@/lib/score-utils";
 
 const Icons = {
@@ -161,25 +162,33 @@ export default async function VodReportPage({
       </div>
 
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-          {currentScore !== undefined && (
-            <span style={{
-              fontFamily: "var(--font-geist-mono), monospace",
-              fontSize: 28, fontWeight: 800, color: scoreColor, letterSpacing: "-0.03em",
-            }}>
-              {currentScore}
-            </span>
-          )}
-          <h1 style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2, margin: 0, color: "var(--ink)" }}>
-            {vod.title}
-          </h1>
+      <div style={{ marginBottom: 28, display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+            {currentScore !== undefined && (
+              <span style={{
+                fontFamily: "var(--font-geist-mono), monospace",
+                fontSize: 28, fontWeight: 800, color: scoreColor, letterSpacing: "-0.03em",
+              }}>
+                {currentScore}
+              </span>
+            )}
+            <h1 style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2, margin: 0, color: "var(--ink)" }}>
+              {vod.title}
+            </h1>
+          </div>
+          <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+            {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {" · "}
+            {formatDuration(vod.duration_seconds)}
+          </span>
         </div>
-        <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-          {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-          {" · "}
-          {formatDuration(vod.duration_seconds)}
-        </span>
+        <ShareReportButton
+          vodId={vod.id}
+          existingToken={vod.share_token}
+          score={currentScore}
+          variant="prominent"
+        />
       </div>
 
       {/* Coach report */}

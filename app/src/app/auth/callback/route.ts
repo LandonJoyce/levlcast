@@ -2,6 +2,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { sendWelcomeEmail } from "@/lib/email";
+import { fetchTwitchVods, getAppAccessToken, mapVodToRow, parseTwitchDuration } from "@/lib/twitch";
+import { inngest } from "@/lib/inngest/client";
 
 /**
  * OAuth callback — exchanges the auth code for a session,
@@ -92,5 +94,79 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // Auto-sync VODs and queue the most recent one for analysis on new signups.
+  // This kills the activation gap: by the time the user lands on the dashboard,
+  // their first coach report is already being generated. Fire and forget so a
+  // Twitch API hiccup never breaks signup.
+  if (isNewUser) {
+    const twitchId = meta.provider_id || meta.sub;
+    if (twitchId) {
+      autoAnalyzeFirstVod(user.id, twitchId).catch((err) => {
+        console.error("[auth/callback] Auto-analyze failed:", err instanceof Error ? err.message : err);
+      });
+    }
+  }
+
   return response;
+}
+
+/**
+ * Pulls the user's recent Twitch VODs, picks the most recent eligible one
+ * (between 10 min and 4 hours so it fits within free-tier rules), inserts
+ * it into the vods table, and queues the analyze job. Best-effort — failures
+ * are logged but never thrown.
+ */
+async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<void> {
+  const admin = createAdminClient();
+
+  let appToken: string;
+  try {
+    appToken = await getAppAccessToken();
+  } catch (err) {
+    console.warn("[auth/callback/auto-analyze] App token failed:", err instanceof Error ? err.message : err);
+    return;
+  }
+
+  const vods = await fetchTwitchVods(twitchId, appToken, 20);
+  if (vods.length === 0) return;
+
+  // Bulk-insert all recent VODs as pending so the dashboard isn't empty when
+  // the user lands. The chosen VOD is then claimed and queued separately.
+  const rows = vods.map((v) => mapVodToRow(v, userId));
+  const { error: insertErr } = await admin
+    .from("vods")
+    .upsert(rows, { onConflict: "twitch_vod_id" });
+  if (insertErr) {
+    console.warn("[auth/callback/auto-analyze] Bulk VOD insert failed:", insertErr.message);
+    return;
+  }
+
+  // 10 min minimum (skip tiny test streams), 4 hour max (free-tier rule)
+  const MIN_DURATION = 10 * 60;
+  const MAX_DURATION = 4 * 60 * 60;
+  const eligible = vods.find((v) => {
+    const dur = parseTwitchDuration(v.duration);
+    return dur >= MIN_DURATION && dur <= MAX_DURATION;
+  });
+
+  if (!eligible) return;
+
+  // Atomic claim: only flip status to transcribing if it's still pending
+  const { data: claimed } = await admin
+    .from("vods")
+    .update({ status: "transcribing" })
+    .eq("user_id", userId)
+    .eq("twitch_vod_id", eligible.id)
+    .eq("status", "pending")
+    .select("id")
+    .single();
+
+  if (!claimed) return;
+
+  await inngest.send({
+    name: "vod/analyze",
+    data: { vodId: claimed.id, userId },
+  });
+
+  console.log(`[auth/callback/auto-analyze] Queued first analysis for new user ${userId} (vod ${claimed.id})`);
 }

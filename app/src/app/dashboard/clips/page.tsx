@@ -174,7 +174,7 @@ export default async function ClipsPage({
       {/* Header */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
-          <span className="page-eyebrow">Â§ 03 Â· Highlights</span>
+          <span className="page-eyebrow">§ 03 · Highlights</span>
           <h1 className="page-title">Clips</h1>
           <p className="page-sub">Auto-detected moments, ready to clip and post.</p>
         </div>
@@ -213,7 +213,7 @@ export default async function ClipsPage({
             <div className="tabs">
               {TAB_ITEMS.map(([k, l, c]) => (
                 <Link key={k} href={`/dashboard/clips${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
-                  {l} Â· {c}
+                  {l} · {c}
                 </Link>
               ))}
             </div>
@@ -338,7 +338,7 @@ export default async function ClipsPage({
                       </div>
                       <div className="clip-meta">
                         <b>{p.title}</b>
-                        <span>{categoryLabel(p.category)} Â· {p.vodTitle}</span>
+                        <span>{categoryLabel(p.category)} · {p.vodTitle}</span>
                       </div>
                       <div style={{ padding: "0 12px 12px" }}>
                         <GenerateClipButton vodId={p.vodId} peakIndex={p.peakIndex} hasProcessing={hasProcessing} clipTitle={p.title} />

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -88,7 +88,7 @@ function LoginForm() {
 
       {showAndroidTip && (
         <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, fontSize: 13, textAlign: "center", background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.25)", color: "rgba(255,255,255,0.6)" }}>
-          On Android, if the Twitch app opens — tap <strong style={{ color: "rgba(255,255,255,0.85)" }}>Cancel</strong> and select your browser to continue.
+          On Android, if the Twitch app opens â€” tap <strong style={{ color: "rgba(255,255,255,0.85)" }}>Cancel</strong> and select your browser to continue.
         </div>
       )}
 
@@ -116,7 +116,7 @@ function LoginForm() {
         {loading ? "Connecting..." : "Connect with Twitch"}
       </button>
 
-      {/* Trust signals — prominent */}
+      {/* Trust signals â€” prominent */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 14, flexWrap: "wrap" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -144,7 +144,7 @@ export default function LoginPage() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Purple aura — matches landing page hero */}
+      {/* Purple aura â€” matches landing page hero */}
       <div style={{
         position: "absolute", left: "50%", top: "-80px",
         width: "min(1000px, 120vw)", height: 500,
@@ -190,3 +190,4 @@ export default function LoginPage() {
     </main>
   );
 }
+

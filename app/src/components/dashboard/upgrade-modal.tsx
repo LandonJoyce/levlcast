@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { X, Check, Lock } from "lucide-react";
@@ -9,12 +9,19 @@ interface UpgradeModalProps {
   reason: string;
 }
 
+type Plan = "monthly" | "annual";
+
 const FEATURES = [
-  "20 VOD analyses per month",
+  "15 VOD analyses per month",
   "20 clip generations per month",
   "Full coaching report on every stream",
   "Priority processing",
 ];
+
+const PLAN_DETAILS: Record<Plan, { price: string; cycle: string; sub: string; badge?: string }> = {
+  monthly: { price: "$9.99", cycle: "/month", sub: "cancel anytime" },
+  annual:  { price: "$99",   cycle: "/year",  sub: "save $20.88 vs monthly", badge: "Save 17%" },
+};
 
 function StripeBadge() {
   return (
@@ -37,12 +44,17 @@ function StripeBadge() {
 export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [plan, setPlan] = useState<Plan>("monthly");
 
   async function handleUpgrade() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
       const json = await res.json();
       if (!res.ok || !json.url) {
         setError(json.error || "Something went wrong. Please try again.");
@@ -57,6 +69,8 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
   }
 
   if (!isOpen) return null;
+
+  const details = PLAN_DETAILS[plan];
 
   return (
     <div
@@ -83,7 +97,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
         }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--blue)", margin: 0 }}>
-              Founding Member
+              Pro
             </p>
             <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", margin: "2px 0 0", color: "var(--ink)" }}>
               Upgrade to Pro
@@ -104,15 +118,55 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
         <div style={{ padding: "16px 24px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
           <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>{reason}</p>
 
+          {/* Plan toggle */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
+            background: "var(--surface-2)", borderRadius: 10, padding: 4,
+            border: "1px solid var(--line)",
+          }}>
+            {(["monthly", "annual"] as const).map((p) => {
+              const active = plan === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPlan(p)}
+                  style={{
+                    position: "relative",
+                    padding: "9px 12px",
+                    borderRadius: 7,
+                    border: "none",
+                    background: active ? "var(--surface)" : "transparent",
+                    color: active ? "var(--ink)" : "var(--ink-3)",
+                    fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+                    textTransform: "capitalize",
+                    transition: "all 120ms",
+                  }}
+                >
+                  {p}
+                  {p === "annual" && (
+                    <span style={{
+                      position: "absolute", top: -7, right: -4,
+                      fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                      padding: "2px 6px", borderRadius: 4,
+                      background: "var(--green)", color: "#0b1c10",
+                    }}>SAVE 17%</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Price block */}
           <div style={{
             background: "color-mix(in oklab, var(--blue-soft) 30%, var(--surface-2))",
             border: "1px solid color-mix(in oklab, var(--blue) 30%, var(--line))",
             borderRadius: 12, padding: "14px 16px",
-            display: "flex", alignItems: "baseline", gap: 6,
           }}>
-            <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)" }}>$9.99</span>
-            <span style={{ fontSize: 13, color: "var(--ink-3)" }}>/month · cancel anytime</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)" }}>{details.price}</span>
+              <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{details.cycle} · {details.sub}</span>
+            </div>
           </div>
 
           {/* Features */}
@@ -152,7 +206,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
               boxShadow: loading ? "none" : "0 6px 20px -6px color-mix(in oklab, var(--blue) 60%, transparent)",
             }}
           >
-            {loading ? "Redirecting to checkout..." : "Upgrade to Pro: $9.99/month"}
+            {loading ? "Redirecting to checkout..." : `Upgrade to Pro: ${details.price}${details.cycle}`}
           </button>
 
           {/* Stripe badge */}
