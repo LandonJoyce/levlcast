@@ -45,10 +45,10 @@ function scoreColor(score: number) {
 }
 
 const TREND_LABEL: Record<string, string> = {
-  building: "↗ Building",
-  declining: "↘ Declining",
-  consistent: "→ Consistent",
-  volatile: "↕ Volatile",
+  building: "Building",
+  declining: "Declining",
+  consistent: "Consistent",
+  volatile: "Volatile",
 };
 
 export default async function SharePage({
@@ -58,7 +58,6 @@ export default async function SharePage({
 }) {
   const { token } = await params;
 
-  // Validate token is UUID format before hitting the DB
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(token)) notFound();
 
@@ -79,91 +78,111 @@ export default async function SharePage({
   if (!report) notFound();
 
   const score = report.overall_score ?? 0;
-  const trend = TREND_LABEL[report.energy_trend] ?? "→ Consistent";
+  const color = scoreColor(score);
+  const trend = TREND_LABEL[report.energy_trend] ?? "Consistent";
 
   return (
-    <div className="min-h-screen bg-bg text-foreground">
-      {/* Fixed background glow */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] glow-bg pointer-events-none opacity-40" />
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#fff", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      {/* Background glow */}
+      <div style={{
+        position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)",
+        width: 700, height: 500, borderRadius: "50%",
+        background: `radial-gradient(ellipse, color-mix(in oklab, ${color} 12%, transparent), transparent 70%)`,
+        pointerEvents: "none",
+      }} />
 
-      <div className="relative max-w-2xl mx-auto px-4 py-12">
-        {/* LevlCast header */}
-        <div className="flex items-center justify-between mb-10">
-          <span className="text-xl font-extrabold tracking-tight text-gradient">LevlCast</span>
+      <div style={{ position: "relative", maxWidth: 580, margin: "0 auto", padding: "40px 20px 80px" }}>
+
+        {/* Nav */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", background: "linear-gradient(90deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            LevlCast
+          </span>
           <a
-            href="https://www.levlcast.com"
-            className="text-xs text-muted hover:text-white transition-colors"
+            href="https://www.levlcast.com/auth/login"
+            style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.45)", textDecoration: "none", letterSpacing: "0.02em" }}
           >
-            Get your free analysis →
+            Get your free report
           </a>
         </div>
 
         {/* Streamer identity */}
-        <div className="flex items-center gap-3 mb-6">
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
           {profile?.twitch_avatar_url && (
             <img
               src={profile.twitch_avatar_url}
               alt={profile.twitch_display_name}
-              className="w-12 h-12 rounded-full border border-border"
+              style={{ width: 48, height: 48, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)" }}
             />
           )}
           <div>
-            <p className="font-bold">{profile?.twitch_display_name ?? "Streamer"}</p>
-            <p className="text-xs text-muted">@{profile?.twitch_login}</p>
+            <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>{profile?.twitch_display_name ?? "Streamer"}</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: 0 }}>@{profile?.twitch_login}</p>
           </div>
         </div>
 
-        {/* Stream title + date */}
-        <h1 className="text-lg font-extrabold tracking-tight leading-snug mb-1">{vod.title}</h1>
-        <p className="text-xs text-muted mb-8">
+        {/* Stream title */}
+        <h1 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px", lineHeight: 1.3 }}>{vod.title}</h1>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "0 0 28px" }}>
           {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
           {" · "}{formatDuration(vod.duration_seconds)}
         </p>
 
-        {/* Score + summary */}
-        <div className="bg-surface border border-border rounded-2xl p-6 mb-4 flex items-center gap-6">
-          <div
-            className="flex-shrink-0 w-24 h-24 rounded-full border-4 flex flex-col items-center justify-center"
-            style={{ borderColor: scoreColor(score) }}
-          >
-            <span className="text-3xl font-extrabold leading-none" style={{ color: scoreColor(score) }}>{score}</span>
-            <span className="text-xs text-muted">/100</span>
+        {/* Hero score card */}
+        <div style={{
+          background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 20, padding: "28px 24px", marginBottom: 12,
+          display: "flex", alignItems: "center", gap: 24,
+        }}>
+          <div style={{
+            flexShrink: 0, width: 88, height: 88, borderRadius: "50%",
+            border: `3px solid ${color}`,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            background: `color-mix(in oklab, ${color} 10%, transparent)`,
+          }}>
+            <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1, color }}>{score}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>/100</span>
           </div>
-          <div>
-            <p className="text-xs font-bold text-muted uppercase tracking-widest mb-1">Stream Score</p>
-            {report.recommendation && <p className="text-sm leading-relaxed">{report.recommendation}</p>}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 6px" }}>Stream Score</p>
+            {report.recommendation && (
+              <p style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,0.85)", margin: 0 }}>{report.recommendation}</p>
+            )}
           </div>
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-surface border border-border rounded-xl p-4 text-center">
-            <p className="text-2xl font-extrabold text-accent-light">{peaks.length}</p>
-            <p className="text-xs text-muted mt-1">Peak Moments</p>
-          </div>
-          <div className="bg-surface border border-border rounded-xl p-4 text-center">
-            <p className="text-sm font-bold">{trend}</p>
-            <p className="text-xs text-muted mt-1">Energy Trend</p>
-          </div>
-          <div className="bg-surface border border-border rounded-xl p-4 text-center">
-            <p className="text-sm font-bold capitalize" style={{
-              color: report.viewer_retention_risk === "low" ? "#22c55e"
-                : report.viewer_retention_risk === "medium" ? "#eab308" : "#ef4444"
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 12 }}>
+          {[
+            { value: peaks.length.toString(), label: "Clip Moments" },
+            { value: trend, label: "Energy Trend" },
+            {
+              value: (report.viewer_retention_risk ?? "unknown"),
+              label: "Retention Risk",
+              color: report.viewer_retention_risk === "low" ? "#22c55e" : report.viewer_retention_risk === "medium" ? "#eab308" : "#ef4444",
+            },
+          ].map(({ value, label, color: c }) => (
+            <div key={label} style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 14, padding: "16px 12px", textAlign: "center",
             }}>
-              {report.viewer_retention_risk ?? "unknown"}
-            </p>
-            <p className="text-xs text-muted mt-1">Retention Risk</p>
-          </div>
+              <p style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px", textTransform: "capitalize", color: c ?? "#fff" }}>{value}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0, letterSpacing: "0.04em" }}>{label}</p>
+            </div>
+          ))}
         </div>
 
         {/* Strengths */}
         {report.strengths?.length > 0 && (
-          <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-            <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">Strengths</p>
-            <ul className="space-y-2">
+          <div style={{
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: "20px", marginBottom: 12,
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 14px" }}>What they do well</p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
               {report.strengths.slice(0, 3).map((s: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-green-400 font-bold mt-0.5">✓</span>
+                <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
+                  <span style={{ color: "#22c55e", fontWeight: 700, flexShrink: 0 }}>+</span>
                   {s}
                 </li>
               ))}
@@ -171,26 +190,85 @@ export default async function SharePage({
           </div>
         )}
 
+        {/* Improvements - teased */}
+        {report.improvements?.length > 0 && (
+          <div style={{
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 16, padding: "20px", marginBottom: 12, position: "relative", overflow: "hidden",
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 14px" }}>Areas to improve</p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+              {report.improvements.slice(0, 1).map((s: string, i: number) => (
+                <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
+                  <span style={{ color: "#f59e0b", fontWeight: 700, flexShrink: 0 }}>!</span>
+                  {s}
+                </li>
+              ))}
+              {report.improvements.length > 1 && (
+                <li style={{
+                  fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic",
+                  filter: "blur(4px)", userSelect: "none",
+                }}>
+                  {report.improvements[1]}
+                </li>
+              )}
+            </ul>
+            {report.improvements.length > 1 && (
+              <div style={{
+                position: "absolute", bottom: 0, left: 0, right: 0, height: 56,
+                background: "linear-gradient(to bottom, transparent, rgba(10,10,15,0.95))",
+              }} />
+            )}
+          </div>
+        )}
+
         {/* Best moment */}
         {report.best_moment && (
-          <div className="bg-accent/10 border border-accent/20 rounded-2xl p-5 mb-8">
-            <p className="text-xs font-bold text-muted uppercase tracking-widest mb-2">Best Moment</p>
-            <p className="text-accent-light font-bold text-lg mb-1">{report.best_moment.time}</p>
-            <p className="text-sm text-muted">{report.best_moment.description}</p>
+          <div style={{
+            background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)",
+            borderRadius: 16, padding: "20px", marginBottom: 32,
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(167,139,250,0.6)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 6px" }}>Best Moment</p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: "#a78bfa", margin: "0 0 4px" }}>{report.best_moment.time}</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", margin: 0 }}>{report.best_moment.description}</p>
           </div>
         )}
 
         {/* CTA */}
-        <div className="text-center border border-border rounded-2xl p-6 bg-surface">
-          <p className="font-bold mb-1">Want a report like this?</p>
-          <p className="text-sm text-muted mb-4">LevlCast analyzes your Twitch VODs and finds your best clip moments, free to try.</p>
+        <div style={{
+          background: "linear-gradient(135deg, rgba(167,139,250,0.12), rgba(56,189,248,0.08))",
+          border: "1px solid rgba(167,139,250,0.25)",
+          borderRadius: 20, padding: "32px 28px", textAlign: "center",
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(167,139,250,0.8)", textTransform: "uppercase", margin: "0 0 10px" }}>
+            Want to know your score?
+          </p>
+          <p style={{ fontSize: 20, fontWeight: 900, margin: "0 0 8px", lineHeight: 1.2 }}>
+            Get a free AI coach report<br />for your stream
+          </p>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: "0 0 24px", lineHeight: 1.6 }}>
+            LevlCast analyzes your Twitch VODs, scores your performance, finds your best clip moments, and tells you exactly what to improve. Free to start.
+          </p>
           <a
-            href="https://www.levlcast.com"
-            className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-opacity"
+            href="https://www.levlcast.com/auth/login"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 10,
+              background: "linear-gradient(135deg, #a78bfa, #38bdf8)",
+              color: "#fff", fontWeight: 800, fontSize: 14, letterSpacing: "0.01em",
+              padding: "14px 32px", borderRadius: 14, textDecoration: "none",
+              boxShadow: "0 8px 32px -8px rgba(167,139,250,0.5)",
+            }}
           >
-            Get your free analysis
+            Analyze my stream free
+            <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+              <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </a>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", margin: "12px 0 0" }}>
+            No credit card. Connect Twitch and go.
+          </p>
         </div>
+
       </div>
     </div>
   );
