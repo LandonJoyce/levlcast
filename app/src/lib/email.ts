@@ -151,6 +151,7 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   await resend.emails.send({
     from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
+    reply_to: "support@levlcast.com",
     subject: "Hey, welcome to LevlCast",
     html: `<!DOCTYPE html>
 <html lang="en">
@@ -176,8 +177,12 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
             I built LevlCast because I wanted a tool that actually helps streamers grow. Not just giving them vague numbers, but tells them what to fix and shows them their best moments. Every person who joins is part of a community of streamers who are serious about improving together, and I'm glad you're one of them.
           </p>
 
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            To get started, sync your streams and run your first analysis. It takes about 5 minutes and you'll get a full coach report with your stream score, clip moments, and one specific thing to focus on next time.
+          </p>
+
           <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
-            To get started, sync your streams and run your first analysis. It takes about 5 minutes and you'll get a full coach report with your stream score, peak clip moments, and one specific thing to focus on next time.
+            If you run into anything or have questions, reach us at support@levlcast.com.
           </p>
 
           <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
@@ -212,7 +217,8 @@ export async function sendProWelcomeEmail(to: string, name: string): Promise<voi
   await resend.emails.send({
     from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
-    subject: "Welcome to Pro — you're in",
+    reply_to: "support@levlcast.com",
+    subject: "You're now on Pro",
     html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome to Pro</title></head>
@@ -273,7 +279,7 @@ export async function sendProWelcomeEmail(to: string, name: string): Promise<voi
           </table>
 
           <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
-            If you ever have questions, run into anything weird, or just want to share feedback — reply directly to this email. I read every one.
+            If you ever have questions, run into anything weird, or just want to share feedback, email us at support@levlcast.com. I read every one.
           </p>
 
           <p style="margin:0 0 6px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Talk soon,</p>
