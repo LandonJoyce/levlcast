@@ -213,19 +213,35 @@ export default async function DashboardPage() {
 
   const tableStreams = (recentVods ?? []).slice(0, 5);
 
-  // SVG trend path
+  // SVG trend chart — smooth bezier curves
   const trendW = 320;
-  const trendH = 90;
-  const minScore = Math.max(0, Math.min(...trend) - 10);
-  const maxScore = Math.max(minScore + 20, Math.max(50, ...trend));
-  const points = trend.map((v, i) => [
-    trend.length === 1 ? trendW / 2 : i * (trendW / (trend.length - 1)),
-    trendH - ((v - minScore) / (maxScore - minScore)) * (trendH - 16),
-  ]);
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-  const area = `${path} L${trendW},${trendH} L0,${trendH} Z`;
+  const trendH = 110;
+  const PAD_T = 18;
+  const PAD_B = 20;
+  const chartH = trendH - PAD_T - PAD_B;
 
-  // Dates for x-axis labels on trend chart (oldest → newest)
+  const minScore = trend.length ? Math.max(0, Math.min(...trend) - 8) : 0;
+  const maxScore = trend.length ? Math.min(100, Math.max(minScore + 25, Math.max(...trend) + 8)) : 100;
+  const toY = (v: number) => PAD_T + chartH * (1 - (v - minScore) / (maxScore - minScore));
+  const toX = (i: number) => trend.length <= 1 ? trendW / 2 : (i / (trend.length - 1)) * trendW;
+  const pts: [number, number][] = trend.map((v, i) => [toX(i), toY(v)]);
+
+  let linePath = pts.length ? `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}` : "";
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    const dx = (x1 - x0) * 0.42;
+    linePath += ` C${(x0+dx).toFixed(1)},${y0.toFixed(1)} ${(x1-dx).toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const areaPath = pts.length > 1
+    ? `${linePath} L${pts[pts.length-1][0].toFixed(1)},${trendH} L${pts[0][0].toFixed(1)},${trendH} Z`
+    : "";
+
+  const gridScores = [25, 50, 75].filter(g => g > minScore && g < maxScore);
+  const pbScore = trend.length ? Math.max(...trend) : 0;
+  const pbIndex = trend.lastIndexOf(pbScore);
+  const latestDotColor = (latestScore ?? 0) >= 75 ? "#22c55e" : (latestScore ?? 0) >= 50 ? "#eab308" : "#ef4444";
+
+  // Dates for chart x-axis — first and last only
   const trendDates = (recentVods ?? [])
     .slice(0, 12)
     .map((v) => {
@@ -320,52 +336,68 @@ export default async function DashboardPage() {
               </div>
             </div>
             {trend.length > 1 ? (
-              <svg viewBox={`0 0 ${trendW} ${trendH + 28}`} style={{ width: "100%", height: trendH + 28, marginTop: 14, overflow: "visible" }}>
+              <svg viewBox={`0 0 ${trendW} ${trendH}`} style={{ width: "100%", height: trendH, marginTop: 10, overflow: "visible" }}>
                 <defs>
-                  <linearGradient id="dashTrendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.60 0.22 290)" stopOpacity="0.32" />
-                    <stop offset="100%" stopColor="oklch(0.60 0.22 290)" stopOpacity="0" />
+                  <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.28" />
+                    <stop offset="85%" stopColor="#7c3aed" stopOpacity="0" />
                   </linearGradient>
                 </defs>
-                <path d={area} fill="url(#dashTrendGradient)" />
-                <path d={path} stroke="oklch(0.60 0.22 290)" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                {points.map((p, i) => {
-                  const isLast = i === points.length - 1;
-                  const score = trend[i];
-                  const prevScore = i > 0 ? trend[i - 1] : null;
-                  const up = prevScore !== null && score > prevScore;
-                  const down = prevScore !== null && score < prevScore;
-                  const dotColor = isLast ? "oklch(0.60 0.22 290)" : up ? "oklch(0.72 0.18 145)" : down ? "oklch(0.65 0.22 25)" : "oklch(0.55 0.04 245)";
+                {/* Grid lines */}
+                {gridScores.map(g => (
+                  <g key={g}>
+                    <line x1={0} y1={toY(g)} x2={trendW} y2={toY(g)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                    <text x={-6} y={toY(g) + 3.5} textAnchor="end" fontSize="8" fontFamily="monospace" fill="rgba(255,255,255,0.18)">{g}</text>
+                  </g>
+                ))}
+                {/* Area + line */}
+                <path d={areaPath} fill="url(#trendFill)" />
+                <path d={linePath} stroke="#7c3aed" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Dots */}
+                {pts.map((p, i) => {
+                  const isLast = i === pts.length - 1;
+                  const isPB = i === pbIndex && trend.length > 2;
                   return (
                     <g key={i}>
-                      {isLast && <circle cx={p[0]} cy={p[1]} r="9" fill="oklch(0.60 0.22 290)" opacity="0.25" />}
-                      <circle cx={p[0]} cy={p[1]} r={isLast ? 5 : 4} fill={dotColor} />
-                      <text
-                        x={p[0]}
-                        y={p[1] - 10}
-                        textAnchor="middle"
-                        fontSize="9"
-                        fontFamily="var(--font-geist-mono), monospace"
-                        fill={isLast ? "oklch(0.60 0.22 290)" : "oklch(0.6 0.04 245)"}
-                        fontWeight={isLast ? "700" : "400"}
-                      >{score}</text>
-                      {trendDates[i] && (
-                        <text
-                          x={Math.max(16, Math.min(trendW - 16, p[0]))}
-                          y={trendH + 20}
-                          textAnchor="middle"
-                          fontSize="8"
+                      {isLast && <circle cx={p[0]} cy={p[1]} r="11" fill={latestDotColor} opacity="0.12" />}
+                      {isLast && <circle cx={p[0]} cy={p[1]} r="6.5" fill={latestDotColor} opacity="0.22" />}
+                      <circle cx={p[0]} cy={p[1]} r={isLast ? 4 : isPB ? 3.5 : 2.5}
+                        fill={isLast ? latestDotColor : isPB ? "#f59e0b" : "rgba(255,255,255,0.3)"}
+                        stroke={isLast ? "none" : isPB ? "rgba(245,158,11,0.4)" : "none"}
+                        strokeWidth="1"
+                      />
+                      {/* Score label only on latest */}
+                      {isLast && (
+                        <text x={p[0]} y={p[1] - 13} textAnchor="middle" fontSize="10"
                           fontFamily="var(--font-geist-mono), monospace"
-                          fill="oklch(0.45 0.03 245)"
-                        >{trendDates[i]}</text>
+                          fill={latestDotColor} fontWeight="700"
+                        >{trend[i]}</text>
+                      )}
+                      {/* PB label */}
+                      {isPB && !isLast && (
+                        <text x={p[0]} y={p[1] - 10} textAnchor="middle" fontSize="8"
+                          fontFamily="var(--font-geist-mono), monospace"
+                          fill="rgba(245,158,11,0.7)"
+                        >PB</text>
                       )}
                     </g>
                   );
                 })}
+                {/* Date labels — first and last only */}
+                {trendDates[0] && (
+                  <text x={Math.max(10, pts[0]?.[0] ?? 0)} y={trendH - 2} textAnchor="middle" fontSize="8"
+                    fontFamily="var(--font-geist-mono), monospace" fill="rgba(255,255,255,0.22)"
+                  >{trendDates[0]}</text>
+                )}
+                {trendDates.length > 1 && trendDates[trendDates.length - 1] && (
+                  <text x={Math.min(trendW - 10, pts[pts.length - 1]?.[0] ?? trendW)} y={trendH - 2} textAnchor="middle" fontSize="8"
+                    fontFamily="var(--font-geist-mono), monospace" fill="rgba(255,255,255,0.22)"
+                  >{trendDates[trendDates.length - 1]}</text>
+                )}
               </svg>
             ) : (
               <p style={{ marginTop: 14, fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: "20px 0" }}>
-                One stream analyzed. analyze a few more to see your trend.
+                Analyze a few more streams to see your trend.
               </p>
             )}
           </div>
