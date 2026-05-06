@@ -389,8 +389,27 @@ export async function cutClip(
     try {
       await execAsync(remuxCmd, { timeout: 60000 });
     } catch (remuxErr: any) {
-      console.error("[ffmpeg] remux failed:", remuxErr.stderr?.slice(-600));
-      throw ffmpegError(remuxErr);
+      // -bsf:a aac_adtstoasc fails on some Twitch streams whose audio is already
+      // in raw AAC (not ADTS). Retry without the bitstream filter — if the audio
+      // is already packetized correctly this is safe to omit.
+      console.warn("[ffmpeg] remux failed, retrying without aac_adtstoasc:", remuxErr.stderr?.slice(-300));
+      const remuxFallbackCmd = [
+        `"${ffmpegPath}"`,
+        `-fflags +genpts+igndts+discardcorrupt`,
+        `-err_detect ignore_err`,
+        `-max_interleave_delta 0`,
+        `-i "${inputFilePath}"`,
+        `-c copy`,
+        `-avoid_negative_ts make_zero`,
+        `-y`,
+        `"${remuxedPath}"`,
+      ].join(" ");
+      try {
+        await execAsync(remuxFallbackCmd, { timeout: 60000 });
+      } catch (fallbackErr: any) {
+        console.error("[ffmpeg] remux fallback also failed:", fallbackErr.stderr?.slice(-600));
+        throw ffmpegError(fallbackErr);
+      }
     }
     console.log(`[ffmpeg] Remux complete → ${remuxedPath}`);
 
