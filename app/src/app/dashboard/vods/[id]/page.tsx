@@ -232,7 +232,7 @@ export default async function VodPunchPage({
                   <ChangeStyleButton
                     clipId={topClip.id}
                     vodId={id}
-                    startSeconds={topClip.start_time_seconds ?? 0}
+                    peakIndex={0}
                     currentStyle={(topClip.caption_style as any) ?? "bold"}
                   />
                 </div>

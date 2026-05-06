@@ -313,12 +313,12 @@ export function PostToYouTube({
 export function ChangeStyleButton({
   clipId,
   vodId,
-  startSeconds,
+  peakIndex,
   currentStyle = "bold",
 }: {
   clipId: string;
   vodId: string;
-  startSeconds: number;
+  peakIndex: number;
   currentStyle?: CaptionStyle;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -339,7 +339,7 @@ export function ChangeStyleButton({
       const genRes = await fetch("/api/clips/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vodId, startSeconds, captionStyle: style }),
+        body: JSON.stringify({ vodId, peakIndex, captionStyle: style }),
       });
       const json = await genRes.json();
       if (!genRes.ok) throw new Error(json.message || json.error || "Generate failed");
