@@ -278,7 +278,7 @@ export default async function VodPunchPage({
                   No viral clip found this stream
                 </p>
                 <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
-                  The AI analyzed this stream and didn't find a moment strong enough to clip. Your full coaching breakdown is below.
+                  Your coach reviewed this stream and didn't find a moment worth clipping. Your full coaching breakdown is below.
                 </p>
               </div>
             </div>
