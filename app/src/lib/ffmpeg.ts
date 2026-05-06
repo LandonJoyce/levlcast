@@ -411,24 +411,48 @@ export async function cutClip(
         // discontinuity that -avoid_negative_ts can't fix. Last resort: full
         // re-encode with setpts/asetpts to rebuild timestamps from scratch.
         // Slower (~2-3min on Vercel) but handles any timestamp corruption.
+        // -genpts: generate PTS from scratch instead of reading input values.
+        // -probesize/-analyzeduration: read more of the stream before decoding.
+        // filter_complex with explicit mapping: more reliable than -vf/-af combo.
         console.warn("[ffmpeg] both stream-copy remuxes failed, re-encoding to fix timestamps:", fallbackErr.stderr?.slice(-300));
         const reencodeCmd = [
           `"${ffmpegPath}"`,
-          `-fflags +igndts+discardcorrupt`,
+          `-fflags +genpts+igndts+discardcorrupt`,
           `-err_detect ignore_err`,
+          `-probesize 100M`,
+          `-analyzeduration 100M`,
           `-i "${inputFilePath}"`,
-          `-vf "setpts=PTS-STARTPTS"`,
-          `-af "asetpts=PTS-STARTPTS"`,
-          `-c:v libx264 -preset ultrafast -crf 18`,
-          `-c:a aac -b:a 128k`,
+          `-filter_complex "[0:v]setpts=PTS-STARTPTS[vout];[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]"`,
+          `-map "[vout]"`,
+          `-map "[aout]"`,
+          `-c:v libx264`,
+          `-preset ultrafast`,
+          `-crf 18`,
+          `-pix_fmt yuv420p`,
+          `-c:a aac`,
+          `-b:a 128k`,
+          `-avoid_negative_ts make_zero`,
+          `-movflags +faststart`,
           `-y`,
           `"${remuxedPath}"`,
         ].join(" ");
         try {
           await execAsync(reencodeCmd, { timeout: 300000 });
+          console.warn("[ffmpeg] re-encode fallback succeeded");
         } catch (reencodeErr: any) {
-          console.error("[ffmpeg] re-encode fallback also failed:", reencodeErr.stderr?.slice(-600));
-          throw ffmpegError(reencodeErr);
+          const reencodeStderr: string = reencodeErr.stderr ?? "";
+          console.error("[ffmpeg] re-encode fallback also failed:", reencodeStderr.slice(-800));
+          // Don't call ffmpegError() here — its time=- check fires on re-encode input
+          // progress even when the encode itself is the problem. Show actual error lines.
+          const reencodeLines = reencodeStderr.split("\n").map((l: string) => l.trim()).filter(Boolean);
+          const errLines = reencodeLines.filter((l: string) =>
+            /^(error|invalid|could not|no such|failed|unable|cannot|conversion failed)/i.test(l) ||
+            /^\[.*\] (error|invalid|could not|failed)/i.test(l)
+          );
+          const errDetail = errLines.length > 0
+            ? errLines.slice(-4).join(" | ").slice(0, 600)
+            : reencodeStderr.slice(-400) || reencodeErr.message;
+          throw new Error(`FFmpeg failed (all fallbacks exhausted): ${errDetail}`);
         }
       }
     }

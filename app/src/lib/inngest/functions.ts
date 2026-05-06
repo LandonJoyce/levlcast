@@ -620,7 +620,9 @@ export const generateClip = inngest.createFunction(
       // Do NOT split into multiple steps — passing a video buffer between Inngest steps
       // serializes it as JSON, which blows past Inngest's step state size limit and
       // causes silent failures where the clip appears "completed" but stays processing.
-      await step.run("generate-and-upload", async () => {
+      // Returns { ok: true } on success, { ok: false, reason } when FFmpeg fails so the
+      // function can fall back to the next best peak without the whole job failing.
+      const uploadResult = await step.run("generate-and-upload", async () => {
         console.log(`[clip] Downloading segments for "${peak.title}" (${peak.start}s - ${peak.end}s)`);
 
         const { data: profile } = await supabase
@@ -667,29 +669,37 @@ export const generateClip = inngest.createFunction(
         const vodWords = (vodData?.word_timestamps as import("@/lib/captions").CaptionWord[] | null) ?? null;
         const captionStyle = (clipRecord?.caption_style ?? "bold") as import("@/lib/captions").CaptionStyle;
 
-        let captionedBuffer: Buffer;
-        let cleanSourceBuffer: Buffer;
+        // cutClip failures (FFmpeg) return { ok: false } instead of throwing —
+        // callers can then fall through to the next peak rather than hard-failing.
+        // Download / upload / auth errors still throw as NonRetriableError.
+        let cutResult: { captioned: Buffer; cleanSource: Buffer } | null = null;
+        let cutFailReason: string | null = null;
         try {
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
           console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-          const result = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
+          cutResult = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
             vodWords,
             vodWindow: { start: peak.start, end: peak.end },
             captionStyle,
-          }).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
-          captionedBuffer = result.captioned;
-          cleanSourceBuffer = result.cleanSource;
-          console.log(`[clip] Cut complete: ${captionedBuffer.length} bytes captioned, ${cleanSourceBuffer.length} bytes clean`);
+          });
+          console.log(`[clip] Cut complete: ${cutResult.captioned.length} bytes captioned, ${cutResult.cleanSource.length} bytes clean`);
+        } catch (err) {
+          cutFailReason = err instanceof Error ? err.message : String(err);
+          console.error(`[clip] cutClip failed for peak ${peakIndex}:`, cutFailReason);
         } finally {
           await download.cleanup();
+        }
+
+        if (cutFailReason !== null || !cutResult) {
+          return { ok: false as const, reason: cutFailReason ?? "cutClip returned null" };
         }
 
         const baseFileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}`;
 
         const [publicUrl, cleanUrl] = await Promise.all([
-          uploadToR2(`${baseFileName}.mp4`, captionedBuffer!, "video/mp4"),
-          uploadToR2(`${baseFileName}-clean.mp4`, cleanSourceBuffer!, "video/mp4"),
+          uploadToR2(`${baseFileName}.mp4`, cutResult.captioned, "video/mp4"),
+          uploadToR2(`${baseFileName}-clean.mp4`, cutResult.cleanSource, "video/mp4"),
         ]).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
         const { error: updateError } = await supabase.from("clips").update({
@@ -701,7 +711,99 @@ export const generateClip = inngest.createFunction(
         if (updateError) throw new NonRetriableError(`DB update failed: ${updateError.message}`);
 
         console.log(`[clip] Saved: "${peak.title}" → ${publicUrl}`);
+        return { ok: true as const };
       });
+
+      // FFmpeg failed for this peak — mark it failed and try the next best peak.
+      // Only retry up to peakIndex 2 so we don't chain indefinitely on a corrupted VOD.
+      if (!uploadResult.ok) {
+        await supabase.from("clips").update({
+          status: "failed",
+          failed_reason: uploadResult.reason,
+        }).eq("id", clipId);
+
+        if (peakIndex < 3) {
+          const nextClipData = await step.run("queue-next-peak", async () => {
+            const { data: vodData } = await supabase
+              .from("vods")
+              .select("peak_data")
+              .eq("id", vodId)
+              .single();
+            const allPeaks = (vodData?.peak_data as any[]) ?? [];
+            const nextIdx = peakIndex + 1;
+
+            if (nextIdx >= allPeaks.length) {
+              console.log(`[clip] Peak ${peakIndex} failed, no more peaks for vod=${vodId}`);
+              return null;
+            }
+
+            const nextPeak = allPeaks[nextIdx];
+            let start = Number(nextPeak.start);
+            let end = Number(nextPeak.end);
+            const dur = end - start;
+            if (dur < 30) {
+              const pad = (30 - dur) / 2;
+              start = Math.max(0, start - pad);
+              end = end + pad;
+            }
+            const expanded = { ...nextPeak, start, end };
+
+            // Guard duplicate
+            const { data: existing } = await supabase
+              .from("clips")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("vod_id", vodId)
+              .eq("start_time_seconds", Math.round(start))
+              .in("status", ["processing", "ready"])
+              .maybeSingle();
+
+            if (existing) {
+              console.log(`[clip] Next peak ${nextIdx} already has a clip`);
+              return null;
+            }
+
+            const { data: newClip } = await supabase
+              .from("clips")
+              .insert({
+                user_id: userId,
+                vod_id: vodId,
+                title: nextPeak.title,
+                description: nextPeak.reason,
+                start_time_seconds: Math.round(start),
+                end_time_seconds: Math.round(end),
+                caption_text: nextPeak.caption,
+                caption_style: "bold",
+                peak_score: nextPeak.score,
+                peak_category: nextPeak.category,
+                peak_reason: nextPeak.reason,
+                status: "processing",
+              })
+              .select("id")
+              .single();
+
+            if (!newClip) return null;
+            console.log(`[clip] Falling back to peak ${nextIdx}: "${nextPeak.title}" (${newClip.id})`);
+            return { clipId: newClip.id, peak: expanded, peakIndex: nextIdx };
+          });
+
+          if (nextClipData) {
+            await step.sendEvent("fallback-clip-gen", {
+              name: "clip/generate",
+              data: {
+                clipId: nextClipData.clipId,
+                vodId,
+                twitchVodId,
+                userId,
+                peakIndex: nextClipData.peakIndex,
+                peak: nextClipData.peak,
+              },
+            });
+          }
+        }
+
+        return { clipId, fallback: true };
+      }
 
       // Notify user — fire and forget
       await step.run("notify-clip-ready", async () => {
