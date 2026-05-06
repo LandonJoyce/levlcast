@@ -25,7 +25,7 @@ import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
-import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail } from "@/lib/email";
+import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
 
 export const analyzeVod = inngest.createFunction(
@@ -809,7 +809,7 @@ export const generateClip = inngest.createFunction(
       await step.run("notify-clip-ready", async () => {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("expo_push_token, web_push_subscription")
+          .select("expo_push_token, web_push_subscription, plan, subscription_expires_at, twitch_display_name")
           .eq("id", userId)
           .single();
 
@@ -829,6 +829,29 @@ export const generateClip = inngest.createFunction(
             if (msg.includes("410") || msg.includes("expired") || msg.includes("unsubscribed")) {
               await supabase.from("profiles").update({ web_push_subscription: null }).eq("id", userId);
             }
+          }
+        }
+
+        // Conversion email for free users — "your clip is ready + here's what Pro unlocks"
+        const isExpired = profile?.plan === "pro" && profile?.subscription_expires_at &&
+          new Date(profile.subscription_expires_at) < new Date();
+        const isFree = profile?.plan !== "pro" || isExpired;
+
+        if (isFree) {
+          try {
+            const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+            if (user?.email) {
+              const { data: vodData } = await supabase
+                .from("vods")
+                .select("coach_report")
+                .eq("id", vodId)
+                .single();
+              const score = (vodData?.coach_report as any)?.overall_score as number | undefined;
+              const name = profile?.twitch_display_name ?? user.email.split("@")[0];
+              await sendClipReadyEmail(user.email, name, vodId, peak.title, score);
+            }
+          } catch (err) {
+            console.warn("[clip] clip-ready email failed:", err instanceof Error ? err.message : String(err));
           }
         }
       });

@@ -208,6 +208,115 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   });
 }
 
+export async function sendClipReadyEmail(
+  to: string,
+  name: string,
+  vodId: string,
+  clipTitle: string,
+  score: number | undefined
+): Promise<void> {
+  const scoreText = score !== undefined ? `${score}/100` : null;
+  const vodUrl = `https://levlcast.com/dashboard/vods/${vodId}`;
+  const upgradeUrl = `https://levlcast.com/dashboard/settings`;
+
+  await resend.emails.send({
+    from: "LevlCast <hello@levlcast.com>",
+    to,
+    subject: "Your clip is ready to post",
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your clip is ready</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;">Hey ${name}</p>
+          <h1 style="margin:0 0 14px;font-size:26px;font-weight:800;color:#ffffff;line-height:1.2;">Your clip is ready to post.</h1>
+          <p style="margin:0 0 24px;font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;">Your coach found your best moment from this stream and cut it automatically.</p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a22;border-radius:14px;padding:16px 20px;margin-bottom:26px;">
+            <tr><td>
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Best moment${scoreText ? ` · Stream scored ${scoreText}` : ""}</p>
+              <p style="margin:0;font-size:15px;font-weight:600;color:#ffffff;line-height:1.4;">${clipTitle}</p>
+            </td></tr>
+          </table>
+
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+            <tr><td style="background:#7C3AED;border-radius:12px;">
+              <a href="${vodUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
+                View and Download Clip →
+              </a>
+            </td></tr>
+          </table>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:24px;margin-bottom:24px;">
+            <tr><td>
+              <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#ffffff;">You've used your free clip for this month.</p>
+              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Pro gives you 20 clips and 20 stream analyses every month so you can post consistently and track how your streams improve over time.</p>
+            </td></tr>
+          </table>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a22;border-radius:14px;padding:16px 20px;margin-bottom:26px;">
+            <tr>
+              <td style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);">20 clips / month</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);">20 stream analyses / month</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);">Score history and improvement tracking</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;">
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);">Post clips directly to YouTube</p>
+              </td>
+            </tr>
+          </table>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a22;border-radius:14px;padding:16px 20px;margin-bottom:26px;">
+            <tr><td>
+              <p style="margin:0 0 6px;font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;font-style:italic;">"LevlCast is incredible. The clips it finds are exactly the moments my viewers react to most."</p>
+              <p style="margin:0;font-size:12px;font-weight:700;color:rgba(255,255,255,0.35);">Charmbix, Twitch streamer</p>
+            </td></tr>
+          </table>
+
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.4);border-radius:12px;">
+              <a href="${upgradeUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#a78bfa;text-decoration:none;">
+                Upgrade to Pro — $9.99/mo →
+              </a>
+            </td></tr>
+          </table>
+
+        </td></tr>
+
+        <tr><td style="padding-top:24px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">
+            LevlCast · <a href="https://levlcast.com/dashboard/settings" style="color:rgba(255,255,255,0.2);text-decoration:underline;">Unsubscribe</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
 export async function sendActivationEmail(to: string, name: string): Promise<void> {
   await resend.emails.send({
     from: "LevlCast <hello@levlcast.com>",
