@@ -28,50 +28,48 @@ export default function LandingProPlan() {
 
   return (
     <div className="ll-plan-pro-outer">
-      {/* Toggle */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        gap: 0, padding: "5px", margin: "0 auto 0",
-        background: "rgba(255,255,255,0.06)",
-        borderRadius: "12px 12px 0 0",
-        borderTop: "1px solid rgba(255,255,255,0.1)",
-        borderLeft: "1px solid rgba(255,255,255,0.1)",
-        borderRight: "1px solid rgba(255,255,255,0.1)",
-      }}>
-        <button
-          onClick={() => setAnnual(false)}
-          style={{
-            padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: 600, letterSpacing: "0.02em",
-            background: !annual ? "rgba(255,255,255,0.12)" : "transparent",
-            color: !annual ? "#fff" : "rgba(255,255,255,0.45)",
-            transition: "all 150ms",
-          }}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => setAnnual(true)}
-          style={{
-            position: "relative",
-            padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: 600, letterSpacing: "0.02em",
-            background: annual ? "rgba(255,255,255,0.12)" : "transparent",
-            color: annual ? "#fff" : "rgba(255,255,255,0.45)",
-            transition: "all 150ms",
-          }}
-        >
-          Annual
-          <span style={{
-            position: "absolute", top: -8, right: -4,
-            fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
-            padding: "2px 6px", borderRadius: 4,
-            background: "#A3E635", color: "#0b1c10",
-          }}>SAVE 17%</span>
-        </button>
-      </div>
-
-      <article className="ll-plan ll-plan-pro" style={{ borderRadius: "0 0 20px 20px" }}>
+      <article className="ll-plan ll-plan-pro">
+        {/* Toggle */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "flex-end",
+          gap: 0, padding: "4px",
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: 10,
+          marginBottom: 16,
+          alignSelf: "flex-start",
+        }}>
+          <button
+            onClick={() => setAnnual(false)}
+            style={{
+              padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, letterSpacing: "0.02em",
+              background: !annual ? "rgba(255,255,255,0.12)" : "transparent",
+              color: !annual ? "#fff" : "rgba(255,255,255,0.45)",
+              transition: "all 150ms",
+            }}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setAnnual(true)}
+            style={{
+              position: "relative",
+              padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, letterSpacing: "0.02em",
+              background: annual ? "rgba(255,255,255,0.12)" : "transparent",
+              color: annual ? "#fff" : "rgba(255,255,255,0.45)",
+              transition: "all 150ms",
+            }}
+          >
+            Annual
+            <span style={{
+              position: "absolute", top: -8, right: -4,
+              fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+              padding: "2px 6px", borderRadius: 4,
+              background: "#A3E635", color: "#0b1c10",
+            }}>SAVE 17%</span>
+          </button>
+        </div>
         <div>
           <div className="ll-plan-name">Pro</div>
           <div className="ll-plan-cycle">{annual ? "billed yearly" : "billed monthly"}</div>
@@ -128,5 +126,6 @@ export default function LandingProPlan() {
         )}
       </article>
     </div>
+
   );
 }
