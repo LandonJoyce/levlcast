@@ -166,7 +166,7 @@ export function ShareReportButton({ vodId, existingToken, score, variant = "comp
         className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
         style={{ background: "#000", color: "#fff", border: "1px solid rgba(255,255,255,0.18)" }}
       >
-        <XIcon size={11} /> X
+        <XIcon size={11} /> Post to X
       </button>
       <button
         onClick={copy}
