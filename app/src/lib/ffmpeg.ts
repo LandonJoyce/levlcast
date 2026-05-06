@@ -236,24 +236,30 @@ async function getFFmpegPath(): Promise<string> {
 function ffmpegError(err: any): Error {
   const stderr: string = err.stderr || "";
   const lines = stderr.split("\n").map((l: string) => l.trim()).filter(Boolean);
-  // Drop the noisy progress lines and the giant Stream/Metadata header
-  // dump that buries real error text. What's left is mostly the actual
-  // failure reason near the end of stderr.
-  const useful = lines.filter((l) =>
-    !/^frame=|^size=|^Stream #|^\s*Metadata:|^\s*encoder\s*:|^\s*handler_name\s*:|^\s*vendor_id\s*:/i.test(l)
+
+  // PTS rollover: negative time= in progress output
+  if (/time=-\d+:\d+:\d+/.test(stderr)) {
+    return new Error("FFmpeg rejected the input timestamps — the source MPEG-TS likely has gaps from missing Twitch segments. Retry the clip; if it persists the VOD is partially unavailable.");
+  }
+
+  // First pass: grab lines that look like actual FFmpeg errors
+  const errorLines = lines.filter((l) =>
+    /^(error|invalid|could not|no such|failed|unable|cannot|conversion failed|av_interleaved|moov atom|end of file|broken pipe)/i.test(l) ||
+    /^\[.*\] (error|invalid|could not|no such|failed|unable|cannot)/i.test(l)
   );
-  // Errors usually live in the last 6 useful lines. If that's empty
-  // (FFmpeg sometimes exits non-zero with only progress output for
-  // PTS/discontinuity issues), fall back to a synthesized message.
-  const tail = useful.slice(-6).join(" | ");
+  if (errorLines.length > 0) {
+    return new Error(`FFmpeg failed: ${errorLines.slice(-4).join(" | ").slice(0, 800)}`);
+  }
+
+  // Second pass: strip all the container/metadata/progress noise and take the last useful lines
+  const useful = lines.filter((l) =>
+    !/^frame=|^size=|^Stream #|^\s*Metadata:|^\s*encoder\s*:|^\s*handler_name\s*:|^\s*vendor_id\s*:|^\s*major_brand|^\s*minor_version|^\s*compatible_brands|^\s*Side data:|^\s*cpb:|^Output #|^Input #|^  Duration:|^\s*Stream mapping:|^Press/i.test(l)
+  );
+  const tail = useful.slice(-8).join(" | ");
   if (!tail) {
-    // Detect PTS rollover signature so retry advice is useful
-    if (/time=-\d+:\d+:\d+/.test(stderr)) {
-      return new Error("FFmpeg rejected the input timestamps — the source MPEG-TS likely has gaps from missing Twitch segments. Retry the clip; if it persists the VOD is partially unavailable.");
-    }
     return new Error(`FFmpeg failed without an explicit error: ${err.message}`);
   }
-  return new Error(`FFmpeg failed: ${tail.slice(0, 600)}`);
+  return new Error(`FFmpeg failed: ${tail.slice(0, 800)}`);
 }
 
 export interface CutClipOptions {
