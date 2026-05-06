@@ -151,7 +151,7 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   await resend.emails.send({
     from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
-    reply_to: "support@levlcast.com",
+    replyTo: "support@levlcast.com",
     subject: "Hey, welcome to LevlCast",
     html: `<!DOCTYPE html>
 <html lang="en">
@@ -217,7 +217,7 @@ export async function sendProWelcomeEmail(to: string, name: string): Promise<voi
   await resend.emails.send({
     from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
-    reply_to: "support@levlcast.com",
+    replyTo: "support@levlcast.com",
     subject: "You're now on Pro",
     html: `<!DOCTYPE html>
 <html lang="en">
