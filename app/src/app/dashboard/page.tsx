@@ -7,6 +7,7 @@ import WelcomeModal from "@/components/dashboard/welcome-modal";
 import { MissionsCard } from "@/components/dashboard/missions-card";
 import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
 import type { CoachingArcData } from "@/lib/coaching-arc";
+import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -152,6 +153,21 @@ export default async function DashboardPage() {
   const topPerfCategory = Object.entries(perfByCategory).sort((a, b) => b[1].views - a[1].views)[0] ?? null;
   const totalTrackedViews = Object.values(perfByCategory).reduce((s, e) => s + e.views, 0);
 
+  // Follower snapshots — last 35 days for growth brief
+  const thirtyFiveDaysAgo = new Date();
+  thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
+  const { data: followerSnapshots } = await supabase
+    .from("follower_snapshots")
+    .select("follower_count, snapped_at")
+    .eq("user_id", user.id)
+    .eq("platform", "twitch")
+    .gte("snapped_at", thirtyFiveDaysAgo.toISOString())
+    .order("snapped_at", { ascending: true });
+
+  const streamDates = (recentVods ?? [])
+    .map((v) => (v.stream_date ?? "").slice(0, 10))
+    .filter(Boolean);
+
   const displayName = profile?.twitch_display_name || "Streamer";
 
   // ─── Empty state — no streams analyzed yet ─────────────
@@ -271,6 +287,14 @@ export default async function DashboardPage() {
       {/* Coaching Arc — shows once 3+ streams analyzed */}
       {profile?.coaching_arc && (
         <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
+      )}
+
+      {/* Follower growth brief */}
+      {(followerSnapshots?.length ?? 0) > 0 && (
+        <FollowerBriefCard
+          snapshots={followerSnapshots ?? []}
+          streamDates={streamDates}
+        />
       )}
 
       {/* Stats + upgrade row */}

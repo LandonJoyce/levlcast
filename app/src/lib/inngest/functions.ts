@@ -1714,6 +1714,35 @@ export const autoSyncTwitchVods = inngest.createFunction(
 
       for (const profile of profiles) {
         try {
+          // Daily follower snapshot — runs regardless of new VODs
+          try {
+            const today = new Date().toISOString().slice(0, 10);
+            const { data: existingSnap } = await supabase
+              .from("follower_snapshots")
+              .select("id")
+              .eq("user_id", profile.id)
+              .eq("platform", "twitch")
+              .gte("snapped_at", `${today}T00:00:00Z`)
+              .maybeSingle();
+
+            if (!existingSnap) {
+              const followerRes = await fetch(
+                `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${profile.twitch_id}`,
+                { headers: { Authorization: `Bearer ${appToken}`, "Client-Id": process.env.TWITCH_CLIENT_ID! } }
+              );
+              if (followerRes.ok) {
+                const followerJson = await followerRes.json() as { total?: number };
+                await supabase.from("follower_snapshots").insert({
+                  user_id: profile.id,
+                  platform: "twitch",
+                  follower_count: followerJson.total ?? 0,
+                });
+              }
+            }
+          } catch {
+            // non-fatal — never block VOD sync on snapshot failure
+          }
+
           const twitchVods = await fetchTwitchVods(profile.twitch_id!, appToken, 10);
           if (twitchVods.length === 0) continue;
 
