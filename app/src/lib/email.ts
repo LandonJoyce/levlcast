@@ -151,7 +151,7 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   await resend.emails.send({
     from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
-    reply_to: "support@levlcast.com",
+    reply_to: "mototoka14@gmail.com",
     subject: "Hey, welcome to LevlCast",
     html: `<!DOCTYPE html>
 <html lang="en">
@@ -217,7 +217,7 @@ export async function sendProWelcomeEmail(to: string, name: string): Promise<voi
   await resend.emails.send({
     from: "Landon @ LevlCast <hello@levlcast.com>",
     to,
-    reply_to: "support@levlcast.com",
+    reply_to: "mototoka14@gmail.com",
     subject: "You're now on Pro",
     html: `<!DOCTYPE html>
 <html lang="en">
@@ -279,7 +279,7 @@ export async function sendProWelcomeEmail(to: string, name: string): Promise<voi
           </table>
 
           <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
-            If you ever have questions, run into anything weird, or just want to share feedback, email us at support@levlcast.com. I read every one.
+            If you ever have questions, run into anything weird, or just want to share feedback, email us at hello@levlcast.com. I read every one.
           </p>
 
           <p style="margin:0 0 6px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Talk soon,</p>
