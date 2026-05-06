@@ -3,11 +3,6 @@ import { generateCoachingArc } from "@/lib/coaching-arc";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const secret = request.headers.get("x-admin-secret");
-  if (!secret || secret !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const supabase = createAdminClient();
 
   // Find all users who have 3+ analyzed VODs with a coach report
