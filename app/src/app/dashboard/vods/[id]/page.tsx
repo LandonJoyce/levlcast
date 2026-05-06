@@ -313,15 +313,21 @@ export default async function VodPunchPage({
           ) : null}
 
           {/* Full analysis link */}
-          <div style={{ padding: "16px 28px", display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ padding: "16px 28px" }}>
             <Link
               href={`/dashboard/vods/${id}/report`}
               style={{
-                fontSize: 13, color: "var(--ink-3)", textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "11px 0",
+                borderRadius: 10,
+                fontSize: 13, fontWeight: 600, textDecoration: "none",
+                background: "linear-gradient(90deg, color-mix(in oklab, var(--blue) 12%, var(--surface-2)), color-mix(in oklab, var(--blue) 6%, var(--surface-2)))",
+                border: "1px solid color-mix(in oklab, var(--blue) 25%, var(--line))",
+                color: "var(--blue)",
+                letterSpacing: "0.01em",
               }}
             >
-              Full analysis <Icons.Arrow />
+              Full coaching breakdown <Icons.Arrow />
             </Link>
           </div>
         </div>
