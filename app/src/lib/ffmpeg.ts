@@ -407,8 +407,29 @@ export async function cutClip(
       try {
         await execAsync(remuxFallbackCmd, { timeout: 60000 });
       } catch (fallbackErr: any) {
-        console.error("[ffmpeg] remux fallback also failed:", fallbackErr.stderr?.slice(-600));
-        throw ffmpegError(fallbackErr);
+        // Both stream-copy remuxes failed — the MPEG-TS has a genuine PTS
+        // discontinuity that -avoid_negative_ts can't fix. Last resort: full
+        // re-encode with setpts/asetpts to rebuild timestamps from scratch.
+        // Slower (~2-3min on Vercel) but handles any timestamp corruption.
+        console.warn("[ffmpeg] both stream-copy remuxes failed, re-encoding to fix timestamps:", fallbackErr.stderr?.slice(-300));
+        const reencodeCmd = [
+          `"${ffmpegPath}"`,
+          `-fflags +igndts+discardcorrupt`,
+          `-err_detect ignore_err`,
+          `-i "${inputFilePath}"`,
+          `-vf "setpts=PTS-STARTPTS"`,
+          `-af "asetpts=PTS-STARTPTS"`,
+          `-c:v libx264 -preset ultrafast -crf 18`,
+          `-c:a aac -b:a 128k`,
+          `-y`,
+          `"${remuxedPath}"`,
+        ].join(" ");
+        try {
+          await execAsync(reencodeCmd, { timeout: 300000 });
+        } catch (reencodeErr: any) {
+          console.error("[ffmpeg] re-encode fallback also failed:", reencodeErr.stderr?.slice(-600));
+          throw ffmpegError(reencodeErr);
+        }
       }
     }
     console.log(`[ffmpeg] Remux complete → ${remuxedPath}`);
