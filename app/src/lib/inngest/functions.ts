@@ -703,6 +703,34 @@ export const generateClip = inngest.createFunction(
         console.log(`[clip] Saved: "${peak.title}" → ${publicUrl}`);
       });
 
+      // Notify user — fire and forget
+      await step.run("notify-clip-ready", async () => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("expo_push_token, web_push_subscription")
+          .eq("id", userId)
+          .single();
+
+        const pushPayload = {
+          title: "Your clip is ready",
+          body: peak.title,
+          data: { vodId },
+        };
+
+        await sendPush(profile?.expo_push_token, pushPayload);
+
+        if (profile?.web_push_subscription) {
+          try {
+            await sendWebPush(profile.web_push_subscription as any, pushPayload);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("410") || msg.includes("expired") || msg.includes("unsubscribed")) {
+              await supabase.from("profiles").update({ web_push_subscription: null }).eq("id", userId);
+            }
+          }
+        }
+      });
+
       return { clipId, title: peak.title };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
