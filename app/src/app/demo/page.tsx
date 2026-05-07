@@ -90,29 +90,28 @@ export default function DemoPage() {
       {/* Sticky demo banner */}
       <div style={{
         position: "sticky", top: 0, zIndex: 100,
-        background: "linear-gradient(135deg, rgba(148,61,255,0.95), rgba(180,70,200,0.95), rgba(242,97,121,0.95))",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255,255,255,0.12)",
-        padding: "10px 20px",
+        background: "#F59E0B",
+        borderBottom: "1px solid rgba(0,0,0,0.15)",
+        padding: "12px 20px",
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", background: "rgba(0,0,0,0.25)", padding: "3px 8px", borderRadius: 4 }}>
-            Sample Report
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", background: "rgba(0,0,0,0.15)", color: "#000", padding: "3px 8px", borderRadius: 4 }}>
+            Demo
           </span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
-            This is not your report. Connect Twitch to get yours.
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#000" }}>
+            This is not your report — it's a sample. Your score is not 74.
           </span>
         </div>
         <Link
           href="/auth/login"
           style={{
             fontSize: 13, fontWeight: 700, padding: "8px 18px", borderRadius: 8,
-            background: "#fff", color: "#0a0a14", textDecoration: "none",
+            background: "#000", color: "#fff", textDecoration: "none",
             whiteSpace: "nowrap", flexShrink: 0,
           }}
         >
-          Get Mine Free
+          Analyze My Stream Free
         </Link>
       </div>
 
