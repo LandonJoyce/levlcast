@@ -1154,8 +1154,8 @@
   --ll-blue:        rgb(95,165,195);
   --ll-grad:        linear-gradient(180deg, rgb(148,61,255) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
   --ll-grad-h:      linear-gradient(90deg,  rgb(148,61,255) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
-  --ll-display:     "Bricolage Grotesque", system-ui, sans-serif;
-  --ll-body:        "Poppins", system-ui, sans-serif;
+  --ll-display:     "Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif;
+  --ll-body:        "Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif;
   --ll-mono:        "Menlo", "JetBrains Mono", monospace;
   --ll-maxw:        1296px;
   --ll-gutter:      72px;

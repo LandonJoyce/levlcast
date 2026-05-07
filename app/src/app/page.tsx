@@ -35,11 +35,6 @@ export default async function LandingPage() {
 
   return (
     <div className="ll-page">
-      {/* Fonts */}
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-      <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
 
       {/* ── Nav ── */}
       <header className="ll-nav-wrap">

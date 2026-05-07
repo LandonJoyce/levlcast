@@ -159,7 +159,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <Link href="/" style={{
-            fontFamily: '"Bricolage Grotesque", system-ui, sans-serif',
+            fontFamily: '"Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif',
             fontSize: 32, fontWeight: 500, letterSpacing: "-0.01em",
             background: "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
