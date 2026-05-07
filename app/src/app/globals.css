@@ -1257,7 +1257,7 @@
 .ll-page .ll-hero-grid {
   display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 32px;
 }
-.ll-page .ll-hero-center { min-width: 0; }
+.ll-page .ll-hero-center { min-width: 0; padding-right: 140px; }
 .ll-page .ll-hero-vid { display: flex; align-items: center; justify-content: flex-end; }
 
 /* ── Phone Mockup (pure CSS iPhone) ── */
@@ -1861,6 +1861,7 @@
   .ll-page .ll-strip { grid-template-columns: 1fr 1fr; }
   .ll-page .ll-hero-grid { grid-template-columns: 1fr; }
   .ll-page .ll-hero-vid { display: none; }
+  .ll-page .ll-hero-center { padding-right: 0; }
   .ll-page .ll-strip-item:nth-child(2) { border-right: 0; }
   .ll-page .ll-strip-item:nth-child(1),
   .ll-page .ll-strip-item:nth-child(2) { border-bottom: 1px solid var(--ll-line-soft); }
