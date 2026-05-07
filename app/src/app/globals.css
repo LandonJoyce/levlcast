@@ -1267,6 +1267,9 @@
   box-shadow: 0 24px 64px rgba(0,0,0,0.6);
   display: block;
 }
+.ll-page .ll-hero-vid-right .ll-hero-video {
+  width: 340px;
+}
 .ll-page .ll-h1 {
   font-family: var(--ll-display); font-size: clamp(42px,6vw,70px);
   line-height: 1.05; letter-spacing: -0.02em;
