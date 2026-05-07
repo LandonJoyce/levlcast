@@ -14,9 +14,10 @@ export default function PhoneMockup({ src }: { src: string }) {
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       />
       <div className="ll-pm-device">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/la/phone-frame.png" className="ll-pm-frame" alt="" />
-        <video autoPlay muted loop playsInline src={src} className="ll-pm-vid" />
+        <div className="ll-pm-screen">
+          <div className="ll-pm-notch" />
+          <video autoPlay muted loop playsInline src={src} className="ll-pm-vid" />
+        </div>
       </div>
     </motion.div>
   );

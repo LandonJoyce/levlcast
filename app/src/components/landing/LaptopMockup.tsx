@@ -14,10 +14,15 @@ export default function LaptopMockup({ src }: { src: string }) {
         animate={inView ? { rotateX: 7, scale: 1, opacity: 1, y: 0 } : {}}
         transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="ll-lm-device">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/la/macbook-frame.png" className="ll-lm-frame" alt="" />
-          <video autoPlay muted loop playsInline src={src} className="ll-lm-vid" />
+        <div className="ll-lm-lid">
+          <div className="ll-lm-camera" />
+          <div className="ll-lm-screen">
+            <video autoPlay muted loop playsInline src={src} className="ll-lm-vid" />
+          </div>
+        </div>
+        <div className="ll-lm-hinge" />
+        <div className="ll-lm-base">
+          <div className="ll-lm-trackpad-slot" />
         </div>
       </motion.div>
     </div>
