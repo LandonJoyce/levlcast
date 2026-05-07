@@ -1265,26 +1265,31 @@
   position: relative;
   width: 100%; max-width: 220px;
   margin: 0 auto;
-  filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8));
 }
 .ll-pm-glow {
   position: absolute; inset: -50px -20px;
   background: radial-gradient(ellipse at 50% 65%,
-    rgba(148,61,255,0.45) 0%, rgba(242,97,121,0.18) 40%, transparent 68%);
+    rgba(148,61,255,0.4) 0%, rgba(242,97,121,0.15) 40%, transparent 68%);
   filter: blur(24px);
-  pointer-events: none; z-index: 0; border-radius: 50%;
+  pointer-events: none; z-index: 0;
 }
-.ll-pm-mask {
+.ll-pm-device {
   position: relative; z-index: 1;
-  -webkit-mask-image: url('/la/phone-frame.png');
-  mask-image: url('/la/phone-frame.png');
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
 }
+/* Frame overlaid on top — mix-blend-mode: screen makes the black screen transparent */
+.ll-pm-frame {
+  display: block; width: 100%;
+  position: relative; z-index: 2;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+/* Video sits behind the frame, aligned to the screen area */
 .ll-pm-vid {
-  width: 100%; display: block;
+  position: absolute; z-index: 1;
+  top: 2.5%; left: 3%; right: 3%; bottom: 2%;
+  width: 94%; height: 95.5%;
+  object-fit: cover;
+  border-radius: 40px;
 }
 
 /* ── VOD showcase ── */
