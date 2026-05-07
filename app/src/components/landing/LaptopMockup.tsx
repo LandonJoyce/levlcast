@@ -14,18 +14,10 @@ export default function LaptopMockup({ src }: { src: string }) {
         animate={inView ? { rotateX: 7, scale: 1, opacity: 1, y: 0 } : {}}
         transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="ll-lm-frame">
-          <div className="ll-lm-chrome">
-            <div className="ll-lm-dots">
-              <span style={{ background: "#FF5F57" }} />
-              <span style={{ background: "#FFBD2E" }} />
-              <span style={{ background: "#28C840" }} />
-            </div>
-            <div className="ll-lm-url">levlcast.com/dashboard</div>
-          </div>
-          <div className="ll-lm-video">
-            <video autoPlay muted loop playsInline src={src} />
-          </div>
+        <div className="ll-lm-device">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/la/macbook-frame.png" className="ll-lm-frame" alt="" />
+          <video autoPlay muted loop playsInline src={src} className="ll-lm-vid" />
         </div>
       </motion.div>
     </div>
