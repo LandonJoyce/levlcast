@@ -1645,9 +1645,9 @@
   text-align: center;
   background: linear-gradient(to bottom,
     rgb(9,11,27) 0%,
-    rgb(28,18,12) 30%,
-    rgb(38,22,10) 50%,
-    rgb(28,18,12) 70%,
+    rgb(30,12,18) 30%,
+    rgb(42,14,22) 50%,
+    rgb(30,12,18) 70%,
     rgb(9,11,27) 100%
   );
 }
