@@ -1773,7 +1773,11 @@
 }
 
 /* ── Streamer Marquee wrapper ── */
-.ll-page .ll-page-marquee { width: 100%; overflow: hidden; }
+.ll-page .ll-page-marquee {
+  width: 100%; overflow: hidden;
+  background: linear-gradient(to right, rgb(2,4,12) 0%, rgb(9,16,48) 28%, rgb(9,16,48) 72%, rgb(2,4,12) 100%);
+  padding-block: 40px;
+}
 
 /* ── Report Card Marquee ── */
 @keyframes ll-scroll-left  { from { transform: translateX(0); } to { transform: translateX(-50%); } }
