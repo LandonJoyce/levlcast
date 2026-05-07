@@ -70,8 +70,8 @@ export async function POST(request: Request) {
   }
 
   // Founding members have no stream length cap — they subscribed early with that promise.
-  // Free users cannot analyze VODs longer than 2 hours regardless of range selected.
-  if (!usage.founding_member && usage.plan !== "pro") {
+  // Free: up to 6 hours. Pro: up to 10 hours.
+  if (!usage.founding_member) {
     const { data: vodMeta } = await supabase
       .from("vods")
       .select("duration_seconds")
@@ -79,13 +79,16 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .single();
 
-    const FREE_MAX_SECONDS = 14400; // 4 hours
-    if (vodMeta?.duration_seconds && vodMeta.duration_seconds > FREE_MAX_SECONDS) {
+    const isPro = usage.plan === "pro";
+    const maxSeconds = isPro ? 36000 : 21600; // 10h pro, 6h free
+    if (vodMeta?.duration_seconds && vodMeta.duration_seconds > maxSeconds) {
       return NextResponse.json(
         {
           error: "vod_too_long",
-          message: "Free accounts can only analyze streams up to 2 hours long. Upgrade to Pro to analyze longer streams.",
-          upgrade: true,
+          message: isPro
+            ? "Pro accounts can analyze streams up to 10 hours long."
+            : "Free accounts can analyze streams up to 6 hours long. Upgrade to Pro for streams up to 10 hours.",
+          upgrade: !isPro,
         },
         { status: 403 }
       );
