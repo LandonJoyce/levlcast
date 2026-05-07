@@ -3,7 +3,6 @@ import Link from "next/link";
 
 const display = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
   axes: ["opsz", "SOFT"],
   variable: "--mk-display",
 });
