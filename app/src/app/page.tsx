@@ -2,6 +2,8 @@
 import FaqAccordion from "@/components/FaqAccordion";
 import StreamerMarquee from "@/components/landing/StreamerMarquee";
 import LandingProPlan from "@/components/landing/LandingProPlan";
+import PhoneMockup from "@/components/landing/PhoneMockup";
+import LaptopMockup from "@/components/landing/LaptopMockup";
 
 /* ─── Data ─── */
 async function getStreamCount(): Promise<number> {
@@ -65,10 +67,8 @@ export default async function LandingPage() {
       {/* ── Hero ── */}
       <section className="ll-hero">
         <div className="ll-con ll-hero-grid">
-          <div className="ll-hero-vid ll-hero-vid-left">
-            <div className="ll-hero-vid-frame">
-              <video autoPlay muted loop playsInline src="/demo/clipvideo.mp4" className="ll-hero-video" />
-            </div>
+          <div className="ll-hero-vid">
+            <PhoneMockup src="/demo/clipvideo.mp4" />
           </div>
           <div className="ll-hero-center">
             <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
@@ -117,19 +117,7 @@ export default async function LandingPage() {
       <div className="ll-vod-showcase">
         <div className="ll-con">
           <p className="ll-vod-showcase-label">See it in action</p>
-          <div className="ll-browser-wrap">
-            <div className="ll-browser-frame">
-              <div className="ll-browser-bar">
-                <div className="ll-browser-dots">
-                  <span style={{ background: "#FF5F57" }} />
-                  <span style={{ background: "#FFBD2E" }} />
-                  <span style={{ background: "#28C840" }} />
-                </div>
-                <div className="ll-browser-url">levlcast.com/dashboard</div>
-              </div>
-              <video autoPlay muted loop playsInline src="/demo/LEVLCASTHEROAGAIN.mp4" className="ll-vod-showcase-video" />
-            </div>
-          </div>
+          <LaptopMockup src="/demo/LEVLCASTHEROAGAIN.mp4" />
         </div>
       </div>
 
