@@ -1,16 +1,16 @@
 const CARDS = [
-  { handle: "NovaSerpent", score: 81, delta: "+9", cat: "HYPE", fix: "Energy held through the whole session. Mid-game transitions used to kill momentum." },
-  { handle: "clutchpxl", score: 67, delta: "+12", cat: "CLUTCH", fix: "Started slow but picked up hard after first win. Opening 20 min need more energy." },
-  { handle: "ZephyrFPS", score: 74, delta: "+6", cat: "COMEDY", fix: "Chat engagement was strong. Dead air at 1:12 dropped viewers 30% in 4 minutes." },
-  { handle: "ironwolf_tv", score: 58, delta: "+4", cat: "EDUCATIONAL", fix: "Good game knowledge but stream felt like a tutorial. Let personality come through more." },
-  { handle: "ArcticBlaze", score: 88, delta: "+14", cat: "HYPE", fix: "Best stream yet. Keep the back-and-forth with chat, it drove the biggest spikes." },
-  { handle: "mxreyna", score: 62, delta: "+7", cat: "EMOTIONAL", fix: "Genuine reactions landed well. Consistency dipped in hour two, energy fell off." },
-  { handle: "DriftKing99", score: 76, delta: "+11", cat: "CLUTCH", fix: "Comeback moment at 2:34 was your clip of the month. Build more tension before peaks." },
-  { handle: "solstice_gg", score: 55, delta: "+3", cat: "COMEDY", fix: "Strong personality, audio mix was hurting you. Game audio buried your voice twice." },
-  { handle: "KryptoViper", score: 83, delta: "+8", cat: "HYPE", fix: "Seven minutes of dead air at 47:20. Everything else was top tier." },
-  { handle: "lunarvex", score: 70, delta: "+5", cat: "EDUCATIONAL", fix: "Teaching segments were clear. Transition to gameplay felt abrupt every time." },
-  { handle: "PyroShift", score: 91, delta: "+18", cat: "HYPE", fix: "Highest score this month. Chat was fully locked in during the final hour." },
-  { handle: "echidnaTV", score: 64, delta: "+9", cat: "COMEDY", fix: "Laugh rate was above average. Pacing slowed after the 90-minute mark." },
+  { handle: "novxserpent", score: 81, delta: "+9", cat: "HYPE", fix: "Dead air at 1:14 dropped viewers 28% in under 4 minutes. Everything around it was strong." },
+  { handle: "clutchpxl", score: 67, delta: "+12", cat: "CLUTCH", fix: "You went silent for 6 minutes after the first loss at 47:20. That's where retention tanked." },
+  { handle: "zephyrfps_", score: 74, delta: "+6", cat: "COMEDY", fix: "The bit at 2:03 spiked chat harder than anything else. You moved on too fast — lean into those." },
+  { handle: "ironwolf_tv", score: 58, delta: "+4", cat: "EDUCATIONAL", fix: "Strong game knowledge but you stopped talking during mechanical sections. Narrate everything." },
+  { handle: "arcticblaze", score: 88, delta: "+14", cat: "HYPE", fix: "Best score yet. The back-and-forth with chat in hour two is what pushed it above 85." },
+  { handle: "mxreyna", score: 62, delta: "+7", cat: "EMOTIONAL", fix: "Energy dropped off hard after 1:30:00. Second half felt like a different stream." },
+  { handle: "driftkxng", score: 76, delta: "+11", cat: "CLUTCH", fix: "Comeback at 2:34 was your best clippable moment in three streams. You need to set that up more." },
+  { handle: "solstice_gg", score: 55, delta: "+3", cat: "COMEDY", fix: "Game audio was drowning your voice at 22:10 and again at 58:40. Fix the mix before next stream." },
+  { handle: "kryptoviper", score: 83, delta: "+8", cat: "HYPE", fix: "7 minutes of silence at 47:20 is the only thing that cost you a 90+ score. Otherwise elite." },
+  { handle: "lunarvex_", score: 70, delta: "+5", cat: "EDUCATIONAL", fix: "The tutorial segments landed well. Every time you switched back to gameplay you lost the thread." },
+  { handle: "pyroshift", score: 91, delta: "+18", cat: "HYPE", fix: "Chat was fully locked in from 1:45 to close. That's the longest sustained engagement on record." },
+  { handle: "echidnatv", score: 64, delta: "+9", cat: "COMEDY", fix: "Pacing fell off after 1:30. You had 4 strong comedy moments in the first hour, one in the second." },
 ];
 
 function scoreColor(n: number) {
