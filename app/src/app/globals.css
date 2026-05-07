@@ -1786,8 +1786,10 @@
   position: absolute; inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(to right, rgb(9,11,27) 0%, transparent 14%),
-    linear-gradient(to left,  rgb(9,11,27) 0%, transparent 14%);
+    linear-gradient(to right,  rgb(9,11,27) 0%, transparent 14%),
+    linear-gradient(to left,   rgb(9,11,27) 0%, transparent 14%),
+    linear-gradient(to bottom, rgb(9,11,27) 0%, transparent 30%),
+    linear-gradient(to top,    rgb(9,11,27) 0%, transparent 30%);
   z-index: 10;
 }
 .ll-page .ll-rc-row-wrap { width: 100%; overflow: hidden; }
