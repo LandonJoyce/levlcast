@@ -25,6 +25,7 @@ export const changelog: ChangelogEntry[] = [
     title: "Coach Report Tightened",
     items: [
       { type: "removed", text: "Removed the missions section from the coach report. Generic homework-style goals weren't getting used and weren't earning their slot. The priority fix at the top is the one thing to act on." },
+      { type: "new", text: "Two minutes to rewatch on every report — one win, one lesson. Click the timestamp and your VOD opens at exactly that moment so you can study your own tape." },
     ],
   },
   {

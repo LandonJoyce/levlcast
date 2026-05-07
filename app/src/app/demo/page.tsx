@@ -34,6 +34,18 @@ const DEMO_REPORT: CoachReport = {
   punch_line: "You had everything you needed for a viral clip and kept pulling back right before it landed.",
   recommendation:
     "Your best moments happen when you stop reacting and start leading the moment out loud. The 45:12 clutch worked because you were commentating the decision, not just the result. Do that from the first game.",
+  rewatch_moments: [
+    {
+      time: "45:12",
+      kind: "best",
+      note: "Watch how you narrated each decision in real time. That's the cadence that made chat react. Repeat this opening every game.",
+    },
+    {
+      time: "1:18:40",
+      kind: "worst",
+      note: "Notice the 90 seconds of silent gameplay after the loss. Your energy resets started here. Find a refill move for that beat.",
+    },
+  ],
   cold_open: {
     score: "weak",
     note:

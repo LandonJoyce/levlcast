@@ -107,6 +107,8 @@ export interface CoachReport {
   cold_open?: { score: "strong" | "average" | "weak"; note: string };
   /** Longest silence/low-energy gaps detected in the stream. */
   dead_zones?: Array<{ time: string; duration: number }>;
+  /** Two specific minutes to rewatch — one model-behavior moment, one teachable mistake. */
+  rewatch_moments?: Array<{ time: string; kind: "best" | "worst"; note: string }>;
 }
 
 // ─── CLIPS ───────────────────────────────────────────────────────────────────

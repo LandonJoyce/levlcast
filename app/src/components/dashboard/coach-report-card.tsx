@@ -795,6 +795,46 @@ export function CoachReportCard({
             </div>
           )}
 
+          {/* ── 3. REWATCH MOMENTS ── two specific minutes to study, one win one mistake */}
+          {(report.rewatch_moments ?? []).length > 0 && (
+            <div style={{ margin: "0 0 36px", padding: "24px 26px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
+                Rewatch <em style={{ fontStyle: "italic", ...gradText }}>two minutes.</em>
+              </h2>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 18 }}>
+                60 seconds each. Study them before next stream.
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {(report.rewatch_moments ?? []).map((m, i) => {
+                  const isBest = m.kind === "best";
+                  const accent = isBest ? "#A3E635" : "#F87171";
+                  const accentSoft = isBest ? "rgba(163,230,53,0.05)" : "rgba(248,113,113,0.05)";
+                  const accentBorder = isBest ? "rgba(163,230,53,0.22)" : "rgba(248,113,113,0.22)";
+                  const inner = (
+                    <div style={{ padding: "14px 16px", borderRadius: 10, background: accentSoft, border: `1px solid ${accentBorder}`, display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center" }}>
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: accent }}>
+                        {isBest ? "Win" : "Lesson"}
+                      </span>
+                      <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", lineHeight: 1.55, color: "#ECF1FA", margin: 0 }}>
+                        {m.note}
+                      </p>
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: accent, letterSpacing: "0.04em" }}>
+                        {m.time}{twitchVodId ? " ↗" : ""}
+                      </span>
+                    </div>
+                  );
+                  return twitchVodId ? (
+                    <a key={i} href={vodUrl(twitchVodId, m.time)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <div key={i}>{inner}</div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* ── 4. OPENING / CLOSING ── */}
           {(report.cold_open?.note || report.closing?.note) && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 36px" }}>
