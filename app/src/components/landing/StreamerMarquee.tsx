@@ -67,12 +67,9 @@ function Row({ items, reverse }: { items: typeof CARDS; reverse?: boolean }) {
 }
 
 export default function StreamerMarquee() {
-  const row1 = CARDS.slice(0, 9);
-  const row2 = CARDS.slice(9);
   return (
     <div className="ll-rc-wrap" aria-hidden="true">
-      <Row items={row1} />
-      <Row items={row2} reverse />
+      <Row items={CARDS} />
     </div>
   );
 }

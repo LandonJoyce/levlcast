@@ -66,7 +66,18 @@ export default async function LandingPage() {
       <section className="ll-hero">
         <div className="ll-con ll-hero-grid">
           <div className="ll-hero-vid ll-hero-vid-left">
-            <video autoPlay muted loop playsInline src="/demo/clipvideo.mp4" className="ll-hero-video" />
+            <div className="ll-hero-vid-frame">
+              <div className="ll-hero-vid-glow" />
+              <div className="ll-hero-vid-badge">
+                <span className="ll-hero-vid-badge-dot" />
+                Clip
+              </div>
+              <video autoPlay muted loop playsInline src="/demo/clipvideo.mp4" className="ll-hero-video" />
+              <div className="ll-hero-vid-stat">
+                <span className="ll-hero-vid-stat-score">81/100</span>
+                <span className="ll-hero-vid-stat-delta">+9</span>
+              </div>
+            </div>
           </div>
           <div className="ll-hero-center">
             <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
@@ -115,7 +126,20 @@ export default async function LandingPage() {
       <div className="ll-vod-showcase">
         <div className="ll-con">
           <p className="ll-vod-showcase-label">See it in action</p>
-          <video autoPlay muted loop playsInline src="/demo/LEVLCASTHEROAGAIN.mp4" className="ll-vod-showcase-video" />
+          <div className="ll-browser-wrap">
+            <div className="ll-browser-glow" />
+            <div className="ll-browser-frame">
+              <div className="ll-browser-bar">
+                <div className="ll-browser-dots">
+                  <span style={{ background: "#FF5F57" }} />
+                  <span style={{ background: "#FFBD2E" }} />
+                  <span style={{ background: "#28C840" }} />
+                </div>
+                <div className="ll-browser-url">levlcast.com/dashboard</div>
+              </div>
+              <video autoPlay muted loop playsInline src="/demo/LEVLCASTHEROAGAIN.mp4" className="ll-vod-showcase-video" />
+            </div>
+          </div>
         </div>
       </div>
 
