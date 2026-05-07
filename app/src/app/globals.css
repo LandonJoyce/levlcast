@@ -1823,12 +1823,12 @@
 }
 .ll-page .ll-rc-score span { font-size: 13px; opacity: 0.55; font-weight: 500; margin-left: 1px; }
 .ll-page .ll-rc-delta {
-  font-family: var(--ll-mono); font-size: 12px; font-weight: 700;
-  background: rgba(255,255,255,0.06); border-radius: 5px; padding: 2px 7px;
+  font-family: var(--ll-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
 }
 .ll-page .ll-rc-cat {
-  font-family: var(--ll-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-  padding: 3px 8px; border-radius: 5px; margin-left: auto;
+  font-family: var(--ll-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  padding: 2px 0 2px 7px; border-left: 2px solid; margin-left: auto;
+  text-transform: uppercase;
 }
 .ll-page .ll-rc-fix {
   font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin: 0;
