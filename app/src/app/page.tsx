@@ -83,7 +83,7 @@ export default async function LandingPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
             <a
-              href="https://apps.apple.com/app/levlcast/id6744042940"
+              href="https://apps.apple.com/us/app/levlcast/id6761281566"
               target="_blank"
               rel="noopener noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 4 }}
