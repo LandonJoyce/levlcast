@@ -106,8 +106,15 @@ export default async function LandingPage() {
 
       {/* ── Live counter ── */}
       <div className="ll-live-counter">
-        <span className="ll-live-num">{displayCount}</span>
-        <span className="ll-live-label">streams <span className="ll-grad-text">analyzed</span> and counting</span>
+        <div className="ll-live-inner">
+          <span className="ll-live-num">{displayCount}</span>
+          <div className="ll-live-words">
+            <span>streams</span>
+            <span className="ll-live-word-grad">analyzed</span>
+            <span>and</span>
+            <span>counting</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Before / After ── */}
