@@ -1263,67 +1263,28 @@
 /* ── Phone Mockup ── */
 .ll-pm-outer {
   position: relative;
-  width: 100%; max-width: 210px;
+  width: 100%; max-width: 220px;
   margin: 0 auto;
-  filter: drop-shadow(0 48px 64px rgba(0,0,0,0.75));
+  filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8));
 }
 .ll-pm-glow {
-  position: absolute; inset: -50px -24px;
+  position: absolute; inset: -50px -20px;
   background: radial-gradient(ellipse at 50% 65%,
-    rgba(148,61,255,0.5) 0%, rgba(242,97,121,0.22) 38%, transparent 68%);
-  filter: blur(22px);
+    rgba(148,61,255,0.45) 0%, rgba(242,97,121,0.18) 40%, transparent 68%);
+  filter: blur(24px);
   pointer-events: none; z-index: 0; border-radius: 50%;
 }
-.ll-pm-body {
+.ll-pm-mask {
   position: relative; z-index: 1;
-  background: linear-gradient(158deg, #26263c 0%, #191928 28%, #101018 62%, #0c0c12 100%);
-  border-radius: 50px;
-  padding: 16px 10px 12px;
-  border: 1.5px solid rgba(255,255,255,0.13);
-  box-shadow:
-    0 0 0 1px rgba(0,0,0,0.95),
-    inset 0 2px 0 rgba(255,255,255,0.07),
-    inset 0 -1px 0 rgba(0,0,0,0.7),
-    inset 1px 0 0 rgba(255,255,255,0.025),
-    inset -1px 0 0 rgba(255,255,255,0.025),
-    0 80px 120px -20px rgba(0,0,0,0.9),
-    0 0 60px -10px rgba(148,61,255,0.12);
+  -webkit-mask-image: url('/la/phone-frame.png');
+  mask-image: url('/la/phone-frame.png');
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
-.ll-pm-vol1, .ll-pm-vol2, .ll-pm-power {
-  position: absolute;
-  background: linear-gradient(to right, #1c1c2c, #242436);
-}
-.ll-pm-vol1 { left: -3px; top: 88px;  width: 3px; height: 28px; border-radius: 2px 0 0 2px; }
-.ll-pm-vol2 { left: -3px; top: 128px; width: 3px; height: 28px; border-radius: 2px 0 0 2px; }
-.ll-pm-power { right: -3px; top: 106px; width: 3px; height: 42px; border-radius: 0 2px 2px 0; }
-.ll-pm-island {
-  display: flex; justify-content: center; margin-bottom: 10px;
-}
-.ll-pm-island > div {
-  background: #060608; border-radius: 20px;
-  padding: 5px 20px; display: flex; align-items: center;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
-}
-.ll-pm-cam {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #1e2030, #080810);
-  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.06), inset 0 0 3px rgba(80,120,255,0.18);
-}
-.ll-pm-screen {
-  position: relative; border-radius: 36px; overflow: hidden;
-  background: #000; line-height: 0;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 28px 2px rgba(148,61,255,0.12);
-}
-.ll-pm-screen video { width: 100%; display: block; }
-.ll-pm-gloss {
-  position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  background: linear-gradient(135deg,
-    rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 30%, transparent 60%);
-  border-radius: inherit;
-}
-.ll-pm-home {
-  width: 38%; height: 4px; background: rgba(255,255,255,0.2);
-  border-radius: 2px; margin: 12px auto 0;
+.ll-pm-vid {
+  width: 100%; display: block;
 }
 
 /* ── VOD showcase ── */
