@@ -1212,7 +1212,7 @@
 /* ── Nav ── */
 .ll-page .ll-nav-wrap {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(9,11,27,0.05);
+  background: rgb(4,4,8);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   border: none !important;
