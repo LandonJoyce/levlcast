@@ -1,24 +1,14 @@
 const CARDS = [
-  { handle: "novxserpent", score: 81, delta: "+9", cat: "HYPE", fix: "Dead air at 1:14 dropped viewers 28% in under 4 minutes. Everything around it was strong." },
-  { handle: "bramvdijk_tv", score: 67, delta: "+12", cat: "CLUTCH", fix: "You went silent for 6 minutes after the first loss at 47:20. That's where retention tanked." },
-  { handle: "zephyrfps_", score: 74, delta: "+6", cat: "COMEDY", fix: "The bit at 2:03 spiked chat harder than anything else. You moved on too fast, lean into those." },
-  { handle: "kasperholm", score: 58, delta: "+4", cat: "EDUCATIONAL", fix: "Strong game knowledge but you stopped talking during mechanical sections. Narrate everything." },
-  { handle: "arcticblaze", score: 88, delta: "+14", cat: "HYPE", fix: "Best score yet. The back-and-forth with chat in hour two is what pushed it above 85." },
-  { handle: "thierrylive", score: 62, delta: "+7", cat: "EMOTIONAL", fix: "Energy dropped off hard after 1:30:00. Second half felt like a different stream." },
-  { handle: "driftkxng", score: 76, delta: "+11", cat: "CLUTCH", fix: "Comeback at 2:34 was your best clippable moment in three streams. Need to set that up more." },
-  { handle: "solstice_gg", score: 55, delta: "+3", cat: "COMEDY", fix: "Game audio was drowning your voice at 22:10 and again at 58:40. Fix the mix before next stream." },
-  { handle: "magnusfps", score: 83, delta: "+8", cat: "HYPE", fix: "7 minutes of silence at 47:20 is the only thing that cost you a 90. Otherwise elite." },
-  { handle: "lunarvex_", score: 70, delta: "+5", cat: "EDUCATIONAL", fix: "The tutorial segments landed well. Every time you switched back to gameplay you lost the thread." },
-  { handle: "pyroshift", score: 91, delta: "+18", cat: "HYPE", fix: "Chat was fully locked in from 1:45 to close. Longest sustained engagement on record." },
-  { handle: "echidnatv", score: 64, delta: "+9", cat: "COMEDY", fix: "Pacing fell off after 1:30. Four strong comedy moments in the first hour, one in the second." },
-  { handle: "rikkevods", score: 72, delta: "+6", cat: "EMOTIONAL", fix: "The story you told at 38:00 held chat completely still. Do more of that, it's your best content." },
-  { handle: "clutchpxl", score: 79, delta: "+10", cat: "CLUTCH", fix: "Three near-miss moments that never paid off. Let those breathe longer before moving on." },
-  { handle: "jensenlive", score: 61, delta: "+5", cat: "EDUCATIONAL", fix: "You explained the build twice in 10 minutes. Trust that chat was listening the first time." },
-  { handle: "voltaicvex", score: 85, delta: "+13", cat: "HYPE", fix: "Opening 45 minutes were the best of any stream this month. The back half needs to match that." },
-  { handle: "floortje_gg", score: 68, delta: "+8", cat: "COMEDY", fix: "Chat was laughing but you kept apologizing for the jokes. Own it, the bit at 1:08 was good." },
-  { handle: "svenplays", score: 77, delta: "+7", cat: "CLUTCH", fix: "You hit your peak moment at 2:11 then spent 20 minutes in cool-down mode. Ride the wave longer." },
-  { handle: "kryptoviper", score: 83, delta: "+8", cat: "HYPE", fix: "7 minutes of silence at 47:20 is the only thing that cost you a 90+ score. Otherwise elite." },
-  { handle: "ironwolf_tv", score: 58, delta: "+4", cat: "EDUCATIONAL", fix: "Strong game knowledge but you stopped talking during mechanical sections. Narrate everything." },
+  { handle: "novxserpent", game: "Valorant", score: 81, delta: "+9", cat: "CLUTCH", fix: "The 1v3 clutch on Bind at 1:14 was your best moment. You went quiet right after and lost 22% of viewers in 3 minutes." },
+  { handle: "bramvdijk_tv", game: "CS2", score: 67, delta: "+12", cat: "HYPE", fix: "AWP ace on Mirage at 47:20 spiked chat but you moved straight into the next round. Hold that moment longer." },
+  { handle: "kasperholm", game: "World of Warcraft", score: 58, delta: "+4", cat: "EDUCATIONAL", fix: "Mythic+ breakdown was solid but you stopped narrating during the pull at 38:10. Lost half the chat right there." },
+  { handle: "arcticblaze", game: "Valorant", score: 88, delta: "+14", cat: "HYPE", fix: "Best score this month. Reading enemy Sage walls out loud kept chat engaged through the slow rounds." },
+  { handle: "thierrylive", game: "PUBG", score: 62, delta: "+7", cat: "EMOTIONAL", fix: "The final circle loss at 1:28 was genuine and chat loved it. The second half never recovered that energy." },
+  { handle: "driftkxng", game: "CS2", score: 76, delta: "+11", cat: "CLUTCH", fix: "Deagle kill through smoke on Inferno at 2:34 is the best clip you've had in three streams." },
+  { handle: "magnusfps", game: "Valorant", score: 83, delta: "+8", cat: "HYPE", fix: "Operator duel on Haven at 47:20 then 7 minutes of silence. That gap is the only thing keeping you under 90." },
+  { handle: "pyroshift", game: "Apex Legends", score: 91, delta: "+18", cat: "HYPE", fix: "Back-to-back 20 bomb run from 1:45 to close. Chat was locked in the entire time. Longest run on record." },
+  { handle: "svenplays", game: "PUBG", score: 77, delta: "+7", cat: "CLUTCH", fix: "Won a 1v4 in the final zone at 2:11 then went into a quiet loot run for 20 minutes. Ride that energy." },
+  { handle: "floortje_gg", game: "Apex Legends", score: 68, delta: "+8", cat: "COMEDY", fix: "Wraith portal into the storm at 1:08 had chat going. You apologized for it. Don't, it was the highlight." },
 ];
 
 function scoreColor(n: number) {
@@ -38,7 +28,7 @@ function catColor(c: string) {
   }
 }
 
-function Card({ handle, score, delta, cat, fix }: (typeof CARDS)[0]) {
+function Card({ handle, game, score, delta, cat, fix }: (typeof CARDS)[0]) {
   const sc = scoreColor(score);
   const cc = catColor(cat);
   return (
@@ -49,7 +39,10 @@ function Card({ handle, score, delta, cat, fix }: (typeof CARDS)[0]) {
         <div className="ll-rc-cat" style={{ background: cc.bg, color: cc.text }}>{cat}</div>
       </div>
       <p className="ll-rc-fix">{fix}</p>
-      <div className="ll-rc-handle">{handle}</div>
+      <div className="ll-rc-meta">
+        <span className="ll-rc-handle">{handle}</span>
+        <span className="ll-rc-game">{game}</span>
+      </div>
     </div>
   );
 }
@@ -67,8 +60,8 @@ function Row({ items, reverse }: { items: typeof CARDS; reverse?: boolean }) {
 }
 
 export default function StreamerMarquee() {
-  const row1 = CARDS.slice(0, 6);
-  const row2 = CARDS.slice(6);
+  const row1 = CARDS.slice(0, 5);
+  const row2 = CARDS.slice(5);
   return (
     <div className="ll-rc-wrap" aria-hidden="true">
       <Row items={row1} />

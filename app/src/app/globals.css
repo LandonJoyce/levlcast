@@ -1841,6 +1841,12 @@
 .ll-page .ll-rc-fix {
   font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.55; margin: 0;
 }
+.ll-page .ll-rc-meta {
+  display: flex; align-items: center; justify-content: space-between;
+}
 .ll-page .ll-rc-handle {
   font-family: var(--ll-mono); font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.04em;
+}
+.ll-page .ll-rc-game {
+  font-family: var(--ll-mono); font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 0.04em;
 }
