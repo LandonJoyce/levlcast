@@ -1641,30 +1641,21 @@
 
 /* Live counter */
 .ll-page .ll-live-counter {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 80px 20px 88px;
+  text-align: center;
   background: rgb(4,4,8);
   border-top: 1px solid rgba(255,255,255,0.07);
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  display: flex; justify-content: center; align-items: center;
-}
-.ll-page .ll-live-inner {
-  display: flex; flex-direction: row; align-items: center; gap: 20px;
 }
 .ll-page .ll-live-num {
-  font-family: var(--ll-display); font-size: clamp(72px, 11vw, 120px); font-weight: 700;
+  font-family: var(--ll-display); font-size: clamp(60px, 8vw, 88px); font-weight: 700;
   background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
-  line-height: 1; letter-spacing: -0.04em; flex-shrink: 0;
+  line-height: 1; letter-spacing: -0.04em;
 }
-.ll-page .ll-live-words {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 0;
-}
-.ll-page .ll-live-words span {
-  font-size: clamp(15px, 1.8vw, 22px); font-weight: 500;
-  color: rgba(255,255,255,0.65); line-height: 1.3; letter-spacing: -0.01em;
-  display: block;
-}
-.ll-page .ll-live-word-grad {
-  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent !important;
+.ll-page .ll-live-label {
+  font-size: clamp(18px, 2.5vw, 26px); font-weight: 500; color: rgba(255,255,255,0.7);
+  letter-spacing: -0.01em;
 }
 
 /* ── Footer ── */
@@ -1776,8 +1767,7 @@
   .ll-page .ll-plan-pro-outer { margin-top: 0; }
   .ll-page .ll-btn.ll-btn-grad { font-size: 15px; padding: 13px 22px; }
   .ll-page .ll-rc-card { width: 230px; }
-  .ll-page .ll-live-num { font-size: 60px; }
-  .ll-page .ll-live-words span { font-size: 14px; }
+  .ll-page .ll-live-num { font-size: 52px; }
   .ll-page .ll-foot-socials { gap: 12px; }
   .ll-page .ll-yt-grid { gap: 12px; }
 }
