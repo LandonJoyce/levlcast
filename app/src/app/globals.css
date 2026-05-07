@@ -1331,8 +1331,7 @@
 .ll-page .ll-vod-showcase-label {
   font-family: var(--ll-display); font-size: clamp(28px, 4vw, 42px); font-weight: 700;
   letter-spacing: -0.02em; text-align: center; margin: 0 0 40px;
-  background: var(--ll-grad-h);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  color: #ECF1FA;
 }
 
 /* ── Laptop Mockup ── */

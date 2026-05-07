@@ -116,7 +116,7 @@ export default async function LandingPage() {
       {/* ── VOD Video showcase ── */}
       <div className="ll-vod-showcase">
         <div className="ll-con">
-          <p className="ll-vod-showcase-label">See it in action</p>
+          <p className="ll-vod-showcase-label">See it in <span className="ll-grad-text">action</span></p>
           <LaptopMockup src="/demo/LEVLCASTHEROAGAIN.mp4" />
         </div>
       </div>
