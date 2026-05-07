@@ -1255,13 +1255,9 @@
 .ll-page .ll-hero::before {
   content: "";
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(to right,
-    rgba(5,15,35,0.95) 0%,
-    rgba(5,15,35,0.6) 20%,
-    rgba(5,15,35,0.1) 50%,
-    rgba(5,15,35,0.6) 80%,
-    rgba(5,15,35,0.95) 100%
-  );
+  background:
+    linear-gradient(to right, rgba(5,15,40,0.9) 0%, transparent 38%, transparent 62%, rgba(5,15,40,0.9) 100%),
+    radial-gradient(ellipse 55% 100% at 50% 50%, rgba(95,165,195,0.13) 0%, transparent 65%);
 }
 .ll-page .ll-hero::after { display: none; }
 .ll-page .ll-h1 {
