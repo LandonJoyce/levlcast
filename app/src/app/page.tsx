@@ -115,20 +115,20 @@ export default async function LandingPage() {
           <div className="ll-compare">
             <article className="ll-card-ba">
               <span className="ll-ba-tag ll-ba-tag-bad">Without LevlCast</span>
-              <h3 className="ll-ba-h">Guesswork after every stream</h3>
+              <h3 className="ll-ba-h">End every stream with nothing</h3>
               <ul className="ll-ba-list">
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>18 minutes of dead air at 1:40. You didn't notice.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>VODs expire in 14 days. Best moments lost forever.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>Generic advice: "be more engaging." What does that even mean?</li>
+                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>You lost half your viewers somewhere in hour two. No idea where.</li>
+                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>Your best clip of the month expired with the VOD.</li>
+                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>You go live again tomorrow doing the exact same thing.</li>
               </ul>
             </article>
             <article className="ll-card-ba">
               <span className="ll-ba-tag ll-ba-tag-good">With LevlCast</span>
-              <h3 className="ll-ba-h">One specific fix, every stream</h3>
+              <h3 className="ll-ba-h">End every stream knowing exactly what to fix</h3>
               <ul className="ll-ba-list">
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>Chat pulse mapped to your transcript, second by second.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>Auto-clips of your hype, comedy, and clutch moments.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>Three missions to carry into your next session. That's it.</li>
+                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>See the exact timestamp where viewers dropped off.</li>
+                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>Your best moments clipped and ready to post before you sleep.</li>
+                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>One specific thing to do differently next stream. Not a list. One thing.</li>
               </ul>
             </article>
           </div>
