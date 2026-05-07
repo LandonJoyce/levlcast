@@ -1643,7 +1643,16 @@
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 80px 20px 100px;
   text-align: center;
-  background: radial-gradient(ellipse at 50% 30%, rgba(251,146,60,0.2) 0%, rgba(251,146,60,0.04) 55%, transparent 72%);
+  position: relative; z-index: 0;
+}
+.ll-page .ll-live-counter::before {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 1400px; height: 900px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at 50% 50%, rgba(251,146,60,0.28) 0%, rgba(251,146,60,0.1) 35%, rgba(251,146,60,0.03) 60%, transparent 75%);
+  filter: blur(50px);
+  z-index: -1; pointer-events: none;
 }
 .ll-page .ll-live-num {
   font-family: var(--ll-display); font-size: 72px; font-weight: 700;
