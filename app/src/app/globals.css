@@ -1252,19 +1252,8 @@
   position: relative; text-align: center;
   padding-block: 120px 48px; isolation: isolate;
 }
-.ll-page .ll-hero::before {
-  content: "";
-  position: absolute; left: 50%; top: -80px;
-  width: min(900px, 100vw); height: 500px; border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.22) 0%, rgba(249,115,22,0.06) 50%, transparent 75%);
-  transform: translateX(-50%); z-index: -1; filter: blur(90px);
-}
-.ll-page .ll-hero::after {
-  content: ""; position: absolute; left: 50%; top: -60px;
-  width: min(500px, 80vw); height: 300px; border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 0%, rgba(251,146,60,0.18) 0%, transparent 70%);
-  transform: translateX(-50%); z-index: -1; filter: blur(40px);
-}
+.ll-page .ll-hero::before { display: none; }
+.ll-page .ll-hero::after { display: none; }
 .ll-page .ll-h1 {
   font-family: var(--ll-display); font-size: clamp(42px,6vw,70px);
   line-height: 1.05; letter-spacing: -0.02em;
@@ -1762,8 +1751,6 @@
   .ll-page .ll-sec { padding-block: 56px; }
   .ll-page .ll-shead { margin-bottom: 36px; gap: 16px; }
   .ll-page .ll-hero { padding-block: 56px 40px; }
-  .ll-page .ll-hero::before { height: 300px; }
-  .ll-page .ll-hero::after { height: 180px; }
   .ll-page .ll-h1 { font-size: clamp(32px, 9vw, 42px); margin: 16px auto 16px; }
   .ll-page .ll-lede { font-size: 15px; margin-bottom: 24px; }
   .ll-page .ll-h2 { font-size: clamp(26px, 7vw, 36px); }
