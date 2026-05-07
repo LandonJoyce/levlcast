@@ -1256,11 +1256,11 @@
   content: "";
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(to right,
-    rgba(95,165,195,0.22) 0%,
-    rgba(95,165,195,0.08) 40%,
-    rgba(95,165,195,0.12) 50%,
-    rgba(95,165,195,0.08) 60%,
-    rgba(95,165,195,0.22) 100%
+    rgba(9,20,40,0.7) 0%,
+    rgba(9,20,40,0.35) 25%,
+    rgba(9,20,40,0.05) 50%,
+    rgba(9,20,40,0.35) 75%,
+    rgba(9,20,40,0.7) 100%
   );
 }
 .ll-page .ll-hero::after { display: none; }
