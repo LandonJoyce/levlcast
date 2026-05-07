@@ -42,8 +42,8 @@ function Card({ handle, game, score, delta, cat, fix }: (typeof CARDS)[0]) {
     <div className="ll-rc-card">
       <div className="ll-rc-top">
         <div className="ll-rc-score" style={{ color: sc }}>{score}<span>/100</span></div>
-        <div className="ll-rc-delta" style={{ color: sc }}>▲ {delta}</div>
-        <div className="ll-rc-cat" style={{ color: cc.text, borderColor: cc.text }}>{cat}</div>
+        <div className="ll-rc-delta" style={{ color: sc }}>{delta}</div>
+        <div className="ll-rc-cat" style={{ background: cc.bg, color: cc.text }}>{cat}</div>
       </div>
       <p className="ll-rc-fix">{fix}</p>
       <div className="ll-rc-meta">
