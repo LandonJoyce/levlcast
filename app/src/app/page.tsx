@@ -74,26 +74,13 @@ export default async function LandingPage() {
               Get Your First Report Free
             </Link>
             <Link href="/demo" style={{
-              display: "inline-flex", alignItems: "center", gap: 12,
-              padding: "10px 18px 10px 14px",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.04)",
-              textDecoration: "none",
-              color: "var(--ll-fg)",
-              fontSize: 14,
-              backdropFilter: "blur(8px)",
+              display: "inline-flex", alignItems: "center", gap: 8,
+              textDecoration: "none", fontSize: 14,
             }}>
-              <span style={{
-                fontFamily: "var(--ll-mono)", fontSize: 13, fontWeight: 700,
-                color: "#A3E635",
-                background: "rgba(163,230,53,0.1)",
-                border: "1px solid rgba(163,230,53,0.25)",
-                borderRadius: 6, padding: "3px 9px",
-              }}>74/100</span>
-              <span style={{ color: "rgba(255,255,255,0.75)" }}>See a sample report</span>
-              <span style={{ fontSize: 11, padding: "2px 7px", background: "rgba(255,255,255,0.07)", borderRadius: 4, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>no signup</span>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <span style={{ fontFamily: "var(--ll-mono)", fontSize: 12, fontWeight: 700, color: "#A3E635" }}>74/100</span>
+              <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>·</span>
+              <span style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1 }}>See a sample report</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
             <a
               href="https://apps.apple.com/app/levlcast/id6744042940"
