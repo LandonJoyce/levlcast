@@ -69,36 +69,33 @@ export default async function LandingPage() {
             <video autoPlay muted loop playsInline src="/demo/clipvideo.mp4" className="ll-hero-video" />
           </div>
           <div className="ll-hero-center">
-          <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
-          <p className="ll-lede">
-            LevlCast watches your VOD and tells you exactly what to fix. Score, timestamps, and clips ready to post.
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-            <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
-              Get Your First Report Free
-            </Link>
-            <Link href="/demo" style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              textDecoration: "none", fontSize: 14,
-            }}>
-              <span style={{ fontFamily: "var(--ll-mono)", fontSize: 12, fontWeight: 700, color: "#A3E635" }}>74/100</span>
-              <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>·</span>
-              <span style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1 }}>See a sample report</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </Link>
-            <a
-              href="https://apps.apple.com/us/app/levlcast/id6761281566"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 4 }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-              Also free on the App Store
-            </a>
-          </div>
-          </div>
-          <div className="ll-hero-vid ll-hero-vid-right">
-            <video autoPlay muted loop playsInline src="/demo/LEVLCASTHEROAGAIN.mp4" className="ll-hero-video" />
+            <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
+            <p className="ll-lede">
+              LevlCast watches your VOD and tells you exactly what to fix. Score, timestamps, and clips ready to post.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+              <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
+                Get Your First Report Free
+              </Link>
+              <Link href="/demo" style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                textDecoration: "none", fontSize: 14,
+              }}>
+                <span style={{ fontFamily: "var(--ll-mono)", fontSize: 12, fontWeight: 700, color: "#A3E635" }}>74/100</span>
+                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>·</span>
+                <span style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1 }}>See a sample report</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </Link>
+              <a
+                href="https://apps.apple.com/us/app/levlcast/id6761281566"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 4 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Also free on the App Store
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -112,6 +109,14 @@ export default async function LandingPage() {
       <div className="ll-live-counter">
         <span className="ll-live-num">{displayCount}</span>
         <span className="ll-live-label">streams <span className="ll-grad-text">analyzed</span> and counting</span>
+      </div>
+
+      {/* ── VOD Video showcase ── */}
+      <div className="ll-vod-showcase">
+        <div className="ll-con">
+          <p className="ll-vod-showcase-label">See it in action</p>
+          <video autoPlay muted loop playsInline src="/demo/LEVLCASTHEROAGAIN.mp4" className="ll-vod-showcase-video" />
+        </div>
       </div>
 
       {/* ── Before / After ── */}
