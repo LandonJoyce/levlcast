@@ -1641,18 +1641,21 @@
 
 /* Live counter */
 .ll-page .ll-live-counter {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 110px 20px 130px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 80px 20px 88px;
   text-align: center;
   background: rgb(4,4,8);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 .ll-page .ll-live-num {
-  font-family: var(--ll-display); font-size: 72px; font-weight: 700;
+  font-family: var(--ll-display); font-size: clamp(90px, 14vw, 160px); font-weight: 700;
   background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
-  line-height: 1; letter-spacing: -0.03em;
+  line-height: 1; letter-spacing: -0.04em;
 }
 .ll-page .ll-live-label {
-  font-size: 20px; color: rgba(255,255,255,0.55);
+  font-size: clamp(18px, 2.5vw, 26px); font-weight: 500; color: rgba(255,255,255,0.7);
+  letter-spacing: -0.01em;
 }
 
 /* ── Footer ── */
@@ -1764,7 +1767,7 @@
   .ll-page .ll-plan-pro-outer { margin-top: 0; }
   .ll-page .ll-btn.ll-btn-grad { font-size: 15px; padding: 13px 22px; }
   .ll-page .ll-rc-card { width: 230px; }
-  .ll-page .ll-live-num { font-size: 52px; }
+  .ll-page .ll-live-num { font-size: 72px; }
   .ll-page .ll-foot-socials { gap: 12px; }
   .ll-page .ll-yt-grid { gap: 12px; }
 }
