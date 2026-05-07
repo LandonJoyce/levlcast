@@ -1653,7 +1653,8 @@
 }
 .ll-page .ll-live-num {
   font-family: var(--ll-display); font-size: 72px; font-weight: 700;
-  color: #A3E635; line-height: 1; letter-spacing: -0.03em;
+  background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text; color: transparent;
+  line-height: 1; letter-spacing: -0.03em;
 }
 .ll-page .ll-live-label {
   font-size: 20px; color: rgba(255,255,255,0.55);
