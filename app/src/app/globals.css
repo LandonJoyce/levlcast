@@ -1755,7 +1755,6 @@
   .ll-page .ll-foot-main { grid-template-columns: 1fr; }
   .ll-page .ll-hero { padding-block: 80px 60px; }
   .ll-page .ll-card-ba { padding: 32px; }
-  .ll-page .ll-sm-track { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ── Mobile (phones) ── */
@@ -1775,7 +1774,7 @@
   .ll-page .ll-plan { padding: 28px 24px; }
   .ll-page .ll-plan-pro-outer { margin-top: 0; }
   .ll-page .ll-btn.ll-btn-grad { font-size: 15px; padding: 13px 22px; }
-  .ll-page .ll-sm-track { grid-template-columns: repeat(2, 1fr); }
+  .ll-page .ll-rc-card { width: 230px; }
   .ll-page .ll-live-num { font-size: 52px; }
   .ll-page .ll-foot-socials { gap: 12px; }
   .ll-page .ll-yt-grid { gap: 12px; }
@@ -1784,48 +1783,64 @@
 /* ── Streamer Marquee wrapper ── */
 .ll-page .ll-page-marquee { width: 100%; overflow: hidden; }
 
-/* ── Streamer Grid — static 2×5 ── */
-.ll-page .ll-sm-wrap {
-  display: flex; flex-direction: column; gap: 16px;
+/* ── Report Card Marquee ── */
+@keyframes ll-scroll-left  { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes ll-scroll-right { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+.ll-page .ll-rc-wrap {
+  display: flex; flex-direction: column; gap: 14px;
   padding-block: 4px;
   position: relative;
+  overflow: hidden;
 }
-/* Left + right side fades across the whole grid */
-.ll-page .ll-sm-wrap::before {
+.ll-page .ll-rc-wrap::before {
   content: "";
   position: absolute; inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(to right, rgb(9,11,27) 0%, transparent 12%),
-    linear-gradient(to left,  rgb(9,11,27) 0%, transparent 12%);
+    linear-gradient(to right, rgb(9,11,27) 0%, transparent 14%),
+    linear-gradient(to left,  rgb(9,11,27) 0%, transparent 14%);
   z-index: 10;
 }
-/* Bottom fade across the whole grid */
-.ll-page .ll-sm-wrap::after {
-  content: "";
-  position: absolute; left: 0; right: 0; bottom: 0;
-  height: 100px;
-  pointer-events: none;
-  background: linear-gradient(to top, rgb(9,11,27) 0%, transparent 100%);
-  z-index: 10;
+.ll-page .ll-rc-row-wrap { width: 100%; overflow: hidden; }
+.ll-page .ll-rc-track {
+  display: flex; gap: 14px;
+  width: max-content;
+  animation: ll-scroll-left 40s linear infinite;
 }
-.ll-page .ll-sm-row-wrap { width: 100%; }
-.ll-page .ll-sm-track {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
+.ll-page .ll-rc-track-rev {
+  animation: ll-scroll-right 44s linear infinite;
 }
-.ll-page .ll-sm-card {
-  position: relative;
-  aspect-ratio: 4/3;
-  border-radius: 12px; overflow: hidden;
-  border: none;
+.ll-page .ll-rc-wrap:hover .ll-rc-track,
+.ll-page .ll-rc-wrap:hover .ll-rc-track-rev { animation-play-state: paused; }
+
+.ll-page .ll-rc-card {
+  width: 260px; flex-shrink: 0;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  backdrop-filter: blur(4px);
 }
-.ll-page .ll-sm-overlay {
-  position: absolute; inset: 0;
-  padding: 10px 12px; display: flex; flex-direction: column;
-  z-index: 3;
+.ll-page .ll-rc-top {
+  display: flex; align-items: center; gap: 10px;
 }
-.ll-page .ll-sm-live {
-  font-family: var(--ll-mono); font-size: 9px; letter-spacing: 0.12em;
-  background: var(--ll-red); color: #fff;
-  padding: 2px 7px; border-radius: 3px; width: fit-content;
+.ll-page .ll-rc-score {
+  font-family: var(--ll-mono); font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.03em;
+}
+.ll-page .ll-rc-score span { font-size: 13px; opacity: 0.55; font-weight: 500; margin-left: 1px; }
+.ll-page .ll-rc-delta {
+  font-family: var(--ll-mono); font-size: 12px; font-weight: 700;
+  background: rgba(255,255,255,0.06); border-radius: 5px; padding: 2px 7px;
+}
+.ll-page .ll-rc-cat {
+  font-family: var(--ll-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 3px 8px; border-radius: 5px; margin-left: auto;
+}
+.ll-page .ll-rc-fix {
+  font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.55; margin: 0;
+}
+.ll-page .ll-rc-handle {
+  font-family: var(--ll-mono); font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.04em;
 }
