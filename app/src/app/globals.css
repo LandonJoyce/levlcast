@@ -1256,8 +1256,7 @@
   content: "";
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
-    linear-gradient(to right, rgba(6,12,38,1) 0%, rgba(8,16,44,0.85) 18%, transparent 42%, transparent 58%, rgba(8,16,44,0.85) 82%, rgba(6,12,38,1) 100%),
-    radial-gradient(ellipse 50% 90% at 50% 50%, rgba(90,155,200,0.1) 0%, transparent 60%);
+    linear-gradient(to right, rgba(6,12,38,0.97) 0%, rgba(6,12,38,0.55) 18%, transparent 40%, transparent 60%, rgba(6,12,38,0.55) 82%, rgba(6,12,38,0.97) 100%);
 }
 .ll-page .ll-hero::after { display: none; }
 .ll-page .ll-h1 {
