@@ -36,17 +36,22 @@ export async function POST(req: NextRequest) {
 ${sourceDesc}
 Username: ${authorName}
 
+What LevlCast does (pick the 1-2 most relevant to their pain point):
+- Analyzes your VOD after each stream, scores it 0-100, and tells you the specific things to fix to improve
+- Auto-detects your best moments and generates clips ready to post as YouTube Shorts or TikTok without you rewatching anything
+- Shows the exact timestamps where viewers dropped off so you know what killed retention
+- Tracks your coaching score across streams so you can see if you're actually getting better
+
 Rules:
-- First line: SUBJECT: <a short subject line specific to their situation, 4-7 words, no generic phrases like "your stream" or "quick question", make it feel like it's written by a real person who read their ${isComment ? "comment" : "post"}>
+- First line: SUBJECT: <4-7 words, specific to their situation, written like a real person who actually read their ${isComment ? "comment" : "post"}, no generic openers>
 - Then a blank line
 - Then the message body: 3 sentences max
-- Reference something specific from their ${isComment ? "comment" : "post"}
-- Say you built LevlCast, not that you found it or that it's a tool you use
-- Explain what it does in one sentence: it watches your VOD after each stream and shows you the exact timestamps where viewers dropped off
-- Mention it's free. End with levlcast.com
-- No em dashes. No hyphens between words. No corpo language. No "I hope". No "just wanted to".
-- Sound like a real person texting, not a marketer
-- Match their tone: if they're frustrated, be direct; if they're casual, be casual
+- Sentence 1: acknowledge their specific problem from the ${isComment ? "comment" : "post"} (1 detail that proves you read it)
+- Sentence 2: say you built LevlCast, describe what it does using the features most relevant to their pain (1 sentence)
+- Sentence 3: tell them it's free to try, end with levlcast.com
+- No em dashes. No hyphens between words. No corpo language. No "I hope". No "just wanted to". No "checking out". No "might be worth".
+- Sound like a person who actually uses the product and built it, not a marketer
+- Match their tone exactly: if they're frustrated, be blunt; if they're casual, be casual; if they're technical, be specific
 - Return ONLY the subject line and message. Nothing else.`,
       },
     ],
