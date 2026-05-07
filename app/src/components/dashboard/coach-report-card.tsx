@@ -79,7 +79,6 @@ function buildScript(r: CoachReport, prev?: number) {
     else if (d < 0) p.push(`Down ${Math.abs(d)} from last stream.`);
   }
   p.push(`Number one priority. ${r.recommendation}`);
-  (r.next_stream_goals ?? []).forEach((g, i) => p.push(`Mission ${i + 1}. ${g}`));
   return p.join(" ");
 }
 
@@ -297,7 +296,7 @@ function LockedSection({
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: PURPLE }}>{label}</span>
         </div>
         <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.55, maxWidth: "36ch" }}>
-          {hint ?? "Pro unlocks the full report every fix, every mission, every flagged moment."}
+          {hint ?? "Pro unlocks the full report every fix, every flagged moment."}
         </p>
         <button
           onClick={onUpgrade}
@@ -389,8 +388,6 @@ const ANTI_PATTERN_LABELS: Record<string, string> = {
   self_defeat: "Self-Defeat Talk",
 };
 
-const ROMAN = ["i.", "ii.", "iii.", "iv.", "v."];
-
 interface ChatPulseBucket {
   start: number; end: number; count: number; uniqueChatters: number;
   laughCount: number; hypeCount: number; sadCount: number;
@@ -427,13 +424,11 @@ export function CoachReportCard({
 
   const [displayScore, setDisplayScore] = useState(0);
   const [draw, setDraw] = useState(false);
-  const [checked, setChecked] = useState<Set<number>>(new Set());
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const openUpgrade = useCallback(() => setUpgradeOpen(true), []);
 
   const lockedStrengths = Math.max(0, (report.strengths?.length ?? 0) - 1);
   const fixCount = report.improvements?.length ?? 0;
-  const missionCount = report.next_stream_goals?.length ?? 0;
   const antiPatternCount = report.anti_patterns?.length ?? 0;
 
   const recapDelta = previousReport ? computeReportDelta(previousReport, report) : null;
@@ -800,45 +795,6 @@ export function CoachReportCard({
             </div>
           )}
 
-          {/* ── 3. MISSIONS ── */}
-          {(report.next_stream_goals ?? []).length > 0 && (
-            isPro ? (
-              <div style={{ margin: "0 0 36px", padding: "24px 26px", borderRadius: 14, background: PURPLE_SOFT, border: `1px solid ${PURPLE_BORDER}` }}>
-                <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 28, letterSpacing: "-0.015em", marginBottom: 4, color: "#ECF1FA" }}>
-                  Missions for{" "}
-                  <em style={{ fontStyle: "italic", ...gradText }}>next stream.</em>
-                </h2>
-                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 22 }}>
-                  Click to mark as committed
-                </div>
-                {(report.next_stream_goals ?? []).map((goal, i, arr) => (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "44px 1fr 28px", gap: 14, alignItems: "start", padding: "14px 0", borderBottom: i < arr.length - 1 ? "1px solid rgba(148,61,255,0.15)" : "none" }}>
-                    <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, letterSpacing: "-0.03em", lineHeight: 0.9, ...gradText }}>
-                      {ROMAN[i] ?? `${i + 1}.`}
-                    </div>
-                    <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", lineHeight: 1.6, color: checked.has(i) ? "#6F7C95" : "#ECF1FA", margin: 0, textDecoration: checked.has(i) ? "line-through" : "none" }}>
-                      {goal}
-                    </p>
-                    <button
-                      className={`cr2-check${checked.has(i) ? " done" : ""}`}
-                      onClick={() => setChecked(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s; })}
-                      aria-label={`Mark mission ${i + 1} as done`}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ margin: "0 0 32px" }}>
-                <LockedSection
-                  label={`Your Missions · ${missionCount} next-stream goal${missionCount !== 1 ? "s" : ""}`}
-                  hint={missionCount > 0 ? `${missionCount} concrete mission${missionCount !== 1 ? "s" : ""} to commit to checkable, built from this stream's data.` : undefined}
-                  height={140}
-                  onUpgrade={openUpgrade}
-                />
-              </div>
-            )
-          )}
-
           {/* ── 4. OPENING / CLOSING ── */}
           {(report.cold_open?.note || report.closing?.note) && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 36px" }}>
@@ -1200,9 +1156,6 @@ export function CoachReportCard({
                 {fixCount > 0 && (
                   <UnlockStat n={fixCount} label={`Specific fix${fixCount !== 1 ? "es" : ""} for next stream`} color="#F59E0B" />
                 )}
-                {missionCount > 0 && (
-                  <UnlockStat n={missionCount} label={`Mission${missionCount !== 1 ? "s" : ""} to commit to`} color={PURPLE} />
-                )}
                 {antiPatternCount > 0 && (
                   <UnlockStat n={antiPatternCount} label={`Growth killer${antiPatternCount !== 1 ? "s" : ""} flagged`} color="#F87171" />
                 )}
@@ -1275,7 +1228,7 @@ export function CoachReportCard({
       <UpgradeModal
         isOpen={upgradeOpen}
         onClose={() => setUpgradeOpen(false)}
-        reason="Unlock all fixes, missions, growth-killer flags, and 15 VOD analyses per month with full clip generation."
+        reason="Unlock all fixes, growth-killer flags, and 15 VOD analyses per month with full clip generation."
       />
     </>
   );

@@ -518,7 +518,7 @@ export interface CoachReport {
   improvements: string[];
   best_moment: { time: string; description: string };
   recommendation: string;
-  next_stream_goals: string[];
+  next_stream_goals?: string[];
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
   // Closing score — mirrors cold_open for how the stream ended. Optional
@@ -1128,7 +1128,6 @@ SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries
 - Labels must sound like a fellow streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Playing It Safe". Storytelling: "No Callback", "No Setup". Transitions: "Dead Transition", "Wasted Downtime". Chat: "Chat Ignored", "Chat Wallpaper". Audience: "Audience Cold", "New Viewer Blind". Vocal: "Monotone Zone", "Flat Delivery". Hype: "Built That Up", "Let It Happen". Closing: "Cold Ending", "No Finish". NEVER: "Audience Disconnect", "Content Vacuum", "Viewer Arc".
 - Best moment: write this like a coach reviewing game tape — (1) what was building before this moment that set it up, (2) the exact thing the streamer did at that second and why it landed, (3) how to engineer this intentionally on the next stream. 3 sentences. Actions and energy only — no reconstructed words.
 - Recommendation: Imagine a successful experienced streamer just watched this VOD. What is the one thing they would pull you aside and say? Lead with that insight directly. 2-3 sentences max. Make it feel like a real person said it, not a report. Never mention viewer counts or numbers in this field. No timestamps. No quoted words.
-- Goals (next_stream_goals): These are missions for the NEXT stream, not analysis of this one. Never use timestamps in goals. Goals describe a behavior to do or avoid in the next session. Each goal must be one clear sentence, specific enough to check off after the stream. Sound like a coach, not a report. No timestamps, no em dashes. Bad: "At 18:30 you went silent, so work on that." Good: "Pick one moment every 30 minutes to ask chat a direct question and wait for an answer."
 - Cold open: evaluate from when the streamer STARTS actively engaging, not from the stream's timestamp 0. Settling in (reading chat, audio check, BRB screen, intro music, sipping coffee) is NOT a cold open problem — it's normal stream behavior. Score "strong" if they came in with clear energy and a hook once they started; "average" if they warmed up naturally into the stream; "weak" ONLY if they took more than 8 minutes to actually engage, opened with visibly negative/flat energy once engaged, or ignored active chat during the opening. Silence before they started engaging is never "weak". Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
 - Closing: score the last 5 minutes. Normal sign-off behavior (saying bye, thanking viewers, shouting out subs, hyping next stream) is NOT a closing problem. Score "strong" if they ended with energy, gratitude, and a clear next-stream hook; "average" if they wrapped up naturally; "weak" ONLY if they ended mid-content without warning, ended on visibly negative energy, complained about the stream as they ended, or trailed off silently. Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
 - Anti-patterns: scan the transcript for these 5 specific growth-killing behaviors and flag ONLY if you can produce an exact verbatim quote. Empty array is the correct output when none apply. DO NOT flag ambient negativity or interpretation — the quote must literally match the pattern's meaning.
@@ -1191,11 +1190,6 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   },
   "punch_line": "<ONE sentence. Written like someone who just watched your entire stream and is telling you the one thing you need to hear. No timestamp required. This is about a pattern, a missed opportunity, a moment the stream had and didn't take, or something the streamer kept doing that cost them. It should make them feel 'why didn't I do that' or 'I knew something was off'. No softening, no praise, no encouragement. Just the honest observation that stings a little and makes them want to fix it. Example tone: 'You had the energy for a viral moment and kept pulling back right before it landed.' or 'Every time the stream started building you changed the subject and reset the tension.' or 'You played it safe the entire stream and safe doesn't get clipped.' No em dashes. Under 20 words. No quoted words. No timestamps.>",
   "recommendation": "<1-2 short sentences addressed to 'you'. Reference this specific stream. Most impactful change. No buildup. Use contractions.>",
-  "next_stream_goals": [
-    "<one sentence. A specific behavior to do next stream that fixes the biggest problem. No timestamps. No em dashes. Sounds like a coach, not a report. Use contractions.>",
-    "<one sentence. A different behavior. Targets a different problem. No timestamps. No em dashes.>",
-    "<one sentence. A different behavior. Targets a different problem. No timestamps. No em dashes.>"
-  ],
   "momentum_crash": {
     "time": "<MM:SS of where the crash started>",
     "duration_min": <integer minutes the dead zone lasted>,

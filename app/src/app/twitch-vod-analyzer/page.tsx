@@ -161,7 +161,7 @@ export default function VodAnalyzerPage() {
                 <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
                   <img
                     src="/screenshots/image13.png"
-                    alt="LevlCast Twitch VOD analyzer report showing stream score, priorities, and missions"
+                    alt="LevlCast Twitch VOD analyzer report showing stream score, priorities, and growth-killer flags"
                     className="w-full h-auto"
                   />
                 </div>

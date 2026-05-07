@@ -99,8 +99,8 @@ export interface CoachReport {
   };
   /** The single highest-leverage thing to do differently next stream. */
   recommendation: string;
-  /** Three specific, measurable goals for the next stream. */
-  next_stream_goals: string[];
+  /** Legacy: present on historical reports only — no longer generated. */
+  next_stream_goals?: string[];
   /** How likely the stream was to lose viewers mid-way. */
   viewer_retention_risk: RetentionRisk;
   /** How strong the stream's opening was (first 5 minutes). */

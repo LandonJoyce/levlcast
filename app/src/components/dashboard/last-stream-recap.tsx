@@ -9,7 +9,6 @@
 
 import {
   type ReportDelta,
-  type MissionCheck,
   antiPatternLabel,
   formatSeconds,
 } from "@/lib/report-delta";
@@ -20,46 +19,6 @@ const SUBSCORE_LABEL: Record<string, string> = {
   consistency: "Consistency",
   content: "Content",
 };
-
-function StatusPill({ status }: { status: MissionCheck["status"] }) {
-  if (status === "achieved") {
-    return (
-      <span style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
-        textTransform: "uppercase", letterSpacing: "0.18em",
-        padding: "3px 8px", borderRadius: 999,
-        background: "rgba(163,230,53,0.12)", color: "#A3E635",
-        border: "1px solid rgba(163,230,53,0.32)",
-      }}>
-        Done
-      </span>
-    );
-  }
-  if (status === "regressed") {
-    return (
-      <span style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
-        textTransform: "uppercase", letterSpacing: "0.18em",
-        padding: "3px 8px", borderRadius: 999,
-        background: "rgba(248,113,113,0.12)", color: "#F87171",
-        border: "1px solid rgba(248,113,113,0.32)",
-      }}>
-        Slipped
-      </span>
-    );
-  }
-  return (
-    <span style={{
-      fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 700,
-      textTransform: "uppercase", letterSpacing: "0.18em",
-      padding: "3px 8px", borderRadius: 999,
-      background: "rgba(255,255,255,0.04)", color: "#A6B3C9",
-      border: "1px solid rgba(255,255,255,0.12)",
-    }}>
-      Ongoing
-    </span>
-  );
-}
 
 function subScoreColor(score: number) {
   return score >= 66 ? "#A3E635" : score >= 33 ? "#F59E0B" : "#F87171";
@@ -84,16 +43,13 @@ function deltaArrow(delta: number) {
 }
 
 export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
-  const { score, biggestWin, biggestRegression, subscores, deadAir, antiPatterns, missions } = delta;
+  const { score, biggestWin, biggestRegression, subscores, deadAir, antiPatterns } = delta;
 
   // Recurring anti-patterns are the most credibility-building signal
   // ("we noticed you do this every stream"), so we surface them first.
   const recurring = antiPatterns.filter((a) => a.recurring);
   const cleared = antiPatterns.filter((a) => a.cleared);
   const newlyFlagged = antiPatterns.filter((a) => a.newThisStream);
-
-  const achievedMissions = missions.filter((m) => m.status === "achieved");
-  const regressedMissions = missions.filter((m) => m.status === "regressed");
 
   // Headline copy adapts to the data — punchy where the data warrants it.
   const headline = score.delta > 5
@@ -241,48 +197,6 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
         </div>
       )}
 
-
-      {/* Mission check — last stream's goals matched against this stream */}
-      {missions.length > 0 && (
-        <div style={{ marginTop: 22 }}>
-          <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: "0.28em", ...gradText,
-            marginBottom: 12,
-          }}>
-            Last Stream&apos;s Missions · {achievedMissions.length}/{missions.length} done
-          </div>
-          {missions.map((m, i) => (
-            <div key={i} style={{
-              padding: "12px 14px",
-              borderRadius: 8,
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              marginBottom: 8,
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
-                <span style={{
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                  fontSize: "calc(var(--cs, 1) * 14px)",
-                  color: m.status === "achieved" ? "#A3E635" : m.status === "regressed" ? "#F87171" : "#ECF1FA",
-                  lineHeight: 1.5, flex: 1,
-                  textDecoration: m.status === "achieved" ? "line-through" : "none",
-                  textDecorationColor: "rgba(163,230,53,0.5)",
-                }}>
-                  {m.goal}
-                </span>
-                <StatusPill status={m.status} />
-              </div>
-              <div style={{
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
-                color: "#6F7C95", letterSpacing: "0.02em", marginTop: 2,
-              }}>
-                {m.evidence}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Recurring anti-patterns — credibility kicker. Says explicitly:
           we remember what you do every stream. */}

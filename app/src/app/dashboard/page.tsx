@@ -221,7 +221,7 @@ export default async function DashboardPage() {
           {[
             { n: "01", t: "Sync from Twitch", b: "One click. We pull your VOD library, read-only, no setup." },
             { n: "02", t: "AI watches every minute", b: "Scored on energy, engagement, consistency, and content." },
-            { n: "03", t: "Get your coach report", b: "Stream story, priority fix, 3 strengths, 3 missions for next stream." },
+            { n: "03", t: "Get your coach report", b: "Stream story, priority fix, 3 strengths, growth-killers flagged with quotes." },
           ].map((s) => (
             <div key={s.n} className="card card-pad">
               <span className="mono-label">{s.n}</span>

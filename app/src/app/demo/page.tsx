@@ -34,11 +34,6 @@ const DEMO_REPORT: CoachReport = {
   punch_line: "You had everything you needed for a viral clip and kept pulling back right before it landed.",
   recommendation:
     "Your best moments happen when you stop reacting and start leading the moment out loud. The 45:12 clutch worked because you were commentating the decision, not just the result. Do that from the first game.",
-  next_stream_goals: [
-    "Write down two stories before you go live. Use one during every loading screen.",
-    "In the first 60 seconds, tell chat exactly what you're chasing tonight.",
-    "Narrate your read before you make the play. Not after.",
-  ],
   cold_open: {
     score: "weak",
     note:

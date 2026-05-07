@@ -20,6 +20,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.10.3",
+    date: "2026-05-07",
+    title: "Coach Report Tightened",
+    items: [
+      { type: "removed", text: "Removed the missions section from the coach report. Generic homework-style goals weren't getting used and weren't earning their slot. The priority fix at the top is the one thing to act on." },
+    ],
+  },
+  {
     version: "v0.10.2",
     date: "2026-05-05",
     title: "Streams Page Redesign + Clip Quality Lift",
