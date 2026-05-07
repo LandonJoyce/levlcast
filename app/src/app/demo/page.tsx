@@ -100,7 +100,7 @@ export default function DemoPage() {
             Demo
           </span>
           <span style={{ fontSize: 14, fontWeight: 700, color: "#000" }}>
-            This is not your report — it's a sample. Your score is not 74.
+            This is not your report. Connect Twitch to get yours free.
           </span>
         </div>
         <Link
