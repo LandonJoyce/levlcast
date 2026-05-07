@@ -101,7 +101,7 @@ export default function DemoPage() {
             Sample Report
           </span>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
-            Connect Twitch to get a real report on your actual streams. Free.
+            This is not your report. Connect Twitch to get yours.
           </span>
         </div>
         <Link
