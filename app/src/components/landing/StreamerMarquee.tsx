@@ -12,7 +12,6 @@ const CARDS = [
   { handle: "rikkevods", game: "Fortnite", score: 72, delta: "+6", cat: "CLUTCH", fix: "Box fight at 1:44 was textbook. You started explaining the build and chat doubled. Keep doing that." },
   { handle: "voltaicvex", game: "Rocket League", score: 85, delta: "+13", cat: "CLUTCH", fix: "Overtime winner at 2:08 got 14 clips in one session. You need to build that tension out loud more." },
   { handle: "tarkovpete", game: "Escape from Tarkov", score: 66, delta: "+8", cat: "EMOTIONAL", fix: "The wipe at Customs at 1:03 had chat more invested than any raid this month. That raw reaction is the content." },
-  { handle: "deeprockdave", game: "Deep Rock Galactic", score: 79, delta: "+11", cat: "COMEDY", fix: "The friendly fire moment at 44:30 broke chat. You kept apologizing instead of committing to the bit." },
   { handle: "huntclipz", game: "Hunt: Showdown", score: 74, delta: "+7", cat: "CLUTCH", fix: "Long ammo snipe at 2:17 through two walls. You underreacted. Chat was going insane and you moved on." },
   { handle: "poe_niklas", game: "Path of Exile", score: 60, delta: "+5", cat: "EDUCATIONAL", fix: "Build crafting segment at 28:00 held viewers but you assumed too much knowledge. Explain the why, not just the what." },
   { handle: "seathieves_ro", game: "Sea of Thieves", score: 71, delta: "+9", cat: "COMEDY", fix: "The skeleton ship ambush at 57:00 was genuinely chaotic. Chat wanted you to lose. Play into that more." },
