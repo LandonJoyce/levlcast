@@ -1239,26 +1239,27 @@
 .ll-page .ll-nav-cta { display: inline-flex; align-items: center; gap: 8px; }
 .ll-page .ll-nav-cta-mobile { display: none; }
 .ll-page .ll-nav-discord {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 6px;
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 7px;
   border: 1px solid rgba(88,101,242,0.4);
-  background: rgba(88,101,242,0.08);
-  color: #fff; text-decoration: none;
-  font-size: 11px; font-weight: 600;
+  background: rgba(88,101,242,0.1);
+  color: #5865F2; text-decoration: none;
   margin-right: 10px;
   transition: all 150ms;
+  flex-shrink: 0;
 }
 .ll-page .ll-nav-discord:hover {
-  background: rgba(88,101,242,0.18);
-  border-color: rgba(88,101,242,0.6);
+  background: rgba(88,101,242,0.22);
+  border-color: rgba(88,101,242,0.7);
 }
-.ll-page .ll-nav-discord svg { width: 13px; height: 13px; color: #5865F2; flex-shrink: 0; }
-.ll-page .ll-nav-discord-tag {
-  font-family: var(--ll-mono); font-size: 9px;
-  color: #A3E635; font-weight: 700;
-  padding: 1px 5px; border-radius: 3px;
-  background: rgba(163,230,53,0.1);
-  border: 1px solid rgba(163,230,53,0.25);
+.ll-page .ll-nav-discord svg { color: #5865F2; flex-shrink: 0; }
+.ll-page .ll-nav-discord-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #A3E635;
+  box-shadow: 0 0 0 2px var(--ll-bg, #08080d), 0 0 6px rgba(163,230,53,0.7);
 }
 .ll-page .ll-nav-arrow-icon {
   width: 28px; height: 28px; border-radius: 50%;
