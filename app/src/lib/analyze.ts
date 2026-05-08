@@ -411,9 +411,12 @@ const CHUNK_SECONDS = 20 * 60;
 // Overlap between adjacent chunks so moments on boundaries aren't split.
 const CHUNK_OVERLAP = 2 * 60;
 
-// Maximum peaks returned per VOD. Most streams have 1-2 real clips.
-// 3 is the hard ceiling — returning 4-6 almost always means padding.
-const MAX_PEAKS = 3;
+// Maximum peaks returned per VOD. Most streams have 1-2 strong clips and
+// a few good-but-not-great ones. Surfacing 5 lets the streamer pick which
+// moments to spend their clip quota on — feedback consistently asked for
+// "recommended cuts I can choose from" rather than a single auto-pick.
+// The downstream rerank still orders by score so the top 1-2 are real.
+const MAX_PEAKS = 5;
 
 // Top candidates to consider during the re-ranking pass on long VODs.
 const RERANK_CANDIDATE_LIMIT = 18;
@@ -475,21 +478,20 @@ export async function detectPeaks(
   const rerankResponse = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 512,
-    system: `You are a viral content editor. Your only job is to find the one clip from this stream that could actually go viral. You are not building a clip reel — you are finding the single best moment. Everything else gets cut.`,
+    system: `You are a viral content editor. Your job is to give the streamer a short, curated shortlist of moments that are genuinely worth clipping from this stream. Quality over quantity. A short list of strong picks beats a long list with padding.`,
     messages: [{
       role: "user",
-      content: `These ${topCandidates.length} candidates came from the same stream. They are competing against each other. Only the best survive.
+      content: `These ${topCandidates.length} candidates came from the same stream. Pick the ones genuinely worth clipping. Most streams have 1-2 standout moments and a few decent ones — surface up to ${MAX_PEAKS}, but only if each one earns its slot.
 
 KNOCKOUT RULES:
-1. Ask for each candidate: "Would a stranger who has never heard of this streamer stop scrolling for this?" If the honest answer is no, it is eliminated.
-2. If two candidates are from the same emotional category (both hype, both rage, both funny), only the stronger one survives. Never return duplicates of the same type.
-3. A clip that needs 30 seconds of context to land is eliminated. Hook must hit in the first 3 seconds.
-4. If the #1 candidate is clearly better than all others, return only that one. Do not pad.
-5. Return 0 if nothing genuinely clears the bar. An empty array is the honest answer when the stream had no viral moment.
+1. For each candidate ask: "Would a stranger who has never heard of this streamer stop scrolling for this?" If the honest answer is no, it is eliminated.
+2. If two candidates are from the same emotional category (both hype, both rage, both funny), keep the stronger one. Don't return near-duplicates.
+3. A clip that needs 30 seconds of setup to land is eliminated. The hook must hit in the first 3 seconds.
+4. Order matters — the strongest pick goes first, then in descending quality. Never put a weaker pick above a stronger one to balance the list.
+5. Padding is worse than a short list. If only 1 clip earns it, return only 1. If 0 earn it, return 0.
+6. Hard ceiling: ${MAX_PEAKS} picks. The streamer would rather have 3 great ones than 5 with two duds.
 
-Most streams have 1 viral clip. Occasionally 2. Almost never 3. Return 1 unless #2 is genuinely as strong.
-
-Return ONLY a JSON array of 1-based numbers, e.g. [3] or [2, 7]. No explanation.
+Return ONLY a JSON array of 1-based numbers in ranked order, e.g. [3] or [2, 7, 1]. No explanation.
 
 Candidates:
 ${candidateSummary}`,

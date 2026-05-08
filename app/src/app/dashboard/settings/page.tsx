@@ -1,5 +1,5 @@
 ﻿import { createClient } from "@/lib/supabase/server";
-import { getUserUsage, FREE_LIMITS, PRO_LIMITS } from "@/lib/limits";
+import { getUserUsage } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
 import { redirect } from "next/navigation";
@@ -42,7 +42,6 @@ export default async function SettingsPage({
   ]);
 
   const usage = await getUserUsage(user.id, supabase);
-  const limits = usage.plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
 
   return (
@@ -109,10 +108,12 @@ export default async function SettingsPage({
           <div style={{ padding: "18px 22px 22px" }}>
             <SubscriptionSection
               plan={usage.plan}
-              analysesUsed={usage.analyses_this_month}
-              analysesLimit={limits.analyses_per_month}
-              clipsUsed={usage.clips_this_month}
-              clipsLimit={limits.clips_per_month}
+              analysesUsed={usage.analyses_used}
+              analysesLimit={usage.analyses_limit}
+              clipsUsed={usage.clips_used}
+              clipsLimit={usage.clips_limit}
+              periodLabel={usage.period_label}
+              onTrial={usage.on_trial}
               hasStripeSubscription={!!profile?.stripe_customer_id}
               hasPaypalSubscription={!!profile?.paypal_subscription_id}
               subscriptionExpiresAt={subscription?.subscription_expires_at ?? profile?.subscription_expires_at ?? null}

@@ -28,6 +28,7 @@ import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/colla
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
+import { incrementTrialAnalysis, incrementTrialClip, FREE_TRIAL_LIMITS, FOUNDING_LIMITS, PRO_LIMITS } from "@/lib/limits";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -277,49 +278,84 @@ export const analyzeVod = inngest.createFunction(
         const now = new Date();
         const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-        // Double-check limit before recording success.
-        // This catches anyone who bypassed the API-level check (e.g. deleted
-        // their analyzed VOD to reset the count, then triggered a new job).
-        const { data: usageLog } = await supabase
-          .from("usage_logs")
-          .select("analyses_count")
-          .eq("user_id", userId)
-          .eq("month", month)
-          .single();
-
         const { data: profile } = await supabase
           .from("profiles")
-          .select("plan")
+          .select("plan, subscription_expires_at, founding_member, twitch_id")
           .eq("id", userId)
           .single();
 
-        const plan = profile?.plan === "pro" ? "pro" : "free";
-        const limit = plan === "pro" ? 20 : 1;
-        const alreadyUsed = usageLog?.analyses_count ?? 0;
+        const isExpired = profile?.plan === "pro" && profile?.subscription_expires_at &&
+          new Date(profile.subscription_expires_at) < new Date();
+        const plan: "free" | "pro" = profile?.plan === "pro" && !isExpired ? "pro" : "free";
+        const isFounding = profile?.founding_member === true;
 
-        if (alreadyUsed >= limit) {
-          // Limit exceeded — mark as failed so the user sees it, but don't charge usage
+        // Double-check limit before recording success. This catches anyone who
+        // bypassed the API-level check (deleted their analyzed VOD, raced two
+        // requests, etc.). Free users hit the lifetime trial cap; Pro/founding
+        // hit a monthly cap. Both are read from the same tamper-proof tables
+        // the user-facing limits.ts uses.
+        if (plan === "free") {
+          const twitchId = profile?.twitch_id as string | undefined;
+          let analysesUsed = 0;
+          if (twitchId) {
+            const { data: trial } = await supabase
+              .from("trial_records")
+              .select("analyses_used")
+              .eq("twitch_id", twitchId)
+              .maybeSingle();
+            analysesUsed = trial?.analyses_used ?? 0;
+          }
+          if (analysesUsed >= FREE_TRIAL_LIMITS.analyses_lifetime) {
+            await supabase.from("vods").update({
+              status: "failed",
+              failed_reason: `You've used all ${FREE_TRIAL_LIMITS.analyses_lifetime} free analyses. Subscribe to keep analyzing streams.`,
+            }).eq("id", vodId);
+            console.warn(`[inngest] analyze-vod blocked at save — user ${userId} on free trial already used ${analysesUsed}/${FREE_TRIAL_LIMITS.analyses_lifetime}`);
+            return;
+          }
+
           await supabase.from("vods").update({
-            status: "failed",
-            failed_reason: "Monthly analysis limit reached. Upgrade to Pro for more analyses.",
-          }).eq("id", vodId);
-          console.warn(`[inngest] analyze-vod blocked at save — user ${userId} already used ${alreadyUsed}/${limit} analyses`);
-          return;
-        }
-
-        // Save results and increment usage counter atomically
-        await Promise.all([
-          supabase.from("vods").update({
             status: "ready",
             peak_data: peaks,
             coach_report: coachReport,
             analyzed_at: now.toISOString(),
-          }).eq("id", vodId),
-          supabase.from("usage_logs").upsert(
-            { user_id: userId, month, analyses_count: alreadyUsed + 1 },
-            { onConflict: "user_id,month" }
-          ),
-        ]);
+          }).eq("id", vodId);
+
+          if (twitchId) {
+            await incrementTrialAnalysis(twitchId);
+          }
+        } else {
+          // Pro / founding — monthly counter
+          const { data: usageLog } = await supabase
+            .from("usage_logs")
+            .select("analyses_count")
+            .eq("user_id", userId)
+            .eq("month", month)
+            .single();
+          const monthlyLimit = isFounding ? FOUNDING_LIMITS.analyses_per_month : PRO_LIMITS.analyses_per_month;
+          const alreadyUsed = usageLog?.analyses_count ?? 0;
+          if (alreadyUsed >= monthlyLimit) {
+            await supabase.from("vods").update({
+              status: "failed",
+              failed_reason: `Monthly analysis limit reached (${monthlyLimit}/month).`,
+            }).eq("id", vodId);
+            console.warn(`[inngest] analyze-vod blocked at save — user ${userId} already used ${alreadyUsed}/${monthlyLimit}`);
+            return;
+          }
+
+          await Promise.all([
+            supabase.from("vods").update({
+              status: "ready",
+              peak_data: peaks,
+              coach_report: coachReport,
+              analyzed_at: now.toISOString(),
+            }).eq("id", vodId),
+            supabase.from("usage_logs").upsert(
+              { user_id: userId, month, analyses_count: alreadyUsed + 1 },
+              { onConflict: "user_id,month" }
+            ),
+          ]);
+        }
       });
 
       // Auto-generate the best clip immediately after analysis — clip is ready
@@ -332,29 +368,48 @@ export const analyzeVod = inngest.createFunction(
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-        // Mirror getUserUsage clip quota check
+        // Mirror getUserUsage clip quota check — free users use the lifetime
+        // trial counter, Pro/founding use the monthly clips count.
         const { data: profile } = await supabase
           .from("profiles")
-          .select("plan, subscription_expires_at, founding_member")
+          .select("plan, subscription_expires_at, founding_member, twitch_id")
           .eq("id", userId)
           .single();
 
         const isExpired = profile?.plan === "pro" && profile?.subscription_expires_at &&
           new Date(profile.subscription_expires_at) < new Date();
         const plan = profile?.plan === "pro" && !isExpired ? "pro" : "free";
-        const clipLimit = (profile?.founding_member === true || plan === "pro") ? 20 : 5;
 
-        const { count: clipsThisMonth } = await supabase
-          .from("clips")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .in("status", ["ready", "deleted"])
-          .gte("created_at", monthStart)
-          .lt("created_at", monthEnd);
-
-        if ((clipsThisMonth ?? 0) >= clipLimit) {
-          console.log(`[analyze] Auto-generate skipped — clip limit reached (${clipsThisMonth}/${clipLimit})`);
-          return null;
+        if (plan === "free") {
+          const twitchId = profile?.twitch_id as string | undefined;
+          let clipsUsed = 0;
+          if (twitchId) {
+            const { data: trial } = await supabase
+              .from("trial_records")
+              .select("clips_used")
+              .eq("twitch_id", twitchId)
+              .maybeSingle();
+            clipsUsed = trial?.clips_used ?? 0;
+          }
+          if (clipsUsed >= FREE_TRIAL_LIMITS.clips_lifetime) {
+            console.log(`[analyze] Auto-generate skipped — trial clip limit reached (${clipsUsed}/${FREE_TRIAL_LIMITS.clips_lifetime})`);
+            return null;
+          }
+        } else {
+          const clipLimit = profile?.founding_member === true
+            ? FOUNDING_LIMITS.clips_per_month
+            : PRO_LIMITS.clips_per_month;
+          const { count: clipsThisMonth } = await supabase
+            .from("clips")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .in("status", ["ready", "deleted"])
+            .gte("created_at", monthStart)
+            .lt("created_at", monthEnd);
+          if ((clipsThisMonth ?? 0) >= clipLimit) {
+            console.log(`[analyze] Auto-generate skipped — clip limit reached (${clipsThisMonth}/${clipLimit})`);
+            return null;
+          }
         }
 
         const topPeak = peaks[0];
@@ -748,6 +803,20 @@ export const generateClip = inngest.createFunction(
         }).eq("id", clipId);
 
         if (updateError) throw new NonRetriableError(`DB update failed: ${updateError.message}`);
+
+        // Trial users get a lifetime clip counter — increment on success only.
+        // Failed clips don't count (the user gets to retry without burning the quota).
+        const { data: clipOwner } = await supabase
+          .from("profiles")
+          .select("plan, subscription_expires_at, twitch_id")
+          .eq("id", userId)
+          .single();
+        const ownerExpired = clipOwner?.plan === "pro" && clipOwner?.subscription_expires_at &&
+          new Date(clipOwner.subscription_expires_at) < new Date();
+        const ownerOnFree = !(clipOwner?.plan === "pro" && !ownerExpired);
+        if (ownerOnFree && clipOwner?.twitch_id) {
+          await incrementTrialClip(clipOwner.twitch_id as string);
+        }
 
         console.log(`[clip] Saved: "${peak.title}" → ${publicUrl}`);
         return { ok: true as const };

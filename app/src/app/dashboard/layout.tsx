@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import DashSidebar from "@/components/dashboard/DashSidebar";
 import DashTopbar from "@/components/dashboard/DashTopbar";
+import { TrialBanner } from "@/components/dashboard/trial-banner";
+import { getUserUsage } from "@/lib/limits";
 
 /**
  * Dashboard layout — new dash-shell (sidebar + topbar + content grid).
@@ -49,6 +51,8 @@ export default async function DashboardLayout({
     profile?.plan === "pro" &&
     !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
 
+  const usage = await getUserUsage(user.id, supabase);
+
   return (
     <div className="dash">
       <div className="dash-shell">
@@ -61,6 +65,14 @@ export default async function DashboardLayout({
         <main className="main">
           <DashTopbar />
           <div className="content">
+            {usage.on_trial && (
+              <TrialBanner
+                analysesUsed={usage.analyses_used}
+                analysesLimit={usage.analyses_limit}
+                clipsUsed={usage.clips_used}
+                clipsLimit={usage.clips_limit}
+              />
+            )}
             {children}
           </div>
         </main>

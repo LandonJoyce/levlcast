@@ -97,8 +97,8 @@ export default async function VodsPage({
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
 
   const usage = await getUserUsage(user.id, supabase);
-  const quotaUsed = usage.analyses_this_month;
-  const quotaTotal = usage.plan === "pro" ? 20 : 1;
+  const quotaUsed = usage.analyses_used;
+  const quotaTotal = usage.analyses_limit;
   const quotaPct = Math.min(100, Math.round((quotaUsed / quotaTotal) * 100));
 
   const filtered = vodList.filter((v) => {
@@ -129,7 +129,7 @@ export default async function VodsPage({
       {vodList.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 16px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
           <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-            {usage.plan === "pro" ? "Pro plan" : "Free plan"} · {quotaUsed}/{quotaTotal} analyses this month
+            {usage.on_trial ? "Free trial" : usage.plan === "pro" ? "Pro plan" : "Free plan"} · {quotaUsed}/{quotaTotal} analyses {usage.period_label}
           </span>
           <div className="prog" style={{ flex: 1, maxWidth: 160 }}>
             <span style={{ width: `${quotaPct}%` }} />

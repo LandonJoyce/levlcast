@@ -68,6 +68,7 @@ export default async function VodPunchPage({
     { data: prevVod },
     { count: priorAnalyzedCount },
     { data: processingClip },
+    { data: allClipsForVod },
   ] = await Promise.all([
     supabase
       .from("clips")
@@ -111,6 +112,14 @@ export default async function VodPunchPage({
       .eq("status", "processing")
       .limit(1)
       .maybeSingle(),
+    // All clips for this VOD — used to render the recommended-cuts list
+    // with per-peak status (ready / processing / not yet generated).
+    supabase
+      .from("clips")
+      .select("id, status, start_time_seconds, video_url, title")
+      .eq("user_id", user!.id)
+      .eq("vod_id", id)
+      .in("status", ["ready", "processing"]),
   ]);
 
   const coachReport = vod.coach_report as any;
@@ -125,6 +134,15 @@ export default async function VodPunchPage({
   const isFirstScore = vod.status === "ready" && currentScore !== undefined && (priorAnalyzedCount ?? 1) === 0;
   const scoreColor = currentScore !== undefined ? scoreColorHex(currentScore) : "#A6B3C9";
   const topPeak = peaks[0] ?? null;
+
+  // Map each detected peak to its clip status. We match by start_time_seconds
+  // ±3s — same tolerance the clip generation API uses to prevent duplicates.
+  type ClipRow = { id: string; status: string; start_time_seconds: number; video_url: string | null; title: string | null };
+  const clipsList: ClipRow[] = (allClipsForVod as ClipRow[] | null) ?? [];
+  function findClipForPeak(peakStart: number): ClipRow | undefined {
+    const target = Math.round(Number(peakStart));
+    return clipsList.find((c) => Math.abs(c.start_time_seconds - target) <= 3);
+  }
 
   return (
     <>
@@ -311,6 +329,94 @@ export default async function VodPunchPage({
               </p>
             </div>
           ) : null}
+
+          {/* Recommended cuts — additional moments beyond the top clip.
+              Streamers asked for a curated list to choose from instead of a
+              single auto-pick. Top peak is already shown as the hero clip
+              above, so we list peaks 2..N here. */}
+          {peaks.length > 1 && (
+            <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
+                  More moments worth clipping
+                </p>
+                <p style={{ fontSize: 11, color: "var(--ink-3)", margin: 0 }}>
+                  {peaks.length - 1} {peaks.length - 1 === 1 ? "pick" : "picks"}
+                </p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {peaks.slice(1).map((p, i) => {
+                  const realIndex = i + 1;
+                  const existingClip = findClipForPeak(Number(p.start));
+                  const startSec = Number(p.start);
+                  const mm = Math.floor(startSec / 60);
+                  const ss = Math.floor(startSec % 60);
+                  const ts = `${mm}:${ss.toString().padStart(2, "0")}`;
+                  return (
+                    <div key={`peak-${realIndex}`} style={{
+                      display: "flex", alignItems: "flex-start", gap: 12,
+                      padding: "12px 14px",
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 10,
+                    }}>
+                      <span className="mono" style={{
+                        fontSize: 11, color: "var(--ink-3)",
+                        background: "var(--surface)", padding: "3px 7px", borderRadius: 6,
+                        flexShrink: 0, marginTop: 1,
+                      }}>{ts}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 3px", lineHeight: 1.35 }}>
+                          {p.title}
+                        </p>
+                        <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0, lineHeight: 1.45 }}>
+                          {p.reason}
+                        </p>
+                      </div>
+                      <div style={{ flexShrink: 0, minWidth: 110 }}>
+                        {existingClip?.status === "ready" && existingClip.video_url ? (
+                          <Link
+                            href="/dashboard/clips"
+                            className="btn btn-ghost"
+                            style={{ fontSize: 12, padding: "6px 10px" }}
+                          >
+                            View clip <Icons.Arrow />
+                          </Link>
+                        ) : existingClip?.status === "processing" ? (
+                          <span className="chip" style={{ fontSize: 11, opacity: 0.8 }}>Generating…</span>
+                        ) : (
+                          <GenerateClipButton vodId={vod.id} peakIndex={realIndex} hasProcessing={hasProcessingClip} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {coachReport?.missed_clip?.time && coachReport?.missed_clip?.note && (
+                <div style={{
+                  marginTop: 14,
+                  padding: "12px 14px",
+                  background: "color-mix(in oklab, var(--orange, #d97706) 6%, var(--surface-2))",
+                  border: "1px dashed color-mix(in oklab, var(--orange, #d97706) 35%, var(--line))",
+                  borderRadius: 10,
+                }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                    <span className="mono" style={{
+                      fontSize: 11, color: "var(--orange, #d97706)", fontWeight: 700,
+                    }}>
+                      MISSED
+                    </span>
+                    <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                      {coachReport.missed_clip.time}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: "var(--ink-2)", margin: 0, lineHeight: 1.5 }}>
+                    {coachReport.missed_clip.note}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Full analysis link */}
           <div style={{ padding: "16px 28px" }}>

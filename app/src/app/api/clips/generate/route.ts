@@ -16,7 +16,7 @@
 
 import { waitUntil } from "@vercel/functions";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { getUserUsage } from "@/lib/limits";
+import { getUserUsage, incrementTrialClip } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { downloadTwitchVodVideo, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
 import { cutClip } from "@/lib/ffmpeg";
@@ -39,9 +39,9 @@ export async function POST(request: Request) {
   // Check plan limits before any expensive work
   const usage = await getUserUsage(user.id, supabase);
   if (!usage.can_generate_clip) {
-    const limitMsg = usage.plan === "pro"
-      ? "You've reached your 20 clip limit for this month."
-      : "You've reached your 5 clip limit for this month. Upgrade to Pro for 20 clips per month.";
+    const limitMsg = usage.on_trial
+      ? `You've used all ${usage.clips_limit} clips on your free trial. Subscribe to keep clipping.`
+      : `You've reached your ${usage.clips_limit} clip limit for this month.`;
     return NextResponse.json(
       { error: "limit_reached", message: limitMsg, upgrade: true },
       { status: 403 }
@@ -267,6 +267,20 @@ async function runClipGeneration({
     }).eq("id", clipId);
 
     if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
+
+    // Free trial users get a lifetime clip counter — increment on success only.
+    // (profile already fetched above; reuse to avoid a second roundtrip.)
+    const { data: clipOwner } = await admin
+      .from("profiles")
+      .select("plan, subscription_expires_at, twitch_id")
+      .eq("id", userId)
+      .single();
+    const ownerExpired = clipOwner?.plan === "pro" && clipOwner?.subscription_expires_at &&
+      new Date(clipOwner.subscription_expires_at) < new Date();
+    const ownerOnFree = !(clipOwner?.plan === "pro" && !ownerExpired);
+    if (ownerOnFree && clipOwner?.twitch_id) {
+      await incrementTrialClip(clipOwner.twitch_id as string);
+    }
 
     console.log(`[clip] Done: "${peak.title}" — all 4 stages complete`);
   } catch (err) {

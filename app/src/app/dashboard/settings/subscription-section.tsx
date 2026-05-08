@@ -10,6 +10,10 @@ interface SubscriptionSectionProps {
   analysesLimit: number;
   clipsUsed: number;
   clipsLimit: number;
+  /** "this month" for Pro, "ever" for free trial. */
+  periodLabel: string;
+  /** True when the user is on the lifetime free trial (vs paid free fallback). */
+  onTrial: boolean;
   hasStripeSubscription: boolean;
   hasPaypalSubscription: boolean;
   subscriptionExpiresAt: string | null;
@@ -44,6 +48,8 @@ export function SubscriptionSection({
   analysesLimit,
   clipsUsed,
   clipsLimit,
+  periodLabel,
+  onTrial,
   hasStripeSubscription,
   hasPaypalSubscription,
   subscriptionExpiresAt,
@@ -78,21 +84,23 @@ export function SubscriptionSection({
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Subscription</h2>
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${plan === "pro" ? "bg-accent/20 text-accent-light" : "bg-white/5 text-muted"}`}>
-            {plan === "pro" ? "Pro" : "Free"}
+            {plan === "pro" ? "Pro" : onTrial ? "Free trial" : "Free"}
           </span>
         </div>
 
         {/* Usage stats */}
         <div className="space-y-4 mb-6">
-          <UsageBar label="VOD analyses this month" used={analysesUsed} limit={analysesLimit} />
-          <UsageBar label="Total clips generated" used={clipsUsed} limit={clipsLimit} />
+          <UsageBar label={`VOD analyses ${periodLabel}`} used={analysesUsed} limit={analysesLimit} />
+          <UsageBar label={`Clips generated ${periodLabel}`} used={clipsUsed} limit={clipsLimit} />
         </div>
 
         {/* Actions */}
         {plan === "free" ? (
           <div className="space-y-3">
             <p className="text-sm text-muted">
-              Upgrade to Pro for 15 VOD analyses and 20 clips per month, plus priority processing.
+              {onTrial
+                ? `Your free trial includes ${analysesLimit} analyses and ${clipsLimit} clips. Subscribe for 15 analyses and 20 clips every month.`
+                : "Upgrade to Pro for 15 VOD analyses and 20 clips per month, plus priority processing."}
             </p>
             <button
               onClick={() => setUpgradeOpen(true)}

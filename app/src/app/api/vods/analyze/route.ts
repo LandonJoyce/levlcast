@@ -37,12 +37,11 @@ export async function POST(request: Request) {
 
   const usage = await getUserUsage(user.id, supabase);
   if (!usage.can_analyze) {
+    const message = usage.on_trial
+      ? `You've used all ${usage.analyses_limit} analyses on your free trial. Subscribe to keep analyzing streams.`
+      : `You've used all ${usage.analyses_limit} analyses for this month.`;
     return NextResponse.json(
-      {
-        error: "limit_reached",
-        message: "You've used your 1 free analysis this month. Upgrade to Pro for 15 analyses per month.",
-        upgrade: true,
-      },
+      { error: "limit_reached", message, upgrade: true },
       { status: 403 }
     );
   }
