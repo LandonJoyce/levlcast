@@ -1315,12 +1315,6 @@
   border-color: rgba(88,101,242,0.7);
 }
 .ll-page .ll-nav-discord svg { color: #5865F2; flex-shrink: 0; }
-.ll-page .ll-nav-discord-dot {
-  position: absolute; top: -3px; right: -3px;
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #A3E635;
-  box-shadow: 0 0 0 2px var(--ll-bg, #08080d), 0 0 6px rgba(163,230,53,0.7);
-}
 .ll-page .ll-nav-arrow-icon {
   width: 28px; height: 28px; border-radius: 50%;
   background: #111; color: #fff;
