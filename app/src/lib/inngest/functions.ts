@@ -226,7 +226,7 @@ export const analyzeVod = inngest.createFunction(
         // advice never references streams that hadn't happened yet at stream time
         const { data: priorVods } = await supabase
           .from("vods")
-          .select("coach_report, stream_date")
+          .select("coach_report, stream_date, peak_data")
           .eq("user_id", userId)
           .eq("status", "ready")
           .neq("id", vodId)
@@ -235,16 +235,30 @@ export const analyzeVod = inngest.createFunction(
           .order("stream_date", { ascending: false })
           .limit(3);
 
-        type VodRow = { coach_report: unknown; stream_date: string };
+        type VodRow = { coach_report: unknown; stream_date: string; peak_data: unknown };
         const priorReports: PriorCoachSummary[] = (priorVods ?? [] as VodRow[])
           .filter((v: VodRow) => v.coach_report && v.stream_date)
           .map((v: VodRow) => {
-            const r = v.coach_report as { overall_score?: number; recommendation?: string; improvements?: string[] };
+            const r = v.coach_report as {
+              overall_score?: number;
+              recommendation?: string;
+              improvements?: string[];
+              score_breakdown?: { energy?: number; engagement?: number; consistency?: number; content?: number };
+              cold_open?: { score?: "strong" | "average" | "weak" };
+              closing?: { score?: "strong" | "average" | "weak" };
+              anti_patterns?: Array<{ type?: string }>;
+            };
+            const peaks = Array.isArray(v.peak_data) ? (v.peak_data as unknown[]) : [];
             return {
               date: v.stream_date.slice(0, 10),
               score: r.overall_score ?? 0,
               recommendation: r.recommendation ?? "",
               top_improvement: (r.improvements?.[0] ?? "").replace(/\*\*[^*]+\*\*\s*[—–-]\s*/, ""),
+              subscores: r.score_breakdown,
+              cold_open_score: r.cold_open?.score,
+              closing_score: r.closing?.score,
+              peak_count: peaks.length,
+              anti_pattern_types: (r.anti_patterns ?? []).map((a) => a.type).filter((x): x is string => !!x),
             };
           });
 

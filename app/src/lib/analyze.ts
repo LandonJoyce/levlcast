@@ -578,6 +578,16 @@ export interface PriorCoachSummary {
   score: number;
   recommendation: string;
   top_improvement: string;
+  /** Sub-scores (0-100) so the AI can call out which dimension is trending. */
+  subscores?: { energy?: number; engagement?: number; consistency?: number; content?: number };
+  /** How the stream ended — "strong | average | weak". Trend matters across streams. */
+  closing_score?: "strong" | "average" | "weak";
+  /** How the stream opened — same idea. */
+  cold_open_score?: "strong" | "average" | "weak";
+  /** Number of detected peak/clip moments — low count multiple streams = pattern. */
+  peak_count?: number;
+  /** Anti-patterns flagged in this prior stream (types only, no quotes needed). */
+  anti_pattern_types?: string[];
 }
 
 const CATEGORY_COACHING_GUIDE: Record<string, string> = {
@@ -939,11 +949,59 @@ ${crash.excerpt}`
     : "";
 
   // ── Prior stream history for longitudinal coaching ──
+  // Compute aggregate trends so the AI can make quantitative callouts that
+  // raw Claude.ai cannot replicate — these averages live only in our DB.
   const historyBlock = (priorReports && priorReports.length > 0)
-    ? `PREVIOUS STREAM HISTORY (this streamer has been coached before — use this to spot patterns):
-${priorReports.map((r, i) => `Stream ${i + 1} ago (${r.date}, score ${r.score}):
+    ? (() => {
+        const scores = priorReports.map((r) => r.score);
+        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        const peakCounts = priorReports.map((r) => r.peak_count ?? 0).filter((n) => n > 0);
+        const avgPeaks = peakCounts.length > 0
+          ? Math.round((peakCounts.reduce((a, b) => a + b, 0) / peakCounts.length) * 10) / 10
+          : null;
+        const closings = priorReports.map((r) => r.closing_score).filter((x): x is "strong" | "average" | "weak" => !!x);
+        const closingPattern = closings.length > 0 ? closings.join(" → ") : null;
+        const colds = priorReports.map((r) => r.cold_open_score).filter((x): x is "strong" | "average" | "weak" => !!x);
+        const coldPattern = colds.length > 0 ? colds.join(" → ") : null;
+        const apCounts: Record<string, number> = {};
+        priorReports.forEach((r) => (r.anti_pattern_types ?? []).forEach((t) => { apCounts[t] = (apCounts[t] ?? 0) + 1; }));
+        const recurringAp = Object.entries(apCounts).filter(([, c]) => c >= 2).map(([t]) => t);
+
+        const subscoreLines = ["energy", "engagement", "consistency", "content"]
+          .map((dim) => {
+            const vals = priorReports
+              .map((r) => r.subscores?.[dim as "energy" | "engagement" | "consistency" | "content"])
+              .filter((v): v is number => typeof v === "number");
+            if (vals.length === 0) return null;
+            const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+            return `  ${dim}: avg ${avg}/100 (${vals.join(", ")})`;
+          })
+          .filter(Boolean)
+          .join("\n");
+
+        const benchmark = `BENCHMARK — averages from this streamer's last ${priorReports.length} stream${priorReports.length > 1 ? "s" : ""}:
+- Average overall score: ${avgScore}/100
+${subscoreLines ? `- Average sub-scores:\n${subscoreLines}` : ""}
+${avgPeaks !== null ? `- Average clip moments per stream: ${avgPeaks}` : ""}
+${coldPattern ? `- Cold-open pattern (oldest → newest): ${coldPattern}` : ""}
+${closingPattern ? `- Closing pattern (oldest → newest): ${closingPattern}` : ""}
+${recurringAp.length > 0 ? `- Anti-patterns flagged in 2+ prior streams: ${recurringAp.join(", ")}` : ""}`.replace(/\n+/g, "\n").trim();
+
+        const detail = priorReports.map((r, i) => `Stream ${i + 1} ago (${r.date}, score ${r.score}):
   Priority: ${r.recommendation}
-  Top fix: ${r.top_improvement}`).join("\n")}
+  Top fix: ${r.top_improvement}`).join("\n");
+
+        return `PREVIOUS STREAM HISTORY (this streamer has been coached before — use this to spot patterns):
+${detail}
+
+${benchmark}
+
+QUANTITATIVE TREND CALLOUTS — use the benchmark above to make statements only possible with this streamer's actual history:
+- If THIS stream's overall score is significantly above or below the average, name the delta directly in the recommendation or trend_vs_history. Don't say "you improved" — say "you went from a 62 average to a 78 today" or "you dropped 18 points from your average."
+- If a sub-score (energy, engagement, consistency, content) is trending DOWN across the prior streams, call it out by name with the actual numbers. Generic Claude cannot do this — only you can.
+- If clip moments per stream are trending below average, treat that as a content density problem and say so.
+- If cold open or closing has been weak 2+ streams in a row, that is now a SHAPE pattern, not a one-off — name it as such.
+- These quantitative callouts are LevlCast's edge over a chatbot. Use them when the data supports it. Never fabricate a number that is not in the benchmark.
 
 ANTI-REPETITION RULE — this is critical:
 - Before writing each improvement, check if the same problem appeared in 2+ prior reports above.
@@ -956,7 +1014,8 @@ ANTI-REPETITION RULE — this is critical:
 - If no: this is a new finding from this stream — write it fresh, no prior-report language.
 - Do NOT recycle prior reports' exact wording. If the same label would appear twice, drop the repeat.
 - New problems visible only in this stream take priority over repeating history.
-If this stream shows improvement on a past problem, note it in trend_vs_history — earned recognition matters.`
+If this stream shows improvement on a past problem, note it in trend_vs_history — earned recognition matters.`;
+      })()
     : "";
 
   // ── Peaks summary for coaching context ──
