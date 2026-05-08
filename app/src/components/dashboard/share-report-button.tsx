@@ -101,9 +101,21 @@ export function ShareReportButton({ vodId, existingToken, score, variant = "comp
       <button
         onClick={generate}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-muted hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          padding: "10px 18px", borderRadius: 10,
+          background: "linear-gradient(135deg, rgb(148,61,255), rgb(242,97,121))",
+          color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: "0.01em",
+          border: "none", cursor: loading ? "wait" : "pointer",
+          opacity: loading ? 0.7 : 1,
+          boxShadow: "0 4px 16px -4px rgba(148,61,255,0.4)",
+          transition: "transform 120ms ease",
+        }}
+        onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+        onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
-        <Share2 size={12} />
+        <Share2 size={15} />
         {loading ? "Generating..." : "Share Report"}
       </button>
     );
@@ -158,14 +170,29 @@ export function ShareReportButton({ vodId, existingToken, score, variant = "comp
     );
   }
 
-  // Compact (used on /vods/[id])
+  // Compact (used on /vods/[id]) — link already exists, copy on click
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-muted hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "10px 18px", borderRadius: 10,
+        background: copied
+          ? "linear-gradient(135deg, #22c55e, #16a34a)"
+          : "linear-gradient(135deg, rgb(148,61,255), rgb(242,97,121))",
+        color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: "0.01em",
+        border: "none", cursor: "pointer",
+        boxShadow: copied
+          ? "0 4px 16px -4px rgba(34,197,94,0.4)"
+          : "0 4px 16px -4px rgba(148,61,255,0.4)",
+        transition: "transform 120ms ease, background 200ms",
+      }}
+      onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+      onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
     >
-      {copied ? <Check size={12} /> : <Share2 size={12} />}
-      {copied ? "Copied!" : "Share"}
+      {copied ? <Check size={15} /> : <Share2 size={15} />}
+      {copied ? "Copied!" : "Share Report"}
     </button>
   );
 }
