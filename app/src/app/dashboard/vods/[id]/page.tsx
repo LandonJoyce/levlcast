@@ -5,6 +5,7 @@ import { formatDuration } from "@/lib/utils";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
+import { HighlightReelButton } from "@/components/dashboard/highlight-reel-button";
 import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { DownloadClip, CopyCaption, PostToYouTube, ChangeStyleButton } from "@/components/dashboard/clip-actions";
 import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebration";
@@ -113,10 +114,12 @@ export default async function VodPunchPage({
       .limit(1)
       .maybeSingle(),
     // All clips for this VOD — used to render the recommended-cuts list
-    // with per-peak status (ready / processing / not yet generated).
+    // with per-peak status (ready / processing / not yet generated). Includes
+    // the special caption_style="reel" rows so the highlight reel button can
+    // surface its existing/in-progress state.
     supabase
       .from("clips")
-      .select("id, status, start_time_seconds, video_url, title")
+      .select("id, status, start_time_seconds, video_url, title, caption_style")
       .eq("user_id", user!.id)
       .eq("vod_id", id)
       .in("status", ["ready", "processing"]),
@@ -137,12 +140,17 @@ export default async function VodPunchPage({
 
   // Map each detected peak to its clip status. We match by start_time_seconds
   // ±3s — same tolerance the clip generation API uses to prevent duplicates.
-  type ClipRow = { id: string; status: string; start_time_seconds: number; video_url: string | null; title: string | null };
+  type ClipRow = { id: string; status: string; start_time_seconds: number; video_url: string | null; title: string | null; caption_style: string | null };
   const clipsList: ClipRow[] = (allClipsForVod as ClipRow[] | null) ?? [];
   function findClipForPeak(peakStart: number): ClipRow | undefined {
     const target = Math.round(Number(peakStart));
-    return clipsList.find((c) => Math.abs(c.start_time_seconds - target) <= 3);
+    // Skip reel rows when matching individual peaks — the reel's start_time
+    // is the first segment and would otherwise shadow that peak's "Generate"
+    // button.
+    return clipsList.find((c) => c.caption_style !== "reel" && Math.abs(c.start_time_seconds - target) <= 3);
   }
+  const existingReel = clipsList.find((c) => c.caption_style === "reel" && c.status === "ready");
+  const processingReel = clipsList.find((c) => c.caption_style === "reel" && c.status === "processing");
 
   return (
     <>
@@ -333,16 +341,28 @@ export default async function VodPunchPage({
           {/* Recommended cuts — additional moments beyond the top clip.
               Streamers asked for a curated list to choose from instead of a
               single auto-pick. Top peak is already shown as the hero clip
-              above, so we list peaks 2..N here. */}
+              above, so we list peaks 2..N here. The Highlight Reel button
+              stitches the top picks into a single short. */}
           {peaks.length > 1 && (
             <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--line)" }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
-                  More moments worth clipping
-                </p>
-                <p style={{ fontSize: 11, color: "var(--ink-3)", margin: 0 }}>
-                  {peaks.length - 1} {peaks.length - 1 === 1 ? "pick" : "picks"}
-                </p>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                gap: 12, flexWrap: "wrap", marginBottom: 12,
+              }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
+                    More moments worth clipping
+                  </p>
+                  <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "3px 0 0" }}>
+                    {peaks.length - 1} {peaks.length - 1 === 1 ? "pick" : "picks"} below, or stitch the top {Math.min(3, peaks.length)} into one reel.
+                  </p>
+                </div>
+                <HighlightReelButton
+                  vodId={vod.id}
+                  peakCount={peaks.length}
+                  reelExisting={existingReel?.id ?? null}
+                  reelProcessing={!!processingReel}
+                />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {peaks.slice(1).map((p, i) => {

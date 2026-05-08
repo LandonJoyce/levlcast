@@ -535,3 +535,103 @@ export async function cutClip(
     } catch {}
   }
 }
+
+/**
+ * Concatenate already-cut clip buffers into a single highlight reel video.
+ *
+ * Inputs are expected to be the captioned MP4 buffers returned by cutClip().
+ * Because cutClip emits consistent h264 main + aac at a baseline 1280×720
+ * pipeline, the concat demuxer can stream-copy them in sequence, which
+ * finishes in under 5 seconds for a 60s reel. If stream-copy fails (codec
+ * mismatch, container quirks), we fall back to a re-encode so the function
+ * still produces a usable output rather than throwing.
+ *
+ * Used by the highlight-reel API to stitch the top N moments of a stream
+ * into one short. Captions are baked into each segment by cutClip; we don't
+ * re-burn anything here.
+ */
+export async function concatClipBuffers(buffers: Buffer[]): Promise<Buffer> {
+  if (buffers.length === 0) throw new Error("concatClipBuffers: no inputs");
+  if (buffers.length === 1) return buffers[0];
+
+  const ffmpegPath = await getFFmpegPath();
+  const tempDir = await mkdtemp(join(tmpdir(), "levlcast-reel-"));
+  const inputPaths: string[] = [];
+  const outputPath = join(tempDir, "reel.mp4");
+  const reencodePath = join(tempDir, "reel-reencode.mp4");
+  const listPath = join(tempDir, "concat.txt");
+
+  try {
+    for (let i = 0; i < buffers.length; i++) {
+      const p = join(tempDir, `seg${i}.mp4`);
+      await writeFile(p, buffers[i]);
+      inputPaths.push(p);
+    }
+
+    // concat demuxer expects file paths quoted; use POSIX-style forward slashes
+    // even on Windows because ffmpeg's demuxer parser treats backslashes as
+    // escapes. The -safe 0 flag waives the demuxer's path-safety check that
+    // blocks anything but plain relative names by default.
+    const concatBody = inputPaths
+      .map((p) => `file '${p.replace(/\\/g, "/")}'`)
+      .join("\n");
+    await writeFile(listPath, concatBody + "\n");
+
+    // Stream-copy attempt — fast, no quality loss.
+    const copyCmd = [
+      `"${ffmpegPath}"`,
+      `-f concat -safe 0`,
+      `-i "${listPath}"`,
+      `-c copy`,
+      `-movflags +faststart`,
+      `-y`,
+      `"${outputPath}"`,
+    ].join(" ");
+
+    try {
+      await execAsync(copyCmd, { timeout: 60000 });
+      console.log(`[reel] Stream-copied ${buffers.length} segments`);
+      return await readFile(outputPath);
+    } catch (copyErr: any) {
+      console.warn("[reel] Stream copy failed, re-encoding:", copyErr.stderr?.slice(-300));
+    }
+
+    // Fallback: re-encode through filter_complex concat. Slower but tolerates
+    // codec/parameter drift between segments.
+    const inputArgs = inputPaths.map((p) => `-i "${p}"`).join(" ");
+    const concatStreams = inputPaths
+      .map((_, i) => `[${i}:v:0][${i}:a:0]`)
+      .join("");
+    const filter = `${concatStreams}concat=n=${inputPaths.length}:v=1:a=1[outv][outa]`;
+
+    const reencodeCmd = [
+      `"${ffmpegPath}"`,
+      inputArgs,
+      `-filter_complex "${filter}"`,
+      `-map "[outv]" -map "[outa]"`,
+      `-c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p`,
+      `-c:a aac -b:a 128k`,
+      `-movflags +faststart`,
+      `-y`,
+      `"${reencodePath}"`,
+    ].join(" ");
+
+    try {
+      await execAsync(reencodeCmd, { timeout: 240000 });
+      console.log(`[reel] Re-encoded ${buffers.length} segments`);
+      return await readFile(reencodePath);
+    } catch (encErr: any) {
+      console.error("[reel] Concat re-encode failed:", encErr.stderr?.slice(-800));
+      throw ffmpegError(encErr);
+    }
+  } finally {
+    for (const p of inputPaths) await unlink(p).catch(() => {});
+    await unlink(listPath).catch(() => {});
+    await unlink(outputPath).catch(() => {});
+    await unlink(reencodePath).catch(() => {});
+    try {
+      const { rmdir } = await import("fs/promises");
+      await rmdir(tempDir);
+    } catch {}
+  }
+}

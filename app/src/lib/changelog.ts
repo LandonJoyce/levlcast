@@ -22,9 +22,10 @@ export const changelog: ChangelogEntry[] = [
   {
     version: "v0.11.0",
     date: "2026-05-08",
-    title: "Free Trial + Recommended Cuts",
+    title: "Free Trial, Recommended Cuts, Highlight Reel",
     items: [
       { type: "new", text: "New free trial gives you 3 full VOD analyses and 5 clips to try LevlCast. Enough to see your scores trend, spot patterns across streams, and watch a few of your moments turn into clips before deciding to subscribe." },
+      { type: "new", text: "Highlight Reel: stitch the top three moments from a stream into one short with captions baked in. Built for streamers who want a finished YouTube Short or TikTok in one click instead of cutting moments together themselves." },
       { type: "new", text: "Every report now surfaces a curated list of moments worth clipping, not just one auto-pick. The strongest clip still gets generated automatically, then you choose which of the remaining picks to spend a clip on." },
       { type: "new", text: "Missed-clip callout shows the moment in your stream that should have been a clip but wasn't fully landed, with the timestamp and what to do differently next time." },
       { type: "improved", text: "Clip moment detection now ranks up to five strong moments per stream instead of capping at three. Each pick still has to earn its slot. Padding bad clips into the list is explicitly off-limits." },
