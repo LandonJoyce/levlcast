@@ -707,8 +707,9 @@ WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex top
  * This is the entry point for LevlCast's per-game knowledge. Add a new game
  * by writing the module — no schema or pipeline changes required.
  */
-const GAME_COACHING_MODULES: Array<{ keywords: string[]; module: string }> = [
+const GAME_COACHING_MODULES: Array<{ name: string; keywords: string[]; module: string }> = [
   {
+    name: "VALORANT",
     keywords: ["valorant", "valo", "val ranked", "val comp", "val unrated"],
     module: `VALORANT — game-specific coaching:
 
@@ -730,6 +731,7 @@ Clip moment patterns specific to this game:
 - Last-round economy pressure and the deciding clutch`,
   },
   {
+    name: "League of Legends",
     keywords: ["league of legends", "league ranked", " lol ", "lol ranked", "summoners rift", "tft"],
     module: `LEAGUE OF LEGENDS — game-specific coaching:
 
@@ -752,6 +754,7 @@ Clip moment patterns specific to this game:
 - Trash talk in chat with chat after a smurf accuses you of something`,
   },
   {
+    name: "Counter-Strike 2",
     keywords: ["counter-strike", "cs2", "cs:go", "csgo", "premier", "faceit"],
     module: `COUNTER-STRIKE 2 — game-specific coaching:
 
@@ -774,6 +777,7 @@ Clip moment patterns specific to this game:
 - Trash talk in voice chat with enemies after a winning round`,
   },
   {
+    name: "Minecraft",
     keywords: ["minecraft"],
     module: `MINECRAFT — game-specific coaching:
 
@@ -794,6 +798,7 @@ Clip moment patterns specific to this game:
 - A moment of vulnerability about why this world matters to them`,
   },
   {
+    name: "Fortnite",
     keywords: ["fortnite"],
     module: `FORTNITE — game-specific coaching:
 
@@ -815,6 +820,7 @@ Clip moment patterns specific to this game:
 - Chat-driven decisions ("chat where do we drop") that pay off`,
   },
   {
+    name: "Phasmophobia & Dead by Daylight",
     keywords: ["phasmophobia", "phasmo", "dead by daylight", "dbd"],
     module: `PHASMOPHOBIA / DEAD BY DAYLIGHT — co-op horror coaching:
 
@@ -837,6 +843,7 @@ Clip moment patterns specific to these games:
 - Successful exorcism / final identification in Phasmo with chat hyped`,
   },
   {
+    name: "Marvel Rivals",
     keywords: ["marvel rivals", "rivals ranked", "rivals comp", "marvelrivals"],
     module: `MARVEL RIVALS — game-specific coaching:
 
@@ -857,6 +864,13 @@ Clip moment patterns specific to this game:
 - Trash talk with chat after a winning team fight`,
   },
 ];
+
+/**
+ * Public list of games with dedicated coaching modules. Exported for the
+ * landing page so adding a new game module instantly shows up in marketing
+ * with no double-bookkeeping.
+ */
+export const SUPPORTED_GAMES: string[] = GAME_COACHING_MODULES.map((g) => g.name);
 
 /**
  * Pick the first game module whose keywords match the VOD title.

@@ -1176,6 +1176,61 @@
 }
 .ll-page .ll-sec { padding-block: 100px; position: relative; }
 
+/* ── Game coverage strip ── */
+.ll-page .ll-game-strip {
+  padding: 64px 0 56px;
+  position: relative;
+  background: linear-gradient(180deg, transparent 0%, rgba(148,61,255,0.04) 50%, transparent 100%);
+}
+.ll-page .ll-game-strip-head { text-align: center; max-width: 720px; margin: 0 auto 28px; }
+.ll-page .ll-game-strip-eyebrow {
+  display: inline-block;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.5);
+  padding: 4px 11px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  margin-bottom: 18px;
+}
+.ll-page .ll-game-strip-title {
+  font-family: var(--ll-display);
+  font-size: clamp(28px, 3.4vw, 42px);
+  font-weight: 700; letter-spacing: -0.02em;
+  line-height: 1.15; margin: 0 0 12px;
+  color: var(--ll-fg);
+}
+.ll-page .ll-game-strip-sub {
+  font-size: 15px; line-height: 1.55;
+  color: var(--ll-fg-mute);
+  margin: 0;
+}
+.ll-page .ll-game-strip-list {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 10px; padding: 0; margin: 0; list-style: none;
+  max-width: 920px; margin: 0 auto;
+}
+.ll-page .ll-game-strip-pill {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.005em;
+  padding: 9px 18px; border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--ll-fg);
+  transition: all 150ms;
+}
+.ll-page .ll-game-strip-pill:hover {
+  background: rgba(148,61,255,0.1);
+  border-color: rgba(148,61,255,0.35);
+  transform: translateY(-1px);
+}
+.ll-page .ll-game-strip-pill-more {
+  background: linear-gradient(135deg, rgba(148,61,255,0.12), rgba(242,97,121,0.08));
+  border-color: rgba(148,61,255,0.35);
+  color: rgba(255,255,255,0.85);
+  font-style: italic;
+  font-weight: 500;
+}
+.ll-page .ll-game-strip-pill-more:hover { transform: none; }
+
 /* ── Eyebrow pill ── */
 .ll-page .ll-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
@@ -1914,6 +1969,9 @@
 @media (max-width: 640px) {
   .ll-page { --ll-gutter: 16px; }
   .ll-page .ll-sec { padding-block: 56px; }
+  .ll-page .ll-game-strip { padding: 40px 0 32px; }
+  .ll-page .ll-game-strip-list { gap: 8px; }
+  .ll-page .ll-game-strip-pill { font-size: 13px; padding: 7px 14px; }
   .ll-page .ll-shead { margin-bottom: 36px; gap: 16px; }
   .ll-page .ll-hero { padding-block: 56px 40px; }
   .ll-page .ll-h1 { font-size: clamp(32px, 9vw, 42px); margin: 16px auto 16px; }

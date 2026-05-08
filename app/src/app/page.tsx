@@ -4,6 +4,7 @@ import StreamerMarquee from "@/components/landing/StreamerMarquee";
 import LandingProPlan from "@/components/landing/LandingProPlan";
 import PhoneMockup from "@/components/landing/PhoneMockup";
 import LaptopMockup from "@/components/landing/LaptopMockup";
+import { SUPPORTED_GAMES } from "@/lib/analyze";
 
 /* ─── Data ─── */
 async function getStreamCount(): Promise<number> {
@@ -192,6 +193,27 @@ export default async function LandingPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Game Coverage ── */}
+      <section className="ll-game-strip">
+        <div className="ll-con">
+          <div className="ll-game-strip-head">
+            <span className="ll-game-strip-eyebrow">COACHING DEPTH BY GAME</span>
+            <h2 className="ll-game-strip-title">
+              Each game gets <span className="ll-grad-text">its own coaching playbook</span>.
+            </h2>
+            <p className="ll-game-strip-sub">
+              Match cadence, viewer expectations, clip patterns — calibrated per game. Not a one-size-fits-all AI wrapper.
+            </p>
+          </div>
+          <ul className="ll-game-strip-list">
+            {SUPPORTED_GAMES.map((g) => (
+              <li key={g} className="ll-game-strip-pill">{g}</li>
+            ))}
+            <li className="ll-game-strip-pill ll-game-strip-pill-more">More games every week</li>
+          </ul>
         </div>
       </section>
 
