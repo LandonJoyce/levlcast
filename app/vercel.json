@@ -4,10 +4,10 @@
       "maxDuration": 300
     },
     "src/app/api/clips/generate/route.ts": {
-      "maxDuration": 30
+      "maxDuration": 300
     },
     "src/app/api/vods/analyze/route.ts": {
-      "maxDuration": 30
+      "maxDuration": 300
     }
   }
 }
