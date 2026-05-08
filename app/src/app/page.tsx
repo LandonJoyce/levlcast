@@ -134,7 +134,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="problem">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2">Most streamers are flying completely <span className="ll-grad-text">blind</span></h2>
+            <h2 className="ll-h2">Three streams from now, you&apos;ll have the <span className="ll-grad-text">same problems</span> you have today.</h2>
           </div>
           <div className="ll-compare">
             <article className="ll-card-ba">
