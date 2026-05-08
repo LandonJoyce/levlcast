@@ -44,6 +44,17 @@ function scoreColor(score: number) {
   return "#ef4444";
 }
 
+function parseItem(raw: string) {
+  const cleaned = raw.replace(/^RECURRING:\s*/i, "");
+  const m = cleaned.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
+  if (!m) return { label: "", body: cleaned, ts: null as string | null };
+  let body = m[2].trim();
+  const tsM = body.match(/\s+at\s+(\d{1,2}:\d{2}(?::\d{2})?)\.?\s*$/i);
+  const ts = tsM ? tsM[1] : null;
+  if (tsM) body = body.slice(0, tsM.index!).trim().replace(/\.$/, "");
+  return { label: m[1], body, ts };
+}
+
 const TREND_LABEL: Record<string, string> = {
   building: "Building",
   declining: "Declining",
@@ -179,13 +190,26 @@ export default async function SharePage({
             borderRadius: 16, padding: "20px", marginBottom: 12,
           }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 14px" }}>What they do well</p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-              {report.strengths.slice(0, 3).map((s: string, i: number) => (
-                <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
-                  <span style={{ color: "#22c55e", fontWeight: 700, flexShrink: 0 }}>+</span>
-                  {s}
-                </li>
-              ))}
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 14 }}>
+              {report.strengths.slice(0, 3).map((s: string, i: number) => {
+                const { label, body, ts } = parseItem(s);
+                return (
+                  <li key={i} style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 12, fontSize: 13, lineHeight: 1.55, color: "rgba(255,255,255,0.8)" }}>
+                    <span style={{ color: "#22c55e", fontWeight: 800, fontSize: 15, lineHeight: 1.55, flexShrink: 0 }}>+</span>
+                    <div>
+                      {label && (
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{label}</span>
+                          {ts && (
+                            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "rgba(34,197,94,0.7)", letterSpacing: "0.04em" }}>{ts}</span>
+                          )}
+                        </div>
+                      )}
+                      <span>{body}</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -197,19 +221,32 @@ export default async function SharePage({
             borderRadius: 16, padding: "20px", marginBottom: 12, position: "relative", overflow: "hidden",
           }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 14px" }}>Areas to improve</p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-              {report.improvements.slice(0, 1).map((s: string, i: number) => (
-                <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
-                  <span style={{ color: "#f59e0b", fontWeight: 700, flexShrink: 0 }}>!</span>
-                  {s}
-                </li>
-              ))}
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 14 }}>
+              {report.improvements.slice(0, 1).map((s: string, i: number) => {
+                const { label, body, ts } = parseItem(s);
+                return (
+                  <li key={i} style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 12, fontSize: 13, lineHeight: 1.55, color: "rgba(255,255,255,0.8)" }}>
+                    <span style={{ color: "#f59e0b", fontWeight: 800, fontSize: 15, lineHeight: 1.55, flexShrink: 0 }}>!</span>
+                    <div>
+                      {label && (
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{label}</span>
+                          {ts && (
+                            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "rgba(245,158,11,0.7)", letterSpacing: "0.04em" }}>{ts}</span>
+                          )}
+                        </div>
+                      )}
+                      <span>{body}</span>
+                    </div>
+                  </li>
+                );
+              })}
               {report.improvements.length > 1 && (
                 <li style={{
                   fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic",
-                  filter: "blur(4px)", userSelect: "none",
+                  filter: "blur(4px)", userSelect: "none", paddingLeft: 22,
                 }}>
-                  {report.improvements[1]}
+                  {parseItem(report.improvements[1]).body || report.improvements[1]}
                 </li>
               )}
             </ul>
