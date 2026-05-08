@@ -109,6 +109,8 @@ export interface CoachReport {
   dead_zones?: Array<{ time: string; duration: number }>;
   /** Two specific minutes to rewatch — one model-behavior moment, one teachable mistake. */
   rewatch_moments?: Array<{ time: string; kind: "best" | "worst"; note: string }>;
+  /** The moment that should've been THE clip but wasn't fully realized. */
+  missed_clip?: { time: string; note: string };
 }
 
 // ─── CLIPS ───────────────────────────────────────────────────────────────────

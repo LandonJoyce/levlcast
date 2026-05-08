@@ -520,6 +520,7 @@ export interface CoachReport {
   recommendation: string;
   next_stream_goals?: string[];
   rewatch_moments?: Array<{ time: string; kind: "best" | "worst"; note: string }>;
+  missed_clip?: { time: string; note: string };
   viewer_retention_risk: "low" | "medium" | "high";
   cold_open: { score: "strong" | "weak" | "average"; note: string };
   // Closing score — mirrors cold_open for how the stream ended. Optional
@@ -946,7 +947,12 @@ ${priorReports.map((r, i) => `Stream ${i + 1} ago (${r.date}, score ${r.score}):
 
 ANTI-REPETITION RULE — this is critical:
 - Before writing each improvement, check if the same problem appeared in 2+ prior reports above.
-- If yes: prefix that improvement with "RECURRING: " and be blunt — they have been told before.
+- If yes: prefix the LABEL with "RECURRING: " and give the pattern a NAME unique to THIS streamer based on the specific shape of their habit. Examples:
+    * If they crash energy at minute 47 every stream → "Your 47-Minute Fade"
+    * If they always go silent after losing a match → "Post-Loss Silence"
+    * If they ignore chat during ranked → "Ranked Tunnel"
+    * If their cold open is always 8+ minutes of setup → "The Long Warm-Up"
+  Invent the name based on what's specific about THIS streamer's pattern. Do NOT use generic labels like "RECURRING: Dead Air" or "RECURRING: Chat Ignored" — those feel boilerplate. The name should make the streamer think "yeah that's me." Be blunt — they have been told before.
 - If no: this is a new finding from this stream — write it fresh, no prior-report language.
 - Do NOT recycle prior reports' exact wording. If the same label would appear twice, drop the repeat.
 - New problems visible only in this stream take priority over repeating history.
@@ -975,6 +981,14 @@ VOICE RULES — non-negotiable:
 - Sound like a text message from a smart friend, not a film review.
 - Never write "the streamer" in fields addressed to them — say "you".
 - Never pad with filler. If you've made the point, stop. No "and that's the key" or "this is important" endings.
+
+VOICE MATCH — read before writing:
+Read the transcript and pick up the streamer's actual register. The report should sound like a friend who streams the same way they do. Then write feedback in a tone that matches:
+- If they cuss freely and run hot, you can be blunt and casual. "That whole stretch was cooked." "Chat was lurking and you knew it." Don't sanitize the read.
+- If they're calm and measured (educational, IRL), you're calm and direct. No forced edge. No "bro" or "gang" if they don't talk that way.
+- If they're a chill variety streamer, match the chill. Don't import urgency they don't have.
+- Pick up vocabulary they actually use (specific game terms, slang, recurring phrases) and reflect it back without quoting them. This proves you watched.
+- Never write in a default coaching voice that sounds the same across all streamers. The voice is part of the proof you watched this specific stream.
 
 CORE PRINCIPLE: You watched this specific stream. You know what happened. Every piece of feedback references a real moment — a timestamp, a specific topic they talked about, a specific thing they did or didn't do. Generic advice that could apply to any streamer is useless and you never give it.
 
@@ -1130,6 +1144,7 @@ SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries
 - Best moment: write this like a coach reviewing game tape — (1) what was building before this moment that set it up, (2) the exact thing the streamer did at that second and why it landed, (3) how to engineer this intentionally on the next stream. 3 sentences. Actions and energy only — no reconstructed words.
 - Recommendation: Imagine a successful experienced streamer just watched this VOD. What is the one thing they would pull you aside and say? Lead with that insight directly. 2-3 sentences max. Make it feel like a real person said it, not a report. Never mention viewer counts or numbers in this field. No timestamps. No quoted words.
 - Rewatch moments: pick TWO specific minutes the streamer should rewatch on their own VOD — one "best" (60 seconds of model behavior they should study and repeat) and one "worst" (60 seconds of a teachable mistake they need to see for themselves). These are LEARNING tools, not highlights. Different from best_moment: best_moment celebrates the peak; rewatch_moments are about behavior to study. The "worst" rewatch should NOT be the most embarrassing moment — it should be the most INSTRUCTIVE one (a dead patch they didn't notice, an energy dip during a key beat, a chat moment they ignored). One sentence each describing exactly what to watch for. No quoted words. No em dashes.
+- Missed clip: identify the SINGLE moment in this stream that should have been THE clip but wasn't fully realized. Different from best_moment (which celebrates the peak that DID happen) — missed_clip names the moment with viral DNA that the streamer let pass. Look for: chat reacted hard but you kept moving, a setup that landed but you didn't milk it, a vulnerability moment you pulled back from, a reaction you cut short, a build-up that fizzled because you changed topics. The note must say (1) what was happening at that timestamp, (2) why it had viral DNA, (3) what to do differently next time so the moment lands instead of slipping. 2-3 short sentences. No quoted words. If no clear missed clip exists in the stream (rare — most streams have one), omit this field entirely rather than fabricating.
 - Cold open: evaluate from when the streamer STARTS actively engaging, not from the stream's timestamp 0. Settling in (reading chat, audio check, BRB screen, intro music, sipping coffee) is NOT a cold open problem — it's normal stream behavior. Score "strong" if they came in with clear energy and a hook once they started; "average" if they warmed up naturally into the stream; "weak" ONLY if they took more than 8 minutes to actually engage, opened with visibly negative/flat energy once engaged, or ignored active chat during the opening. Silence before they started engaging is never "weak". Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
 - Closing: score the last 5 minutes. Normal sign-off behavior (saying bye, thanking viewers, shouting out subs, hyping next stream) is NOT a closing problem. Score "strong" if they ended with energy, gratitude, and a clear next-stream hook; "average" if they wrapped up naturally; "weak" ONLY if they ended mid-content without warning, ended on visibly negative energy, complained about the stream as they ended, or trailed off silently. Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
 - Anti-patterns: scan the transcript for these 5 specific growth-killing behaviors and flag ONLY if you can produce an exact verbatim quote. Empty array is the correct output when none apply. DO NOT flag ambient negativity or interpretation — the quote must literally match the pattern's meaning.
@@ -1196,6 +1211,10 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     { "time": "<MM:SS>", "kind": "best", "note": "<1 sentence telling 'you' what to watch for in the next 60 seconds. Specific behavior to study and repeat. No quoted words.>" },
     { "time": "<MM:SS>", "kind": "worst", "note": "<1 sentence telling 'you' what to watch for in the next 60 seconds. Specific behavior to fix. Not embarrassment, instruction. No quoted words.>" }
   ],
+  "missed_clip": {
+    "time": "<MM:SS>",
+    "note": "<2-3 short sentences. The moment that SHOULD have been a clip but wasn't. What was happening, why it had viral DNA, what to do next time. Address as 'you'. No quoted words. Omit this whole field if no clear missed-clip moment exists.>"
+  },
   "momentum_crash": {
     "time": "<MM:SS of where the crash started>",
     "duration_min": <integer minutes the dead zone lasted>,
