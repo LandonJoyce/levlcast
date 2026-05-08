@@ -5,24 +5,24 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Twitch Clip Generator AI Makes Clips From Your VODs",
+  title: "AI Twitch Clip Generator: Auto-Cut Your Best VOD Moments",
   description:
-    "LevlCast's AI Twitch clip generator finds your best moments hype, comedy, clutch and turns them into ready-to-post clips. Auto-post to YouTube Shorts. Free to start.",
+    "AI watches your VODs and cuts your best moments (hype, clutch, comedy) into ready-to-post Shorts. No scrubbing, no editing. Free to start.",
   alternates: { canonical: "/twitch-clip-generator" },
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com/twitch-clip-generator",
-    title: "Twitch Clip Generator AI Makes Clips From Your VODs",
+    title: "AI Twitch Clip Generator: Auto-Cut Your Best VOD Moments",
     description:
-      "AI finds your best moments and turns them into ready-to-post clips. No scrubbing, no editing, no manual picking.",
+      "AI finds your best Twitch moments and cuts them into ready-to-post Shorts. No scrubbing, no editing, no manual picking.",
     siteName: "LevlCast",
     images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Twitch Clip Generator AI-Powered",
+    title: "AI Twitch Clip Generator",
     description:
-      "AI finds your best Twitch moments and turns them into ready-to-post clips.",
+      "AI cuts your best Twitch moments into ready-to-post Shorts. Free to start.",
     images: ["/opengraph-image"],
   },
 };

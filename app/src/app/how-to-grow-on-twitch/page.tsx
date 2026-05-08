@@ -4,24 +4,24 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "How to Grow on Twitch in 2026 The Honest Guide",
+  title: "How to Grow on Twitch 2026: What Works and What Doesn't",
   description:
-    "The honest version of how to grow on Twitch in 2026. No gimmicks, no bots, no follow-for-follow. Just the tactics that actually move the needle and the ones that don't.",
+    "5 tactics that actually grow a Twitch channel in 2026, and the popular advice that wastes your time. No bots, no follow-for-follow, no schedule fluff.",
   alternates: { canonical: "/how-to-grow-on-twitch" },
   openGraph: {
     type: "article",
     url: "https://www.levlcast.com/how-to-grow-on-twitch",
-    title: "How to Grow on Twitch in 2026 The Honest Guide",
+    title: "How to Grow on Twitch 2026: What Works and What Doesn't",
     description:
-      "Five things that actually work for honest Twitch growth in 2026. Real tactics, not gimmicks.",
+      "5 tactics that actually grow a Twitch channel in 2026, and the popular advice that wastes your time.",
     siteName: "LevlCast",
     images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "How to Grow on Twitch in 2026",
+    title: "How to Grow on Twitch 2026",
     description:
-      "The honest guide to Twitch growth real tactics, no gimmicks.",
+      "5 tactics that actually grow Twitch in 2026. The honest version, no bots or fluff.",
     images: ["/opengraph-image"],
   },
 };
