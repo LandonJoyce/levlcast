@@ -200,7 +200,6 @@ export default async function LandingPage() {
       <section className="ll-game-strip">
         <div className="ll-con">
           <div className="ll-game-strip-head">
-            <span className="ll-game-strip-eyebrow">COACHING DEPTH BY GAME</span>
             <h2 className="ll-game-strip-title">
               Each game gets <span className="ll-grad-text">its own coaching playbook</span>.
             </h2>
