@@ -21,7 +21,7 @@ const SELLING_POINTS = [
   },
   {
     title: "Your best moments, already clipped",
-    body: "Hype, comedy, clutch — captioned and ready to post to YouTube Shorts.",
+    body: "Hype, comedy, clutch. Captioned and ready to post to YouTube Shorts.",
   },
   {
     title: "Two minutes to rewatch",
@@ -229,19 +229,6 @@ export default function LoginPage() {
         }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          {/* Eyebrow */}
-          <span style={{
-            display: "inline-block",
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
-            padding: "5px 12px", borderRadius: 999,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.7)",
-            marginBottom: 28,
-          }}>
-            AI Stream Coach
-          </span>
-
           <h2 style={{
             fontSize: "clamp(34px, 3.6vw, 48px)",
             fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.05,
