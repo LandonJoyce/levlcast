@@ -232,7 +232,7 @@ export default async function ClipsPage({
                 {processingClips.map((c) => (
                   <div key={c.id} className="clip-card">
                     <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--blue) 8%, var(--surface))" }}>
-                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
+                      <span className="ts">starts {formatTimestamp(c.start_time_seconds as number | null)}</span>
                       <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                         <span className="mono" style={{ fontSize: 11, color: "var(--blue)", letterSpacing: ".06em" }}>generating...</span>
                       </span>
@@ -268,7 +268,7 @@ export default async function ClipsPage({
                           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                         />
                       )}
-                      <span className="ts">{formatTimestamp(c.start_time_seconds as number | null)}</span>
+                      <span className="ts">starts {formatTimestamp(c.start_time_seconds as number | null)}</span>
                       <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="play"><Icons.Play /></a>
                       <span className="score" style={{ color: scoreColorVar(score) }}>
                         {score}<span style={{ opacity: 0.6, fontSize: 9 }}>/100</span>
@@ -333,7 +333,7 @@ export default async function ClipsPage({
                   {ungeneratedPeaks.map((p, idx) => (
                     <div key={`${p.vodId}-${p.peakIndex}-${idx}`} className="clip-card">
                       <div className="clip-thumb">
-                        <span className="ts">{formatTimestamp(p.start)}</span>
+                        <span className="ts">starts {formatTimestamp(p.start)}</span>
                         <span className="play"><Icons.Plus /></span>
                       </div>
                       <div className="clip-meta">

@@ -94,20 +94,14 @@ export default async function SharePage({
 
   const GRAD = "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)";
   const HELV = '"Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif';
-  const SERIF = '"Instrument Serif", Georgia, serif';
-  const MONO = '"JetBrains Mono", ui-monospace, Menlo, monospace';
   const labelStyle: React.CSSProperties = {
-    fontFamily: MONO, fontSize: 10, fontWeight: 700,
-    letterSpacing: "0.18em", textTransform: "uppercase",
-    color: "rgba(255,255,255,0.4)", margin: 0,
+    fontFamily: HELV, fontSize: 11, fontWeight: 600,
+    letterSpacing: "0.06em", textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)", margin: 0,
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#08080d", color: "#ECF1FA", fontFamily: HELV }}>
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       {/* Background glow — purple/pink to match brand */}
       <div style={{
         position: "fixed", top: -100, left: "50%", transform: "translateX(-50%)",
@@ -129,7 +123,7 @@ export default async function SharePage({
           <a
             href="https://www.levlcast.com/auth/login"
             style={{
-              fontFamily: MONO, fontSize: 10, fontWeight: 700,
+              fontFamily: HELV, fontSize: 10, fontWeight: 700,
               letterSpacing: "0.18em", textTransform: "uppercase",
               color: "rgba(255,255,255,0.45)", textDecoration: "none",
             }}
@@ -159,7 +153,7 @@ export default async function SharePage({
               <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: "#ECF1FA" }}>
                 {profile?.twitch_display_name ?? "Streamer"}
               </p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, fontFamily: MONO }}>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, fontFamily: HELV }}>
                 @{profile?.twitch_login}
               </p>
             </div>
@@ -188,17 +182,16 @@ export default async function SharePage({
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               }}>
                 <span style={{
-                  fontFamily: SERIF, fontSize: 38, fontWeight: 400, lineHeight: 1, color, letterSpacing: "-0.03em",
+                  fontFamily: HELV, fontSize: 38, fontWeight: 800, lineHeight: 1, color, letterSpacing: "-0.025em",
                 }}>{score}</span>
-                <span style={{ fontSize: 9, fontFamily: MONO, color: "rgba(255,255,255,0.35)", marginTop: 2, letterSpacing: "0.1em" }}>/ 100</span>
+                <span style={{ fontSize: 9, fontFamily: HELV, color: "rgba(255,255,255,0.35)", marginTop: 2, letterSpacing: "0.1em" }}>/ 100</span>
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ ...labelStyle, marginBottom: 6 }}>The one thing</p>
               {report.recommendation ? (
                 <p style={{
-                  fontFamily: SERIF, fontSize: 17, fontStyle: "italic",
-                  fontWeight: 400, lineHeight: 1.35, letterSpacing: "-0.005em",
+                  fontFamily: HELV, fontSize: 15, fontWeight: 500, lineHeight: 1.45, letterSpacing: "-0.005em",
                   color: "#ECF1FA", margin: 0,
                 }}>
                   {report.recommendation}
@@ -214,7 +207,7 @@ export default async function SharePage({
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", margin: 0, fontWeight: 500, lineHeight: 1.4 }}>
               {vod.title}
             </p>
-            <p style={{ fontSize: 10, fontFamily: MONO, color: "rgba(255,255,255,0.3)", margin: "3px 0 0", letterSpacing: "0.04em" }}>
+            <p style={{ fontSize: 10, fontFamily: HELV, color: "rgba(255,255,255,0.3)", margin: "3px 0 0", letterSpacing: "0.04em" }}>
               {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {formatDuration(vod.duration_seconds)}
             </p>
           </div>
@@ -239,12 +232,12 @@ export default async function SharePage({
               borderRadius: 10, padding: "10px 10px", textAlign: "center",
             }}>
               <p style={{
-                fontFamily: SERIF, fontSize: 18, fontWeight: 400, margin: "0 0 2px",
+                fontFamily: HELV, fontSize: 16, fontWeight: 700, margin: "0 0 3px",
                 textTransform: "capitalize", color: c, lineHeight: 1.1, letterSpacing: "-0.01em",
               }}>{value}</p>
               <p style={{
-                fontFamily: MONO, fontSize: 9, color: "rgba(255,255,255,0.4)",
-                margin: 0, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700,
+                fontFamily: HELV, fontSize: 10, color: "rgba(255,255,255,0.45)",
+                margin: 0, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600,
               }}>{label}</p>
             </div>
           ))}
@@ -266,7 +259,7 @@ export default async function SharePage({
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
                         <span style={{ color: "#ECF1FA", fontWeight: 700, fontSize: 13 }}>{label}</span>
                         {ts && (
-                          <span style={{ fontFamily: MONO, fontSize: 10, color: "rgba(163,230,53,0.85)", letterSpacing: "0.04em" }}>{ts}</span>
+                          <span style={{ fontFamily: HELV, fontSize: 10, color: "rgba(163,230,53,0.85)", letterSpacing: "0.04em" }}>{ts}</span>
                         )}
                       </div>
                     )}
@@ -294,7 +287,7 @@ export default async function SharePage({
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
                         <span style={{ color: "#ECF1FA", fontWeight: 700, fontSize: 13 }}>{label}</span>
                         {ts && (
-                          <span style={{ fontFamily: MONO, fontSize: 10, color: "rgba(245,158,11,0.85)", letterSpacing: "0.04em" }}>{ts}</span>
+                          <span style={{ fontFamily: HELV, fontSize: 10, color: "rgba(245,158,11,0.85)", letterSpacing: "0.04em" }}>{ts}</span>
                         )}
                       </div>
                     )}
@@ -304,8 +297,7 @@ export default async function SharePage({
               })}
               {report.improvements.length > 1 && (
                 <li style={{
-                  fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic",
-                  filter: "blur(4px)", userSelect: "none",
+                  fontSize: 12, color: "rgba(255,255,255,0.25)",                   filter: "blur(4px)", userSelect: "none",
                 }}>
                   {parseItem(report.improvements[1]).body || report.improvements[1]}
                 </li>
@@ -336,12 +328,12 @@ export default async function SharePage({
                 color: "transparent",
               }}>Best moment</span>
               <span style={{
-                fontFamily: MONO, fontSize: 11, fontWeight: 700,
+                fontFamily: HELV, fontSize: 11, fontWeight: 700,
                 color: "rgba(242,97,121,0.95)", letterSpacing: "0.04em",
               }}>{report.best_moment.time}</span>
             </div>
             <p style={{
-              fontFamily: SERIF, fontSize: 14, fontStyle: "italic", fontWeight: 400,
+              fontFamily: HELV, fontSize: 14, fontWeight: 400,
               lineHeight: 1.45, color: "rgba(255,255,255,0.85)", margin: 0, letterSpacing: "-0.005em",
             }}>
               {report.best_moment.description}
@@ -362,8 +354,7 @@ export default async function SharePage({
             Want your score?
           </p>
           <p style={{
-            fontFamily: SERIF, fontSize: 24, fontWeight: 400, fontStyle: "italic",
-            margin: "0 0 6px", lineHeight: 1.15, letterSpacing: "-0.015em", color: "#ECF1FA",
+            fontFamily: HELV, fontSize: 22, fontWeight: 700, margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em", color: "#ECF1FA",
           }}>
             Get your <span style={{
               background: GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
@@ -387,7 +378,7 @@ export default async function SharePage({
               <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </a>
-          <p style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)", margin: "12px 0 0", textTransform: "uppercase", fontWeight: 700 }}>
+          <p style={{ fontFamily: HELV, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)", margin: "12px 0 0", textTransform: "uppercase", fontWeight: 700 }}>
             No card · Connect Twitch · Free
           </p>
         </div>
