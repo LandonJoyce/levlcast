@@ -36,19 +36,17 @@ export async function POST(req: NextRequest) {
 ${sourceDesc}
 Username: ${authorName}
 
-What LevlCast does (pick the 1-2 most relevant to their pain point):
-- Analyzes your VOD after each stream, scores it 0-100, and tells you the specific things to fix to improve
-- Auto-detects your best moments and generates clips ready to post as YouTube Shorts or TikTok without you rewatching anything
-- Shows the exact timestamps where viewers dropped off so you know what killed retention
-- Tracks your coaching score across streams so you can see if you're actually getting better
+What LevlCast does (the message MUST mention both halves of the product, even when only one is more relevant to their pain):
+- Coach report on every VOD: scores it 0-100, tells you the one specific thing to fix, names the moments viewers dropped off, tracks score across streams so you see real improvement
+- Auto-clip generation: detects your best moments (hype, comedy, clutch), cuts them with captions, ready to post as YouTube Shorts or TikTok without you rewatching anything
 
 Rules:
 - First line: SUBJECT: <4-7 words, specific to their situation, written like a real person who actually read their ${isComment ? "comment" : "post"}, no generic openers>
 - Then a blank line
-- Then the message body: 3 sentences max
+- Then the message body: 3-4 sentences max
 - Sentence 1: acknowledge their specific problem from the ${isComment ? "comment" : "post"} (1 detail that proves you read it)
-- Sentence 2: say you built LevlCast, describe what it does using the features most relevant to their pain (1 sentence)
-- Sentence 3: tell them it's free to try, end with levlcast.com
+- Sentence 2: say you built LevlCast and describe BOTH the coach report (what it tells them) AND the auto-clip generation (what it cuts for them). Tie one of them to their specific pain. Both must appear naturally in this sentence or split across sentence 2 and 3.
+- Final sentence: tell them it's free to try, end with levlcast.com
 - No em dashes. No hyphens between words. No corpo language. No "I hope". No "just wanted to". No "checking out". No "might be worth".
 - Sound like a person who actually uses the product and built it, not a marketer
 - Match their tone exactly: if they're frustrated, be blunt; if they're casual, be casual; if they're technical, be specific
