@@ -709,6 +709,71 @@ WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex top
  */
 const GAME_COACHING_MODULES: Array<{ keywords: string[]; module: string }> = [
   {
+    keywords: ["valorant", "valo", "val ranked", "val comp", "val unrated"],
+    module: `VALORANT — game-specific coaching:
+
+Valorant is a tactical 5v5 shooter built on round economy, agent utility, and ranked progression. Matches are ~30-40 minutes with 13-round halves and a side switch. Viewers tune in for clutch potential, agent expertise, and the ranked grind story arc. The pacing is round-by-round, not match-by-match.
+
+- **The ranked grind IS the narrative**: "I'm grinding to Diamond" / "trying to climb out of Plat hell" gives viewers a reason to follow across streams. Streamers without a ranked story arc just play matches and end. Frame your goal at stream start and reference it throughout.
+- **Buy phases are the chat window**: 30-45 seconds before each round is when viewers and streamers both talk. Talking through the buy ("I'm full saving this round, we need armor next round") teaches viewers your strategy and reads as confident play. Silent buy phases waste 12+ chat moments per match.
+- **Util commentary is the differentiation**: Calling out your own util usage and the enemy's ("they used both Killjoy ults, we can push next round") is the layer of commentary that separates Valorant streamers from "just shooting people." Mechanical aim is what 90% of streamers show. Util tracking is what the top 10% do.
+- **Clutch reactions are the peak clip windows**: 1v3+ clutch attempts are the single most-clipped moments in Valorant. Build the tension out loud ("I have ult, I have full HP, they don't know where I am"), then react when the clutch lands. Silent clutches don't clip.
+- **Half-time and post-match are chat moments**: Side switch gets 90+ seconds, post-match has full lobby downtime. Recap the half, predict adjustments, take chat questions about the comp.
+- **Agent specialization affects coaching**: Duelist mains (Jett, Reyna, Raze) get coached differently than Sentinel mains (Cypher, Killjoy, Chamber) or Smokes (Omen, Brimstone, Astra). If they're a one-trick, evaluate whether their commentary on THAT agent has depth — lineups, common mistakes, role responsibility.
+- **Comms in 5-stack vs solo queue**: Streaming with a 5-stack means the friend banter becomes the content. Solo queue means dealing with rage / silent teammates is the storyline. Coach accordingly.
+
+Clip moment patterns specific to this game:
+- Aces (5-kill rounds) and 1vX clutches
+- Operator flicks and specific agent ult moments (Reyna empress, Sova ult triple kill, Killjoy ult lockdown)
+- Trash talk after winning a force-buy round
+- Reactions to enemy outplays (especially Killjoy lurk, Cypher ult plays)
+- Last-round economy pressure and the deciding clutch`,
+  },
+  {
+    keywords: ["league of legends", "league ranked", " lol ", "lol ranked", "summoners rift", "tft"],
+    module: `LEAGUE OF LEGENDS — game-specific coaching:
+
+League is a 5v5 MOBA with 20-40 minute matches structured by phase: draft → lane → mid game (objectives) → late game (team fights). The match has more downtime than fast-paced shooters, which means narration windows are longer but more abundant. Ranked grind from Iron to Challenger is the standard streaming arc.
+
+- **Draft is the strategy showcase**: 90 seconds of pick/ban is the most strategic content on stream. Streamers who just queue and pick silently waste it. Naming counter-picks, predicting enemy comp synergy, calling out priority champions = expertise on display. Teaches viewers macro thinking.
+- **Lane phase is constant narration opportunity**: First 15 minutes of the game is mostly farming and trading. CS counts ("I'm two CS up, they're shoving"), wave management ("I'm freezing this wave"), trades ("that trade was a win, I have priority now"). Lane phase silence reads as mechanical play with no game IQ.
+- **Objective rotations are the chat hype window**: Drake spawn, Herald spawn, Baron timing — these are when the streamer should be reading the map out loud, calling rotations, predicting fights. Streamers who type instead of talk during objective windows lose the audience that came for high-level play.
+- **Team fights are the peak clips**: 5v5 team fights with Penta-kills, big AOE ults (Malphite, Kennen, Yasuo R), or game-deciding plays are the most-clipped moments. The reactions and comms during these moments matter more than the gameplay itself.
+- **Champion mastery affects coaching**: One-tricks and OTPs (Yasuo, Riven, Lee Sin, Akali) get coached differently than flex players. If they're streaming the same champ every game, evaluate whether their commentary has matchup depth and macro IQ, not just mechanics.
+- **Macro narration is the moat over chat-AI advice**: Naming when to push waves, when to recall, when to roam, when to ward — this is the depth that separates "watching gameplay" from "watching a coach play." Streamers who only narrate fights leave the rest of the game silent.
+- **Post-game review is a free engagement window**: Win or loss, the 60 seconds after a match are when chat is ready to talk. Quick review of what went right/wrong, decision points, what you'd do differently. Streamers who instantly requeue waste this.
+
+Clip moment patterns specific to this game:
+- Pentakills and aced team fights
+- Solo kills in lane against a bigger threat
+- Outplay moments — flash plays, dodge ults, exhaust timing
+- Insane macro reads (correctly predicting Baron call, denied recall)
+- Reactions to enemy throws (winning from a losing position)
+- Trash talk in chat with chat after a smurf accuses you of something`,
+  },
+  {
+    keywords: ["counter-strike", "cs2", "cs:go", "csgo", "premier", "faceit"],
+    module: `COUNTER-STRIKE 2 — game-specific coaching:
+
+CS2 is a tactical 5v5 with side switching at half-time. Round economy IS the meta layer of the game — eco, force buy, full buy, full save. Matches are 24-30 rounds (first to 13 wins regular, premier is different). Viewers tune in for clutch potential, demo-tier game IQ, and the ranked or premier climb. Mechanical aim is table stakes; game IQ is what wins streams.
+
+- **Round economy is the strategy layer**: Calling buys out loud ("we're force buying, save SMGs for next round if we win") is the depth viewers want. Silent buy phases waste the most rich chat window in the game. Force buy success and eco wins are the most narratively satisfying rounds — frame them.
+- **Clutches are everything in this game**: 1vX clutches are the single biggest reason CS streams get clipped. Build tension out loud ("they have to defuse, I have a kit, I'm last alive, I can do this"), then react. Silent clutches don't clip and don't sell. The clutch reaction is the product.
+- **Half-time and post-match are real chat moments**: Side switch gets 60+ seconds, post-match has 90+ seconds of downtime. Streamers who use these windows to recap the half, talk strategy, complain about teammates, or read chat retain viewers across matches. Streamers who instantly queue lose them.
+- **Map-specific knowledge separates streamers**: CS players who narrate map control ("we have B apartments, they're stacking A long, I'm rotating mid"), specific spots, smoke/flash lineups, and rotations are showing the depth that AI-only coaching can't replicate. This is the game where macro narration is most valuable.
+- **Demo / mistake review is content**: Post-round reviews of "I shouldn't have peeked there" or "I should've held angle" double as teaching moments and self-deprecating humor that builds parasocial trust. Acting like every loss is bad luck reads as cope and kills credibility.
+- **Pug / faceit / premier all need different framing**: Premier streams have the rank story arc. Faceit streams have the matchmaking complaints + pro-adjacent skill ceiling. Casual MM is the chill grind. Match the pacing of feedback to the lobby seriousness.
+- **Util discipline is the moat over silent aim play**: Calling smoke + flash combos by name, knowing default lineups, util tracking ("they've used both flashbangs"), and economy reads ("they full saved, expect wide rotates next round") = top-tier streaming. Pure aim diff content has a low ceiling.
+
+Clip moment patterns specific to this game:
+- 1vX clutches (especially with low HP, no kit, or eco)
+- Aces and multi-kills in pistol or eco rounds (highest impact)
+- Insane aim moments (flicks, AWP no-scopes, deagle one-taps)
+- Reactions to enemy outplays (a perfect smoke lurk, a held angle that wins the round)
+- Save rounds where the streamer escapes alive against the odds
+- Trash talk in voice chat with enemies after a winning round`,
+  },
+  {
     keywords: ["minecraft"],
     module: `MINECRAFT — game-specific coaching:
 
