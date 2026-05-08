@@ -699,6 +699,52 @@ CHAT-DRIVEN PIVOTS: Letting chat questions steer the content creates investment 
 WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex topics made genuinely accessible? Is uncertainty handled authentically or faked? Did chat shape the direction at any point?`,
 };
 
+/**
+ * Per-game coaching modules. Each entry holds (a) keywords used to detect
+ * the game from the VOD title or transcript, and (b) a coaching module that
+ * gets layered on top of the streamer-category guide when a match is found.
+ *
+ * This is the entry point for LevlCast's per-game knowledge. Add a new game
+ * by writing the module — no schema or pipeline changes required.
+ */
+const GAME_COACHING_MODULES: Array<{ keywords: string[]; module: string }> = [
+  {
+    keywords: ["marvel rivals", "rivals ranked", "rivals comp", "marvelrivals"],
+    module: `MARVEL RIVALS — game-specific coaching:
+
+Marvel Rivals is a 6v6 hero shooter with three roles (Vanguard, Duelist, Strategist), Team-Up abilities that combo specific heroes, and matches that average 8-12 minutes. The viewer experience hinges on these specifics:
+
+- **Respawn windows are gold**: ~10 seconds between deaths is the natural chat-engagement moment. Streamers who go silent during respawn waste the only built-in downtime the game gives them. If chat is active and you're staring at the respawn timer in silence, that's the dead air to flag — not the team fights.
+- **Ult economy is the meta narrative**: "I have ult" / "their Iron Fist has ult" / "we have to bait their Cloak ult" is the running commentary that makes the game readable to viewers. Streams without ult callouts feel like watching someone else's game with no context. Streamers who narrate ult tracking turn the game into a story.
+- **Team-Up abilities are storytelling beats**: When two specific heroes get picked together (Hulk + Iron Man, Cloak + Dagger, Punisher + Black Widow), the synergy unlock is a moment to react to. Streamers who never call out team-ups miss free engagement.
+- **Match transitions are the chat moment**: 30-45 seconds between matches is the second-best engagement window. Read chat, talk meta, complain about the loss. Streamers who instantly requeue waste this every match.
+- **Tilting silently kills retention**: Marvel Rivals is rage-bait fertile. Frustration is GOOD for clips if it's vocalized — chat clips meltdowns. Silent tilt reads as low energy on the report and is invisible to the audience.
+- **Hero pool affects what to coach**: One-trick mains (Spider-Man, Iron Fist, Jeff) get different feedback than flex players. If they're locking the same hero every match, evaluate the depth of their commentary on THAT hero specifically.
+
+Clip moment patterns specific to this game:
+- Multi-kills in team fights (especially Duelist plays cleaning up)
+- Clutch survives as last hero alive
+- Combo kills triggered by ult chains (e.g. Hulk gamma → Iron Man unibeam)
+- Reactions to enemy ults that change the fight
+- Trash talk with chat after a winning team fight`,
+  },
+];
+
+/**
+ * Pick the first game module whose keywords match the VOD title.
+ * Returns empty string if no match — the report falls back to category-level
+ * coaching, behaving exactly like before.
+ */
+function pickGameModule(vodTitle: string): string {
+  const lower = vodTitle.toLowerCase();
+  for (const entry of GAME_COACHING_MODULES) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) {
+      return entry.module;
+    }
+  }
+  return "";
+}
+
 /** Compute per-minute WPM across the full stream. */
 function buildEnergyMap(segments: TranscriptSegment[], vodDuration: number): { minute: number; wpm: number }[] {
   const totalMinutes = Math.ceil(vodDuration / 60);
@@ -1024,6 +1070,10 @@ If this stream shows improvement on a past problem, note it in trend_vs_history 
     : "No standout moments detected — the stream lacked clear viral peaks.";
 
   const categoryGuideBlock = Object.values(CATEGORY_COACHING_GUIDE).join("\n\n");
+  const gameModule = pickGameModule(vodTitle);
+  const gameModuleBlock = gameModule
+    ? `\n\nGAME-SPECIFIC MODULE (the VOD title indicates this game — layer this knowledge on top of the streamer-category guide above when writing strengths, improvements, recommendation, and best_moment):\n\n${gameModule}`
+    : "";
 
   const coachSystemPrompt = `You are a Twitch growth coach who is also a seasoned streamer yourself. You speak the language — you know what dead air feels like, what it means to go live cold, when chat is sleeping, when someone's in the zone vs grinding silent. Your feedback sounds like a knowledgeable streaming friend giving real talk, not a corporate consultant.
 
@@ -1054,7 +1104,7 @@ CORE PRINCIPLE: You watched this specific stream. You know what happened. Every 
 If you write a strength, you name the exact moment that showed it and tell them how to recreate it. If you write an improvement, you name when and where the problem showed up and give a fix that only makes sense for this specific stream.
 
 CATEGORY COACHING STANDARDS — apply the section matching the streamer type you identify:
-${categoryGuideBlock}`;
+${categoryGuideBlock}${gameModuleBlock}`;
 
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
