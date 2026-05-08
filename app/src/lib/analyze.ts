@@ -709,6 +709,69 @@ WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex top
  */
 const GAME_COACHING_MODULES: Array<{ keywords: string[]; module: string }> = [
   {
+    keywords: ["minecraft"],
+    module: `MINECRAFT — game-specific coaching:
+
+Minecraft is a sandbox game. Viewers do not come for hype clips — they come for parasocial vibes, world-building, and the streamer's ongoing creative project. The bar for what counts as engaging is completely different than competitive games. Silent mining, repetitive grinding, and "background noise" energy are the failure modes here.
+
+- **The world IS the story**: Viewers want to know what you're building, why, what the lore of THIS world is, what's coming next. Streamers who treat their world like a persistent project ("I'm two days into the cobblestone farm and once it's done I'm starting on the nether portal") build long-term retention. Streamers who treat sessions as disconnected play lose it.
+- **Mining and walking are narration tests**: Long stretches of repetitive activity (mining, traveling, sorting chests) are when viewers either commit to you or click off. The streamer's voice IS the content during these. Silent mining for 10+ minutes is the #1 mistake. Talk about what you're going for, react to chat, plan out loud, complain about creepers, anything.
+- **Chat windows are constant**: Unlike competitive games, there's almost always a moment to read chat. Streamers who acknowledge chat by name during chill activities ("hey @user, yeah I do think the Warden is overrated") build small communities fast.
+- **Build reveals are the clip moment**: Finishing a structure, reaching a new biome, seeing a megaproject for the first time on stream. Build up to it, don't rush past it. The reveal is the payoff that gets clipped.
+- **Friend / multiplayer streams shift the dynamic**: If streaming with friends on a server, the banter becomes the content. The streamer who is most audience-facing (acknowledging chat, narrating what's happening) carries the show. Don't disappear into private friend conversations.
+- **No-hype is allowed; no-personality is not**: Calm energy is fine. Generic energy is not. The streamer's specific takes (hates Phantoms, loves the Warden, refuses to use elytra) is what differentiates them from the thousand other Minecraft streamers.
+
+Clip moment patterns specific to this game:
+- A genuine reaction to losing a long-running run (death in hardcore, lost shulker box of items)
+- A creeper jumpscare or unexpected mob encounter
+- Build reveals and time-lapse style "before/after" moments
+- Chat-driven decisions ("chat what should I name this dog") that pay off later
+- A moment of vulnerability about why this world matters to them`,
+  },
+  {
+    keywords: ["fortnite"],
+    module: `FORTNITE — game-specific coaching:
+
+Fortnite is a battle royale with ~20-minute matches and predictable downtime windows (drop, loot, rotation, eliminate, win or die). The match structure dictates everything about engagement timing. Whether the streamer is on Zero Build (more tactical) or regular (build battles), the coaching basics overlap.
+
+- **Drop zone is the opening hook**: First 90 seconds of every match. Naming the drop, calling out the play ("we're going Tilted hot, I want a fight"), reacting to who else dropped. Streamers who land silently waste the only guaranteed engagement window of the match.
+- **Looting is the second chat window**: 30-60 seconds of looting after drop is when chat reads them, not the screen. Naming pickups, judging loot ("scuffed pump again"), planning the rotation = engagement. Silent looting = dead air on a fertile window.
+- **Rotations are commentary opportunity**: Walking through the storm to next zone is the meta-narrative window. Storm reads, predicting where the lobby will collapse to, calling out heard footsteps. Streamers who rotate silently leave 90% of the audience without context for what's about to happen.
+- **Eliminations are the energy peaks**: Reaction to kills, especially trash talk or surprise wins, are the most-clipped moments. Calm "got him" doesn't clip. Genuine reactions do. Build-battle wins in regular mode are the mechanical clip moment; clutch 1vX wins in Zero Build are the tactical equivalent.
+- **Match transitions are chat gold**: 30-45 seconds in the lobby between matches is when chat is most active. Read messages, complain about the loss, hype the win, talk about the storm circle that screwed you. Streamers who instantly requeue waste this every match.
+- **Storyline streams beat one-off streams**: "Trying to win a solo today" or "first to 5 wins, no leaving" framing turns matches into a series viewers want to follow. No framing = no reason to stay through losses.
+
+Clip moment patterns specific to this game:
+- 1vX clutches (especially in late game with low resources)
+- Build battle wins or sick edits in regular mode
+- Trash talk after a winning fight
+- Snipe shots or unexpected long-range eliminations
+- Storm-wall losses or kills in the final circle
+- Chat-driven decisions ("chat where do we drop") that pay off`,
+  },
+  {
+    keywords: ["phasmophobia", "phasmo", "dead by daylight", "dbd"],
+    module: `PHASMOPHOBIA / DEAD BY DAYLIGHT — co-op horror coaching:
+
+Co-op horror is a reaction-driven genre. The whole point of watching is the streamer's authentic fear, surprise, and the social dynamic with friends. Streamers who try to be "cool" about jump scares or who play it stoic kill the entire reason viewers tuned in. This category is unforgiving of fake reactions and rewarding of vulnerability.
+
+- **Authentic reactions are the product**: Genuine screams, jump scare flinches, panic loops, frustrated rage. These are not embarrassing — they ARE the stream. Streamers who suppress reactions because they think "real streamers" stay calm are misreading what their audience wants. The most-clipped horror moments are always the loudest reactions.
+- **Quiet investigation phases are chat windows**: Both games have long stretches of low-tension investigation (Phasmo: gathering evidence; DBD: stealth/totem hunting). These are the chat-engagement windows. Talk through your evidence reads, ask chat what they think the ghost is, debate strategy. Silent investigation = wasted retention window.
+- **Friend group dynamic is the content (Phasmo especially)**: If the streamer is the audience-facing voice (acknowledging chat, narrating what's happening, summarizing the situation for new viewers), they carry the show. Streamers who let friends carry the conversation while they zone out lose their audience to whoever is talking.
+- **Build-up and payoff is the rhythm**: Tension → release → tension → release. Streamers who narrate the build-up ("the temperature just dropped, I think it's about to do the thing") amplify the eventual payoff 10x. Silent building tension means the payoff lands without context.
+- **Match transitions and contract setup are chat moments**: 30-60 seconds between attempts. Hype the upcoming run, complain about the last one, read the contract aloud, announce the strategy. Streamers who skip these waste the most reliable chat window the genre offers.
+- **DBD specific**: Survivor and killer roles need different coaching. Survivor streams should narrate stealth decisions, generator priorities, chase reads. Killer streams should narrate prioritization (which survivor is hooked, who's still on gens, who to tunnel). Both roles benefit from naming the perks they're running and why.
+- **Phasmo specific**: Evidence gathering is the puzzle. Streamers who narrate the deduction process out loud ("we have freezing temps and ghost orbs but no spirit box, so it's not Spirit or Wraith") create educational content layered on top of the horror. Silent evidence-gathering reads as "watching someone play alone."
+
+Clip moment patterns specific to these games:
+- Genuine screams or full-body flinch reactions to jump scares
+- Friend group panic moments (everyone screaming, running into each other)
+- The "I'm alone now" moment when teammates die or disconnect
+- Streamer trying to be brave and failing immediately
+- The reveal / kill cam in DBD
+- Successful exorcism / final identification in Phasmo with chat hyped`,
+  },
+  {
     keywords: ["marvel rivals", "rivals ranked", "rivals comp", "marvelrivals"],
     module: `MARVEL RIVALS — game-specific coaching:
 
