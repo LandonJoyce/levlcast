@@ -713,155 +713,225 @@ const GAME_COACHING_MODULES: Array<{ name: string; keywords: string[]; module: s
     keywords: ["valorant", "valo", "val ranked", "val comp", "val unrated"],
     module: `VALORANT — game-specific coaching:
 
-Valorant is a tactical 5v5 shooter built on round economy, agent utility, and ranked progression. Matches are ~30-40 minutes with 13-round halves and a side switch. Viewers tune in for clutch potential, agent expertise, and the ranked grind story arc. The pacing is round-by-round, not match-by-match.
+5v5 tactical shooter, 13-round halves, side switch at 12. Maps in active rotation: Bind, Haven, Ascent, Split, Lotus, Sunset, Pearl. Roles: Duelist (entry), Sentinel (anchor/info), Controller/Smokes (macro), Initiator (intel). Ranks: Iron through Radiant. Viewers come for clutches, agent expertise, and the climb.
 
-- **The ranked grind IS the narrative**: "I'm grinding to Diamond" / "trying to climb out of Plat hell" gives viewers a reason to follow across streams. Streamers without a ranked story arc just play matches and end. Frame your goal at stream start and reference it throughout.
-- **Buy phases are the chat window**: 30-45 seconds before each round is when viewers and streamers both talk. Talking through the buy ("I'm full saving this round, we need armor next round") teaches viewers your strategy and reads as confident play. Silent buy phases waste 12+ chat moments per match.
-- **Util commentary is the differentiation**: Calling out your own util usage and the enemy's ("they used both Killjoy ults, we can push next round") is the layer of commentary that separates Valorant streamers from "just shooting people." Mechanical aim is what 90% of streamers show. Util tracking is what the top 10% do.
-- **Clutch reactions are the peak clip windows**: 1v3+ clutch attempts are the single most-clipped moments in Valorant. Build the tension out loud ("I have ult, I have full HP, they don't know where I am"), then react when the clutch lands. Silent clutches don't clip.
-- **Half-time and post-match are chat moments**: Side switch gets 90+ seconds, post-match has full lobby downtime. Recap the half, predict adjustments, take chat questions about the comp.
-- **Agent specialization affects coaching**: Duelist mains (Jett, Reyna, Raze) get coached differently than Sentinel mains (Cypher, Killjoy, Chamber) or Smokes (Omen, Brimstone, Astra). If they're a one-trick, evaluate whether their commentary on THAT agent has depth — lineups, common mistakes, role responsibility.
-- **Comms in 5-stack vs solo queue**: Streaming with a 5-stack means the friend banter becomes the content. Solo queue means dealing with rage / silent teammates is the storyline. Coach accordingly.
+- **The ranked grind is the narrative**: Frame the goal at stream start ("breaking Plat 3 today, lost 2 in a row last night"), reference it across matches. Without an arc, every loss is forgettable.
+- **Buy phases are 12+ chat windows per match**: The 15-30 seconds between rounds is when you talk and chat reads. Naming the buy ("we're force buying Vandals"), predicting the enemy buy ("they full saved, expect a default"), reading util commits is the depth viewers want. Silent buys are the single biggest waste of engagement on a Valorant stream.
+- **Util tracking separates streamers**: Calling enemy ults ("their Killjoy has ult, can't push site"), counting flashes used, reading util commits ("Sova used both darts, push wide") is the layer 90% of streamers skip. This is what makes a stream watchable instead of an aim-diff highlight reel.
+- **Map control narration is the macro signal**: "We have B Long, they're stacking A Heaven, I'm flexing mid for info" is what makes a stream feel pro-tier. Each map has its own callouts and anchor spots. Map-aware streamers stand out instantly.
+- **Pistol rounds carry oversized impact**: Round 1 and round 13 swing the half. A clean pistol win deserves a reaction, not a "got 'em" and instant requeue.
+- **Clutch tension narration is the product**: 1vX clutches are the most-clipped moments. Build tension out loud ("3 HP, spike planted, stall 7 seconds, they don't know I'm in CT"), react when it lands. Silent clutches don't clip.
+- **Agent specialization shapes coaching**: Duelist mains (Jett, Reyna, Raze, Phoenix, Iso, Yoru) are entry-frag streams. Sentinel mains (Cypher, Killjoy, Chamber, Sage, Deadlock) are info/anchor streams. Smokes (Omen, Brimstone, Astra, Harbor, Clove) are macro streams. Initiators (Sova, Skye, KAY/O, Breach, Fade, Gekko) are intel streams. Coach to the role.
+- **5-stack vs solo queue is a different show**: 5-stack means friend banter becomes content; solo queue means navigating rage teammates is the storyline.
+
+Common streamer mistakes specific to Valorant:
+- Silent buy phases ("I'll talk during fights")
+- Never calling enemy ults or counting util used
+- Same energy in round 12 as round 4
+- Tilt-typing in match chat instead of vocalizing
+- Instant-requeue at post-match instead of using the 60+ second chat window
 
 Clip moment patterns specific to this game:
-- Aces (5-kill rounds) and 1vX clutches
-- Operator flicks and specific agent ult moments (Reyna empress, Sova ult triple kill, Killjoy ult lockdown)
-- Trash talk after winning a force-buy round
-- Reactions to enemy outplays (especially Killjoy lurk, Cypher ult plays)
-- Last-round economy pressure and the deciding clutch`,
+- Aces in pistol or eco rounds (max impact)
+- 1vX clutches with full tension build-up
+- Operator one-shots, Jett knife kills, Reyna empress sprees, Raze ult hits
+- Killjoy ult lockdowns, Cypher cam plays, Sova triple-kill darts, Brim mollies forcing retakes
+- Trash talk after a winning force-buy
+- Reading enemy strategy correctly mid-round and calling it before it happens`,
   },
   {
     name: "League of Legends",
     keywords: ["league of legends", "league ranked", " lol ", "lol ranked", "summoners rift", "tft"],
     module: `LEAGUE OF LEGENDS — game-specific coaching:
 
-League is a 5v5 MOBA with 20-40 minute matches structured by phase: draft → lane → mid game (objectives) → late game (team fights). The match has more downtime than fast-paced shooters, which means narration windows are longer but more abundant. Ranked grind from Iron to Challenger is the standard streaming arc.
+5v5 MOBA, ~20-40 min matches. Phases: draft, lane (0-15m), mid game / objectives (15-25m), late game team fights (25m+). Roles: top, jungle, mid, ADC (bot), support. Ranks: Iron through Challenger. Key timers: drake (5m), Rift Herald (8m), Baron (20m), Soul (after 4 dragons).
 
-- **Draft is the strategy showcase**: 90 seconds of pick/ban is the most strategic content on stream. Streamers who just queue and pick silently waste it. Naming counter-picks, predicting enemy comp synergy, calling out priority champions = expertise on display. Teaches viewers macro thinking.
-- **Lane phase is constant narration opportunity**: First 15 minutes of the game is mostly farming and trading. CS counts ("I'm two CS up, they're shoving"), wave management ("I'm freezing this wave"), trades ("that trade was a win, I have priority now"). Lane phase silence reads as mechanical play with no game IQ.
-- **Objective rotations are the chat hype window**: Drake spawn, Herald spawn, Baron timing — these are when the streamer should be reading the map out loud, calling rotations, predicting fights. Streamers who type instead of talk during objective windows lose the audience that came for high-level play.
-- **Team fights are the peak clips**: 5v5 team fights with Penta-kills, big AOE ults (Malphite, Kennen, Yasuo R), or game-deciding plays are the most-clipped moments. The reactions and comms during these moments matter more than the gameplay itself.
-- **Champion mastery affects coaching**: One-tricks and OTPs (Yasuo, Riven, Lee Sin, Akali) get coached differently than flex players. If they're streaming the same champ every game, evaluate whether their commentary has matchup depth and macro IQ, not just mechanics.
-- **Macro narration is the moat over chat-AI advice**: Naming when to push waves, when to recall, when to roam, when to ward — this is the depth that separates "watching gameplay" from "watching a coach play." Streamers who only narrate fights leave the rest of the game silent.
-- **Post-game review is a free engagement window**: Win or loss, the 60 seconds after a match are when chat is ready to talk. Quick review of what went right/wrong, decision points, what you'd do differently. Streamers who instantly requeue waste this.
+- **Draft is 90 seconds of free strategy content**: Naming counter-picks, predicting enemy comp synergy, calling priority bans = expertise on display. "If they pick Yasuo, I'm flexing Malphite top" teaches viewers macro thinking. Silent drafts waste the highest-IQ window of the entire match.
+- **Lane phase is constant narration opportunity**: 0-15 min is farming and trading. CS counts ("up 2 CS"), wave management ("freezing this wave to deny their roam"), trades ("that trade was a win, I have priority"), gank reads ("their jungler started bot, I should be careful 3:30 to 4"). Lane phase silence reads as mechanics-only play with no IQ.
+- **Objective rotations are the macro hype window**: Drake spawns at 5m, Herald at 8m, Baron at 20m, Soul at the 4th drake. Map reads, predicting fights, calling vision plays during these timers is the depth viewers came to watch.
+- **Role-specific coaching matters**: Top lane is island gameplay (low priority, late team fight impact). Jungle is map control and gank windows. Mid is roaming/objective priority. ADC is positioning and right-clicking. Support is vision and engage timing. The same advice does not work across roles.
+- **Champion identity shapes coaching**: One-trick OTPs (Yasuo, Riven, Lee Sin, Akali, Singed) get coached differently than flex players. For OTPs, evaluate whether the matchup depth and macro IQ on THAT champ comes through, not just mechanics.
+- **Macro callouts are the chatbot moat**: Naming when to push, when to recall, when to roam, when to ward, when to TP, when to give a wave for prio. This is what separates a coach-tier stream from "someone playing League." 90% of streamers only narrate fights and waste the other 35 minutes.
+- **Tilt visibility is a real feature**: League rage is part of the genre. Vocalized tilt ("I am inting on purpose now, I am done") makes for clip moments. Silent tilt or typing /muteall in chat reads flat on stream and is invisible to the audience.
+- **Post-game lobby is a 30-60s chat window**: Quick review of what went right/wrong, what you would do differently. Streamers who instantly requeue waste the easiest chat moment of every match.
+
+Common streamer mistakes specific to League:
+- Silent draft phase
+- No CS or wave-management commentary in lane
+- No map reads during objective windows (drake/herald/baron)
+- Treating every match the same energy regardless of game state
+- Typing in /all or /team chat instead of vocalizing the take
+- Instant requeue with no post-game recap
 
 Clip moment patterns specific to this game:
 - Pentakills and aced team fights
-- Solo kills in lane against a bigger threat
-- Outplay moments — flash plays, dodge ults, exhaust timing
-- Insane macro reads (correctly predicting Baron call, denied recall)
-- Reactions to enemy throws (winning from a losing position)
-- Trash talk in chat with chat after a smurf accuses you of something`,
+- Solo kills in lane against the counter-pick
+- Outplays: flash plays, dodge ults at the last frame, exhaust on a key target
+- Macro reads called pre-fight (Baron predicted, recall denied, vision-bait kill)
+- Insane comebacks (winning from a 10k gold deficit)
+- Tilt rant moments after a teammate griefs the game`,
   },
   {
     name: "Counter-Strike 2",
     keywords: ["counter-strike", "cs2", "cs:go", "csgo", "premier", "faceit"],
     module: `COUNTER-STRIKE 2 — game-specific coaching:
 
-CS2 is a tactical 5v5 with side switching at half-time. Round economy IS the meta layer of the game — eco, force buy, full buy, full save. Matches are 24-30 rounds (first to 13 wins regular, premier is different). Viewers tune in for clutch potential, demo-tier game IQ, and the ranked or premier climb. Mechanical aim is table stakes; game IQ is what wins streams.
+5v5 tactical, side switch at 12, first to 13 wins regular MM (premier and faceit have variants). Maps in active duty: Mirage, Inferno, Ancient, Anubis, Nuke, Dust 2, Train. Round economy is the meta layer: pistol → anti-eco → full buy → force → eco / save. Viewers want clutches, demo-tier IQ, and the climb.
 
-- **Round economy is the strategy layer**: Calling buys out loud ("we're force buying, save SMGs for next round if we win") is the depth viewers want. Silent buy phases waste the most rich chat window in the game. Force buy success and eco wins are the most narratively satisfying rounds — frame them.
-- **Clutches are everything in this game**: 1vX clutches are the single biggest reason CS streams get clipped. Build tension out loud ("they have to defuse, I have a kit, I'm last alive, I can do this"), then react. Silent clutches don't clip and don't sell. The clutch reaction is the product.
-- **Half-time and post-match are real chat moments**: Side switch gets 60+ seconds, post-match has 90+ seconds of downtime. Streamers who use these windows to recap the half, talk strategy, complain about teammates, or read chat retain viewers across matches. Streamers who instantly queue lose them.
-- **Map-specific knowledge separates streamers**: CS players who narrate map control ("we have B apartments, they're stacking A long, I'm rotating mid"), specific spots, smoke/flash lineups, and rotations are showing the depth that AI-only coaching can't replicate. This is the game where macro narration is most valuable.
-- **Demo / mistake review is content**: Post-round reviews of "I shouldn't have peeked there" or "I should've held angle" double as teaching moments and self-deprecating humor that builds parasocial trust. Acting like every loss is bad luck reads as cope and kills credibility.
-- **Pug / faceit / premier all need different framing**: Premier streams have the rank story arc. Faceit streams have the matchmaking complaints + pro-adjacent skill ceiling. Casual MM is the chill grind. Match the pacing of feedback to the lobby seriousness.
-- **Util discipline is the moat over silent aim play**: Calling smoke + flash combos by name, knowing default lineups, util tracking ("they've used both flashbangs"), and economy reads ("they full saved, expect wide rotates next round") = top-tier streaming. Pure aim diff content has a low ceiling.
+- **Round economy is the layer that separates streamers**: Calling buys ("force AKs, save kits for next round if we win"), reading the enemy economy ("they're on full buy, expect a default"), and naming the right play for the round state is the depth that wins. Silent buy phases are the single biggest waste of stream time in CS.
+- **1vX clutches are the entire product**: This is the most-clipped game in the genre. Build tension out loud ("they have to defuse, kit in, last alive, 12 seconds"), then react. The clutch REACTION is what gets the clip, not the kills. Silent clutches kill themselves.
+- **Map-specific narration is non-negotiable**: Naming map control ("we have B apartments, they're stacking A long, I'm rotating mid"), spots ("I'm playing connector"), and util by callout ("CT smoke up, jungle flash incoming") separates a top-tier stream from someone playing the game alone. Each map (Mirage / Inferno / Ancient / Nuke / Anubis / Dust 2 / Train) has its own callouts and stack tendencies. Use them.
+- **Pistol rounds carry the half**: Round 1 and round 13 swing the half disproportionately. A pistol win plus the anti-eco round basically locks 3 free rounds. Streamers who treat pistol like any other round miss the meta.
+- **Demo / mistake review builds trust**: Post-round "I shouldn't have peeked Catwalk" or "I should've held angle from Heaven" doubles as teaching content and self-deprecating humor. Acting like every loss is teammate diff reads as cope and kills credibility fast.
+- **Util discipline is the chatbot moat**: Naming smoke + flash combos by spot, knowing default lineups (especially A-site execs on Mirage / Inferno), tracking enemy util used ("both flashbangs gone, push through smoke"), and calling economy reads ("they full saved, expect wide A rotate next round") is the depth raw Claude cannot replicate.
+- **Faceit / premier / casual need different framing**: Premier has the rank story arc (climbing the ladder). Faceit has the matchmaking complaints + pro-adjacent ceiling. Casual MM is chill grind. Match the pacing of feedback to the lobby seriousness.
+- **Voice chat moments with enemies are clip gold**: Toxicity is a feature here. Trash talk after winning a round, sarcasm after a teammate griefs, accidental friendships in all-chat are all clip-worthy.
+
+Common streamer mistakes specific to CS2:
+- Silent buy phases
+- Never tracking enemy util counts
+- No map callout narration ("I'm at the spot" instead of "I'm at Connector")
+- Cope blaming after losses without admitting positioning mistakes
+- Skipping post-half-time recap
+- Pure aim-diff streaming with zero macro callouts (low ceiling)
 
 Clip moment patterns specific to this game:
-- 1vX clutches (especially with low HP, no kit, or eco)
-- Aces and multi-kills in pistol or eco rounds (highest impact)
-- Insane aim moments (flicks, AWP no-scopes, deagle one-taps)
-- Reactions to enemy outplays (a perfect smoke lurk, a held angle that wins the round)
-- Save rounds where the streamer escapes alive against the odds
-- Trash talk in voice chat with enemies after a winning round`,
+- 1vX clutches (especially low HP, eco, or against multiple kits)
+- Aces in pistol or eco rounds (highest narrative impact)
+- AWP no-scopes, deagle one-taps, jumping AK flicks
+- Insane spray transfers and one-deag clutches
+- Held-angle wins where the streamer predicted the peek
+- Save rounds with creative escapes (jumping into vents, hiding in unlikely spots)
+- Trash talk in all-chat after a winning round`,
   },
   {
     name: "Minecraft",
     keywords: ["minecraft"],
     module: `MINECRAFT — game-specific coaching:
 
-Minecraft is a sandbox game. Viewers do not come for hype clips — they come for parasocial vibes, world-building, and the streamer's ongoing creative project. The bar for what counts as engaging is completely different than competitive games. Silent mining, repetitive grinding, and "background noise" energy are the failure modes here.
+Sandbox game. Modes vary radically: Survival (single-player or SMP), Hardcore (one death and the world ends), Creative (pure building), Modded (RLCraft, Better MC, ATM10), Server (Hermitcraft-style, Lifesteal, Anarchy). Viewers do not come for hype, they come for parasocial vibes and the streamer's ongoing creative project. Bar for engagement is totally different from competitive games.
 
-- **The world IS the story**: Viewers want to know what you're building, why, what the lore of THIS world is, what's coming next. Streamers who treat their world like a persistent project ("I'm two days into the cobblestone farm and once it's done I'm starting on the nether portal") build long-term retention. Streamers who treat sessions as disconnected play lose it.
-- **Mining and walking are narration tests**: Long stretches of repetitive activity (mining, traveling, sorting chests) are when viewers either commit to you or click off. The streamer's voice IS the content during these. Silent mining for 10+ minutes is the #1 mistake. Talk about what you're going for, react to chat, plan out loud, complain about creepers, anything.
-- **Chat windows are constant**: Unlike competitive games, there's almost always a moment to read chat. Streamers who acknowledge chat by name during chill activities ("hey @user, yeah I do think the Warden is overrated") build small communities fast.
-- **Build reveals are the clip moment**: Finishing a structure, reaching a new biome, seeing a megaproject for the first time on stream. Build up to it, don't rush past it. The reveal is the payoff that gets clipped.
-- **Friend / multiplayer streams shift the dynamic**: If streaming with friends on a server, the banter becomes the content. The streamer who is most audience-facing (acknowledging chat, narrating what's happening) carries the show. Don't disappear into private friend conversations.
-- **No-hype is allowed; no-personality is not**: Calm energy is fine. Generic energy is not. The streamer's specific takes (hates Phantoms, loves the Warden, refuses to use elytra) is what differentiates them from the thousand other Minecraft streamers.
+- **The world IS the story**: Viewers want to know WHAT you're building, WHY, the lore of this world, what's next. Streamers who treat the world as a persistent project ("two days into the iron farm, then the nether portal redesign") build long-term retention. Disconnected one-off play loses it.
+- **Mining, walking, sorting chests are narration tests**: Long repetitive stretches are when viewers commit or bounce. Silent mining for 10+ minutes is the #1 Minecraft streamer mistake. Plan out loud, narrate the goal, react to mobs, complain about phantoms, anything but silence.
+- **Chat windows are constant in this game**: Unlike competitive shooters, there's always a moment to acknowledge chat by name ("@user yeah I think the Warden is overrated"). This builds small communities faster than any other genre.
+- **Build reveals are the peak clip moments**: Finishing a megabuild, reaching a new biome, the first time the redstone contraption works. Build up to it, do not rush past it. The reveal is the payoff that clips.
+- **Mode dictates the energy**: Hardcore streamers carry constant tension (one death ends the world, frame every cave as life-or-death). SMP streamers are chasing drama and lore beats with other players. Creative is pure showcase. Modded is teaching the new mechanics. Match the coaching to the mode.
+- **Co-op / SMP shifts the dynamic**: When streaming with friends, the audience-facing voice carries the show. The streamer who acknowledges chat and summarizes for new viewers wins. Disappearing into private friend convos kills the audience.
+- **Specific takes are personality**: "Hates phantoms, loves the warden, refuses to use elytra, only plays peaceful" is a personality. "Minecraft good" is not. The streamer's opinions on game features are the differentiator.
+- **Mob encounters are free reaction content**: Creeper jumpscares, sudden Warden encounters, accidental Wither summons, lava drops, falling into ravines. React out loud, do not stoic-grind through them.
+
+Common streamer mistakes specific to Minecraft:
+- 10+ minutes of silent mining or strip-mining
+- Treating each session as disconnected play with no goal
+- No chat acknowledgment despite constant windows for it
+- Letting friends carry the conversation while zoning out
+- Rushing past build completions instead of milking the reveal
+- Stoicism through deaths in hardcore (lost retention opportunity)
 
 Clip moment patterns specific to this game:
-- A genuine reaction to losing a long-running run (death in hardcore, lost shulker box of items)
-- A creeper jumpscare or unexpected mob encounter
-- Build reveals and time-lapse style "before/after" moments
-- Chat-driven decisions ("chat what should I name this dog") that pay off later
-- A moment of vulnerability about why this world matters to them`,
+- Hardcore deaths after long runs (the louder the reaction, the bigger the clip)
+- Creeper or Warden jumpscares that genuinely surprise the streamer
+- Build reveals with proper before/after framing
+- First-encounter moments (first Ender Dragon, first Warden, first Elytra)
+- Chat-driven decisions that pay off ("chat what should I name this dog" later becomes a moment)
+- Vulnerability moments about why a specific world matters`,
   },
   {
     name: "Fortnite",
     keywords: ["fortnite"],
     module: `FORTNITE — game-specific coaching:
 
-Fortnite is a battle royale with ~20-minute matches and predictable downtime windows (drop, loot, rotation, eliminate, win or die). The match structure dictates everything about engagement timing. Whether the streamer is on Zero Build (more tactical) or regular (build battles), the coaching basics overlap.
+Battle royale, ~20-minute matches. Modes that change everything: Zero Build (tactical, like Apex/Warzone), Regular (Build, mechanics-driven), Reload (smaller fast-respawn), OG (rotational chapter throwbacks), Solos / Duos / Trios / Squads, Ranked. Match structure: drop, loot, rotate, late game, final circle. Predictable downtime windows make engagement timing especially coachable.
 
-- **Drop zone is the opening hook**: First 90 seconds of every match. Naming the drop, calling out the play ("we're going Tilted hot, I want a fight"), reacting to who else dropped. Streamers who land silently waste the only guaranteed engagement window of the match.
-- **Looting is the second chat window**: 30-60 seconds of looting after drop is when chat reads them, not the screen. Naming pickups, judging loot ("scuffed pump again"), planning the rotation = engagement. Silent looting = dead air on a fertile window.
-- **Rotations are commentary opportunity**: Walking through the storm to next zone is the meta-narrative window. Storm reads, predicting where the lobby will collapse to, calling out heard footsteps. Streamers who rotate silently leave 90% of the audience without context for what's about to happen.
-- **Eliminations are the energy peaks**: Reaction to kills, especially trash talk or surprise wins, are the most-clipped moments. Calm "got him" doesn't clip. Genuine reactions do. Build-battle wins in regular mode are the mechanical clip moment; clutch 1vX wins in Zero Build are the tactical equivalent.
-- **Match transitions are chat gold**: 30-45 seconds in the lobby between matches is when chat is most active. Read messages, complain about the loss, hype the win, talk about the storm circle that screwed you. Streamers who instantly requeue waste this every match.
-- **Storyline streams beat one-off streams**: "Trying to win a solo today" or "first to 5 wins, no leaving" framing turns matches into a series viewers want to follow. No framing = no reason to stay through losses.
+- **Drop zone is the opening hook (every match)**: First 90 seconds. Naming the drop ("we're hot-dropping Tilted, I want bots"), calling who else dropped, calling the play. Silent drops waste the most reliable engagement window in BR.
+- **Looting is the chat window (every match)**: 30-60 seconds after drop is when chat is reading you. Naming pickups, judging loot ("scuffed pump"), planning the rotation. Silent looting is dead air on the most fertile downtime in the game.
+- **Rotations are the meta-narrative window**: Walking through the storm is when you call your read. "Lobby is collapsing east, we want height before the next circle." Streamers who rotate silently leave 90% of the audience without context for the next fight.
+- **Eliminations are the energy peaks**: Calm "got him" does not clip. Genuine reactions do. Build battle wins (regular) and tactical 1vX wins (Zero Build) are the mechanical and tactical clip moments respectively.
+- **Mode shifts coaching completely**: Zero Build streams are tactical / positioning / cover-based; coach like Apex or Warzone. Regular streams are mechanics / building / editing showcases; coach like a comp shooter. Reload is fast respawn pacing. OG is nostalgia-driven (lean into it).
+- **Late game (final 10) is the storyline window**: Once it's down to the final 10, the match arc is real. Narrate every read, every height advantage, every mat count. This is where viewers commit to the match.
+- **Match transitions are 30-45 seconds of chat gold**: Lobby between matches. Hype the win, complain about the storm screw, read chat messages. Instant requeue is the biggest waste.
+- **Storyline framing beats one-off matches**: "First to 5 wins no leaving" or "trying to hit Champion League today" turns disconnected matches into a series. No framing means no reason to stay through losses.
+
+Common streamer mistakes specific to Fortnite:
+- Silent drops and silent looting (the two highest-leverage chat windows)
+- No storm read narration (rotating in silence)
+- Calm reactions to elims that should be hype moments
+- Treating Zero Build like Build mode (different coaching)
+- Instant-requeue with no recap
+- No match-to-match storyline arc
 
 Clip moment patterns specific to this game:
-- 1vX clutches (especially in late game with low resources)
-- Build battle wins or sick edits in regular mode
-- Trash talk after a winning fight
-- Snipe shots or unexpected long-range eliminations
-- Storm-wall losses or kills in the final circle
-- Chat-driven decisions ("chat where do we drop") that pay off`,
+- 1vX clutches in final circle (especially low-mat or low-HP)
+- Sick edit + build battle wins (regular)
+- Tactical outplays in Zero Build (using cover and angles)
+- Snipe shots and unexpected long-range elims
+- Storm-wall kills or losses
+- Chat-driven decisions ("chat where do we drop") that pay off into wins`,
   },
   {
     name: "Phasmophobia & Dead by Daylight",
     keywords: ["phasmophobia", "phasmo", "dead by daylight", "dbd"],
     module: `PHASMOPHOBIA / DEAD BY DAYLIGHT — co-op horror coaching:
 
-Co-op horror is a reaction-driven genre. The whole point of watching is the streamer's authentic fear, surprise, and the social dynamic with friends. Streamers who try to be "cool" about jump scares or who play it stoic kill the entire reason viewers tuned in. This category is unforgiving of fake reactions and rewarding of vulnerability.
+Reaction-driven genre. The product IS the streamer's authentic fear, surprise, and friend group chaos. Stoic / "too cool" streaming kills the entire reason viewers tuned in. Phasmo: 4-player co-op investigation with 24+ ghost types and 7 evidence categories. DBD: 1v4 asymmetric horror with killer-side and survivor-side play, perks, and offerings.
 
-- **Authentic reactions are the product**: Genuine screams, jump scare flinches, panic loops, frustrated rage. These are not embarrassing — they ARE the stream. Streamers who suppress reactions because they think "real streamers" stay calm are misreading what their audience wants. The most-clipped horror moments are always the loudest reactions.
-- **Quiet investigation phases are chat windows**: Both games have long stretches of low-tension investigation (Phasmo: gathering evidence; DBD: stealth/totem hunting). These are the chat-engagement windows. Talk through your evidence reads, ask chat what they think the ghost is, debate strategy. Silent investigation = wasted retention window.
-- **Friend group dynamic is the content (Phasmo especially)**: If the streamer is the audience-facing voice (acknowledging chat, narrating what's happening, summarizing the situation for new viewers), they carry the show. Streamers who let friends carry the conversation while they zone out lose their audience to whoever is talking.
-- **Build-up and payoff is the rhythm**: Tension → release → tension → release. Streamers who narrate the build-up ("the temperature just dropped, I think it's about to do the thing") amplify the eventual payoff 10x. Silent building tension means the payoff lands without context.
-- **Match transitions and contract setup are chat moments**: 30-60 seconds between attempts. Hype the upcoming run, complain about the last one, read the contract aloud, announce the strategy. Streamers who skip these waste the most reliable chat window the genre offers.
-- **DBD specific**: Survivor and killer roles need different coaching. Survivor streams should narrate stealth decisions, generator priorities, chase reads. Killer streams should narrate prioritization (which survivor is hooked, who's still on gens, who to tunnel). Both roles benefit from naming the perks they're running and why.
-- **Phasmo specific**: Evidence gathering is the puzzle. Streamers who narrate the deduction process out loud ("we have freezing temps and ghost orbs but no spirit box, so it's not Spirit or Wraith") create educational content layered on top of the horror. Silent evidence-gathering reads as "watching someone play alone."
+- **Authentic reactions ARE the product**: Genuine screams, full-body flinches, panic loops, frustrated rage. The most-clipped horror moments are the loudest reactions. Streamers who suppress reactions to look "real" are misreading the audience completely.
+- **Investigation / stealth phases are constant chat windows**: Phasmo evidence-gathering and DBD totem-hunting / generator-runs are low-tension stretches. Talk through evidence reads, ask chat what they think the ghost is, debate the killer's perks, talk strategy. Silent investigation is dead air on the easiest engagement window in horror.
+- **Friend group dynamic is the show (Phasmo especially)**: The streamer who is the audience-facing voice carries it. Acknowledging chat, summarizing for new viewers, narrating what's happening to the team. Streamers who zone out and let friends carry the convo lose their audience to whichever friend is loudest.
+- **Build-up and payoff rhythm is the entire genre**: Tension → release → tension → release. Narrating the build-up ("temperature just dropped, I think it's about to do the thing") amplifies the payoff 10x. Silent tension wastes the payoff.
+- **Contract setup and match transitions are 30-60 second chat windows**: Phasmo contract reading, DBD lobby. Hype the upcoming run, complain about the last one, name the strategy.
+- **Phasmo specifics**: 24+ ghost types, each with a unique sign (Banshee throws at one target, Goryo only shows on camera, Onryo blows out flames, Mimic mimics other types, Twins have two manifestations). Evidence types: EMF 5, fingerprints, freezing, ghost orbs, ghost writing, spirit box, DOTS. Streamers who narrate the deduction ("freezing + ghost orbs + no spirit box, narrows to 4 types") layer educational content on top of horror. Map sizes (Tanglewood, Bleasdale, Maple Lodge for small / medium / large) shape pacing.
+- **DBD specifics — killer**: Each killer (Trapper, Wraith, Nurse, Spirit, Blight, Pinhead, Singularity, etc.) has a unique kit. Survivor prioritization is the macro layer (who's hooked, who's on gens, who to tunnel vs spread pressure). Naming perks and why is the depth ("running BBQ for info and Pop for regression").
+- **DBD specifics — survivor**: Stealth choices (lockers, totems, sabotage runs), generator priorities, chase reads (looping at safe pallets, mind-game windows). Naming perks ("Decisive Strike if I'm tunneled, Borrowed Time for unhooks") shows kit knowledge.
+- **Comedy vs scared streams are different products**: Some streamers play horror straight (genuine fear), some play it for laughs (chaos). Coach to which one this streamer is doing. Don't recommend "be funnier" to a streamer building scary atmosphere.
+
+Common streamer mistakes specific to these games:
+- Suppressing reactions to look "tough"
+- Silent investigation phases
+- Letting friends carry chat while zoning out
+- Skipping contract / lobby downtime to instant-queue
+- Phasmo: not narrating evidence deductions
+- DBD: not naming perks or explaining killer/survivor priority
 
 Clip moment patterns specific to these games:
-- Genuine screams or full-body flinch reactions to jump scares
-- Friend group panic moments (everyone screaming, running into each other)
-- The "I'm alone now" moment when teammates die or disconnect
-- Streamer trying to be brave and failing immediately
-- The reveal / kill cam in DBD
-- Successful exorcism / final identification in Phasmo with chat hyped`,
+- Genuine screams and full-body flinches at jump scares
+- Friend group panic chaos (everyone screaming, running into each other)
+- The "I'm alone now" abandonment moment when teammates die
+- Streamer trying to be brave and immediately failing
+- DBD: clutch escapes through the gate, killer 4Ks at last gen, mind-game outplays at pallets
+- Phasmo: successful identification with chat hyped, identifying a Mimic correctly, surviving a hunt with no hiding spot`,
   },
   {
     name: "Marvel Rivals",
     keywords: ["marvel rivals", "rivals ranked", "rivals comp", "marvelrivals"],
     module: `MARVEL RIVALS — game-specific coaching:
 
-Marvel Rivals is a 6v6 hero shooter with three roles (Vanguard, Duelist, Strategist), Team-Up abilities that combo specific heroes, and matches that average 8-12 minutes. The viewer experience hinges on these specifics:
+6v6 hero shooter with 3 roles: Vanguard (tank), Duelist (DPS), Strategist (support). Team-Up abilities unlock combos when specific hero pairs are picked together. Match modes: Convoy, Domination, Convergence. Matches 8-12 min. Ranks: Bronze through One Above All. Viewers want hero expertise, ult timing reads, and ranked grind.
 
-- **Respawn windows are gold**: ~10 seconds between deaths is the natural chat-engagement moment. Streamers who go silent during respawn waste the only built-in downtime the game gives them. If chat is active and you're staring at the respawn timer in silence, that's the dead air to flag — not the team fights.
-- **Ult economy is the meta narrative**: "I have ult" / "their Iron Fist has ult" / "we have to bait their Cloak ult" is the running commentary that makes the game readable to viewers. Streams without ult callouts feel like watching someone else's game with no context. Streamers who narrate ult tracking turn the game into a story.
-- **Team-Up abilities are storytelling beats**: When two specific heroes get picked together (Hulk + Iron Man, Cloak + Dagger, Punisher + Black Widow), the synergy unlock is a moment to react to. Streamers who never call out team-ups miss free engagement.
-- **Match transitions are the chat moment**: 30-45 seconds between matches is the second-best engagement window. Read chat, talk meta, complain about the loss. Streamers who instantly requeue waste this every match.
-- **Tilting silently kills retention**: Marvel Rivals is rage-bait fertile. Frustration is GOOD for clips if it's vocalized — chat clips meltdowns. Silent tilt reads as low energy on the report and is invisible to the audience.
-- **Hero pool affects what to coach**: One-trick mains (Spider-Man, Iron Fist, Jeff) get different feedback than flex players. If they're locking the same hero every match, evaluate the depth of their commentary on THAT hero specifically.
+- **Respawn windows are 10-second chat moments**: Every death triggers ~10 seconds of staring at a respawn timer. This is the only built-in downtime the game gives you. Silent respawn = dead air on the most predictable engagement window in the genre. Read chat, complain about the team fight, predict the next push.
+- **Ult economy is the meta narrative**: "I have ult, their Magneto used his on a single target, push next fight" is the running commentary that makes Rivals readable to viewers. Tracking ult counts (yours and the enemy's) is the macro layer most streamers skip.
+- **Team-Up callouts are free engagement**: When you and a teammate pick a synergy pair (Hulk + Iron Man unlocks gamma → unibeam, Cloak + Dagger swap heal/damage, Punisher + Black Widow weapon mode, Hela + Loki + Thor team-up trio), the unlock is a moment to react to. Streamers who never call out team-ups miss free content.
+- **Role dictates coaching completely**: Vanguard (Hulk, Doctor Strange, Magneto, Venom, Captain America) is shot-calling, space-making, ult-chaining. Duelist (Spider-Man, Iron Fist, Star-Lord, Punisher, Hela, Iron Man) is target prioritization, dive timing, finishing. Strategist (Mantis, Luna Snow, Rocket, Cloak & Dagger, Loki, Adam Warlock) is heal priority, peeling, ult-saving for clutch. The same advice does not apply to all three.
+- **Hero pool depth shapes coaching**: One-trick mains (Spider-Man, Iron Fist, Jeff the Land Shark) need depth on THAT hero (matchups, dive timing, escape routes). Flex players need shot-calling and counterpick reads ("they have flying tank, I'm switching to Hela").
+- **Match transitions are 30-45 second chat windows**: Lobby between matches. Read chat, complain about the loss, hype the win, talk meta. Instant-requeue is the biggest waste.
+- **Tilt visibility is a feature, not a bug**: Vocalized rage is clip gold. Silent tilt reads as low energy and is invisible to the audience. Marvel Rivals is rage-fertile because of solo-queue support hell.
+- **Map type changes the pace**: Convoy maps (push the cart) have constant fight cadence. Domination (control the point) has spike fights at flag captures. Convergence has phase shifts. Coach to the mode.
+
+Common streamer mistakes specific to Marvel Rivals:
+- Silent respawn windows
+- Never calling enemy ults or team-up unlocks
+- Same advice for Vanguard, Duelist, and Strategist (they need different feedback)
+- Tilting silently when solo-queue support is bad
+- Instant-requeue after the match without using the lobby chat window
+- Treating Convoy and Domination matches the same energy
 
 Clip moment patterns specific to this game:
-- Multi-kills in team fights (especially Duelist plays cleaning up)
-- Clutch survives as last hero alive
-- Combo kills triggered by ult chains (e.g. Hulk gamma → Iron Man unibeam)
-- Reactions to enemy ults that change the fight
-- Trash talk with chat after a winning team fight`,
+- Multi-kills in team fights, especially Duelist clean-up plays (Hela rune kills, Spider-Man uppercut chains, Star-Lord ult sprees)
+- Clutch survives as last hero (Strategist 1v1 outplays are gold)
+- Ult-chain combos triggered by Team-Up (Hulk gamma → Iron Man unibeam → Storm tornado)
+- Reactions to enemy ults that flip a fight (a perfectly placed Doctor Strange portal block, a clutch Mantis sleep)
+- Trash talk after a winning push or a stolen point capture
+- Reading enemy comp swaps correctly and calling the counterpick before the fight`,
   },
 ];
 
