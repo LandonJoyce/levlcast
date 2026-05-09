@@ -282,14 +282,14 @@ export default async function ClipsPage({
                       {/* Regular clips edit freely. Reels are editable only
                           if they have reel_segments metadata — older reels
                           (pre-migration 012) need to be regenerated first. */}
-                      {((c.caption_style as string | null) !== "reel" ||
-                        Array.isArray(c.reel_segments) && (c.reel_segments as unknown[]).length > 0) && (
+                      {(!c.is_highlight_reel ||
+                        (Array.isArray(c.reel_segments) && (c.reel_segments as unknown[]).length > 0)) && (
                         <Link
                           href={`/dashboard/clips/${c.id}/edit`}
                           className="btn btn-ghost"
                           style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 0" }}
                         >
-                          {(c.caption_style as string | null) === "reel" ? "Edit reel" : "Edit clip"}
+                          {c.is_highlight_reel ? "Edit reel" : "Edit clip"}
                         </Link>
                       )}
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />

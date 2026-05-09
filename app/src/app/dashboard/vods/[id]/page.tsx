@@ -115,11 +115,11 @@ export default async function VodPunchPage({
       .maybeSingle(),
     // All clips for this VOD — used to render the recommended-cuts list
     // with per-peak status (ready / processing / not yet generated). Includes
-    // the special caption_style="reel" rows so the highlight reel button can
-    // surface its existing/in-progress state.
+    // is_highlight_reel rows so the highlight reel button can surface its
+    // existing/in-progress state.
     supabase
       .from("clips")
-      .select("id, status, start_time_seconds, video_url, title, caption_style")
+      .select("id, status, start_time_seconds, video_url, title, is_highlight_reel")
       .eq("user_id", user!.id)
       .eq("vod_id", id)
       .in("status", ["ready", "processing"]),
@@ -140,17 +140,17 @@ export default async function VodPunchPage({
 
   // Map each detected peak to its clip status. We match by start_time_seconds
   // ±3s — same tolerance the clip generation API uses to prevent duplicates.
-  type ClipRow = { id: string; status: string; start_time_seconds: number; video_url: string | null; title: string | null; caption_style: string | null };
+  type ClipRow = { id: string; status: string; start_time_seconds: number; video_url: string | null; title: string | null; is_highlight_reel: boolean | null };
   const clipsList: ClipRow[] = (allClipsForVod as ClipRow[] | null) ?? [];
   function findClipForPeak(peakStart: number): ClipRow | undefined {
     const target = Math.round(Number(peakStart));
     // Skip reel rows when matching individual peaks — the reel's start_time
     // is the first segment and would otherwise shadow that peak's "Generate"
     // button.
-    return clipsList.find((c) => c.caption_style !== "reel" && Math.abs(c.start_time_seconds - target) <= 3);
+    return clipsList.find((c) => !c.is_highlight_reel && Math.abs(c.start_time_seconds - target) <= 3);
   }
-  const existingReel = clipsList.find((c) => c.caption_style === "reel" && c.status === "ready");
-  const processingReel = clipsList.find((c) => c.caption_style === "reel" && c.status === "processing");
+  const existingReel = clipsList.find((c) => c.is_highlight_reel && c.status === "ready");
+  const processingReel = clipsList.find((c) => c.is_highlight_reel && c.status === "processing");
 
   return (
     <>

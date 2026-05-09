@@ -9,7 +9,7 @@
  *     reel stays under ~60 seconds.
  *   - Downloads + cuts each peak in parallel using the existing cutClip path,
  *     then concatenates the captioned outputs with concatClipBuffers().
- *   - Stores as a single clip row of caption_style "reel". Counts as one
+ *   - Stores as a single clip row with is_highlight_reel=true. Counts as one
  *     clip toward the user's quota even though it includes multiple moments.
  *
  * RESPONSES:
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .eq("vod_id", vodId)
     .eq("status", "processing")
-    .eq("caption_style", "reel")
+    .eq("is_highlight_reel", true)
     .maybeSingle();
   if (existing) {
     return NextResponse.json({ error: "Highlight reel already being generated" }, { status: 409 });
@@ -144,7 +144,8 @@ export async function POST(request: Request) {
       start_time_seconds: Math.round(firstStart),
       end_time_seconds: Math.round(firstStart + totalDuration),
       caption_text: reelCaption,
-      caption_style: "reel",
+      caption_style: "bold",
+      is_highlight_reel: true,
       peak_score: selected[0].score,
       peak_category: "highlight_reel",
       peak_reason: "Multi-cut highlight reel",

@@ -54,7 +54,7 @@ export default async function ClipEditPage({
   // captions correctly. Older reels generated before this column existed
   // have no segment data and stay locked out — re-generating the reel
   // populates the metadata.
-  const isReel = clip.caption_style === "reel";
+  const isReel = clip.is_highlight_reel === true;
   const reelSegments = (clip.reel_segments as Array<{ vodStart: number; vodEnd: number; reelStart: number; reelEnd: number }> | null) ?? null;
   if (isReel && (!reelSegments || reelSegments.length === 0)) {
     return (
@@ -129,7 +129,7 @@ export default async function ClipEditPage({
         candidateFrames={(clip.candidate_frames as string[] | null) ?? []}
         fullDuration={fullDuration}
         defaultCards={defaultCards}
-        captionStyle={isReel ? "bold" : ((clip.caption_style as CaptionStyle) ?? "bold")}
+        captionStyle={(clip.caption_style as CaptionStyle) ?? "bold"}
         isReel={isReel}
         title={(clip.title as string) ?? ""}
       />
