@@ -699,43 +699,50 @@ export function ClipEditor({
           {progressNote && saving && (
             <p className="mono" style={{ fontSize: 11, color: "var(--ink-3)", margin: 0 }}>{progressNote}</p>
           )}
-          {savedFlash && !saving && !error && (
-            <p
-              className="mono"
+          {/* Saved confirmation block. Holds the green flash, an inline
+              download link (when relevant), and the YouTube link together
+              so they read as one "here's what just happened" group rather
+              than competing CTAs against Save & ship it. */}
+          {!saving && !error && (savedFlash || readyDownload || youtubeUrl) && (
+            <div
               style={{
-                fontSize: 11.5,
-                color: "var(--green, #A3E635)",
-                margin: 0,
-                padding: "6px 8px",
-                background: "color-mix(in oklab, var(--green, #A3E635) 14%, var(--surface-2))",
-                border: "1px solid color-mix(in oklab, var(--green, #A3E635) 32%, var(--line))",
-                borderRadius: 6,
+                display: "flex", flexDirection: "column", gap: 6,
+                padding: "8px 10px",
+                background: "color-mix(in oklab, var(--green, #A3E635) 12%, var(--surface-2))",
+                border: "1px solid color-mix(in oklab, var(--green, #A3E635) 30%, var(--line))",
+                borderRadius: 8,
               }}
             >
-              {savedFlash}
-            </p>
-          )}
-          {readyDownload && !saving && (
-            <a
-              href={readyDownload.url}
-              // download attribute hints to the browser to save instead of
-              // navigating. Combined with the endpoint's
-              // Content-Disposition: attachment header, this triggers a
-              // direct download with no new tab and no popup blocker fight.
-              download
-              className="btn btn-blue"
-              style={{
-                width: "100%", justifyContent: "center", textAlign: "center",
-                fontSize: 12.5, padding: "9px 0", textDecoration: "none",
-              }}
-            >
-              {readyDownload.label}
-            </a>
-          )}
-          {youtubeUrl && (
-            <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 11, color: "var(--blue)" }}>
-              Posted to YouTube — open
-            </a>
+              {savedFlash && (
+                <p className="mono" style={{ fontSize: 11.5, color: "var(--green, #A3E635)", margin: 0 }}>
+                  {savedFlash}
+                </p>
+              )}
+              {readyDownload && (
+                // download attribute + Content-Disposition: attachment from
+                // the endpoint = direct file download, no new tab.
+                <a
+                  href={readyDownload.url}
+                  download
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    fontSize: 12.5, fontWeight: 600,
+                    color: "var(--green, #A3E635)",
+                    textDecoration: "underline",
+                    textDecorationThickness: "1px",
+                    textUnderlineOffset: 3,
+                    padding: 0,
+                  }}
+                >
+                  ↓ {readyDownload.label}
+                </a>
+              )}
+              {youtubeUrl && (
+                <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "var(--blue)", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                  ↗ View on YouTube
+                </a>
+              )}
+            </div>
           )}
           <button
             type="button"
