@@ -289,43 +289,65 @@ export default async function LandingPage() {
 
       </section>
 
-      {/* ── The Loop ── */}
+      {/* ── The Loop — editorial walkthrough, no cards/icons ── */}
       <section className="ll-sec" id="how">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2"><span className="ll-grad-text">Four steps.</span> No new habits</h2>
+            <h2 className="ll-h2">
+              Stream. Sync. <span className="ll-grad-text">Learn.</span> Repeat.
+            </h2>
+            <p style={{ fontSize: 16, color: "rgba(255,255,255,0.6)", marginTop: 10, maxWidth: 580 }}>
+              No setup. No overlay. No new habits. The whole loop runs around the way you already stream.
+            </p>
           </div>
-          <div className="ll-steps">
+
+          <div style={{ maxWidth: 760, marginTop: 24 }}>
             {[
               {
-                n: "01", title: "Stream normally",
-                body: "Nothing changes about how you go live. No setup, no overlay, no extra software.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>,
+                title: "You stream like you always do.",
+                body: "Nothing changes on your end. No extra software, no overlay, no plugin. Just go live.",
               },
               {
-                n: "02", title: "Hit Sync after",
-                body: "Open LevlCast, hit Sync. Your VOD shows up. One button to start the analysis.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg>,
+                title: "After the stream, hit Sync.",
+                body: "Your VOD shows up in LevlCast. One button to start the analysis. The full read takes about five minutes.",
               },
               {
-                n: "03", title: "Read your report",
-                body: "0-100 score with exact timestamps. What worked, what didn't, the one fix to make next.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>,
+                title: "Read what your stream actually did.",
+                body: "Score 0–100 with the exact timestamps that mattered. What pulled viewers in, what made them tab away, the one fix that would've moved the needle.",
               },
               {
-                n: "04", title: "Go live again",
-                body: "Take the one thing into your next stream. Analyze it after. That's the whole loop.",
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>,
+                title: "Take the fix into the next stream.",
+                body: "One change at a time. Analyze that stream after. Watch the score move. That's the whole loop.",
               },
-            ].map((s) => (
-              <article key={s.n} className="ll-step">
-                <div className="ll-step-top">
-                  <div className="ll-step-icon">{s.icon}</div>
-                  <span className="ll-step-num">{s.n}</span>
+            ].map((s, i) => (
+              <div
+                key={s.title}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr",
+                  gap: 22,
+                  paddingBlock: "20px 22px",
+                  borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <span style={{
+                  fontFamily: "var(--ll-mono)",
+                  fontSize: 13, fontWeight: 700,
+                  color: "rgba(255,255,255,0.35)",
+                  letterSpacing: "0.06em",
+                  paddingTop: 4,
+                }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 style={{ fontSize: 19, fontWeight: 600, color: "#fff", margin: "0 0 6px", letterSpacing: "-0.01em" }}>
+                    {s.title}
+                  </h3>
+                  <p style={{ fontSize: 15, lineHeight: 1.55, color: "rgba(255,255,255,0.65)", margin: 0 }}>
+                    {s.body}
+                  </p>
                 </div>
-                <h3 className="ll-step-h">{s.title}</h3>
-                <p className="ll-step-body">{s.body}</p>
-              </article>
+              </div>
             ))}
           </div>
         </div>
