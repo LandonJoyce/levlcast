@@ -24,7 +24,7 @@ async function getStreamCount(): Promise<number> {
 const faqItems = [
   { q: "How does the analysis work?", a: "You connect your Twitch account, sync your VODs, and hit Analyze. We pull the audio from your stream, run it through our transcription pipeline, and Claude reads the full transcript to find your best moments and weakest points. The whole thing takes about 5 minutes for a 2-hour stream." },
   { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
-  { q: "Is it actually free?", a: "Yeah. One full VOD analysis and 1 clip per month, permanently. No trial period, no credit card, no expiry. If you want more than that, that's what Pro is for." },
+  { q: "Is it actually free?", a: "Yeah. The free trial gives you 3 full VOD analyses and 5 clips with no credit card. That's enough to see your scores trend, watch a few of your moments turn into clips, and decide if Pro is worth it." },
   { q: "Does it work for my channel?", a: "Any public Twitch channel works: partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
   { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast. The title and description come from the report. Edit them if you want, or just tap post." },
 ];
@@ -61,11 +61,11 @@ export default async function LandingPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02.01-.03.02c-2.72 4.07-3.47 8.03-3.1 11.95c0 .02.01.04.03.05c1.8 1.32 3.53 2.12 5.24 2.65c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08-.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05 0 .07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.52.31-1.07.56-1.64.78c-.04.01-.05.06-.04.09c.32.61.68 1.19 1.07 1.74c.03.01.06.02.09.01c1.72-.53 3.45-1.33 5.25-2.65c.02-.01.03-.03.03-.05c.44-4.53-.73-8.46-3.1-11.95c-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.84 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.83 2.12-1.89 2.12z"/></svg>
               </a>
               <Link href="/auth/login" className="ll-btn ll-btn-white ll-nav-cta">
-                Get Started Free
+                Start Free Trial
                 <span className="ll-nav-arrow-icon">↗</span>
               </Link>
               <Link href="/auth/login" className="ll-btn ll-btn-grad ll-nav-cta-mobile" style={{ fontSize: 13, padding: "9px 16px" }}>
-                Get Started
+                Start Free Trial
               </Link>
             </div>
           </nav>
@@ -338,16 +338,16 @@ export default async function LandingPage() {
             <h2 className="ll-h2"><span className="ll-grad-text">Two plans.</span> No tricks</h2>
           </div>
           <div className="ll-pricing">
-            {/* Free */}
+            {/* Free trial */}
             <article className="ll-plan">
               <div>
-                <div className="ll-plan-name">For You</div>
-                <div className="ll-plan-cycle">Free</div>
+                <div className="ll-plan-name">Free Trial</div>
+                <div className="ll-plan-cycle">No card required</div>
               </div>
-              <div className="ll-plan-price">$0 <small>forever</small></div>
+              <div className="ll-plan-price">$0 <small>to start</small></div>
               <hr className="ll-plan-sep" />
               <ul className="ll-plan-feats">
-                {["1 full VOD analysis / month", "Streams up to 6 hours", "Full coaching report + score", "1 clip per month", "iOS app + web"].map((f) => (
+                {["3 full VOD analyses", "5 clips on the house", "Streams up to 6 hours", "Full coaching report + score", "iOS app + web"].map((f) => (
                   <li key={f}>
                     <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
@@ -357,7 +357,7 @@ export default async function LandingPage() {
                 ))}
               </ul>
               <Link href="/auth/login" className="ll-btn ll-btn-grad ll-btn-arrow">
-                Get Started Free
+                Start Free Trial
                 <span className="ll-btn-arrow-circle">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>

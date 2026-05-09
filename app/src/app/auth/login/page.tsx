@@ -91,7 +91,7 @@ function LoginForm() {
           border: "1px solid rgba(163,230,53,0.3)",
           color: "#A3E635",
         }}>
-          Free · No credit card
+          Free trial · No credit card
         </span>
       </div>
 

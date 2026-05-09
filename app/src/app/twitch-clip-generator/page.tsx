@@ -79,7 +79,7 @@ const faqs = [
   },
   {
     q: "What does the clip generator cost?",
-    a: "Free plan: 5 clips, 1 VOD analysis per month. Pro: $9.99/month or $99/year for 15 analyses and 20 clips per month. No credit card to start.",
+    a: "Free trial: 3 full VOD analyses and 5 clips, no credit card. Pro is $9.99/month or $99/year for 15 analyses and 20 clips every month after that.",
   },
 ];
 
