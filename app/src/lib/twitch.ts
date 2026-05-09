@@ -142,6 +142,11 @@ export async function fetchTwitchVods(
     const params = new URLSearchParams({
       user_id: twitchUserId,
       first: Math.min(limit - vods.length, 20).toString(),
+      // Only past broadcasts. Without this Helix mixes in highlights and
+      // uploads, which can push recent archives out of the first 40 results
+      // for streamers who have many highlights or clip uploads — exactly
+      // why some users were missing their last 1-2 streams from sync.
+      type: "archive",
     });
     if (cursor) params.set("after", cursor);
 
