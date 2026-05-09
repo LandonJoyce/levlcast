@@ -5,14 +5,49 @@ import { useRouter } from "next/navigation";
 import type { CaptionCard, CaptionStyle } from "@/lib/captions";
 import { UpgradeModal } from "@/components/dashboard/upgrade-modal";
 
-const STYLE_OPTIONS: { value: CaptionStyle; label: string }[] = [
-  { value: "bold", label: "Bold" },
-  { value: "boxed", label: "Boxed" },
-  { value: "minimal", label: "Minimal" },
-  { value: "classic", label: "Classic" },
-  { value: "neon", label: "Neon" },
-  { value: "fire", label: "Fire" },
-  { value: "impact", label: "Impact" },
+// Each style includes a tiny preview letter rendered with the same visual
+// treatment the FFmpeg drawtext filter uses, so streamers can see what the
+// caption will actually look like before they pick it.
+const STYLE_OPTIONS: {
+  value: CaptionStyle;
+  label: string;
+  preview: React.ReactNode;
+}[] = [
+  {
+    value: "bold",
+    label: "Bold",
+    preview: <span style={{ fontWeight: 900, fontSize: 18, color: "#fff", textTransform: "uppercase", textShadow: "-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000", letterSpacing: ".02em", lineHeight: 1 }}>Aa</span>,
+  },
+  {
+    value: "boxed",
+    label: "Boxed",
+    preview: <span style={{ fontWeight: 700, fontSize: 13, color: "#fff", textTransform: "uppercase", background: "rgba(0,0,0,0.7)", padding: "3px 7px", borderRadius: 4, letterSpacing: ".02em" }}>Aa</span>,
+  },
+  {
+    value: "minimal",
+    label: "Minimal",
+    preview: <span style={{ fontWeight: 500, fontSize: 14, color: "rgba(255,255,255,0.92)", textShadow: "-1px -1px 0 rgba(0,0,0,0.8),1px 1px 0 rgba(0,0,0,0.8)" }}>Aa</span>,
+  },
+  {
+    value: "classic",
+    label: "Classic",
+    preview: <span style={{ fontWeight: 900, fontSize: 18, color: "#FFE600", textTransform: "uppercase", textShadow: "-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000", letterSpacing: ".02em" }}>Aa</span>,
+  },
+  {
+    value: "neon",
+    label: "Neon",
+    preview: <span style={{ fontWeight: 900, fontSize: 18, color: "#00EEFF", textTransform: "uppercase", textShadow: "-1px -1px 0 #003344,1px -1px 0 #003344,-1px 1px 0 #003344,1px 1px 0 #003344,0 0 10px rgba(0,238,255,0.6)", letterSpacing: ".02em" }}>Aa</span>,
+  },
+  {
+    value: "fire",
+    label: "Fire",
+    preview: <span style={{ fontWeight: 900, fontSize: 18, color: "#FF6B00", textTransform: "uppercase", textShadow: "-2px -2px 0 #1A0000,2px -2px 0 #1A0000,-2px 2px 0 #1A0000,2px 2px 0 #1A0000,0 0 10px rgba(255,107,0,0.5)", letterSpacing: ".02em" }}>Aa</span>,
+  },
+  {
+    value: "impact",
+    label: "Impact",
+    preview: <span style={{ fontWeight: 900, fontSize: 22, color: "#fff", textTransform: "uppercase", textShadow: "-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000", letterSpacing: "-.01em", lineHeight: 1 }}>Aa</span>,
+  },
 ];
 
 type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
@@ -368,16 +403,34 @@ export function ClipEditor({
           <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
             Caption style
           </p>
-          <select
-            value={style}
-            onChange={(e) => setStyle(e.target.value as CaptionStyle)}
-            className="select"
-            style={{ width: "100%", fontSize: 13, padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)" }}
-          >
-            {STYLE_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
+            {STYLE_OPTIONS.map((s) => {
+              const active = style === s.value;
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setStyle(s.value)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+                    padding: "8px 10px",
+                    background: active ? "color-mix(in oklab, var(--blue) 18%, var(--surface-2))" : "var(--surface-2)",
+                    border: `1px solid ${active ? "var(--blue)" : "var(--line)"}`,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    color: active ? "var(--blue)" : "var(--ink)",
+                    fontSize: 12, fontWeight: 600,
+                    minHeight: 38,
+                  }}
+                >
+                  <span>{s.label}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 32 }}>
+                    {s.preview}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div style={{ flex: 1, minHeight: 0 }}>
