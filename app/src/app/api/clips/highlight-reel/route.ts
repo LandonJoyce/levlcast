@@ -32,12 +32,13 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 300;
 
-// Reel target: 3 segments, ~18s each = ~54s total. Within TikTok / Shorts
-// optimal length and short enough to ship through Vercel's 300s function
-// budget even with cold ffmpeg downloads.
+// Reel target: 3 segments, ~9s each = ~27s total. Tighter cuts feel more
+// produced; long auto-trimmed windows include too much setup that nobody
+// asked for. Hard ceiling stays in TikTok / Shorts optimal length and
+// well inside Vercel's 300s function budget.
 const MAX_REEL_SEGMENTS = 3;
-const MAX_SEGMENT_SECONDS = 20;
-const MIN_SEGMENT_SECONDS = 8;
+const MAX_SEGMENT_SECONDS = 10;
+const MIN_SEGMENT_SECONDS = 5;
 
 type Peak = {
   title: string;
@@ -99,11 +100,13 @@ export async function POST(request: Request) {
     );
   }
 
-  // Top picks by score, then chronological so the reel feels like the stream.
+  // Top picks by score, kept in score order so the reel leads with the
+  // strongest hook. Chronological order felt random when the first stream
+  // moment wasn't actually the best one — viewers bounce in the first 3
+  // seconds, so the loudest punch goes up front.
   const selected = [...peaks]
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_REEL_SEGMENTS)
-    .sort((a, b) => a.start - b.start);
+    .slice(0, MAX_REEL_SEGMENTS);
 
   const tightened = selected.map((p) => tightenSegment(p));
 
