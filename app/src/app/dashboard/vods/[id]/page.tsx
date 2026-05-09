@@ -267,6 +267,13 @@ export default async function VodPunchPage({
                 <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: "0 0 12px" }}>
                   {topClip.title}
                 </p>
+                <Link
+                  href={`/dashboard/clips/${topClip.id}/edit`}
+                  className="btn btn-blue"
+                  style={{ width: "100%", justifyContent: "center", fontSize: 13, padding: "10px 0", marginBottom: 10, textDecoration: "none" }}
+                >
+                  Open in editor →
+                </Link>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
                   <DownloadClip clipId={topClip.id} />
                   <CopyCaption caption={topClip.caption_text} />

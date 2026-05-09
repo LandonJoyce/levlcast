@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { UpgradeModal } from "./upgrade-modal";
 
 /**
@@ -21,7 +22,7 @@ export function GenerateClipButton({
   clipTitle?: string;
 }) {
   const [generating, setGenerating] = useState(false);
-  const [done, setDone] = useState(false);
+  const [doneClipId, setDoneClipId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
@@ -43,7 +44,7 @@ export function GenerateClipButton({
         return;
       }
       if (!res.ok) { setError(json.error || "Failed"); return; }
-      setDone(true);
+      if (json.clipId) setDoneClipId(json.clipId as string);
       router.refresh();
     } catch {
       setError("Network error");
@@ -52,8 +53,16 @@ export function GenerateClipButton({
     }
   }
 
-  if (done) {
-    return <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Queued, generating…</span>;
+  if (doneClipId) {
+    return (
+      <Link
+        href={`/dashboard/clips/${doneClipId}/edit`}
+        className="btn btn-blue"
+        style={{ width: "100%", justifyContent: "center", fontSize: 12, textDecoration: "none" }}
+      >
+        Open in editor →
+      </Link>
+    );
   }
 
   if (hasProcessing && !generating) {
