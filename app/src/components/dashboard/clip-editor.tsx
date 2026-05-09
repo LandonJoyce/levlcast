@@ -751,7 +751,15 @@ export function ClipEditor({
             className="btn btn-blue"
             style={{ width: "100%", justifyContent: "center", fontSize: 13, padding: "10px 0", opacity: saving || reverting || trimDuration < 2 ? 0.6 : 1 }}
           >
-            {saving ? "Working…" : "Save & ship it"}
+            {saving
+              ? "Working…"
+              : doDownload && doYouTube
+                ? "Save & export"
+                : doYouTube
+                  ? "Save & post to YouTube"
+                  : doDownload
+                    ? "Save & download"
+                    : "Save"}
           </button>
           {hasOriginal && (
             <button
