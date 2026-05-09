@@ -2,7 +2,6 @@
 import FaqAccordion from "@/components/FaqAccordion";
 import StreamerMarquee from "@/components/landing/StreamerMarquee";
 import LandingProPlan from "@/components/landing/LandingProPlan";
-import PhoneMockup from "@/components/landing/PhoneMockup";
 import LaptopMockup from "@/components/landing/LaptopMockup";
 import { SUPPORTED_GAMES } from "@/lib/analyze";
 
@@ -76,7 +75,12 @@ export default async function LandingPage() {
       <section className="ll-hero">
         <div className="ll-con ll-hero-grid">
           <div className="ll-hero-vid">
-            <PhoneMockup src="/demo/clipvideo.mp4" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/la/clip-editor.png"
+              alt="LevlCast clip editor showing trim, caption editing, style picker, hook frame, and format and destination options"
+              style={{ width: "100%", height: "auto", display: "block", borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 24px 60px rgba(0,0,0,0.45)" }}
+            />
           </div>
           <div className="ll-hero-center">
             <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
@@ -264,21 +268,26 @@ export default async function LandingPage() {
 
         <div className="ll-con">
           <div className="ll-features" style={{ marginTop: 16 }}>
-            {/* Clip editor — refine before ship */}
-            <article className="ll-feat ll-feat-span2">
-              <span className="ll-chip"><span className="ll-chip-dot"></span>Clip Editor</span>
-              <h3 className="ll-feat-h">Make every clip yours before you post.</h3>
-              <p className="ll-feat-body" style={{ maxWidth: 720 }}>
-                Trim it tighter, fix any caption typos, pick the style, set the cover frame. Choose 16:9 or 9:16, then download or post to YouTube in one click. Re-edits are free.
-              </p>
-              <div className="ll-ss-frame" style={{ marginTop: 18 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/la/clip-editor.png"
-                  alt="LevlCast clip editor showing trim sliders, caption editing, style picker, hook frame, and format and destination options"
-                  style={{ width: "100%", height: "auto", display: "block", borderRadius: 12 }}
-                />
+            {/* Post to YouTube — spans 2 */}
+            <article className="ll-feat ll-feat-span2 ll-feat-yt">
+              <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-cyan"></span>Post to YouTube</span>
+              <h3 className="ll-feat-h">From clip to Shorts, in 30 seconds</h3>
+              <div className="ll-yt-grid">
+                {[
+                  { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/clip1.png", pos: "center 30%" },
+                  { title: "The moment everything went completely wrong at once", meta: "MOMENT · 15:03 · #shorts", thumb: "/la/clip2.png", pos: "center 30%" },
+                  { title: "They got exposed mid-trash talk and had no answer", meta: "MOMENT · 3:29 · #shorts", thumb: "/la/clip3.png", pos: "center 85%" },
+                ].map((v) => (
+                  <div key={v.title} className="ll-yt">
+                    <div className="ll-yt-thumb" style={{ backgroundImage: `url(${v.thumb})`, backgroundPosition: v.pos }}>
+                      <div className="ll-yt-play">▶</div>
+                    </div>
+                    <div className="ll-yt-title">{v.title}</div>
+                    <div className="ll-yt-meta">{v.meta}</div>
+                  </div>
+                ))}
               </div>
+              <div className="ll-glow ll-glow-peach"></div>
             </article>
           </div>
         </div>
