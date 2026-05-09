@@ -488,7 +488,8 @@ export async function cutClip(
       console.log(`[ffmpeg] Stream copy cut complete (clean source)`);
       cleanBuffer = await readFile(cleanOutputPath);
     } catch (copyErr: any) {
-      // Fallback: re-encode without captions for clean source
+      // Fallback: re-encode without captions for clean source. Same CFR
+      // and audio-sync tweaks as the captioned encode below.
       console.warn("[ffmpeg] Stream copy cut failed, re-encoding clean source:", copyErr.stderr?.slice(-400));
       const encodeArgs = [
         `"${ffmpegPath}"`,
@@ -497,7 +498,8 @@ export async function cutClip(
         `-t ${duration}`,
         `-c:v libx264 -profile:v main -level 4.0 -preset fast -crf 23 -pix_fmt yuv420p`,
         `-c:a aac -b:a 128k`,
-        `-vf setpts=PTS-STARTPTS -af asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0`,
+        `-vf setpts=PTS-STARTPTS -af asetpts=PTS-STARTPTS,aresample=async=1`,
+        `-fps_mode cfr -r 30`,
         `-avoid_negative_ts make_zero -movflags +faststart -max_muxing_queue_size 9999`,
         `-y "${cleanOutputPath}"`,
       ].join(" ");
@@ -513,6 +515,16 @@ export async function cutClip(
     // Step 3: if captions requested, re-encode with drawtext burn for the web player clip.
     // The clean source is kept separately so the vertical export can re-burn at the correct
     // 1080px vertical scale without inheriting oversized horizontal captions.
+    //
+    // Two encode tweaks vs the original cutClip pipeline:
+    //   - -fps_mode cfr forces a constant framerate. Without it, VFR sources
+    //     (some Twitch encodings) produce VFR output and browsers stutter
+    //     on the discontinuities — what users were seeing as "clips freezing".
+    //   - aresample drops the first_pts=0 hack. With -ss after -i, video
+    //     frames keep source-relative PTS while first_pts=0 was forcing audio
+    //     to start at 0, producing a small video/audio offset. Captions are
+    //     locked to video, so the offset showed up as "captions slightly
+    //     ahead of audio". -avoid_negative_ts make_zero handles normalisation.
     if (captionFilter) {
       const encodeArgs = [
         `"${ffmpegPath}"`,
@@ -521,13 +533,14 @@ export async function cutClip(
         `-t ${duration}`,
         `-c:v libx264 -profile:v main -level 4.0 -preset fast -crf 23 -pix_fmt yuv420p`,
         `-c:a aac -b:a 128k`,
-        `-filter_complex "[0:v]setpts=PTS-STARTPTS${captionFilter}[vout];[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]" -map "[vout]" -map "[aout]"`,
+        `-filter_complex "[0:v]setpts=PTS-STARTPTS${captionFilter}[vout];[0:a]asetpts=PTS-STARTPTS,aresample=async=1[aout]" -map "[vout]" -map "[aout]"`,
+        `-fps_mode cfr -r 30`,
         `-avoid_negative_ts make_zero -movflags +faststart -max_muxing_queue_size 9999`,
         `-y "${outputPath}"`,
       ].join(" ");
       try {
         await execAsync(encodeArgs, { timeout: 180000 });
-        console.log(`[ffmpeg] Caption encode complete`);
+        console.log(`[ffmpeg] Caption encode complete (CFR 30fps)`);
         return { captioned: await readFile(outputPath), cleanSource: cleanBuffer };
       } catch (encErr: any) {
         console.error("[ffmpeg] caption encode failed:", encErr.stderr?.slice(-800));
