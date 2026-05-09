@@ -285,6 +285,23 @@ export default async function LandingPage() {
               </div>
               <div className="ll-glow ll-glow-peach"></div>
             </article>
+
+            {/* Clip editor — refine before ship */}
+            <article className="ll-feat ll-feat-span2">
+              <span className="ll-chip"><span className="ll-chip-dot"></span>Built-In Clip Editor</span>
+              <h3 className="ll-feat-h">Don&apos;t ship the AI&apos;s first cut. Edit it.</h3>
+              <p className="ll-feat-body" style={{ maxWidth: 760 }}>
+                Every clip opens in a real editor. Trim it tighter to the moment that matters, fix the inevitable Deepgram typo, pick a caption style with a live preview, and choose your hook frame. Switch between 16:9 horizontal and 9:16 vertical with cam layout, then download or post to YouTube in the same click. Re-edits don&apos;t cost a clip from your quota.
+              </p>
+              <div className="ll-ss-frame" style={{ marginTop: 18 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/la/clip-editor.png"
+                  alt="LevlCast clip editor: trim sliders, caption text editing, style picker with previews, hook frame picker, format and destination selector"
+                  style={{ width: "100%", height: "auto", display: "block", borderRadius: 12 }}
+                />
+              </div>
+            </article>
           </div>
         </div>
       </section>
