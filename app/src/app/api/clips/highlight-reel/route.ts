@@ -238,7 +238,14 @@ async function runHighlightReel({
     // hit Twitch's per-IP rate limits and Deepgram-style throttling, and the
     // ffmpeg passes are CPU-bound on a single Vercel function — sequential
     // is more reliable inside a 300s budget for 3 short segments.
+    //
+    // We collect BOTH the captioned and the clean buffers per segment so we
+    // can persist a captioned reel as the playable video AND a clean reel as
+    // the source. Storing the captioned reel as source_video_url (the old
+    // behaviour) caused the editor to re-burn captions on already-captioned
+    // pixels — visually doubling them up.
     const captionedBuffers: Buffer[] = [];
+    const cleanBuffers: Buffer[] = [];
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       console.log(`[reel] Segment ${i + 1}/${segments.length}: ${seg.start}s-${seg.end}s "${seg.title}"`);
@@ -264,21 +271,28 @@ async function runHighlightReel({
           captionStyle: "bold",
         });
         captionedBuffers.push(result.captioned);
+        cleanBuffers.push(result.cleanSource);
       } finally {
         await download.cleanup();
       }
     }
 
-    console.log(`[reel] Concatenating ${captionedBuffers.length} captioned segments`);
-    const reelBuffer = await concatClipBuffers(captionedBuffers);
+    console.log(`[reel] Concatenating ${captionedBuffers.length} captioned + clean segments`);
+    const [reelBuffer, cleanReelBuffer] = await Promise.all([
+      concatClipBuffers(captionedBuffers),
+      concatClipBuffers(cleanBuffers),
+    ]);
 
     const baseFileName = `${userId}/${vodId}-reel-${Date.now()}`;
-    const publicUrl = await uploadToR2(`${baseFileName}.mp4`, reelBuffer, "video/mp4");
-    console.log(`[reel] Uploaded → ${publicUrl}`);
+    const [publicUrl, cleanUrl] = await Promise.all([
+      uploadToR2(`${baseFileName}.mp4`, reelBuffer, "video/mp4"),
+      uploadToR2(`${baseFileName}-clean.mp4`, cleanReelBuffer, "video/mp4"),
+    ]);
+    console.log(`[reel] Uploaded → captioned=${publicUrl}, clean=${cleanUrl}`);
 
     const { error: updateError } = await admin.from("clips").update({
       video_url: publicUrl,
-      source_video_url: publicUrl,
+      source_video_url: cleanUrl,
       status: "ready",
     }).eq("id", clipId);
     if (updateError) throw new Error(`DB update failed: ${updateError.message}`);

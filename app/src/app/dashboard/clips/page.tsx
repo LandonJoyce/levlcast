@@ -279,13 +279,18 @@ export default async function ClipsPage({
                       <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                      <Link
-                        href={`/dashboard/clips/${c.id}/edit`}
-                        className="btn btn-ghost"
-                        style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 0" }}
-                      >
-                        Edit clip
-                      </Link>
+                      {/* Edit only on regular clips. Highlight reels are
+                          multi-cut so a single trim+caption editor doesn't
+                          fit them yet. */}
+                      {(c.caption_style as string | null) !== "reel" && (
+                        <Link
+                          href={`/dashboard/clips/${c.id}/edit`}
+                          className="btn btn-ghost"
+                          style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 0" }}
+                        >
+                          Edit clip
+                        </Link>
+                      )}
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
                       <PostToTikTok clipId={c.id} isConnected={isTikTokConnected} alreadyPosted={ttPostedSet.has(c.id)} />
                       {isPro

@@ -49,6 +49,24 @@ export default async function ClipEditPage({
       </div>
     );
   }
+  // Highlight reels are multi-cut and their stored clean source matches that
+  // structure — single-trim + flat caption editing doesn't map onto them yet.
+  // Block the page rather than render an editor that would produce broken cuts.
+  if (clip.caption_style === "reel") {
+    return (
+      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", margin: "0 0 10px" }}>
+          Highlight reels can't be edited yet
+        </h2>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 0 16px" }}>
+          Reels are stitched from multiple moments, and the editor only handles single-clip trims for now. Edit the individual clips instead, or regenerate the reel.
+        </p>
+        <Link href="/dashboard/clips" className="btn btn-ghost" style={{ fontSize: 12 }}>
+          Back to clips
+        </Link>
+      </div>
+    );
+  }
 
   // Default caption cards — derive from the parent VOD's word timestamps,
   // then fall back to anything the user already saved on this clip.
