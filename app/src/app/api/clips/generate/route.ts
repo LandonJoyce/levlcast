@@ -49,10 +49,11 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { vodId, peakIndex, startSeconds, captionStyle } = body;
-
-  const validStyles: CaptionStyle[] = ["bold", "boxed", "minimal", "classic", "neon", "fire", "impact"];
-  const resolvedStyle: CaptionStyle = validStyles.includes(captionStyle) ? captionStyle : "bold";
+  const { vodId, peakIndex, startSeconds } = body;
+  // captionStyle is kept on the clip row as the DEFAULT visual style the
+  // editor will pre-select. The auto-generation no longer burns captions
+  // (the editor does that on save), so this is purely metadata.
+  const DEFAULT_CAPTION_STYLE: CaptionStyle = "bold";
 
   if (!vodId || typeof vodId !== "string" || (peakIndex === undefined && startSeconds === undefined)) {
     return NextResponse.json({ error: "Missing vodId or peakIndex/startSeconds" }, { status: 400 });
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
       start_time_seconds: Math.round(peak.start),
       end_time_seconds: Math.round(peak.end),
       caption_text: peak.caption,
-      caption_style: resolvedStyle,
+      caption_style: DEFAULT_CAPTION_STYLE,
       peak_score: peak.score,
       peak_category: peak.category,
       peak_reason: peak.reason,
@@ -166,7 +167,6 @@ export async function POST(request: Request) {
     vodId: vod.id,
     peakIndex: idx,
     peak,
-    captionStyle: resolvedStyle,
   }));
 
   return NextResponse.json({ clipId: clipRecord.id });
@@ -179,7 +179,6 @@ async function runClipGeneration({
   vodId,
   peakIndex,
   peak,
-  captionStyle,
 }: {
   clipId: string;
   twitchVodId: string;
@@ -187,7 +186,6 @@ async function runClipGeneration({
   vodId: string;
   peakIndex: number;
   peak: { title: string; start: number; end: number; score: number; category: string; reason: string; caption: string };
-  captionStyle: CaptionStyle;
 }) {
   const admin = createAdminClient();
 
@@ -225,43 +223,38 @@ async function runClipGeneration({
       }
     }
 
-    // Fetch VOD word timestamps for caption burn
-    const { data: vodData } = await admin
-      .from("vods")
-      .select("word_timestamps")
-      .eq("id", vodId)
-      .single();
-    const vodWords = (vodData?.word_timestamps as import("@/lib/captions").CaptionWord[] | null) ?? null;
-
-    let captionedBuffer: Buffer;
+    // Auto-generation produces a CLEAN (uncaptioned) clip. Captions are
+    // applied only when the user opens the editor and saves an edit. This
+    // makes the editor the canonical place captions get burned and means
+    // there's never a risk of a user's chosen caption style overlapping
+    // the auto-burned default. video_url and source_video_url both point
+    // at the same clean upload until the first edit, at which point the
+    // editor produces a separate captioned video_url and a re-trimmed
+    // source_video_url.
     let cleanSourceBuffer: Buffer;
     try {
       const adjustedStart = peak.start - download.segmentStartSeconds;
       const adjustedEnd = peak.end - download.segmentStartSeconds;
-      console.log(`[clip] Stage 2/4: cutting ${adjustedStart.toFixed(2)}s–${adjustedEnd.toFixed(2)}s (segment offset: ${download.segmentStartSeconds.toFixed(2)}s)`);
-      const result = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
-        vodWords,
-        vodWindow: { start: peak.start, end: peak.end },
-        captionStyle,
-      });
-      captionedBuffer = result.captioned;
+      console.log(`[clip] Stage 2/4: cutting clean ${adjustedStart.toFixed(2)}s–${adjustedEnd.toFixed(2)}s (segment offset: ${download.segmentStartSeconds.toFixed(2)}s)`);
+      // No vodWords / vodWindow passed → cutClip skips the caption pass and
+      // returns the clean stream-copy in both `captioned` and `cleanSource`.
+      const result = await cutClip(download.filePath, adjustedStart, adjustedEnd, {});
       cleanSourceBuffer = result.cleanSource;
-      console.log(`[clip] Stage 2/4: cut complete — ${(captionedBuffer.length / 1024 / 1024).toFixed(1)}MB captioned, ${(cleanSourceBuffer.length / 1024 / 1024).toFixed(1)}MB clean`);
+      console.log(`[clip] Stage 2/4: cut complete — ${(cleanSourceBuffer.length / 1024 / 1024).toFixed(1)}MB clean`);
     } finally {
       await download.cleanup();
     }
 
     const baseFileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}`;
-    console.log(`[clip] Stage 3/4: uploading to R2 — ${baseFileName}`);
-    const [publicUrl, cleanUrl] = await Promise.all([
-      uploadToR2(`${baseFileName}.mp4`, captionedBuffer!, "video/mp4"),
-      uploadToR2(`${baseFileName}-clean.mp4`, cleanSourceBuffer!, "video/mp4"),
-    ]);
-    console.log(`[clip] Stage 3/4: upload complete → ${publicUrl}`);
+    console.log(`[clip] Stage 3/4: uploading clean clip to R2 — ${baseFileName}`);
+    const cleanUrl = await uploadToR2(`${baseFileName}-clean.mp4`, cleanSourceBuffer!, "video/mp4");
+    console.log(`[clip] Stage 3/4: upload complete → ${cleanUrl}`);
 
     console.log(`[clip] Stage 4/4: updating DB record`);
     const { error: updateError } = await admin.from("clips").update({
-      video_url: publicUrl,
+      // Both URLs initially point at the same clean upload. Editor saves
+      // produce separate captioned video_url + trimmed clean source_video_url.
+      video_url: cleanUrl,
       source_video_url: cleanUrl,
       status: "ready",
     }).eq("id", clipId);

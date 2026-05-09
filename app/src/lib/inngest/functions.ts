@@ -868,35 +868,19 @@ export const generateClip = inngest.createFunction(
           }
         }
 
-        // Fetch caption data for burn
-        const { data: clipRecord } = await supabase
-          .from("clips")
-          .select("caption_style")
-          .eq("id", clipId)
-          .single();
-        const { data: vodData } = await supabase
-          .from("vods")
-          .select("word_timestamps")
-          .eq("id", vodId)
-          .single();
-        const vodWords = (vodData?.word_timestamps as import("@/lib/captions").CaptionWord[] | null) ?? null;
-        const captionStyle = (clipRecord?.caption_style ?? "bold") as import("@/lib/captions").CaptionStyle;
-
-        // cutClip failures (FFmpeg) return { ok: false } instead of throwing —
-        // callers can then fall through to the next peak rather than hard-failing.
-        // Download / upload / auth errors still throw as NonRetriableError.
+        // Auto-generation produces a CLEAN clip (no captions burned). The
+        // editor adds captions on save, which keeps that pipeline as the
+        // single canonical place captions get rendered. No more risk of
+        // a user's chosen style overlapping a default-burned set.
         let cutResult: { captioned: Buffer; cleanSource: Buffer } | null = null;
         let cutFailReason: string | null = null;
         try {
           const adjustedStart = peak.start - download.segmentStartSeconds;
           const adjustedEnd = peak.end - download.segmentStartSeconds;
-          console.log(`[clip] Cutting: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
-          cutResult = await cutClip(download.filePath, adjustedStart, adjustedEnd, {
-            vodWords,
-            vodWindow: { start: peak.start, end: peak.end },
-            captionStyle,
-          });
-          console.log(`[clip] Cut complete: ${cutResult.captioned.length} bytes captioned, ${cutResult.cleanSource.length} bytes clean`);
+          console.log(`[clip] Cutting clean: adjusted ${adjustedStart}s - ${adjustedEnd}s (offset: ${download.segmentStartSeconds}s)`);
+          // No vodWords / vodWindow → cutClip skips the caption pass.
+          cutResult = await cutClip(download.filePath, adjustedStart, adjustedEnd, {});
+          console.log(`[clip] Cut complete: ${cutResult.cleanSource.length} bytes clean`);
         } catch (err) {
           cutFailReason = err instanceof Error ? err.message : String(err);
           console.error(`[clip] cutClip failed for peak ${peakIndex}:`, cutFailReason);
@@ -910,13 +894,12 @@ export const generateClip = inngest.createFunction(
 
         const baseFileName = `${userId}/${vodId}-peak${peakIndex}-${Date.now()}`;
 
-        const [publicUrl, cleanUrl] = await Promise.all([
-          uploadToR2(`${baseFileName}.mp4`, cutResult.captioned, "video/mp4"),
-          uploadToR2(`${baseFileName}-clean.mp4`, cutResult.cleanSource, "video/mp4"),
-        ]).catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
+        const cleanUrl = await uploadToR2(`${baseFileName}-clean.mp4`, cutResult.cleanSource, "video/mp4")
+          .catch((err) => { throw new NonRetriableError(err instanceof Error ? err.message : String(err)); });
 
         const { error: updateError } = await supabase.from("clips").update({
-          video_url: publicUrl,
+          // Both URLs point at the clean upload until the user edits.
+          video_url: cleanUrl,
           source_video_url: cleanUrl,
           status: "ready",
         }).eq("id", clipId);
@@ -937,7 +920,7 @@ export const generateClip = inngest.createFunction(
           await incrementTrialClip(clipOwner.twitch_id as string);
         }
 
-        console.log(`[clip] Saved: "${peak.title}" → ${publicUrl}`);
+        console.log(`[clip] Saved: "${peak.title}" → ${cleanUrl}`);
         return { ok: true as const };
       });
 
