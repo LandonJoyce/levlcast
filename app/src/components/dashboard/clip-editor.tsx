@@ -134,10 +134,10 @@ export function ClipEditor({
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
 
   // Format & destination state — drive the post-save export flow.
-  const [format, setFormat] = useState<"horizontal" | "vertical">("horizontal");
-  const [layout, setLayout] = useState<StreamLayout>("no_cam");
-  const [doDownload, setDoDownload] = useState(true);
-  const [doYouTube, setDoYouTube] = useState(false);
+  const [format, setFormatRaw] = useState<"horizontal" | "vertical">("horizontal");
+  const [layout, setLayoutRaw] = useState<StreamLayout>("no_cam");
+  const [doDownload, setDoDownloadRaw] = useState(true);
+  const [doYouTube, setDoYouTubeRaw] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
@@ -146,6 +146,19 @@ export function ClipEditor({
   // real <a> the user clicks themselves — bypasses popup blockers and
   // avoids about:blank from a streaming mp4 response opened in a new tab.
   const [readyDownload, setReadyDownload] = useState<{ url: string; label: string } | null>(null);
+
+  // Wrap the format/destination setters so changing any of them clears the
+  // success panel. Otherwise switching from 9:16 to 16:9 after a save left
+  // a "Download 9:16 vertical" link visible on screen — confusingly stale.
+  function clearStaleSuccess() {
+    setSavedFlash(null);
+    setReadyDownload(null);
+    setYoutubeUrl(null);
+  }
+  const setFormat: typeof setFormatRaw = (v) => { clearStaleSuccess(); setFormatRaw(v); };
+  const setLayout: typeof setLayoutRaw = (v) => { clearStaleSuccess(); setLayoutRaw(v); };
+  const setDoDownload: typeof setDoDownloadRaw = (v) => { clearStaleSuccess(); setDoDownloadRaw(v); };
+  const setDoYouTube: typeof setDoYouTubeRaw = (v) => { clearStaleSuccess(); setDoYouTubeRaw(v); };
 
   // Keep playback inside the trimmed window so the streamer can preview
   // exactly what the exported clip will look like. Loops back to trimStart
