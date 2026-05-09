@@ -287,31 +287,6 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        <div className="ll-con">
-          <div className="ll-features" style={{ marginTop: 16 }}>
-            {/* Post to YouTube — spans 2 */}
-            <article className="ll-feat ll-feat-span2 ll-feat-yt">
-              <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-cyan"></span>Post to YouTube</span>
-              <h3 className="ll-feat-h">From clip to Shorts, in 30 seconds</h3>
-              <div className="ll-yt-grid">
-                {[
-                  { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/clip1.png", pos: "center 30%" },
-                  { title: "The moment everything went completely wrong at once", meta: "MOMENT · 15:03 · #shorts", thumb: "/la/clip2.png", pos: "center 30%" },
-                  { title: "They got exposed mid-trash talk and had no answer", meta: "MOMENT · 3:29 · #shorts", thumb: "/la/clip3.png", pos: "center 85%" },
-                ].map((v) => (
-                  <div key={v.title} className="ll-yt">
-                    <div className="ll-yt-thumb" style={{ backgroundImage: `url(${v.thumb})`, backgroundPosition: v.pos }}>
-                      <div className="ll-yt-play">▶</div>
-                    </div>
-                    <div className="ll-yt-title">{v.title}</div>
-                    <div className="ll-yt-meta">{v.meta}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="ll-glow ll-glow-peach"></div>
-            </article>
-          </div>
-        </div>
       </section>
 
       {/* ── The Loop ── */}
