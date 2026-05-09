@@ -74,7 +74,28 @@ export default async function LandingPage() {
       {/* ── Hero ── */}
       <section className="ll-hero">
         <div className="ll-con ll-hero-grid">
-          <div className="ll-hero-center" style={{ gridColumn: "1 / -1", padding: 0 }}>
+          <div className="ll-hero-vid" style={{ display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: 14 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/la/clip-editor.png"
+              alt="LevlCast clip editor showing trim sliders, caption editing, style picker, hook frame, and format and destination options"
+              style={{
+                width: "100%", height: "auto", display: "block",
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.08)",
+                boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+              }}
+            />
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 600, color: "#fff", margin: "0 0 6px", letterSpacing: "-0.01em" }}>
+                Make every clip yours before you post.
+              </p>
+              <p style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.65)", margin: 0 }}>
+                Trim it tighter, fix any caption typos, pick the style, set the cover frame. Choose 16:9 or 9:16, then download or post in one click.
+              </p>
+            </div>
+          </div>
+          <div className="ll-hero-center">
             <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
             <p className="ll-lede">
               LevlCast watches your VOD and tells you exactly what to fix. Score, timestamps, and clips ready to post.
@@ -102,38 +123,6 @@ export default async function LandingPage() {
                 Also free on the App Store
               </a>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Clip Editor showcase — full-width hero feature panel ── */}
-      <section className="ll-sec" style={{ paddingTop: 24, paddingBottom: 48 }}>
-        <div className="ll-con">
-          <div style={{ textAlign: "center", maxWidth: 760, margin: "0 auto 28px" }}>
-            <span className="ll-chip" style={{ marginBottom: 14 }}>
-              <span className="ll-chip-dot"></span>Clip Editor
-            </span>
-            <h2 className="ll-h2" style={{ marginBottom: 14 }}>
-              Make every clip <span className="ll-grad-text">yours</span> before you post.
-            </h2>
-            <p style={{ fontSize: 17, lineHeight: 1.55, color: "rgba(255,255,255,0.7)", margin: 0 }}>
-              Trim it tighter, fix any caption typos, pick the style, set the cover frame. Choose 16:9 or 9:16, then download or post to YouTube in one click. Re-edits are free.
-            </p>
-          </div>
-          <div style={{
-            position: "relative",
-            borderRadius: 18,
-            overflow: "hidden",
-            border: "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "0 32px 80px rgba(0,0,0,0.55)",
-            background: "rgba(8,8,13,0.6)",
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/la/clip-editor.png"
-              alt="LevlCast clip editor showing trim sliders, caption editing, style picker, hook frame, and format and destination options"
-              style={{ width: "100%", height: "auto", display: "block" }}
-            />
           </div>
         </div>
       </section>
