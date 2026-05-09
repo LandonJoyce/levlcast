@@ -67,7 +67,7 @@ export async function POST(
 
   const { data: clip } = await supabase
     .from("clips")
-    .select("id, user_id, source_video_url, video_url, start_time_seconds, end_time_seconds, caption_style, candidate_frames")
+    .select("id, user_id, source_video_url, video_url, start_time_seconds, end_time_seconds, caption_style, candidate_frames, original_video_url, edited_at")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -178,9 +178,20 @@ export async function POST(
       // Frame candidates were extracted from the OLD clip duration. Wipe so
       // the editor extracts fresh ones against the new bounds next time.
       candidate_frames: null,
+      edited_at: new Date().toISOString(),
     };
     if (editedCards) update.edited_captions = editedCards;
     if (thumbnailUrl) update.thumbnail_url = thumbnailUrl;
+    // First edit: snapshot the auto-generated original so Revert can put
+    // the streamer back to where the AI left them. Only writes when the
+    // snapshot field is empty — subsequent edits don't overwrite it.
+    if (!clip.original_video_url) {
+      update.original_video_url = clip.video_url;
+      update.original_source_video_url = clip.source_video_url;
+      update.original_start_time_seconds = clip.start_time_seconds;
+      update.original_end_time_seconds = clip.end_time_seconds;
+      update.original_caption_style = clip.caption_style;
+    }
 
     const { error: updateError } = await admin
       .from("clips")

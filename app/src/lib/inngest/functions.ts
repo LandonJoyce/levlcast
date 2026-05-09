@@ -19,7 +19,7 @@ import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { cutClip } from "@/lib/ffmpeg";
 import { detectGame, keywordsForGame } from "@/lib/game-keywords";
-import { uploadToR2 } from "@/lib/r2";
+import { uploadToR2, listR2Objects, deleteR2Objects } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
@@ -675,6 +675,125 @@ export const cleanupStuckClips = inngest.createFunction(
 
     console.log(`[cleanup] Marked ${stuck.length} stuck clips as failed`);
     return { cleaned: stuck.length };
+  }
+);
+
+/**
+ * Daily R2 orphan cleanup. Each clip edit uploads new captioned + clean
+ * mp4s to R2; the previous versions stay in the bucket forever until
+ * something deletes them. Same problem for the candidate frame jpegs that
+ * get rotated when a user re-trims.
+ *
+ * The cron walks the clips table user-by-user, lists every R2 object under
+ * that user's prefix, builds a set of "in-use" URLs from the live clip
+ * rows, and deletes any object older than 24 hours that isn't referenced.
+ *
+ * Why 24h: a clip generation pipeline can take a few minutes. The 24h grace
+ * window means we never race with an in-flight upload, while still
+ * cleaning up before storage costs become a concern.
+ *
+ * Conservative on errors — a partial failure logs and continues so one
+ * malformed user doesn't block cleanup for everyone else.
+ */
+export const cleanupOrphanedR2Objects = inngest.createFunction(
+  { id: "cleanup-orphaned-r2-objects" },
+  { cron: "0 5 * * *" }, // daily 5am UTC
+  async ({ step }) => {
+    const supabase = createAdminClient();
+    const r2Base = process.env.R2_PUBLIC_URL;
+    if (!r2Base) {
+      console.warn("[r2-cleanup] R2_PUBLIC_URL not set, skipping");
+      return { skipped: true };
+    }
+
+    // Anything uploaded in the last 24h is left alone. This is the safety
+    // window that prevents racing with a clip-generation pipeline that's
+    // still mid-upload (cutClip + uploadToR2 can take ~3-5min).
+    const safeCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const { data: profiles } = await step.run("list-users-with-clips", async () => {
+      return await supabase
+        .from("profiles")
+        .select("id")
+        .eq("plan", "pro")
+        .or("plan.eq.pro")
+        .order("id");
+    }) as { data: Array<{ id: string }> | null };
+
+    // Even free / trial users have R2 objects (their generated clips). Pull
+    // all distinct user ids that have any clip row instead of relying on
+    // the plan filter above.
+    const { data: clipUsers } = await supabase
+      .from("clips")
+      .select("user_id")
+      .order("user_id");
+    const userIds = new Set<string>([
+      ...(profiles ?? []).map((p) => p.id),
+      ...((clipUsers ?? []) as Array<{ user_id: string }>).map((c) => c.user_id),
+    ]);
+
+    let totalDeleted = 0;
+    let totalKept = 0;
+    let usersScanned = 0;
+
+    for (const userId of userIds) {
+      try {
+        // Build the in-use URL set for this user from every clip row
+        // (including deleted/failed — their stored URLs may still be in R2).
+        const { data: userClips } = await supabase
+          .from("clips")
+          .select("video_url, source_video_url, thumbnail_url, candidate_frames, original_video_url, original_source_video_url")
+          .eq("user_id", userId);
+
+        const inUse = new Set<string>();
+        for (const c of (userClips ?? []) as Array<{
+          video_url: string | null;
+          source_video_url: string | null;
+          thumbnail_url: string | null;
+          candidate_frames: string[] | null;
+          original_video_url: string | null;
+          original_source_video_url: string | null;
+        }>) {
+          if (c.video_url) inUse.add(c.video_url);
+          if (c.source_video_url) inUse.add(c.source_video_url);
+          if (c.thumbnail_url) inUse.add(c.thumbnail_url);
+          if (c.original_video_url) inUse.add(c.original_video_url);
+          if (c.original_source_video_url) inUse.add(c.original_source_video_url);
+          if (Array.isArray(c.candidate_frames)) {
+            for (const f of c.candidate_frames) if (typeof f === "string") inUse.add(f);
+          }
+        }
+
+        const objects = await listR2Objects(`${userId}/`);
+        const orphanKeys: string[] = [];
+        for (const obj of objects) {
+          if (!obj.Key) continue;
+          if (obj.LastModified && obj.LastModified > safeCutoff) {
+            // Inside the 24h grace window — skip even if not yet referenced
+            // (probably an in-flight upload or just-finished generation).
+            continue;
+          }
+          const url = `${r2Base}/${obj.Key}`;
+          if (inUse.has(url)) {
+            totalKept += 1;
+            continue;
+          }
+          orphanKeys.push(obj.Key);
+        }
+
+        if (orphanKeys.length > 0) {
+          const deleted = await deleteR2Objects(orphanKeys);
+          totalDeleted += deleted;
+          console.log(`[r2-cleanup] user=${userId} deleted=${deleted}/${orphanKeys.length} kept=${objects.length - orphanKeys.length}`);
+        }
+        usersScanned += 1;
+      } catch (err) {
+        console.error(`[r2-cleanup] user=${userId} failed:`, err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    console.log(`[r2-cleanup] Done. users=${usersScanned} deleted=${totalDeleted} kept=${totalKept}`);
+    return { usersScanned, deleted: totalDeleted, kept: totalKept };
   }
 );
 

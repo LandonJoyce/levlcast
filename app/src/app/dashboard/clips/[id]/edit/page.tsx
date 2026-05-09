@@ -140,6 +140,7 @@ export default async function ClipEditPage({
         isPro={isPro}
         isYouTubeConnected={isYouTubeConnected}
         isReel={isReel}
+        hasOriginal={!!clip.original_video_url}
         title={(clip.title as string) ?? ""}
       />
     </>

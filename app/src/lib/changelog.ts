@@ -20,6 +20,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.12.1",
+    date: "2026-05-09",
+    title: "Editor Polish",
+    items: [
+      { type: "new", text: "Add caption cards manually. If the AI's transcript missed a line you said, hit + Add inside the editor and write it in at the current playback time." },
+      { type: "new", text: "Revert to original. If you over-edit a clip, one click puts it back to the auto-generated cut. Your trim, captions, and hook frame edits get thrown away cleanly." },
+      { type: "improved", text: "Hook frame thumbnails now show the timestamp under each one so you can pick a frame without playing through the whole clip." },
+      { type: "improved", text: "Save & ship now shows a green confirmation with a summary of what shipped (download started, posted to YouTube). No more wondering if your click did anything." },
+      { type: "fix", text: "Vertical export now honors your trim. Trimming a 30s clip to 10s and downloading vertical gives you a 10s vertical, not the original 30s." },
+    ],
+  },
+  {
     version: "v0.12.0",
     date: "2026-05-09",
     title: "One-Click Save & Ship",

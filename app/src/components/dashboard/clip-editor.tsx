@@ -1,9 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CaptionCard, CaptionStyle } from "@/lib/captions";
 import { UpgradeModal } from "@/components/dashboard/upgrade-modal";
+
+/**
+ * Card with a stable identity assigned in the editor for React key purposes.
+ * The `id` is local-only — saving sends just {start, end, text} to the API.
+ */
+type EditorCard = CaptionCard & { id: string };
+let cardSeq = 0;
+function nextCardId(): string {
+  cardSeq += 1;
+  return `card_${cardSeq}_${Date.now()}`;
+}
+
+// Sample positions used by the frame extraction endpoint. Mirrored here so
+// we can show a timestamp under each candidate thumbnail without doing
+// another round-trip.
+const FRAME_POSITIONS = [0.1, 0.35, 0.65, 0.9] as const;
 
 // Each style includes a tiny preview letter rendered with the same visual
 // treatment the FFmpeg drawtext filter uses, so streamers can see what the
@@ -77,6 +93,7 @@ export function ClipEditor({
   captionStyle,
   isPro,
   isYouTubeConnected,
+  hasOriginal,
 }: {
   clipId: string;
   videoUrl: string;
@@ -88,6 +105,8 @@ export function ClipEditor({
   isPro: boolean;
   isYouTubeConnected: boolean;
   isReel: boolean;
+  /** True when an original_* snapshot exists (i.e. clip has been edited at least once). */
+  hasOriginal: boolean;
   title: string;
 }) {
   const router = useRouter();
@@ -95,7 +114,14 @@ export function ClipEditor({
 
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(fullDuration);
-  const [cards, setCards] = useState<CaptionCard[]>(defaultCards);
+  // Map default cards to editor cards once on mount. Cards from the server
+  // don't carry a stable id; we mint one so React keys are deletion-safe.
+  const initialCards = useMemo<EditorCard[]>(
+    () => defaultCards.map((c) => ({ ...c, id: nextCardId() })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const [cards, setCards] = useState<EditorCard[]>(initialCards);
   const [style, setStyle] = useState<CaptionStyle>(captionStyle);
   const [frames, setFrames] = useState<string[]>(candidateFrames);
   const [framesLoading, setFramesLoading] = useState(false);
@@ -115,6 +141,7 @@ export function ClipEditor({
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
+  const [reverting, setReverting] = useState(false);
 
   // Keep playback inside the trimmed window so the streamer can preview
   // exactly what the exported clip will look like. Loops back to trimStart
@@ -169,15 +196,54 @@ export function ClipEditor({
   // and have it silently truncated only at save time.
   const MAX_CAPTION_CHARS = 60;
 
-  function updateCardText(idx: number, text: string) {
+  function updateCardText(id: string, text: string) {
     const capped = text.slice(0, MAX_CAPTION_CHARS);
-    setCards((prev) => prev.map((c, i) => (i === idx ? { ...c, text: capped } : c)));
+    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, text: capped } : c)));
   }
-  function deleteCard(idx: number) {
-    const card = cards[idx];
+  function deleteCard(id: string) {
+    const card = cards.find((c) => c.id === id);
     const preview = card ? card.text.slice(0, 40) : "this caption";
     if (!window.confirm(`Drop "${preview}"? You can't undo this without re-loading the page.`)) return;
-    setCards((prev) => prev.filter((_, i) => i !== idx));
+    setCards((prev) => prev.filter((c) => c.id !== id));
+  }
+  /**
+   * Insert a new caption card at the current playback position. Default
+   * length is 1.4s (matches the auto-grouping target in lib/captions.ts).
+   * The user can then type the line and drag the card around in time later
+   * if we add timing handles.
+   */
+  function addCard() {
+    const t = videoRef.current?.currentTime ?? trimStart;
+    const start = Math.max(trimStart, Math.min(t, trimEnd - 0.4));
+    const end = Math.min(trimEnd, start + 1.4);
+    if (end - start < 0.3) return;
+    setCards((prev) => {
+      const next = [...prev, { id: nextCardId(), start, end, text: "" }];
+      next.sort((a, b) => a.start - b.start);
+      return next;
+    });
+  }
+
+  async function revertToOriginal() {
+    if (!window.confirm("Revert this clip to the auto-generated original? Your trim, caption edits, and hook frame will be discarded.")) return;
+    setReverting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/clips/${clipId}/revert`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Revert failed");
+        return;
+      }
+      // Reload so the editor re-mounts with the restored values from the
+      // server. Avoids the stale-state hazard of trying to merge in client.
+      router.refresh();
+      setSavedFlash("Reverted to original");
+    } catch {
+      setError("Network error during revert");
+    } finally {
+      setReverting(false);
+    }
   }
 
   async function saveAndShip() {
@@ -216,7 +282,8 @@ export function ClipEditor({
         body: JSON.stringify({
           trimStart,
           trimEnd,
-          editedCaptions: cards,
+          // Drop the local-only `id` field — server expects bare CaptionCards.
+          editedCaptions: cards.map(({ start, end, text }) => ({ start, end, text })),
           captionStyle: style,
           thumbnailUrl,
         }),
@@ -389,8 +456,13 @@ export function ClipEditor({
             </p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-              {frames.map((url) => {
+              {frames.map((url, i) => {
                 const selected = thumbnailUrl === url;
+                // Server samples at 10 / 35 / 65 / 90 percent of the clip's
+                // total duration; show the actual time so the streamer can
+                // map a thumbnail to a moment without playing through.
+                const pct = FRAME_POSITIONS[i] ?? 0;
+                const t = fullDuration * pct;
                 return (
                   <button
                     key={url}
@@ -403,10 +475,23 @@ export function ClipEditor({
                       overflow: "hidden",
                       cursor: "pointer",
                       background: "var(--surface-2)",
+                      display: "flex",
+                      flexDirection: "column",
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="frame" style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }} />
+                    <img src={url} alt={`Frame at ${fmt(t)}`} style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }} />
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: 10,
+                        color: selected ? "var(--blue)" : "var(--ink-3)",
+                        padding: "3px 0 4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      {fmt(t)}
+                    </span>
                   </button>
                 );
               })}
@@ -452,20 +537,31 @@ export function ClipEditor({
         </div>
 
         <div style={{ flex: 1, minHeight: 0 }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
-            Captions ({cards.length})
-          </p>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
+              Captions ({cards.length})
+            </p>
+            <button
+              type="button"
+              onClick={addCard}
+              className="btn btn-ghost"
+              style={{ fontSize: 11, padding: "4px 9px" }}
+              title="Add a caption at the current playback position"
+            >
+              + Add
+            </button>
+          </div>
           <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6, paddingRight: 4 }}>
             {cards.length === 0 ? (
               <p style={{ fontSize: 12, color: "var(--ink-3)", margin: 0 }}>
-                No caption cards. The clip will export silent (no captions).
+                No caption cards. Click + Add to write one at the current playback time, or the clip will export silent.
               </p>
             ) : (
-              cards.map((c, i) => {
+              cards.map((c) => {
                 const inWindow = c.end > trimStart && c.start < trimEnd;
                 return (
                   <div
-                    key={i}
+                    key={c.id}
                     style={{
                       display: "flex", flexDirection: "column", gap: 4,
                       padding: "6px 8px",
@@ -483,7 +579,8 @@ export function ClipEditor({
                         type="text"
                         value={c.text}
                         maxLength={MAX_CAPTION_CHARS}
-                        onChange={(e) => updateCardText(i, e.target.value)}
+                        placeholder={c.text === "" ? "Type the line..." : undefined}
+                        onChange={(e) => updateCardText(c.id, e.target.value)}
                         style={{
                           flex: 1,
                           fontSize: 12.5,
@@ -496,7 +593,7 @@ export function ClipEditor({
                       />
                       <button
                         type="button"
-                        onClick={() => deleteCard(i)}
+                        onClick={() => deleteCard(c.id)}
                         className="btn btn-ghost"
                         style={{ fontSize: 10, padding: "3px 7px", whiteSpace: "nowrap" }}
                       >
@@ -620,14 +717,26 @@ export function ClipEditor({
           <button
             type="button"
             onClick={saveAndShip}
-            disabled={saving || trimDuration < 2}
+            disabled={saving || reverting || trimDuration < 2}
             className="btn btn-blue"
-            style={{ width: "100%", justifyContent: "center", fontSize: 13, padding: "10px 0", opacity: saving || trimDuration < 2 ? 0.6 : 1 }}
+            style={{ width: "100%", justifyContent: "center", fontSize: 13, padding: "10px 0", opacity: saving || reverting || trimDuration < 2 ? 0.6 : 1 }}
           >
             {saving ? "Working…" : "Save & ship it"}
           </button>
+          {hasOriginal && (
+            <button
+              type="button"
+              onClick={revertToOriginal}
+              disabled={saving || reverting}
+              className="btn btn-ghost"
+              style={{ width: "100%", justifyContent: "center", fontSize: 11.5, padding: "7px 0", opacity: saving || reverting ? 0.5 : 1 }}
+              title="Throw away your edits and go back to the auto-generated cut"
+            >
+              {reverting ? "Reverting…" : "Revert to original"}
+            </button>
+          )}
           <p style={{ fontSize: 11, color: "var(--ink-3)", margin: 0, textAlign: "center" }}>
-            Re-edits don't cost a clip.
+            Re-edits don&apos;t cost a clip.
           </p>
         </div>
       </div>
