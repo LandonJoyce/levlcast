@@ -236,17 +236,25 @@ export default async function VodPunchPage({
             <ShareReportButton vodId={vod.id} existingToken={vod.share_token} score={currentScore} />
           </div>
 
-          {/* Best clip */}
+          {/* Best clip — capped height keeps the rest of the report (coach
+              note, recommended cuts, full-breakdown link) visible above the
+              fold on most laptops. The video itself stays 16/9, just letterboxed
+              by the container when the viewport is wide. */}
           {topClip ? (
             <>
-              <video
-                controls
-                preload="metadata"
-                playsInline
-                style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
-              >
-                <source src={topClip.video_url} type="video/mp4" />
-              </video>
+              <div style={{
+                width: "100%", maxHeight: "min(50vh, 380px)",
+                background: "#000", display: "flex", justifyContent: "center",
+              }}>
+                <video
+                  controls
+                  preload="metadata"
+                  playsInline
+                  style={{ width: "100%", maxHeight: "min(50vh, 380px)", aspectRatio: "16/9", display: "block", objectFit: "contain" }}
+                >
+                  <source src={topClip.video_url} type="video/mp4" />
+                </video>
+              </div>
               <div style={{ padding: "16px 28px 20px", borderBottom: "1px solid var(--line)" }}>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: "0 0 12px" }}>
                   {topClip.title}
