@@ -40,6 +40,55 @@ function expiryFromPeriodEnd(periodEnd: number): string {
   return new Date(periodEnd * 1000 + 5 * 24 * 60 * 60 * 1000).toISOString();
 }
 
+/**
+ * Reads `current_period_end` from a Stripe subscription, handling both the
+ * legacy location (`subscription.current_period_end`) and the new location
+ * introduced in API version 2025-08+ where each subscription item carries
+ * its own period timestamps. Returns undefined if neither is present.
+ *
+ * Why this matters: when only the old field is read on a newer API version
+ * (e.g. 2026-04-22.dahlia), it's `undefined`, the handler falls through to
+ * `billing_cycle_anchor`, and users end up with a 5-day Pro window starting
+ * at signup instead of the 35-day cycle they paid for.
+ */
+function getCurrentPeriodEnd(sub: Stripe.Subscription): number | undefined {
+  const legacy = (sub as unknown as { current_period_end?: number }).current_period_end;
+  if (typeof legacy === "number") return legacy;
+  const items = (sub as unknown as { items?: { data?: Array<{ current_period_end?: number }> } }).items?.data;
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      if (typeof item.current_period_end === "number") return item.current_period_end;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolve the subscription id off an Invoice. The `invoice.subscription`
+ * field is being phased out in newer Stripe API versions; the canonical
+ * locations are `invoice.parent.subscription_details.subscription` or
+ * `invoice.lines.data[i].subscription`. Try all three.
+ */
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
+  const direct = (invoice as unknown as { subscription?: string | { id?: string } }).subscription;
+  if (typeof direct === "string") return direct;
+  if (direct && typeof direct === "object" && typeof direct.id === "string") return direct.id;
+
+  const parentSub = (invoice as unknown as {
+    parent?: { subscription_details?: { subscription?: string | { id?: string } } };
+  }).parent?.subscription_details?.subscription;
+  if (typeof parentSub === "string") return parentSub;
+  if (parentSub && typeof parentSub === "object" && typeof parentSub.id === "string") return parentSub.id;
+
+  const lineSub = (invoice as unknown as {
+    lines?: { data?: Array<{ subscription?: string | { id?: string } }> };
+  }).lines?.data?.[0]?.subscription;
+  if (typeof lineSub === "string") return lineSub;
+  if (lineSub && typeof lineSub === "object" && typeof lineSub.id === "string") return lineSub.id;
+
+  return undefined;
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   const sig = request.headers.get("stripe-signature");
@@ -75,12 +124,21 @@ export async function POST(request: Request) {
           break;
         }
 
-        // Retrieve subscription to get accurate period end
+        // Retrieve subscription to get accurate period end. getCurrentPeriodEnd
+        // checks both legacy (subscription.current_period_end) and new
+        // (subscription.items.data[0].current_period_end) locations — newer
+        // Stripe API versions moved the field onto each subscription item.
         const subId = typeof session.subscription === "string"
           ? session.subscription
           : session.subscription?.id ?? "";
         const sub = await stripe.subscriptions.retrieve(subId);
-        const expiresAt = expiryFromPeriodEnd((sub as any).current_period_end ?? (sub as any).billing_cycle_anchor ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
+        const periodEnd = getCurrentPeriodEnd(sub);
+        const expiresAt = expiryFromPeriodEnd(
+          periodEnd ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60
+        );
+        if (!periodEnd) {
+          console.warn(`[webhook/stripe] checkout.completed — no current_period_end on subscription ${subId}, falling back to now+30d`);
+        }
 
         // Founding-member tagging stopped on 2026-05-06 when Pro dropped from 20/20 to 15/20.
         // Existing founding members are flagged manually via SQL and keep their 20/20 cap forever.
@@ -128,13 +186,22 @@ export async function POST(request: Request) {
           break;
         }
 
-        // Get period end from parent subscription
-        const subId = (invoice as any).subscription as string | undefined;
+        // Get period end from parent subscription. The invoice.subscription
+        // field was relocated in newer Stripe API versions; resolve it via
+        // helpers that try every known location.
+        const subId = getInvoiceSubscriptionId(invoice);
         let expiresAt: string;
         if (subId) {
           const sub = await stripe.subscriptions.retrieve(subId);
-          expiresAt = expiryFromPeriodEnd((sub as any).current_period_end ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
+          const periodEnd = getCurrentPeriodEnd(sub);
+          expiresAt = expiryFromPeriodEnd(
+            periodEnd ?? Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60
+          );
+          if (!periodEnd) {
+            console.warn(`[webhook/stripe] renewal — no current_period_end on subscription ${subId}, falling back to now+30d`);
+          }
         } else {
+          console.warn(`[webhook/stripe] renewal — no subscription id resolvable from invoice ${invoice.id}, falling back to now+35d`);
           expiresAt = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString();
         }
 
@@ -162,8 +229,11 @@ export async function POST(request: Request) {
         if (!userId) break;
 
         const isActive = ["active", "trialing"].includes(sub.status);
-        const periodEnd = (sub as any).current_period_end as number | undefined;
+        const periodEnd = getCurrentPeriodEnd(sub);
         const expiresAt = isActive && periodEnd ? expiryFromPeriodEnd(periodEnd) : null;
+        if (isActive && !periodEnd) {
+          console.warn(`[webhook/stripe] subscription.updated — active sub ${sub.id} but no current_period_end, writing NULL expiry`);
+        }
 
         await admin.from("profiles").update({
           plan: isActive ? "pro" : "free",
