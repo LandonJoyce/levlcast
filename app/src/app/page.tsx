@@ -264,40 +264,18 @@ export default async function LandingPage() {
 
         <div className="ll-con">
           <div className="ll-features" style={{ marginTop: 16 }}>
-            {/* Post to YouTube — spans 2 */}
-            <article className="ll-feat ll-feat-span2 ll-feat-yt">
-              <span className="ll-chip"><span className="ll-chip-dot ll-chip-dot-cyan"></span>Post to YouTube</span>
-              <h3 className="ll-feat-h">From clip to Shorts, in 30 seconds</h3>
-              <div className="ll-yt-grid">
-                {[
-                  { title: "A team fight goes sideways then somehow works out", meta: "MOMENT · 6:38 · #shorts", thumb: "/la/clip1.png", pos: "center 30%" },
-                  { title: "The moment everything went completely wrong at once", meta: "MOMENT · 15:03 · #shorts", thumb: "/la/clip2.png", pos: "center 30%" },
-                  { title: "They got exposed mid-trash talk and had no answer", meta: "MOMENT · 3:29 · #shorts", thumb: "/la/clip3.png", pos: "center 85%" },
-                ].map((v) => (
-                  <div key={v.title} className="ll-yt">
-                    <div className="ll-yt-thumb" style={{ backgroundImage: `url(${v.thumb})`, backgroundPosition: v.pos }}>
-                      <div className="ll-yt-play">▶</div>
-                    </div>
-                    <div className="ll-yt-title">{v.title}</div>
-                    <div className="ll-yt-meta">{v.meta}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="ll-glow ll-glow-peach"></div>
-            </article>
-
             {/* Clip editor — refine before ship */}
             <article className="ll-feat ll-feat-span2">
-              <span className="ll-chip"><span className="ll-chip-dot"></span>Built-In Clip Editor</span>
-              <h3 className="ll-feat-h">Don&apos;t ship the AI&apos;s first cut. Edit it.</h3>
-              <p className="ll-feat-body" style={{ maxWidth: 760 }}>
-                Every clip opens in a real editor. Trim it tighter to the moment that matters, fix the inevitable Deepgram typo, pick a caption style with a live preview, and choose your hook frame. Switch between 16:9 horizontal and 9:16 vertical with cam layout, then download or post to YouTube in the same click. Re-edits don&apos;t cost a clip from your quota.
+              <span className="ll-chip"><span className="ll-chip-dot"></span>Clip Editor</span>
+              <h3 className="ll-feat-h">Make every clip yours before you post.</h3>
+              <p className="ll-feat-body" style={{ maxWidth: 720 }}>
+                Trim it tighter, fix any caption typos, pick the style, set the cover frame. Choose 16:9 or 9:16, then download or post to YouTube in one click. Re-edits are free.
               </p>
               <div className="ll-ss-frame" style={{ marginTop: 18 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/la/clip-editor.png"
-                  alt="LevlCast clip editor: trim sliders, caption text editing, style picker with previews, hook frame picker, format and destination selector"
+                  alt="LevlCast clip editor showing trim sliders, caption editing, style picker, hook frame, and format and destination options"
                   style={{ width: "100%", height: "auto", display: "block", borderRadius: 12 }}
                 />
               </div>
