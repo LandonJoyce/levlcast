@@ -594,11 +594,21 @@ export async function extractFrame(
  * mismatch, container quirks), we fall back to a re-encode so the function
  * still produces a usable output rather than throwing.
  *
+ * Pass forceReencode=true for the *clean* reel concat. Clean per-segment
+ * buffers come from stream-copy cuts of the original Twitch MPEG-TS, which
+ * inherits whatever encoding parameters Twitch served. Two segments from
+ * different parts of a stream often have subtly different codec params
+ * (profile, level, chroma) — the concat demuxer accepts them but browsers
+ * stutter on the discontinuity. Re-encoding normalises everything.
+ *
  * Used by the highlight-reel API to stitch the top N moments of a stream
  * into one short. Captions are baked into each segment by cutClip; we don't
  * re-burn anything here.
  */
-export async function concatClipBuffers(buffers: Buffer[]): Promise<Buffer> {
+export async function concatClipBuffers(
+  buffers: Buffer[],
+  options: { forceReencode?: boolean } = {}
+): Promise<Buffer> {
   if (buffers.length === 0) throw new Error("concatClipBuffers: no inputs");
   if (buffers.length === 1) return buffers[0];
 
@@ -625,23 +635,27 @@ export async function concatClipBuffers(buffers: Buffer[]): Promise<Buffer> {
       .join("\n");
     await writeFile(listPath, concatBody + "\n");
 
-    // Stream-copy attempt — fast, no quality loss.
-    const copyCmd = [
-      `"${ffmpegPath}"`,
-      `-f concat -safe 0`,
-      `-i "${listPath}"`,
-      `-c copy`,
-      `-movflags +faststart`,
-      `-y`,
-      `"${outputPath}"`,
-    ].join(" ");
+    // Stream-copy attempt — fast, no quality loss. Skipped when the caller
+    // knows segments have inconsistent codec params (e.g. clean reels built
+    // from raw Twitch MPEG-TS slices).
+    if (!options.forceReencode) {
+      const copyCmd = [
+        `"${ffmpegPath}"`,
+        `-f concat -safe 0`,
+        `-i "${listPath}"`,
+        `-c copy`,
+        `-movflags +faststart`,
+        `-y`,
+        `"${outputPath}"`,
+      ].join(" ");
 
-    try {
-      await execAsync(copyCmd, { timeout: 60000 });
-      console.log(`[reel] Stream-copied ${buffers.length} segments`);
-      return await readFile(outputPath);
-    } catch (copyErr: any) {
-      console.warn("[reel] Stream copy failed, re-encoding:", copyErr.stderr?.slice(-300));
+      try {
+        await execAsync(copyCmd, { timeout: 60000 });
+        console.log(`[reel] Stream-copied ${buffers.length} segments`);
+        return await readFile(outputPath);
+      } catch (copyErr: any) {
+        console.warn("[reel] Stream copy failed, re-encoding:", copyErr.stderr?.slice(-300));
+      }
     }
 
     // Fallback: re-encode through filter_complex concat. Slower but tolerates

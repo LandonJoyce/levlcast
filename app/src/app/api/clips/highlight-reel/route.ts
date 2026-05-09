@@ -292,8 +292,13 @@ async function runHighlightReel({
 
     console.log(`[reel] Concatenating ${captionedBuffers.length} captioned + clean segments`);
     const [reelBuffer, cleanReelBuffer] = await Promise.all([
+      // Captioned segments share consistent libx264 params from cutClip's
+      // encode pass — stream-copy works, falls back to re-encode if needed.
       concatClipBuffers(captionedBuffers),
-      concatClipBuffers(cleanBuffers),
+      // Clean segments are stream-copy slices of raw Twitch MPEG-TS, so codec
+      // params can vary segment-to-segment. Force a re-encode pass so the
+      // browser doesn't stutter when the editor previews the clean reel.
+      concatClipBuffers(cleanBuffers, { forceReencode: true }),
     ]);
 
     const baseFileName = `${userId}/${vodId}-reel-${Date.now()}`;
