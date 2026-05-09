@@ -227,9 +227,6 @@ export default async function LandingPage() {
             <h2 className="ll-game-strip-title">
               Each game gets <span className="ll-grad-text">its own coaching playbook</span>.
             </h2>
-            <p className="ll-game-strip-sub">
-              Match cadence, viewer expectations, and clip patterns. Each playbook is calibrated to how that specific game actually plays.
-            </p>
           </div>
           <ul className="ll-game-strip-list">
             {SUPPORTED_GAMES.map((g) => (
