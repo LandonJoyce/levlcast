@@ -30,6 +30,7 @@ export function ClipEditor({
   fullDuration,
   defaultCards,
   captionStyle,
+  isReel,
 }: {
   clipId: string;
   videoUrl: string;
@@ -38,6 +39,8 @@ export function ClipEditor({
   fullDuration: number;
   defaultCards: CaptionCard[];
   captionStyle: CaptionStyle;
+  /** Reels keep a fixed visual style — the dropdown is hidden for them. */
+  isReel: boolean;
   title: string;
 }) {
   const router = useRouter();
@@ -284,21 +287,23 @@ export function ClipEditor({
 
       {/* RIGHT — captions + style + actions */}
       <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 16, alignSelf: "start", position: "sticky", top: 16 }}>
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
-            Caption style
-          </p>
-          <select
-            value={style}
-            onChange={(e) => setStyle(e.target.value as CaptionStyle)}
-            className="select"
-            style={{ width: "100%", fontSize: 13, padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)" }}
-          >
-            {STYLE_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-        </div>
+        {!isReel && (
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
+              Caption style
+            </p>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value as CaptionStyle)}
+              className="select"
+              style={{ width: "100%", fontSize: 13, padding: "8px 10px", background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)" }}
+            >
+              {STYLE_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div style={{ flex: 1, minHeight: 0 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>

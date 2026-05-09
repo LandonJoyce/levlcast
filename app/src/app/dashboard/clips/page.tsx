@@ -279,16 +279,17 @@ export default async function ClipsPage({
                       <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                      {/* Edit only on regular clips. Highlight reels are
-                          multi-cut so a single trim+caption editor doesn't
-                          fit them yet. */}
-                      {(c.caption_style as string | null) !== "reel" && (
+                      {/* Regular clips edit freely. Reels are editable only
+                          if they have reel_segments metadata — older reels
+                          (pre-migration 012) need to be regenerated first. */}
+                      {((c.caption_style as string | null) !== "reel" ||
+                        Array.isArray(c.reel_segments) && (c.reel_segments as unknown[]).length > 0) && (
                         <Link
                           href={`/dashboard/clips/${c.id}/edit`}
                           className="btn btn-ghost"
                           style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 0" }}
                         >
-                          Edit clip
+                          {(c.caption_style as string | null) === "reel" ? "Edit reel" : "Edit clip"}
                         </Link>
                       )}
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />

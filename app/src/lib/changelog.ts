@@ -20,6 +20,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.11.2",
+    date: "2026-05-08",
+    title: "Edit Highlight Reels Too",
+    items: [
+      { type: "new", text: "Highlight reels are now editable. Trim them tighter, fix any caption typos across all the stitched moments, and pick a hook frame. Older reels need to be regenerated once before they unlock the editor." },
+      { type: "fix", text: "Editing a reel no longer doubles the captions. Reels now save a clean version of the stitched video alongside the captioned one, and the editor knows how each reel segment maps back to the original VOD." },
+    ],
+  },
+  {
     version: "v0.11.1",
     date: "2026-05-08",
     title: "Edit Your Clips",

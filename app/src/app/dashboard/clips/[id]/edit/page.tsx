@@ -49,17 +49,21 @@ export default async function ClipEditPage({
       </div>
     );
   }
-  // Highlight reels are multi-cut and their stored clean source matches that
-  // structure — single-trim + flat caption editing doesn't map onto them yet.
-  // Block the page rather than render an editor that would produce broken cuts.
-  if (clip.caption_style === "reel") {
+
+  // Reels need per-segment metadata (added in migration 012) to render
+  // captions correctly. Older reels generated before this column existed
+  // have no segment data and stay locked out — re-generating the reel
+  // populates the metadata.
+  const isReel = clip.caption_style === "reel";
+  const reelSegments = (clip.reel_segments as Array<{ vodStart: number; vodEnd: number; reelStart: number; reelEnd: number }> | null) ?? null;
+  if (isReel && (!reelSegments || reelSegments.length === 0)) {
     return (
       <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", margin: "0 0 10px" }}>
-          Highlight reels can't be edited yet
+          Re-generate this reel to edit it
         </h2>
         <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 0 16px" }}>
-          Reels are stitched from multiple moments, and the editor only handles single-clip trims for now. Edit the individual clips instead, or regenerate the reel.
+          This highlight reel was made before the editor supported reels. Regenerate it from the stream's report and the new copy will be editable.
         </p>
         <Link href="/dashboard/clips" className="btn btn-ghost" style={{ fontSize: 12 }}>
           Back to clips
@@ -68,20 +72,40 @@ export default async function ClipEditPage({
     );
   }
 
-  // Default caption cards — derive from the parent VOD's word timestamps,
-  // then fall back to anything the user already saved on this clip.
+  // Default caption cards. For regular clips: slice the VOD's words once.
+  // For reels: walk each stitched segment, slice that segment's words from
+  // the VOD, and remap the timestamps to reel-local time before grouping.
   const fullDuration = (clip.end_time_seconds as number) - (clip.start_time_seconds as number);
   const vodWords = ((clip.vods as { word_timestamps?: CaptionWord[] | null } | null)?.word_timestamps ?? null);
   let defaultCards: CaptionCard[] = [];
   if (clip.edited_captions) {
     defaultCards = clip.edited_captions as CaptionCard[];
   } else if (vodWords) {
-    const sliced = sliceWordsForClip(
-      vodWords,
-      clip.start_time_seconds as number,
-      clip.end_time_seconds as number
-    );
-    defaultCards = groupWordsIntoCards(sliced);
+    if (isReel && reelSegments) {
+      // Per-segment slice + reel-local remap, then group across the full reel.
+      // sliceWordsForClip rebases each word so t=0 = segment.vodStart, so we
+      // add segment.reelStart to land it at the right reel-local position.
+      const remapped: CaptionWord[] = [];
+      for (const seg of reelSegments) {
+        const segWords = sliceWordsForClip(vodWords, seg.vodStart, seg.vodEnd);
+        for (const w of segWords) {
+          remapped.push({
+            word: w.word,
+            start: w.start + seg.reelStart,
+            end: w.end + seg.reelStart,
+            speaker: w.speaker,
+          });
+        }
+      }
+      defaultCards = groupWordsIntoCards(remapped);
+    } else {
+      const sliced = sliceWordsForClip(
+        vodWords,
+        clip.start_time_seconds as number,
+        clip.end_time_seconds as number
+      );
+      defaultCards = groupWordsIntoCards(sliced);
+    }
   }
 
   return (
@@ -105,7 +129,8 @@ export default async function ClipEditPage({
         candidateFrames={(clip.candidate_frames as string[] | null) ?? []}
         fullDuration={fullDuration}
         defaultCards={defaultCards}
-        captionStyle={(clip.caption_style as CaptionStyle) ?? "bold"}
+        captionStyle={isReel ? "bold" : ((clip.caption_style as CaptionStyle) ?? "bold")}
+        isReel={isReel}
         title={(clip.title as string) ?? ""}
       />
     </>

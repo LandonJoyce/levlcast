@@ -126,8 +126,14 @@ export async function POST(
     const admin = createAdminClient();
     const update: Record<string, unknown> = {
       video_url: publicUrl,
-      caption_style: captionStyle,
     };
+    // caption_style="reel" doubles as the marker that distinguishes a
+    // highlight reel from a regular clip. Preserve it across edits — the
+    // burn itself is locked to a fixed visual style for reels in this
+    // iteration. Regular clips can change visual style freely.
+    if (clip.caption_style !== "reel") {
+      update.caption_style = captionStyle;
+    }
     if (editedCards) update.edited_captions = editedCards;
     if (thumbnailUrl) update.thumbnail_url = thumbnailUrl;
 

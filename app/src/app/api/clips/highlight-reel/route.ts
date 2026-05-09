@@ -246,6 +246,11 @@ async function runHighlightReel({
     // pixels — visually doubling them up.
     const captionedBuffers: Buffer[] = [];
     const cleanBuffers: Buffer[] = [];
+    // Track each segment's reel-local position so the editor can later remap
+    // word timestamps from VOD-time to reel-time. Without this metadata the
+    // editor has no way to know which VOD window plays at reel second N.
+    const reelSegmentMeta: Array<{ vodStart: number; vodEnd: number; reelStart: number; reelEnd: number }> = [];
+    let reelCursor = 0;
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       console.log(`[reel] Segment ${i + 1}/${segments.length}: ${seg.start}s-${seg.end}s "${seg.title}"`);
@@ -272,6 +277,14 @@ async function runHighlightReel({
         });
         captionedBuffers.push(result.captioned);
         cleanBuffers.push(result.cleanSource);
+        const segDuration = seg.end - seg.start;
+        reelSegmentMeta.push({
+          vodStart: seg.start,
+          vodEnd: seg.end,
+          reelStart: reelCursor,
+          reelEnd: reelCursor + segDuration,
+        });
+        reelCursor += segDuration;
       } finally {
         await download.cleanup();
       }
@@ -293,6 +306,7 @@ async function runHighlightReel({
     const { error: updateError } = await admin.from("clips").update({
       video_url: publicUrl,
       source_video_url: cleanUrl,
+      reel_segments: reelSegmentMeta,
       status: "ready",
     }).eq("id", clipId);
     if (updateError) throw new Error(`DB update failed: ${updateError.message}`);
