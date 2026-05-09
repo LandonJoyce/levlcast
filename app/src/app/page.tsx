@@ -296,9 +296,6 @@ export default async function LandingPage() {
             <h2 className="ll-h2">
               Stream. Sync. <span className="ll-grad-text">Learn.</span> Repeat.
             </h2>
-            <p style={{ fontSize: 16, color: "rgba(255,255,255,0.6)", marginTop: 10, maxWidth: 580 }}>
-              No setup. No overlay. No new habits. The whole loop runs around the way you already stream.
-            </p>
           </div>
 
           <div style={{ maxWidth: 760, marginTop: 24 }}>
