@@ -2,8 +2,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
-import { PostToYouTube, PostToTikTok, DownloadClip } from "@/components/dashboard/clip-actions";
-import { ExportClipButton } from "@/components/dashboard/clip-export-modal";
 import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { scoreColorVar } from "@/lib/score-utils";
@@ -279,25 +277,32 @@ export default async function ClipsPage({
                       <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                      {/* Regular clips edit freely. Reels are editable only
-                          if they have reel_segments metadata — older reels
-                          (pre-migration 012) need to be regenerated first. */}
-                      {(!c.is_highlight_reel ||
-                        (Array.isArray(c.reel_segments) && (c.reel_segments as unknown[]).length > 0)) && (
-                        <Link
-                          href={`/dashboard/clips/${c.id}/edit`}
-                          className="btn btn-ghost"
-                          style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 0" }}
+                      {/* One button per clip card now. Everything (trim,
+                          captions, hook frame, vertical export, post to
+                          YouTube) lives inside the editor as a single
+                          save-and-ship flow. Older reels without segment
+                          metadata still need a regenerate first — handled
+                          on the editor page itself. */}
+                      <Link
+                        href={`/dashboard/clips/${c.id}/edit`}
+                        className="btn btn-blue"
+                        style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "9px 0" }}
+                      >
+                        {c.is_highlight_reel ? "Open reel" : "Open clip"}
+                      </Link>
+                      {/* Surface where this clip already landed so the user
+                          knows they've already shipped it. */}
+                      {ytUrl && (
+                        <a
+                          href={ytUrl as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mono"
+                          style={{ fontSize: 10.5, color: "var(--ink-3)", textAlign: "center", textDecoration: "none" }}
                         >
-                          {c.is_highlight_reel ? "Edit reel" : "Edit clip"}
-                        </Link>
+                          Posted to YouTube ↗
+                        </a>
                       )}
-                      <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
-                      <PostToTikTok clipId={c.id} isConnected={isTikTokConnected} alreadyPosted={ttPostedSet.has(c.id)} />
-                      {isPro
-                        ? <ExportClipButton clipId={c.id} clipTitle={(c.title as string) || "Clip"} />
-                        : <DownloadClip clipId={c.id} />
-                      }
                     </div>
                   </div>
                 );

@@ -20,6 +20,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.12.0",
+    date: "2026-05-09",
+    title: "One-Click Save & Ship",
+    items: [
+      { type: "improved", text: "Clip and reel cards now have a single Open button instead of three different actions stacked vertically. Trim, captions, hook frame, vertical export, and YouTube posting all live inside the editor as one save-and-ship flow." },
+      { type: "new", text: "Inside the editor, pick your format (16:9 horizontal or 9:16 vertical with cam layout) and where it goes (download, post to YouTube, or both), then hit Save & ship it. The editor handles the rest in one click." },
+      { type: "improved", text: "Highlight reels can now use any caption style (bold, neon, fire, etc.). Visual style and the reel marker are tracked separately in the database so picking a style no longer breaks the reel identity." },
+    ],
+  },
+  {
     version: "v0.11.2",
     date: "2026-05-08",
     title: "Edit Highlight Reels Too",

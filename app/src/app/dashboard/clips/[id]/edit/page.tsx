@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ClipEditor } from "@/components/dashboard/clip-editor";
+import { getUserUsage } from "@/lib/limits";
 import {
   sliceWordsForClip,
   groupWordsIntoCards,
@@ -27,12 +28,18 @@ export default async function ClipEditPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: clip } = await supabase
-    .from("clips")
-    .select("*, vods(id, word_timestamps)")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: clip }, { data: connections }, usage] = await Promise.all([
+    supabase
+      .from("clips")
+      .select("*, vods(id, word_timestamps)")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase.from("social_connections").select("platform").eq("user_id", user.id),
+    getUserUsage(user.id, supabase),
+  ]);
+  const isPro = usage.plan === "pro";
+  const isYouTubeConnected = (connections ?? []).some((c) => c.platform === "youtube");
   if (!clip) notFound();
   if (!clip.source_video_url) {
     return (
@@ -130,6 +137,8 @@ export default async function ClipEditPage({
         fullDuration={fullDuration}
         defaultCards={defaultCards}
         captionStyle={(clip.caption_style as CaptionStyle) ?? "bold"}
+        isPro={isPro}
+        isYouTubeConnected={isYouTubeConnected}
         isReel={isReel}
         title={(clip.title as string) ?? ""}
       />
