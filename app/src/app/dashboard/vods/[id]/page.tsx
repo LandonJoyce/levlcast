@@ -138,16 +138,24 @@ export default async function VodPunchPage({
   const scoreColor = currentScore !== undefined ? scoreColorHex(currentScore) : "#A6B3C9";
   const topPeak = peaks[0] ?? null;
 
-  // Map each detected peak to its clip status. We match by start_time_seconds
-  // ±3s — same tolerance the clip generation API uses to prevent duplicates.
+  // Map each detected peak to its clip status. The dedupe check at clip
+  // generation time uses ±3s, but the editor can trim a clip's bounds inward
+  // by tens of seconds. So for the existence check (does this peak already
+  // have a clip?) we widen the tolerance — peaks are typically minutes apart
+  // so a 60-second window doesn't cause false matches between distinct peaks.
   type ClipRow = { id: string; status: string; start_time_seconds: number; video_url: string | null; title: string | null; is_highlight_reel: boolean | null };
   const clipsList: ClipRow[] = (allClipsForVod as ClipRow[] | null) ?? [];
-  function findClipForPeak(peakStart: number): ClipRow | undefined {
-    const target = Math.round(Number(peakStart));
-    // Skip reel rows when matching individual peaks — the reel's start_time
-    // is the first segment and would otherwise shadow that peak's "Generate"
-    // button.
-    return clipsList.find((c) => !c.is_highlight_reel && Math.abs(c.start_time_seconds - target) <= 3);
+  function findClipForPeak(peakStart: number, peakEnd: number): ClipRow | undefined {
+    const peakTarget = Math.round(Number(peakStart));
+    const peakRangeEnd = Math.round(Number(peakEnd));
+    // Match if the clip's start falls anywhere within (peak - 60s) .. peak end.
+    // Trimming pushes start forward; we never push it backward past the peak,
+    // so the clip's start is always >= original peak start.
+    return clipsList.find((c) =>
+      !c.is_highlight_reel &&
+      c.start_time_seconds >= peakTarget - 60 &&
+      c.start_time_seconds <= peakRangeEnd + 5
+    );
   }
   const existingReel = clipsList.find((c) => c.is_highlight_reel && c.status === "ready");
   const processingReel = clipsList.find((c) => c.is_highlight_reel && c.status === "processing");
@@ -375,7 +383,7 @@ export default async function VodPunchPage({
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {peaks.slice(1).map((p, i) => {
                   const realIndex = i + 1;
-                  const existingClip = findClipForPeak(Number(p.start));
+                  const existingClip = findClipForPeak(Number(p.start), Number(p.end));
                   const startSec = Number(p.start);
                   const mm = Math.floor(startSec / 60);
                   const ss = Math.floor(startSec % 60);

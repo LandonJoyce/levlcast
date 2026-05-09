@@ -103,6 +103,9 @@ export function ClipEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progressNote, setProgressNote] = useState<string | null>(null);
+  // Sticks around after saving=false so the user has visible confirmation
+  // that "Save & ship it" actually did something. Auto-clears on next click.
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
 
   // Format & destination state — drive the post-save export flow.
   const [format, setFormat] = useState<"horizontal" | "vertical">("horizontal");
@@ -162,10 +165,18 @@ export function ClipEditor({
     }
   }
 
+  // Hard cap to match the server-side cap so users can't paste a paragraph
+  // and have it silently truncated only at save time.
+  const MAX_CAPTION_CHARS = 60;
+
   function updateCardText(idx: number, text: string) {
-    setCards((prev) => prev.map((c, i) => (i === idx ? { ...c, text } : c)));
+    const capped = text.slice(0, MAX_CAPTION_CHARS);
+    setCards((prev) => prev.map((c, i) => (i === idx ? { ...c, text: capped } : c)));
   }
   function deleteCard(idx: number) {
+    const card = cards[idx];
+    const preview = card ? card.text.slice(0, 40) : "this caption";
+    if (!window.confirm(`Drop "${preview}"? You can't undo this without re-loading the page.`)) return;
     setCards((prev) => prev.filter((_, i) => i !== idx));
   }
 
@@ -193,6 +204,7 @@ export function ClipEditor({
     setSaving(true);
     setError(null);
     setYoutubeUrl(null);
+    setSavedFlash(null);
     setProgressNote("Saving your edits...");
 
     try {
@@ -244,7 +256,13 @@ export function ClipEditor({
         if (ytJson.url) setYoutubeUrl(ytJson.url);
       }
 
-      setProgressNote("Done.");
+      // Build a destination summary so the success flash actually tells the
+      // user what happened (download fired? posted to YouTube?).
+      const parts: string[] = ["Saved"];
+      if (doDownload) parts.push(format === "vertical" ? "vertical download started" : "download started");
+      if (doYouTube) parts.push("posted to YouTube");
+      setSavedFlash(parts.join(" · "));
+      setProgressNote(null);
       router.refresh();
     } catch {
       setError("Network error during ship");
@@ -464,6 +482,7 @@ export function ClipEditor({
                       <input
                         type="text"
                         value={c.text}
+                        maxLength={MAX_CAPTION_CHARS}
                         onChange={(e) => updateCardText(i, e.target.value)}
                         style={{
                           flex: 1,
@@ -576,6 +595,22 @@ export function ClipEditor({
           )}
           {progressNote && saving && (
             <p className="mono" style={{ fontSize: 11, color: "var(--ink-3)", margin: 0 }}>{progressNote}</p>
+          )}
+          {savedFlash && !saving && !error && (
+            <p
+              className="mono"
+              style={{
+                fontSize: 11.5,
+                color: "var(--green, #A3E635)",
+                margin: 0,
+                padding: "6px 8px",
+                background: "color-mix(in oklab, var(--green, #A3E635) 14%, var(--surface-2))",
+                border: "1px solid color-mix(in oklab, var(--green, #A3E635) 32%, var(--line))",
+                borderRadius: 6,
+              }}
+            >
+              {savedFlash}
+            </p>
           )}
           {youtubeUrl && (
             <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 11, color: "var(--blue)" }}>

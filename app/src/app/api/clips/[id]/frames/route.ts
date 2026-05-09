@@ -16,6 +16,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { extractFrame } from "@/lib/ffmpeg";
 import { uploadToR2 } from "@/lib/r2";
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { writeFile, mkdtemp, unlink } from "fs/promises";
 import { join } from "path";
@@ -34,6 +35,13 @@ export async function POST(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // 30 frame extractions per hour per user. Each call downloads the source
+  // mp4 + runs 4 ffmpeg seeks + uploads 4 jpegs to R2. Without this cap a
+  // user could spam the editor and drain R2 egress.
+  if (!rateLimit(`frames:${user.id}`, 30, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many frame extractions. Try again in a few minutes." }, { status: 429 });
+  }
 
   const { id } = await context.params;
 
@@ -54,6 +62,12 @@ export async function POST(
   const sourceUrl = (clip.source_video_url as string | null) ?? (clip.video_url as string | null);
   if (!sourceUrl) {
     return NextResponse.json({ error: "Clip has no playable source" }, { status: 404 });
+  }
+  // SSRF defense — only fetch from our R2 bucket.
+  const r2Base = process.env.R2_PUBLIC_URL;
+  if (!r2Base || !sourceUrl.startsWith(r2Base)) {
+    console.error(`[frames] Refused non-R2 source URL for clip=${id}`);
+    return NextResponse.json({ error: "Invalid clip source URL" }, { status: 400 });
   }
 
   const duration = (clip.end_time_seconds as number) - (clip.start_time_seconds as number);
