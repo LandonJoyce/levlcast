@@ -279,6 +279,13 @@ export default async function ClipsPage({
                       <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
                     </div>
                     <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+                      <Link
+                        href={`/dashboard/clips/${c.id}/edit`}
+                        className="btn btn-ghost"
+                        style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 0" }}
+                      >
+                        Edit clip
+                      </Link>
                       <PostToYouTube clipId={c.id} isConnected={isYouTubeConnected} existingUrl={ytUrl} />
                       <PostToTikTok clipId={c.id} isConnected={isTikTokConnected} alreadyPosted={ttPostedSet.has(c.id)} />
                       {isPro

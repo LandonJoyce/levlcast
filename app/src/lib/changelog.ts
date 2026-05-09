@@ -20,6 +20,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.11.1",
+    date: "2026-05-08",
+    title: "Edit Your Clips",
+    items: [
+      { type: "new", text: "New clip editor: trim the start and end of any clip down to the exact second, fix caption typos, drop caption cards you don't want, and pick a hook frame for the thumbnail. Re-edits don't cost a clip from your quota." },
+      { type: "improved", text: "Highlight reel cuts are now ~9 seconds each instead of 18, and the strongest moment leads the reel. Tighter cuts feel more produced and the hook hits in the first three seconds." },
+    ],
+  },
+  {
     version: "v0.11.0",
     date: "2026-05-08",
     title: "Free Trial, Recommended Cuts, Highlight Reel",

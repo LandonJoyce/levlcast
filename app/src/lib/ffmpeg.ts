@@ -275,6 +275,13 @@ export interface CutClipOptions {
   vodWindow?: { start: number; end: number };
   /** Caption visual style. Defaults to "bold". */
   captionStyle?: CaptionStyle;
+  /**
+   * Pre-built caption cards in clip-relative timestamps (0 = startSeconds).
+   * When supplied, bypasses the vodWords-derived card generation. Used by
+   * the in-app clip editor so user-edited card text/timing wins over the
+   * auto-generated set.
+   */
+  editedCards?: CaptionCard[];
 }
 
 /**
@@ -318,12 +325,17 @@ export async function cutClip(
   // download we just fall back to a no-caption encode rather than failing.
   let captionFilter = "";
   let captionFiles: string[] = [];
-  if (options.vodWords?.length && options.vodWindow) {
+  const haveEditedCards = (options.editedCards?.length ?? 0) > 0;
+  const haveAutoSource = options.vodWords?.length && options.vodWindow;
+  if (haveEditedCards || haveAutoSource) {
     try {
       const fontPath = await getCaptionFont();
       if (fontPath) {
-        const sliced = sliceWordsForClip(options.vodWords, options.vodWindow.start, options.vodWindow.end);
-        const cards = groupWordsIntoCards(sliced);
+        const cards: CaptionCard[] = haveEditedCards
+          ? options.editedCards!
+          : groupWordsIntoCards(
+              sliceWordsForClip(options.vodWords!, options.vodWindow!.start, options.vodWindow!.end)
+            );
         if (cards.length > 0) {
           // Caption cards use clip-relative timestamps (0 = clip start).
           // The FFmpeg drawtext enable expression evaluates against the
@@ -529,6 +541,42 @@ export async function cutClip(
     await unlink(outputPath).catch(() => {});
     await unlink(cleanOutputPath).catch(() => {});
     for (const f of captionFiles) await unlink(f).catch(() => {});
+    try {
+      const { rmdir } = await import("fs/promises");
+      await rmdir(tempDir);
+    } catch {}
+  }
+}
+
+/**
+ * Extract a single JPEG frame at `timeSeconds` from an MP4 file.
+ *
+ * Used by the hook-frame picker in the clip editor: we pull 4 candidate
+ * frames from a clip and let the streamer choose which one represents the
+ * thumbnail. Output is a small ~85% JPEG so the picker loads instantly.
+ */
+export async function extractFrame(
+  inputFilePath: string,
+  timeSeconds: number
+): Promise<Buffer> {
+  const ffmpegPath = await getFFmpegPath();
+  const tempDir = await mkdtemp(join(tmpdir(), "levlcast-frame-"));
+  const outputPath = join(tempDir, "frame.jpg");
+
+  try {
+    const cmd = [
+      `"${ffmpegPath}"`,
+      `-ss ${Math.max(0, timeSeconds)}`,
+      `-i "${inputFilePath}"`,
+      `-frames:v 1`,
+      `-q:v 4`,
+      `-y`,
+      `"${outputPath}"`,
+    ].join(" ");
+    await execAsync(cmd, { timeout: 30000 });
+    return await readFile(outputPath);
+  } finally {
+    await unlink(outputPath).catch(() => {});
     try {
       const { rmdir } = await import("fs/promises");
       await rmdir(tempDir);
