@@ -142,6 +142,10 @@ export function ClipEditor({
   const [upgradeReason, setUpgradeReason] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
   const [reverting, setReverting] = useState(false);
+  // Set after save completes when the user picked Download. Rendered as a
+  // real <a> the user clicks themselves — bypasses popup blockers and
+  // avoids about:blank from a streaming mp4 response opened in a new tab.
+  const [readyDownload, setReadyDownload] = useState<{ url: string; label: string } | null>(null);
 
   // Keep playback inside the trimmed window so the streamer can preview
   // exactly what the exported clip will look like. Loops back to trimStart
@@ -271,6 +275,7 @@ export function ClipEditor({
     setError(null);
     setYoutubeUrl(null);
     setSavedFlash(null);
+    setReadyDownload(null);
     setProgressNote("Saving your edits...");
 
     try {
@@ -294,18 +299,19 @@ export function ClipEditor({
         return;
       }
 
-      // Step 2 — kick off destinations. Vertical+download streams a fresh
-      // 9:16 render. Horizontal+download proxies the saved video.
-      // YouTube currently posts the saved horizontal clip; vertical+youtube
-      // is a follow-up so we just warn here.
+      // Step 2 — set up destinations. We render a real <a download> for the
+      // download instead of programmatic window.open() because:
+      //   1) the user gesture is gone after the edit-save await, so Firefox
+      //      and Safari pop-up blockers reject window.open()
+      //   2) the export endpoint streams an mp4 — opening it as a tab shows
+      //      about:blank while the download buffers
+      // The clickable link below the success message handles both cleanly.
       if (doDownload) {
-        setProgressNote("Preparing your download...");
-        const downloadUrl = format === "vertical"
+        const url = format === "vertical"
           ? `/api/clips/${clipId}/export?layout=${layout}`
           : `/api/clips/${clipId}/download`;
-        // Open in a new tab so the editor stays put — the browser handles the
-        // attachment download from there.
-        window.open(downloadUrl, "_blank");
+        const label = format === "vertical" ? "Download 9:16 vertical" : "Download 16:9";
+        setReadyDownload({ url, label });
       }
 
       if (doYouTube) {
@@ -324,9 +330,9 @@ export function ClipEditor({
       }
 
       // Build a destination summary so the success flash actually tells the
-      // user what happened (download fired? posted to YouTube?).
+      // user what happened.
       const parts: string[] = ["Saved"];
-      if (doDownload) parts.push(format === "vertical" ? "vertical download started" : "download started");
+      if (doDownload) parts.push("download ready below");
       if (doYouTube) parts.push("posted to YouTube");
       setSavedFlash(parts.join(" · "));
       setProgressNote(null);
@@ -708,6 +714,23 @@ export function ClipEditor({
             >
               {savedFlash}
             </p>
+          )}
+          {readyDownload && !saving && (
+            <a
+              href={readyDownload.url}
+              // download attribute hints to the browser to save instead of
+              // navigating. Combined with the endpoint's
+              // Content-Disposition: attachment header, this triggers a
+              // direct download with no new tab and no popup blocker fight.
+              download
+              className="btn btn-blue"
+              style={{
+                width: "100%", justifyContent: "center", textAlign: "center",
+                fontSize: 12.5, padding: "9px 0", textDecoration: "none",
+              }}
+            >
+              {readyDownload.label}
+            </a>
           )}
           {youtubeUrl && (
             <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 11, color: "var(--blue)" }}>
