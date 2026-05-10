@@ -8,6 +8,7 @@ import { UnpostedClipsCard } from "@/components/dashboard/unposted-clips-card";
 import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
 import type { CoachingArcData } from "@/lib/coaching-arc";
 import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
+import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -197,6 +198,8 @@ export default async function DashboardPage() {
           <p className="page-sub">Let&apos;s analyze your first stream.</p>
         </div>
 
+        <OnboardingChecklist />
+
         <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "48px 32px", textAlign: "center", position: "relative" }}>
             <div style={{ position: "absolute", inset: 0, background: "radial-gradient(600px 280px at 50% 0%, color-mix(in oklab, var(--blue) 18%, transparent), transparent 70%)", pointerEvents: "none" }} />
@@ -255,6 +258,8 @@ export default async function DashboardPage() {
           <Link href="/dashboard/vods" className="btn btn-blue"><Icons.Twitch /> Sync streams</Link>
         </div>
       </div>
+
+      <OnboardingChecklist />
 
       {/* Hero focus card */}
       <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>

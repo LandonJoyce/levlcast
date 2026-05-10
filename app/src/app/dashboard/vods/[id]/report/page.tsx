@@ -191,6 +191,60 @@ export default async function VodReportPage({
         />
       </div>
 
+      {/* TL;DR hero — the score, the one fix, the action. Sits above the
+          detailed breakdown so users always read the summary first instead
+          of getting buried in sub-scores and anti-patterns. */}
+      {coachReport && (
+        (() => {
+          const punchLine: string | null = coachReport?.punch_line ?? null;
+          const fallbackFix: string | null = coachReport?.recommendation
+            ? (coachReport.recommendation as string).replace(/ — /g, ". ").replace(/—/g, " ")
+            : null;
+          const oneFix = punchLine ?? fallbackFix;
+          const topReadyClip = readyClips.sort(
+            (a, b) => ((b.peak_score as number) ?? 0) - ((a.peak_score as number) ?? 0)
+          )[0];
+          return (
+            <div
+              style={{
+                marginBottom: 24,
+                padding: "20px 24px",
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                borderLeft: `3px solid ${scoreColor}`,
+                borderRadius: 12,
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                alignItems: "center",
+                gap: 20,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                {oneFix && (
+                  <>
+                    <p className="mono-label" style={{ color: "var(--ink-3)", marginBottom: 8 }}>
+                      The one thing to fix next stream
+                    </p>
+                    <p style={{ fontSize: 16, lineHeight: 1.55, color: "var(--ink)", margin: 0, fontWeight: 500 }}>
+                      {oneFix}
+                    </p>
+                  </>
+                )}
+              </div>
+              {topReadyClip && (
+                <Link
+                  href={`/dashboard/clips/${topReadyClip.id}/edit`}
+                  className="btn btn-blue"
+                  style={{ fontSize: 13, padding: "10px 16px", whiteSpace: "nowrap", textDecoration: "none" }}
+                >
+                  Open clip in editor →
+                </Link>
+              )}
+            </div>
+          );
+        })()
+      )}
+
       {/* Coach report */}
       {coachReport ? (
         <CoachReportCard
