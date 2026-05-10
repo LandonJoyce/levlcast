@@ -92,13 +92,40 @@ export function CoachingArcCard({ arc }: { arc: CoachingArcData }) {
               <span className="mono-label" style={{ color: "var(--danger)", display: "block", marginBottom: 10 }}>
                 Still working on
               </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {arc.recurring_improvements.map((item, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5 }}>
-                    <span style={{ color: "var(--danger)", flexShrink: 0, fontWeight: 700 }}>!</span>
-                    {item}
-                  </div>
-                ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {arc.recurring_improvements.map((item, i) => {
+                  const examples = arc.recurring_examples?.[i] ?? [];
+                  return (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 8, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5 }}>
+                        <span style={{ color: "var(--danger)", flexShrink: 0, fontWeight: 700 }}>!</span>
+                        {item}
+                      </div>
+                      {examples.length > 0 && (
+                        // Sample lines the streamer could actually say next stream.
+                        // Reads as "try this" not as homework — purely concrete examples.
+                        <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 4 }}>
+                          {examples.map((ex, j) => (
+                            <p
+                              key={j}
+                              style={{
+                                fontSize: 12.5,
+                                color: "var(--ink-2)",
+                                lineHeight: 1.5,
+                                margin: 0,
+                                paddingLeft: 10,
+                                borderLeft: "2px solid color-mix(in oklab, var(--danger) 40%, var(--line))",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              &ldquo;{ex}&rdquo;
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

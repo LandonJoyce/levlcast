@@ -229,7 +229,7 @@ function ArcCard({
 // ─── Insight Card ─────────────────────────────────────────────────────────────
 
 function InsightCard({
-  accent, label, body, ts, index, vodId,
+  accent, label, body, ts, index, vodId, recurring = false,
 }: {
   accent: string;
   label: string;
@@ -237,6 +237,8 @@ function InsightCard({
   ts: string | null;
   index: number;
   vodId?: string;
+  /** True when this issue has shown up in multiple recent streams. */
+  recurring?: boolean;
 }) {
   const tsHref = ts && vodId ? vodUrl(vodId, ts) : null;
   return (
@@ -271,7 +273,7 @@ function InsightCard({
           </span>
         )
       )}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: label && body ? 6 : 0, paddingRight: ts ? 72 : 0 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: label && body ? 6 : 0, paddingRight: ts ? 72 : 0, flexWrap: "wrap" }}>
         <span style={{
           fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
           color: "#4D5876", letterSpacing: "0.16em",
@@ -285,6 +287,21 @@ function InsightCard({
         }}>
           {label || body}
         </span>
+        {recurring && (
+          // Visible signal that this is a pattern, not a one-off. Sits inline
+          // next to the label so the eye picks it up immediately without
+          // making the user read the synthesis below to find it.
+          <span style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+            letterSpacing: "0.1em", textTransform: "uppercase",
+            color: accent,
+            background: "color-mix(in oklab, " + accent + " 15%, transparent)",
+            border: "1px solid color-mix(in oklab, " + accent + " 40%, transparent)",
+            padding: "2px 6px", borderRadius: 4,
+          }}>
+            Recurring
+          </span>
+        )}
       </div>
       {label && body && (
         <p style={{
@@ -439,7 +456,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [],
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -453,6 +470,12 @@ export function CoachReportCard({
   trajectory?: TrajectoryPoint[];
   wordTimestamps?: Array<{ start: number; end: number }> | null;
   twitchVodId?: string;
+  /**
+   * Coaching arc's recurring_improvements list, used to badge improvements
+   * that have shown up in multiple recent streams. Passing [] disables the
+   * badging — older reports without arc data won't show any badges.
+   */
+  recurringImprovements?: string[];
 }) {
   // Strip em dashes from stored report text — old records in the DB may have them
   // even though new reports are cleaned at parse time in lib/analyze.ts
@@ -815,7 +838,19 @@ export function CoachReportCard({
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {(report.improvements ?? []).map((s, i) => {
                       const { label, body, ts } = parseItem(s);
-                      return <InsightCard key={i} accent="#F59E0B" label={label} body={body} ts={ts} index={i + 1} vodId={twitchVodId} />;
+                      // Mark as recurring when the label (or the full string)
+                      // shows up in the coaching arc's recurring list. Fuzzy:
+                      // case-insensitive substring match because arc labels
+                      // may be slightly reworded ("No Take: menu stretches"
+                      // vs "**No Take** — menus need a hot take").
+                      const isRecurring = recurringImprovements.some((r) => {
+                        const rl = r.toLowerCase();
+                        const ll = label.toLowerCase();
+                        const sl = s.toLowerCase();
+                        return (ll && (rl.includes(ll) || ll.includes(rl.split(":")[0].trim()))) ||
+                          (sl && rl.split(":")[0].trim() && sl.includes(rl.split(":")[0].trim()));
+                      });
+                      return <InsightCard key={i} accent="#F59E0B" label={label} body={body} ts={ts} index={i + 1} vodId={twitchVodId} recurring={isRecurring} />;
                     })}
                   </div>
                 </div>

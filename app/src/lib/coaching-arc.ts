@@ -5,6 +5,13 @@ export interface CoachingArcData {
   synthesis: string;
   recurring_improvements: string[];
   improving_areas: string[];
+  /**
+   * Parallel to recurring_improvements (same length, same index). Each entry
+   * is 2-3 short example lines the streamer could actually say next stream to
+   * address that recurring issue. Game-specific where possible. Empty array
+   * means the model couldn't produce examples for that issue.
+   */
+  recurring_examples?: string[][];
   score_history: Array<{ score: number; date: string; vod_id: string }>;
   generated_for_vod_id: string;
 }
@@ -16,7 +23,7 @@ export async function generateCoachingArc(
 ): Promise<CoachingArcData | null> {
   const { data: vods } = await supabase
     .from("vods")
-    .select("id, stream_date, coach_report")
+    .select("id, stream_date, coach_report, game_category, title")
     .eq("user_id", userId)
     .eq("status", "ready")
     .not("coach_report", "is", null)
@@ -41,14 +48,20 @@ export async function generateCoachingArc(
     })
     .join("\n\n");
 
+  // Pick a representative game so the example talking points feel game-
+  // specific. Use the most recent stream's category, falling back to whatever
+  // we have. Empty string when nothing is set.
+  const latestVod = vods[0];
+  const gameContext = (latestVod?.game_category as string | null) || (latestVod?.title as string | null) || "";
+
   const anthropic = new Anthropic();
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 400,
+    max_tokens: 700,
     messages: [
       {
         role: "user",
-        content: `You are reviewing coaching data for a Twitch streamer across ${recent.length} streams, listed oldest to newest.
+        content: `You are reviewing coaching data for a Twitch streamer across ${recent.length} streams, listed oldest to newest.${gameContext ? `\n\nThe streamer mostly plays / streams: ${gameContext}` : ""}
 
 ${streamsText}
 
@@ -56,15 +69,18 @@ Tasks:
 1. Find 1-2 themes that appear in 2 or more streams (persistent problems). Max 8 words each. Be specific and direct.
 2. Find themes from the first 2 streams that do NOT appear in the last 2 streams (they improved). Max 8 words each. If none, use an empty array.
 3. Write 2 sentences about their coaching arc. Reference specific scores and patterns. Plain sentences only. No em dashes. No bullet points. No markdown.
+4. For EACH recurring theme from task 1, write 2 short example lines the streamer could actually say next stream to address it. Use first person. Make them sound like a real streamer (casual, opinionated, sometimes blunt). Reference their game when natural. Max 18 words per line. No em dashes. No quotes around the lines.
 
-Respond with valid JSON only: { "recurring": string[], "improved": string[], "synthesis": string }`,
+The "recurring_examples" array must be parallel to "recurring": same length, same order. Each entry is an array of 2 example lines for the corresponding recurring theme.
+
+Respond with valid JSON only: { "recurring": string[], "improved": string[], "synthesis": string, "recurring_examples": string[][] }`,
       },
     ],
   });
 
   const text = (msg.content[0] as { type: string; text: string }).text;
 
-  let parsed: { recurring: string[]; improved: string[]; synthesis: string };
+  let parsed: { recurring: string[]; improved: string[]; synthesis: string; recurring_examples?: string[][] };
   try {
     const match = text.match(/\{[\s\S]*\}/);
     parsed = JSON.parse(match?.[0] ?? "{}");
@@ -72,12 +88,34 @@ Respond with valid JSON only: { "recurring": string[], "improved": string[], "sy
     return null;
   }
 
-  const clean = (s: string) => s.replace(/—/g, " - ").replace(/–/g, " - ").trim();
+  // Strip em/en dashes per the project-wide rule. ' — ' (with spaces) becomes
+  // '. ' so sentences still flow; bare dashes become a single space. Avoid
+  // hyphen replacements since 'word-word' reads the same way as an em dash.
+  const clean = (s: string) =>
+    s
+      .replace(/ [—–] /g, ". ")
+      .replace(/[—–]/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+  // Pad / trim recurring_examples so it's always parallel to recurring,
+  // even if the model returned the wrong shape.
+  const recurring = (parsed.recurring ?? []).map(clean);
+  const rawExamples = Array.isArray(parsed.recurring_examples) ? parsed.recurring_examples : [];
+  const recurring_examples = recurring.map((_, i) => {
+    const entry = Array.isArray(rawExamples[i]) ? rawExamples[i] : [];
+    return entry
+      .filter((s): s is string => typeof s === "string")
+      .map(clean)
+      .filter((s) => s.length > 0)
+      .slice(0, 3);
+  });
 
   return {
     synthesis: clean(parsed.synthesis ?? ""),
-    recurring_improvements: (parsed.recurring ?? []).map(clean),
+    recurring_improvements: recurring,
     improving_areas: (parsed.improved ?? []).map(clean),
+    recurring_examples,
     score_history: scoreHistory,
     generated_for_vod_id: latestVodId,
   };

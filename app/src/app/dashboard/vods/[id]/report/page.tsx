@@ -86,7 +86,7 @@ export default async function VodReportPage({
     supabase.from("vods").select("status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(20),
     // Prior stats also filtered to streams before this one
     supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(50),
-    supabase.from("profiles").select("plan, subscription_expires_at").eq("id", user!.id).single(),
+    supabase.from("profiles").select("plan, subscription_expires_at, coaching_arc").eq("id", user!.id).single(),
   ]);
 
   const isPro =
@@ -260,6 +260,11 @@ export default async function VodReportPage({
           trajectory={trajectory}
           wordTimestamps={wordTimestamps}
           twitchVodId={vod.twitch_vod_id ?? undefined}
+          recurringImprovements={
+            Array.isArray((profileForPlan?.coaching_arc as { recurring_improvements?: unknown } | null)?.recurring_improvements)
+              ? ((profileForPlan!.coaching_arc as { recurring_improvements?: string[] }).recurring_improvements ?? [])
+              : []
+          }
         />
       ) : (
         <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
