@@ -44,6 +44,45 @@ function vodUrl(vodId: string, ts: string): string {
   return `https://www.twitch.tv/videos/${vodId}?t=${twitchTimestamp(parseTimeSecs(ts))}`;
 }
 
+/**
+ * Walk a string and turn every M:SS or H:MM:SS substring into a clickable
+ * Twitch deep-link, leaving the rest of the text alone. Used for body copy
+ * in the Strengths / Improvements / Opening / Closing sections where the
+ * AI writes prose that mentions timestamps inline.
+ *
+ * Returns a React fragment so it can drop directly into JSX in place of a
+ * plain string.
+ */
+const TIMESTAMP_RE = /\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
+function linkTimestamps(text: string | null | undefined, vodId: string | undefined, color: string = "#A3E635"): React.ReactNode {
+  if (!text) return text ?? "";
+  if (!vodId) return text;
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  // Reset the regex lastIndex since /g state persists across calls.
+  TIMESTAMP_RE.lastIndex = 0;
+  while ((match = TIMESTAMP_RE.exec(text)) !== null) {
+    if (match.index > last) out.push(text.slice(last, match.index));
+    const ts = match[0];
+    out.push(
+      <a
+        key={`${match.index}-${ts}`}
+        href={vodUrl(vodId, ts)}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color, textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}
+        title="Open this moment on Twitch"
+      >
+        {ts}
+      </a>
+    );
+    last = match.index + ts.length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out.length === 1 ? out[0] : <>{out}</>;
+}
+
 function fmtDur(s: number) {
   if (s >= 60) return `${Math.floor(s / 60)}m${s % 60 > 0 ? ` ${s % 60}s` : ""}`;
   return `${s}s`;
@@ -139,12 +178,13 @@ function useAudio(r: CoachReport, prev?: number) {
 // ─── Arc Card (Opening / Closing) ────────────────────────────────────────────
 
 function ArcCard({
-  index, label, body, quality,
+  index, label, body, quality, vodId,
 }: {
   index: string;
   label: string;
   body: string;
   quality?: "strong" | "average" | "weak";
+  vodId?: string;
 }) {
   const qColor = quality === "strong" ? "#A3E635" : quality === "weak" ? "#F87171" : "#F59E0B";
   const qBg = quality === "strong"
@@ -180,7 +220,7 @@ function ArcCard({
         fontSize: "calc(var(--cs, 1) * 14px)",
         color: "#ECF1FA", lineHeight: 1.55, margin: 0,
       }}>
-        {body}
+        {linkTimestamps(body, vodId, "#ECF1FA")}
       </p>
     </div>
   );
@@ -252,7 +292,7 @@ function InsightCard({
           fontSize: "calc(var(--cs, 1) * 12px)", color: "#A6B3C9", lineHeight: 1.6,
           margin: 0, paddingLeft: 22,
         }}>
-          {body}
+          {linkTimestamps(body, vodId, accent)}
         </p>
       )}
     </div>
@@ -645,7 +685,7 @@ export function CoachReportCard({
               </div>
               {report.stream_story ? (
                 <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.7, color: "#D4DCF0", margin: 0 }}>
-                  {clean(report.stream_story)}
+                  {linkTimestamps(clean(report.stream_story), twitchVodId, "#D4DCF0")}
                 </p>
               ) : (
                 <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.7, color: "#A6B3C9", margin: 0 }}>
@@ -730,7 +770,7 @@ export function CoachReportCard({
                 The #1 Fix
               </div>
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.65, color: "#ECF1FA", margin: 0 }}>
-                {clean(report.recommendation)}
+                {linkTimestamps(clean(report.recommendation), twitchVodId, "#ECF1FA")}
               </p>
             </div>
           ) : !isPro ? (
@@ -844,6 +884,7 @@ export function CoachReportCard({
                   label="Opening"
                   quality={report.cold_open.score as "strong" | "average" | "weak"}
                   body={report.cold_open.note}
+                  vodId={twitchVodId}
                 />
               )}
               {report.closing?.note && (
@@ -852,6 +893,7 @@ export function CoachReportCard({
                   label="Closing"
                   quality={report.closing.score as "strong" | "average" | "weak"}
                   body={report.closing.note}
+                  vodId={twitchVodId}
                 />
               )}
             </div>
