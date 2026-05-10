@@ -1,5 +1,5 @@
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
-import { fetchTwitchVods, getAppAccessToken, mapVodToRow } from "@/lib/twitch";
+import { fetchTwitchVods, getAppAccessToken, mapVodToRow, refreshTwitchToken } from "@/lib/twitch";
 import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { sendPush } from "@/lib/push";
@@ -28,10 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 
-  // 2. Get profile to find their Twitch ID
+  // 2. Get profile + the user's stored Twitch tokens
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_id")
+    .select("twitch_id, twitch_access_token, twitch_refresh_token")
     .eq("id", user.id)
     .single();
 
@@ -42,31 +42,63 @@ export async function POST(request: Request) {
     );
   }
 
-  // 3. Get an app access token (client credentials — no user token needed)
-  let appToken: string;
-  try {
-    appToken = await getAppAccessToken();
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("App token failed:", message);
-    return NextResponse.json(
-      { error: "Failed to authenticate with Twitch" },
-      { status: 502 }
-    );
+  // Try the user's OAuth token first, fall back to app token. User tokens
+  // have the streamer's identity attached, which lets Twitch return mature-
+  // flagged content that anonymous app tokens get age-gated out of —
+  // Storm's recent VODs were missing because his channel is marked 18+
+  // and Helix returns an empty list for app tokens against those channels.
+  // Falls back to app token if user token is missing/expired and refresh
+  // also fails.
+  const admin = createAdminClient();
+
+  let twitchVods: Awaited<ReturnType<typeof fetchTwitchVods>> = [];
+  let lastError: string | null = null;
+  let usedToken: "user" | "user-refreshed" | "app" | "none" = "none";
+
+  // Attempt 1: stored user token.
+  if (profile.twitch_access_token) {
+    try {
+      twitchVods = await fetchTwitchVods(profile.twitch_id, profile.twitch_access_token, 40);
+      usedToken = "user";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.warn(`[twitch/vods] user token failed for user=${user.id}, will try refresh:`, lastError);
+    }
   }
 
-  // 4. Fetch VODs from Twitch Helix API
-  let twitchVods;
-  try {
-    twitchVods = await fetchTwitchVods(profile.twitch_id, appToken, 40);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("Twitch VOD fetch failed:", message);
-    return NextResponse.json(
-      { error: "Failed to fetch VODs from Twitch", detail: message },
-      { status: 502 }
-    );
+  // Attempt 2: refresh and retry user token (only if refresh token available).
+  if (twitchVods.length === 0 && usedToken !== "user" && profile.twitch_refresh_token) {
+    try {
+      const refreshed = await refreshTwitchToken(profile.twitch_refresh_token);
+      await admin.from("profiles").update({
+        twitch_access_token: refreshed.accessToken,
+        twitch_refresh_token: refreshed.refreshToken,
+      }).eq("id", user.id);
+      twitchVods = await fetchTwitchVods(profile.twitch_id, refreshed.accessToken, 40);
+      usedToken = "user-refreshed";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.warn(`[twitch/vods] user-refreshed token also failed for user=${user.id}:`, lastError);
+    }
   }
+
+  // Attempt 3: app token. Last resort — won't see age-gated channels.
+  if (twitchVods.length === 0 && usedToken === "none") {
+    try {
+      const appToken = await getAppAccessToken();
+      twitchVods = await fetchTwitchVods(profile.twitch_id, appToken, 40);
+      usedToken = "app";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.error(`[twitch/vods] all token paths failed for user=${user.id}:`, lastError);
+      return NextResponse.json(
+        { error: "Failed to fetch VODs from Twitch", detail: lastError },
+        { status: 502 }
+      );
+    }
+  }
+
+  console.log(`[twitch/vods] user=${user.id} fetched ${twitchVods.length} via ${usedToken}`);
 
   if (twitchVods.length === 0) {
     return NextResponse.json({ synced: 0, total: 0 });
