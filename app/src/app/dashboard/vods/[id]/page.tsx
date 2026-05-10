@@ -7,7 +7,6 @@ import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { HighlightReelButton } from "@/components/dashboard/highlight-reel-button";
 import { ShareReportButton } from "@/components/dashboard/share-report-button";
-import { DownloadClip, CopyCaption, PostToYouTube, ChangeStyleButton } from "@/components/dashboard/clip-actions";
 import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebration";
 import { scoreColorHex } from "@/lib/score-utils";
 
@@ -264,27 +263,9 @@ export default async function VodPunchPage({
                 </video>
               </div>
               <div style={{ padding: "16px 28px 20px", borderBottom: "1px solid var(--line)" }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: "0 0 12px" }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0 }}>
                   {topClip.title}
                 </p>
-                <Link
-                  href={`/dashboard/clips/${topClip.id}/edit`}
-                  className="btn btn-blue"
-                  style={{ width: "100%", justifyContent: "center", fontSize: 13, padding: "10px 0", marginBottom: 10, textDecoration: "none" }}
-                >
-                  Open in editor →
-                </Link>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-                  <DownloadClip clipId={topClip.id} />
-                  <CopyCaption caption={topClip.caption_text} />
-                  <PostToYouTube clipId={topClip.id} isConnected={isYouTubeConnected} />
-                  <ChangeStyleButton
-                    clipId={topClip.id}
-                    vodId={id}
-                    peakIndex={0}
-                    currentStyle={(topClip.caption_style as any) ?? "bold"}
-                  />
-                </div>
               </div>
             </>
           ) : hasProcessingClip ? (
@@ -465,18 +446,16 @@ export default async function VodPunchPage({
           <div style={{ padding: "16px 28px" }}>
             <Link
               href={`/dashboard/vods/${id}/report`}
+              className="btn btn-blue"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                padding: "11px 0",
-                borderRadius: 10,
-                fontSize: 13, fontWeight: 600, textDecoration: "none",
-                background: "linear-gradient(90deg, color-mix(in oklab, var(--blue) 12%, var(--surface-2)), color-mix(in oklab, var(--blue) 6%, var(--surface-2)))",
-                border: "1px solid color-mix(in oklab, var(--blue) 25%, var(--line))",
-                color: "var(--blue)",
+                width: "100%",
+                padding: "12px 0",
+                fontSize: 14, fontWeight: 600, textDecoration: "none",
                 letterSpacing: "0.01em",
               }}
             >
-              Full coaching breakdown <Icons.Arrow />
+              Read full coach report <Icons.Arrow />
             </Link>
           </div>
         </div>
