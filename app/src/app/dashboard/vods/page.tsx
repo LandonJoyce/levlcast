@@ -107,8 +107,6 @@ export default async function VodsPage({
     return v.status === tab;
   });
 
-  const filteredReady = filtered.filter((v) => v.status === "ready");
-  const filteredOther = filtered.filter((v) => v.status !== "ready");
 
   return (
     <>
@@ -189,19 +187,29 @@ export default async function VodsPage({
             </div>
           )}
 
-          {/* Analyzed VODs — card grid with clip + punch line */}
-          {filteredReady.length > 0 && (
+          {/* VOD card grid — analyzed AND unanalyzed mixed chronologically.
+              Previously the big panels only showed analyzed VODs and brand-new
+              synced streams sat in a separate compact list below, so users
+              didn't see their latest stream where they expected it. Unified
+              into one grid; the card renders an analyze CTA when there's no
+              coach report yet, otherwise the score + punch line + clip
+              actions. */}
+          {filtered.length > 0 && (
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
               gap: 20,
             }}>
-              {filteredReady.map((v) => {
+              {filtered.map((v) => {
                 const report = v.coach_report as any;
                 const score = report?.overall_score as number | null ?? null;
                 const punchLine = report?.punch_line as string | null ?? null;
                 const clip = bestClipByVod[v.id] ?? null;
                 const scoreColor = score !== null ? scoreColorHex(score) : "#A6B3C9";
+                const isReady = v.status === "ready";
+                const isProcessing = v.status === "transcribing" || v.status === "analyzing";
+                const showAnalyzeButton = v.status === "pending" || v.status === "failed";
+                const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 14400;
 
                 const thumbBg = v.thumbnail_url
                   ? `url(${(v.thumbnail_url as string).replace("%{width}", "640").replace("%{height}", "360")}) center/cover`
@@ -260,15 +268,25 @@ export default async function VodsPage({
 
                     {/* Card body */}
                     <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                      {/* Score + title */}
+                      {/* Score (analyzed) or status pill (unanalyzed) + title */}
                       <Link href={`/dashboard/vods/${v.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, textDecoration: "none", color: "inherit" }}>
-                        {score !== null && (
+                        {isReady && score !== null ? (
                           <div style={{
                             fontFamily: "var(--font-geist-mono), monospace",
                             fontSize: 36, fontWeight: 800, lineHeight: 1,
                             color: scoreColor, letterSpacing: "-0.03em", flexShrink: 0,
                           }}>
                             {score}
+                          </div>
+                        ) : (
+                          <div style={{
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 11, fontWeight: 700, color: isProcessing ? "var(--blue)" : "var(--ink-3)",
+                            letterSpacing: "0.08em", flexShrink: 0,
+                            background: "var(--surface-2)", border: "1px solid var(--line)",
+                            padding: "4px 8px", borderRadius: 6, textTransform: "uppercase", marginTop: 2,
+                          }}>
+                            {isProcessing ? "Analyzing" : v.status === "failed" ? "Failed" : "New"}
                           </div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -283,30 +301,59 @@ export default async function VodsPage({
                         </div>
                       </Link>
 
-                      {/* Punch line — or fallback for old reports */}
-                      {punchLine ? (
-                        <p style={{
-                          fontSize: 14, lineHeight: 1.5, color: "var(--ink)",
-                          margin: 0, fontWeight: 500,
-                          borderLeft: `3px solid ${scoreColor}`,
-                          paddingLeft: 12,
-                        }}>
-                          {punchLine}
+                      {/* Punch line for analyzed; status note for unanalyzed */}
+                      {isReady ? (
+                        punchLine ? (
+                          <p style={{
+                            fontSize: 14, lineHeight: 1.5, color: "var(--ink)",
+                            margin: 0, fontWeight: 500,
+                            borderLeft: `3px solid ${scoreColor}`,
+                            paddingLeft: 12,
+                          }}>
+                            {punchLine}
+                          </p>
+                        ) : (
+                          <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
+                            Open for your full coaching breakdown.
+                          </p>
+                        )
+                      ) : isProcessing ? (
+                        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
+                          Working on your coach report — usually about five minutes.
+                        </p>
+                      ) : v.status === "failed" && v.failed_reason ? (
+                        <p style={{ fontSize: 13, color: "var(--danger)", margin: 0, lineHeight: 1.5 }}>
+                          {v.failed_reason as string}
                         </p>
                       ) : (
                         <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
-                          Open for your full coaching breakdown.
+                          Run the analysis to get your coach report and best clip.
                         </p>
                       )}
 
                       {/* Actions */}
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: "auto", paddingTop: 4 }}>
-                        {clip && (
+                        {isReady && clip && (
                           <>
                             <DownloadClip clipId={clip.id} />
                             <CopyCaption caption={clip.caption_text} />
                             <PostToYouTube clipId={clip.id} isConnected={isYouTubeConnected} />
                           </>
+                        )}
+                        {!isReady && showAnalyzeButton && (
+                          <AnalyzeButton
+                            vodId={v.id}
+                            status={v.status}
+                            vodTitle={v.title}
+                            durationSeconds={v.duration_seconds ?? 0}
+                            hasProcessing={hasProcessing}
+                            userPlan={usage.plan}
+                          />
+                        )}
+                        {!isReady && requiresPro && v.status === "pending" && (
+                          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "color-mix(in oklab, var(--blue) 14%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))", color: "var(--blue)", fontWeight: 600 }}>
+                            PRO
+                          </span>
                         )}
                         <div style={{ flex: 1 }} />
                         <Link
@@ -320,92 +367,6 @@ export default async function VodsPage({
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {/* Unanalyzed VODs — compact list */}
-          {filteredOther.length > 0 && (
-            <div>
-              {filteredReady.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "8px 0 16px" }}>
-                  <span className="page-eyebrow">Not yet analyzed</span>
-                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-                </div>
-              )}
-              <div className="card">
-                {filteredOther.map((v, i) => {
-                  const isProcessing = v.status === "transcribing" || v.status === "analyzing";
-                  const showAnalyzeButton = v.status === "pending" || v.status === "failed";
-                  const requiresPro = usage.plan !== "pro" && (v.duration_seconds ?? 0) > 14400;
-
-                  return (
-                    <div key={v.id} style={{
-                      padding: "14px 18px",
-                      borderBottom: i === filteredOther.length - 1 ? "none" : "1px solid var(--line)",
-                      display: "grid",
-                      gridTemplateColumns: "80px 1fr auto",
-                      gap: 14,
-                      alignItems: "center",
-                    }}>
-                      {/* thumb */}
-                      <div style={{
-                        width: 80, height: 45, borderRadius: 6,
-                        background: v.thumbnail_url
-                          ? `url(${(v.thumbnail_url as string).replace("%{width}", "320").replace("%{height}", "180")}) center/cover`
-                          : "linear-gradient(135deg, oklch(0.26 0.08 290), oklch(0.11 0.025 265))",
-                        flexShrink: 0, position: "relative", overflow: "hidden",
-                      }}>
-                        {isProcessing && (
-                          <div style={{
-                            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                            background: "rgba(0,0,0,0.55)", fontSize: 9,
-                            fontFamily: "var(--font-geist-mono), monospace",
-                            color: "#fff", letterSpacing: "0.06em", textTransform: "uppercase",
-                          }}>
-                            analyzing
-                          </div>
-                        )}
-                      </div>
-
-                      {/* meta */}
-                      <div className="col" style={{ gap: 4, minWidth: 0 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {v.title}
-                        </span>
-                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                          {formatDate(v.stream_date ?? v.created_at)} · {formatDuration(v.duration_seconds)}
-                        </span>
-                        {v.status === "failed" && v.failed_reason && (
-                          <span style={{ fontSize: 11, color: "var(--danger)", lineHeight: 1.4 }}>
-                            {v.failed_reason as string}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* action */}
-                      <div>
-                        {isProcessing ? (
-                          <span className="mono" style={{ fontSize: 11, color: "var(--blue)" }}>processing…</span>
-                        ) : showAnalyzeButton ? (
-                          <AnalyzeButton
-                            vodId={v.id}
-                            status={v.status}
-                            vodTitle={v.title}
-                            durationSeconds={v.duration_seconds ?? 0}
-                            hasProcessing={hasProcessing}
-                            userPlan={usage.plan}
-                          />
-                        ) : null}
-                        {requiresPro && v.status === "pending" && (
-                          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, background: "color-mix(in oklab, var(--blue) 14%, var(--surface-2))", border: "1px solid color-mix(in oklab, var(--blue) 35%, var(--line))", color: "var(--blue)", fontWeight: 600, display: "block", marginTop: 4 }}>
-                            PRO
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
         </>
