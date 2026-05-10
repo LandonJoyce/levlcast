@@ -41,6 +41,25 @@ const Icons = {
   ),
 };
 
+/** Build the Twitch VOD URL with a ?t=Hh Mm Ss deep-link param. */
+function vodLinkAt(twitchVodId: string | null | undefined, secs: number): string | null {
+  if (!twitchVodId) return null;
+  const safe = Math.max(0, Math.floor(secs));
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  const s = safe % 60;
+  const t = h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`;
+  return `https://www.twitch.tv/videos/${twitchVodId}?t=${t}`;
+}
+
+/** Convert "M:SS" or "H:MM:SS" -> seconds. */
+function parseClipTime(t: string | null | undefined): number {
+  if (!t) return 0;
+  const parts = t.split(":").map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+}
+
 export default async function VodPunchPage({
   params,
 }: {
@@ -376,6 +395,15 @@ export default async function VodPunchPage({
                   const mm = Math.floor(startSec / 60);
                   const ss = Math.floor(startSec % 60);
                   const ts = `${mm}:${ss.toString().padStart(2, "0")}`;
+                  const peakHref = vodLinkAt(vod.twitch_vod_id as string | null, startSec);
+                  const tsContent = (
+                    <span className="mono" style={{
+                      fontSize: 11, color: peakHref ? "var(--blue)" : "var(--ink-3)",
+                      background: "var(--surface)", padding: "3px 7px", borderRadius: 6,
+                      flexShrink: 0, marginTop: 1,
+                      textDecoration: "none",
+                    }}>{ts}{peakHref ? " ↗" : ""}</span>
+                  );
                   return (
                     <div key={`peak-${realIndex}`} style={{
                       display: "flex", alignItems: "flex-start", gap: 12,
@@ -384,11 +412,11 @@ export default async function VodPunchPage({
                       border: "1px solid var(--line)",
                       borderRadius: 10,
                     }}>
-                      <span className="mono" style={{
-                        fontSize: 11, color: "var(--ink-3)",
-                        background: "var(--surface)", padding: "3px 7px", borderRadius: 6,
-                        flexShrink: 0, marginTop: 1,
-                      }}>{ts}</span>
+                      {peakHref ? (
+                        <a href={peakHref} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }} title="Open this moment on Twitch">
+                          {tsContent}
+                        </a>
+                      ) : tsContent}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", margin: "0 0 3px", lineHeight: 1.35 }}>
                           {p.title}
@@ -416,29 +444,45 @@ export default async function VodPunchPage({
                   );
                 })}
               </div>
-              {coachReport?.missed_clip?.time && coachReport?.missed_clip?.note && (
-                <div style={{
-                  marginTop: 14,
-                  padding: "12px 14px",
-                  background: "color-mix(in oklab, var(--orange, #d97706) 6%, var(--surface-2))",
-                  border: "1px dashed color-mix(in oklab, var(--orange, #d97706) 35%, var(--line))",
-                  borderRadius: 10,
-                }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                    <span className="mono" style={{
-                      fontSize: 11, color: "var(--orange, #d97706)", fontWeight: 700,
-                    }}>
-                      MISSED
-                    </span>
-                    <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      {coachReport.missed_clip.time}
-                    </span>
+              {coachReport?.missed_clip?.time && coachReport?.missed_clip?.note && (() => {
+                const missedHref = vodLinkAt(vod.twitch_vod_id as string | null, parseClipTime(coachReport.missed_clip.time));
+                return (
+                  <div style={{
+                    marginTop: 14,
+                    padding: "12px 14px",
+                    background: "color-mix(in oklab, var(--orange, #d97706) 6%, var(--surface-2))",
+                    border: "1px dashed color-mix(in oklab, var(--orange, #d97706) 35%, var(--line))",
+                    borderRadius: 10,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                      <span className="mono" style={{
+                        fontSize: 11, color: "var(--orange, #d97706)", fontWeight: 700,
+                      }}>
+                        MISSED
+                      </span>
+                      {missedHref ? (
+                        <a
+                          href={missedHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mono"
+                          style={{ fontSize: 11, color: "var(--blue)", textDecoration: "none" }}
+                          title="Open this moment on Twitch"
+                        >
+                          {coachReport.missed_clip.time} ↗
+                        </a>
+                      ) : (
+                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                          {coachReport.missed_clip.time}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12.5, color: "var(--ink-2)", margin: 0, lineHeight: 1.5 }}>
+                      {coachReport.missed_clip.note}
+                    </p>
                   </div>
-                  <p style={{ fontSize: 12.5, color: "var(--ink-2)", margin: 0, lineHeight: 1.5 }}>
-                    {coachReport.missed_clip.note}
-                  </p>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
