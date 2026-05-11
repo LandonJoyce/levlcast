@@ -82,19 +82,17 @@ export async function GET(req: NextRequest) {
   let children: any[] = [];
 
   if (q) {
+    // Fan out across all curated subs and let the HELP_PHRASES filter below
+    // decide what's relevant. We previously also required the exact `q`
+    // substring to appear in title/body, but the presets like 'i stream on
+    // twitch' rarely match verbatim, so the result list came back empty even
+    // when subs had plenty of legitimate streamer-help posts. The preset
+    // label is still visible in the UI as a topic hint.
     const results = await Promise.all(SEARCH_FANOUT_SUBS.map(fetchSubFeed));
-    const qLower = q.toLowerCase();
-    children = results
-      .flat()
-      // Pre-filter by the search text so non-matching posts in the fan-out
-      // feeds don't get carried into the streamer-phrase filter below.
-      .filter((c) => {
-        const t = `${c.title ?? ""} ${c.selftext ?? ""}`.toLowerCase();
-        return t.includes(qLower);
-      });
+    children = results.flat();
     if (children.length === 0) {
       return NextResponse.json({
-        error: `No recent matches for "${q}" across ${SEARCH_FANOUT_SUBS.length} subs`,
+        error: `Could not load any of the ${SEARCH_FANOUT_SUBS.length} subs`,
         posts: [],
       });
     }
