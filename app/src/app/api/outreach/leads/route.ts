@@ -128,6 +128,10 @@ export async function GET(req: NextRequest) {
       if (p.title === "[deleted]") return false;
       if (seenAuthors.has(p.author)) return false;
       if (q && p.subreddit && NOISE_SUBS.has(p.subreddit.toLowerCase())) return false;
+      // Drop anything older than 2 weeks. Stale posts rarely convert and the
+      // OP usually isn't around to receive the DM anymore.
+      const twoWeeksAgoSec = (Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000;
+      if (!p.created || p.created < twoWeeksAgoSec) return false;
       const text = `${p.title} ${p.body}`.toLowerCase();
       // Promo subs skip the phrase filter. q-mode posts still need a phrase
       // match because the Reddit-wide search has too many false positives
