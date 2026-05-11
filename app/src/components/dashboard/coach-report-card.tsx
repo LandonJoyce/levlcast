@@ -786,17 +786,12 @@ export function CoachReportCard({
             </div>
           )}
 
-          {/* ── 1. THE #1 FIX ── */}
-          {isPro && report.recommendation ? (
-            <div style={{ margin: "0 0 32px", padding: "22px 24px", borderRadius: 12, background: "rgba(248,113,113,0.05)", border: "1px solid rgba(248,113,113,0.2)", borderLeft: "3px solid #F87171" }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "#F87171", marginBottom: 14 }}>
-                The #1 Fix
-              </div>
-              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 15px)", lineHeight: 1.65, color: "#ECF1FA", margin: 0 }}>
-                {linkTimestamps(clean(report.recommendation), twitchVodId, "#ECF1FA")}
-              </p>
-            </div>
-          ) : !isPro ? (
+          {/* The #1 Fix block used to live here. The /report page now leads
+              with a TL;DR hero that already surfaces punch_line / recommendation
+              above the card, so rendering it again here was duplicated content.
+              Free users still get the upsell teaser since the hero only shows
+              when there's a punch line to show. */}
+          {!isPro && (
             <div style={{ marginBottom: 32 }}>
               <LockedSection
                 label="#1 Priority Fix"
@@ -805,7 +800,7 @@ export function CoachReportCard({
                 onUpgrade={openUpgrade}
               />
             </div>
-          ) : null}
+          )}
 
           <GradDiv />
 
