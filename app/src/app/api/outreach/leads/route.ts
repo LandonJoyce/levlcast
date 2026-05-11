@@ -60,45 +60,49 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Pass either ?subreddit=name or ?q=search-text", posts: [] }, { status: 400 });
   }
 
-  // Subreddit mode: single Arctic Shift call.
-  // Search mode: fan out title-searches across SEARCH_FANOUT_SUBS in parallel
-  // and aggregate. Arctic Shift's text endpoints only work when scoped to a
-  // subreddit, and Reddit's own search.json 403s from Vercel cloud IPs, so
-  // fan-out is the practical Reddit-wide search.
+  // Pull fresh posts via Reddit's per-subreddit JSON feeds. Arctic Shift's
+  // mirror runs ~2 weeks behind so anything filtered by recency comes back
+  // empty. Reddit's per-sub /new.json works from cloud IPs (only /search.json
+  // is blocked). For Reddit-wide search we fan out across the curated sub
+  // list and filter the aggregated feed by the query text.
+  const fetchSubFeed = async (sub: string): Promise<any[]> => {
+    try {
+      const r = await fetch(
+        `https://www.reddit.com/r/${encodeURIComponent(sub)}/new.json?limit=100&raw_json=1`,
+        { headers: { "User-Agent": "LevlCast/1.0 (Reddit outreach tool)", Accept: "application/json" } }
+      );
+      if (!r.ok) return [];
+      const j = await r.json();
+      return ((j?.data?.children ?? []) as any[]).map((c) => c.data ?? c);
+    } catch {
+      return [];
+    }
+  };
+
   let children: any[] = [];
 
   if (q) {
-    const fetches = SEARCH_FANOUT_SUBS.map(async (sub) => {
-      const u = `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&title=${encodeURIComponent(q)}&limit=25`;
-      try {
-        const r = await fetch(u, {
-          headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" },
-        });
-        if (!r.ok) return [] as any[];
-        const j = await r.json();
-        return (j?.data ?? []) as any[];
-      } catch {
-        return [] as any[];
-      }
-    });
-    const results = await Promise.all(fetches);
-    children = results.flat();
+    const results = await Promise.all(SEARCH_FANOUT_SUBS.map(fetchSubFeed));
+    const qLower = q.toLowerCase();
+    children = results
+      .flat()
+      // Pre-filter by the search text so non-matching posts in the fan-out
+      // feeds don't get carried into the streamer-phrase filter below.
+      .filter((c) => {
+        const t = `${c.title ?? ""} ${c.selftext ?? ""}`.toLowerCase();
+        return t.includes(qLower);
+      });
     if (children.length === 0) {
       return NextResponse.json({
-        error: `No results for "${q}" across ${SEARCH_FANOUT_SUBS.length} subs`,
+        error: `No recent matches for "${q}" across ${SEARCH_FANOUT_SUBS.length} subs`,
         posts: [],
       });
     }
   } else {
-    const r = await fetch(
-      `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit!)}&limit=100`,
-      { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
-    );
-    if (!r.ok) {
-      return NextResponse.json({ error: `Arctic Shift ${r.status} on r/${subreddit}`, posts: [] });
+    children = await fetchSubFeed(subreddit!);
+    if (children.length === 0) {
+      return NextResponse.json({ error: `Could not load r/${subreddit}`, posts: [] });
     }
-    const j = await r.json();
-    children = j?.data ?? [];
   }
   const isPromo = !q && subreddit && PROMO_SUBS.has(subreddit.toLowerCase());
   const seenAuthors = new Set<string>();
