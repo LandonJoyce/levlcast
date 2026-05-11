@@ -2,16 +2,33 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+// Subreddit picker for sub-scoped browsing. Removed dead/low-volume subs
+// (letsplay, TwitchFollowers, StreamersCommunity) and kept the active ones.
+// Most lead-finding now happens via the Reddit-wide text search below.
 const SUBREDDITS = [
   { value: "TwitchStreamers", label: "r/TwitchStreamers" },
   { value: "Twitch_Startup", label: "r/Twitch_Startup" },
   { value: "SmallStreamers", label: "r/SmallStreamers" },
-  { value: "TwitchFollowers", label: "r/TwitchFollowers" },
-  { value: "StreamersCommunity", label: "r/StreamersCommunity" },
   { value: "Twitch", label: "r/Twitch" },
   { value: "streaming", label: "r/streaming" },
   { value: "ContentCreators", label: "r/ContentCreators" },
-  { value: "letsplay", label: "r/letsplay" },
+  { value: "NewTubers", label: "r/NewTubers" },
+  { value: "PartneredYoutube", label: "r/PartneredYoutube" },
+];
+
+// Preset Reddit-wide text searches. Phrased the way streamers actually
+// post, so the matches come back as real people asking for help rather
+// than random Twitch mentions. Each runs against all of Reddit and the
+// API filters by the same HELP_PHRASES list before returning hits.
+const SEARCH_PRESETS = [
+  { value: "i stream on twitch", label: "\"i stream on twitch\"" },
+  { value: "i'm a twitch streamer", label: "\"i'm a twitch streamer\"" },
+  { value: "i started streaming", label: "\"i started streaming\"" },
+  { value: "twitch affiliate", label: "twitch affiliate" },
+  { value: "my twitch channel", label: "my twitch channel" },
+  { value: "small streamer", label: "small streamer" },
+  { value: "how to grow on twitch", label: "how to grow on twitch" },
+  { value: "feedback on my stream", label: "feedback on my stream" },
 ];
 
 
@@ -36,8 +53,11 @@ function timeAgo(utc: number) {
 
 export default function OutreachPage() {
   const [mode, setMode] = useState<"posts" | "comments">("posts");
-
+  // "sub" = pick a subreddit and pull its latest posts
+  // "search" = Reddit-wide text search, no subreddit constraint
+  const [source, setSource] = useState<"sub" | "search">("search");
   const [subreddit, setSubreddit] = useState("TwitchStreamers");
+  const [searchQuery, setSearchQuery] = useState(SEARCH_PRESETS[0].value);
 
   // Shared state
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -58,8 +78,13 @@ export default function OutreachPage() {
     setFetchError(null);
     setLeads([]);
     try {
+      // Comments endpoint stays subreddit-scoped (it always was). Posts can
+      // run in either sub or search mode.
       const endpoint = mode === "posts" ? "/api/outreach/leads" : "/api/outreach/leads-comments";
-      const res = await fetch(`${endpoint}?subreddit=${encodeURIComponent(subreddit)}`);
+      const param = mode === "posts" && source === "search"
+        ? `q=${encodeURIComponent(searchQuery)}`
+        : `subreddit=${encodeURIComponent(subreddit)}`;
+      const res = await fetch(`${endpoint}?${param}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setLeads(mode === "posts" ? (data.posts ?? []) : (data.comments ?? []));
@@ -68,7 +93,7 @@ export default function OutreachPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode, subreddit]);
+  }, [mode, source, subreddit, searchQuery]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
@@ -137,13 +162,45 @@ export default function OutreachPage() {
         </button>
       </div>
 
-      {/* Subreddit tabs — shared by both modes */}
-      <div className="tabs" style={{ marginBottom: 24 }}>
-        {SUBREDDITS.map((s) => (
-          <button key={s.value} className={`tab ${subreddit === s.value ? "active" : ""}`} onClick={() => setSubreddit(s.value)}>
-            {s.label}
+      {/* Source switcher — Reddit-wide search or a specific sub. Comments
+          mode forces sub since the comments endpoint is sub-scoped. */}
+      {mode === "posts" && (
+        <div className="row gap-sm" style={{ marginBottom: 16 }}>
+          <button
+            onClick={() => setSource("search")}
+            className={`btn ${source === "search" ? "btn-blue" : "btn-ghost"}`}
+            style={{ fontSize: 12, padding: "6px 16px" }}
+            title="Search across all of Reddit for streamers mentioning Twitch"
+          >
+            Reddit-wide search
           </button>
-        ))}
+          <button
+            onClick={() => setSource("sub")}
+            className={`btn ${source === "sub" ? "btn-blue" : "btn-ghost"}`}
+            style={{ fontSize: 12, padding: "6px 16px" }}
+          >
+            Specific subreddit
+          </button>
+        </div>
+      )}
+
+      {/* Picker — preset search queries for search mode, subreddit list for sub mode */}
+      <div className="tabs" style={{ marginBottom: 24 }}>
+        {(mode === "posts" && source === "search" ? SEARCH_PRESETS : SUBREDDITS).map((s) => {
+          const active = (mode === "posts" && source === "search") ? searchQuery === s.value : subreddit === s.value;
+          return (
+            <button
+              key={s.value}
+              className={`tab ${active ? "active" : ""}`}
+              onClick={() => {
+                if (mode === "posts" && source === "search") setSearchQuery(s.value);
+                else setSubreddit(s.value);
+              }}
+            >
+              {s.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Controls row */}
