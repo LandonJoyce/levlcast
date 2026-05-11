@@ -404,156 +404,10 @@ export default function ReportTestPage() {
 
       <div className="rt-root">
         <div className="rt-wrap">
-          <div className="rt-ticker" aria-hidden="true">
-            <div className="rt-ticker-strip">
-              {[0, 1].map((i) => (
-                <span key={`tk-${i}`} style={{ display: "contents" }}>
-                  <span>◷ Live · <b>Stream #06 archived</b></span>
-                  <span>● Score <b>14/100</b></span>
-                  <span className="red">▼ Energy <b>−6</b></span>
-                  <span className="red">▼ Consistency <b>−10</b></span>
-                  <span>Runtime <b>16:24</b></span>
-                  <span>Recurring: <b>Silent Grind · Cold Ending</b></span>
-                  <span>WPM peak <b>172</b></span>
-                  <span>◷ Next stream · <b>scheduled May 13</b></span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <header className="rt-topbar">
-            <div className="rt-brand">
-              <div className="rt-brand-mark" />
-              <div className="rt-brand-name">LEVL<span>CAST</span></div>
-            </div>
-            <div className="rt-top-actions">
-              <button className="rt-btn">◷ Recent Streams</button>
-              <button className="rt-btn">⚙ Stream Settings</button>
-              <button className="rt-btn primary">▶ Coach Session</button>
-            </div>
-          </header>
-
-          <section className="rt-cover">
-            <div className="rt-cover-tape">
-              <span>◆ Postgame Report</span>
-              <span>· Stream <b>#06</b> ·</span>
-              <span>recorded <b>May 11 · 21:08</b></span>
-              <span>· coach <b>Halo-7</b> ·</span>
-              <span>auto-review</span>
-              <span>· <b>16:24</b> runtime ·</span>
-              <span>1 player · 0 wins</span>
-            </div>
-
-            <div className="rt-cover-body">
-              <div className="rt-cover-left">
-                <div>
-                  <div className="rt-cover-kicker">
-                    <span className="chip">Levlcast</span>
-                    <span>Report 06 · Q2 / 2026</span>
-                  </div>
-                  <h1 className="rt-cover-title">
-                    Gaming<br />
-                    <em>Coaching</em>
-                    <span className="smol">The story of this stream</span>
-                  </h1>
-                  <p className="rt-cover-summary">
-                    A competitive first-person match against a player named <em>Lucky</em> that ran 16 minutes and was <em>almost entirely silent.</em> The game played itself while the streamer occasionally surfaced for single-sentence reactions. The closest thing to a storyline came at the very end when two genuine frustration spikes at <span className="rt-timecode">15:16</span> and <span className="rt-timecode">16:20</span> broke through, but by then the stream was already over.
-                  </p>
-                </div>
-
-                <div className="rt-cover-credits">
-                  <div>Streamer<b>You</b></div>
-                  <div>Opponent<b>Lucky</b></div>
-                  <div>Match<b>FPS · 16:24</b></div>
-                  <div>Talk time<b>1m 04s</b></div>
-                  <div>WPM peak<b>172</b></div>
-                  <div>Words on air<b>~ 318</b></div>
-                </div>
-              </div>
-
-              <div className="rt-cover-right">
-                <div className="rt-scoreboard">
-                  <div className="row">
-                    <span className="rt-label">▸ Levl Index · Stream 06</span>
-                    <span className="rt-label" style={{ color: "var(--ink-2)" }}>Holding steady</span>
-                  </div>
-                  <div className="big">
-                    <div className="n">14</div>
-                    <div className="d">
-                      <div className="of">/ 100</div>
-                      <div className="dlt">▼ 6 from last · trend flat</div>
-                    </div>
-                  </div>
-
-                  <div className="stat-row">
-                    <div className="rt-mini e">
-                      <span className="l">01 · Energy</span>
-                      <span className="v">12<small>/25</small></span>
-                      <span className="b"><i /></span>
-                    </div>
-                    <div className="rt-mini g">
-                      <span className="l">02 · Engmt.</span>
-                      <span className="v">8<small>/25</small></span>
-                      <span className="b"><i /></span>
-                    </div>
-                    <div className="rt-mini c">
-                      <span className="l">03 · Consist.</span>
-                      <span className="v">10<small>/25</small></span>
-                      <span className="b"><i /></span>
-                    </div>
-                    <div className="rt-mini t">
-                      <span className="l">04 · Content</span>
-                      <span className="v">22<small>/25</small></span>
-                      <span className="b"><i /></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rt-versus">
-                  <div className="rt-vs-side">
-                    <span className="role">Streamer</span>
-                    <span className="who you">YOU</span>
-                  </div>
-                  <div className="rt-vs-mid">vs</div>
-                  <div className="rt-vs-side right">
-                    <span className="role">Opponent</span>
-                    <span className="who them">LUCKY</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rt-obt-wrap">
-            <div className="rt-obt">
-              <span className="rt-label">▸ One Big Thing</span>
-              <h2>The Silent <em>Streak</em></h2>
-              <p>
-                This is the <b>sixth consecutive stream</b> with the same core problem documented on record: competitive gameplay broadcast in near-total silence. The capability is clearly there at <b>172 wpm</b> when you speak; the only thing between this channel and a real identity is the commitment to say something out loud every 30 seconds, even if it is just the current score and one word on how you feel about it.
-              </p>
-            </div>
-            <aside className="rt-obt-stat">
-              <div className="item">
-                <span className="n mag">6</span>
-                <span className="l">Streams in a row<br />flagged for silence</span>
-              </div>
-              <div className="div" />
-              <div className="item">
-                <span className="n lime">172</span>
-                <span className="l">WPM when you<br />actually talk</span>
-              </div>
-              <div className="div" />
-              <div className="item">
-                <span className="n">30<small style={{ fontSize: 18, color: "var(--muted)" }}>s</small></span>
-                <span className="l">Max silence before<br />you lose viewers</span>
-              </div>
-            </aside>
-          </section>
-
-          <section>
+          <section style={{ marginTop: 32 }}>
             <div className="rt-section-head">
               <div className="l">
-                <span className="ix">§ 02</span>
+                <span className="ix">§ 01</span>
                 <h2 className="title">Build &amp; <em>Fix</em></h2>
               </div>
               <span className="sub">5 takeaways from Stream 06</span>
@@ -619,22 +473,10 @@ export default function ReportTestPage() {
             </div>
           </section>
 
-          <section className="rt-callout">
-            <span className="rt-label">▸ Consistency · Recurring Pattern</span>
-            <h3>The recurring note hasn&apos;t <em>landed yet</em>.</h3>
-            <p>Scores across the last three sessions were <b>18</b>, <b>8</b>, and <b>12</b>. This stream at <b>14</b> shows no meaningful improvement and no decline, just the same pattern of silent competitive gameplay that has been flagged in every single report. The recurring coaching note has not translated into on-stream behavior change yet.</p>
-            <div className="streaks">
-              <div className="s"><span className="l">Stream 03</span><span className="n">18</span></div>
-              <div className="s"><span className="l">Stream 04</span><span className="n">08</span></div>
-              <div className="s"><span className="l">Stream 05</span><span className="n">12</span></div>
-              <div className="s now"><span className="l">Stream 06 · now</span><span className="n">14</span></div>
-            </div>
-          </section>
-
           <section>
             <div className="rt-section-head">
               <div className="l">
-                <span className="ix">§ 03</span>
+                <span className="ix">§ 02</span>
                 <h2 className="title">The <em>Trajectory</em></h2>
               </div>
               <span className="sub">Last 8 streams · score over time</span>
@@ -688,7 +530,7 @@ export default function ReportTestPage() {
           <section>
             <div className="rt-section-head">
               <div className="l">
-                <span className="ix">§ 04</span>
+                <span className="ix">§ 03</span>
                 <h2 className="title">Stream <em>Timeline</em></h2>
               </div>
               <span className="sub">Talk activity · 0:00 → 16:20</span>
@@ -768,74 +610,6 @@ export default function ReportTestPage() {
             </div>
           </section>
 
-          <section className="rt-urgent-wrap">
-            <div className="rt-section-head">
-              <div className="l">
-                <span className="ix">§ 05</span>
-                <h2 className="title">Item <em>One</em></h2>
-              </div>
-              <span className="sub">5 moments flagged · most urgent shown</span>
-            </div>
-
-            <article className="rt-urgent">
-              <aside className="rt-urgent-mark">
-                <span className="n">01</span>
-                <span className="l">of 05</span>
-              </aside>
-
-              <div className="rt-urgent-body">
-                <div className="top">
-                  <span className="tag">★ Most Urgent</span>
-                  <span className="time">14:30 → 15:15 · 45s window</span>
-                </div>
-                <h4>The arc that <em>almost was</em></h4>
-                <p>
-                  The second frustration at <span className="rt-timecode">14:30</span> had already seeded doubt about whether the loadout was working, so when everything collapsed at once at <span className="rt-timecode">15:15</span> the stakes were already established. The streamer&apos;s rapid-fire dismissal of every option in quick succession created a short, complete emotional arc: genuine panic followed immediately by forced acceptance, that reads as <em>real</em>, not performed.
-                </p>
-                <p>
-                  <b>Next stream:</b> build that arc on purpose. Voice the doubt about a decision <em>before</em> it pays off or blows up, so when the reaction lands it has context behind it.
-                </p>
-              </div>
-
-              <aside className="rt-urgent-arc">
-                <span className="rt-label">▸ Emotional Arc</span>
-                <div className="arc">
-                  <svg viewBox="0 0 200 90" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="rt-arcGrad" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(182,255,60,0.5)" />
-                        <stop offset="100%" stopColor="rgba(182,255,60,0)" />
-                      </linearGradient>
-                    </defs>
-                    <path d={ARC_PATH} fill="url(#rt-arcGrad)" stroke="#b6ff3c" strokeWidth="1.6" />
-                    <circle cx="40" cy="60" r="3" fill="#b6ff3c" />
-                    <circle cx="100" cy="8" r="4" fill="#b6ff3c" style={{ filter: "drop-shadow(0 0 6px #b6ff3c)" }} />
-                    <circle cx="180" cy="60" r="3" fill="#b6ff3c" />
-                  </svg>
-                </div>
-                <div className="pts">
-                  <span>14:30 · Doubt</span>
-                  <span className="peak">15:15 · Peak</span>
-                  <span>15:45 · Reset</span>
-                </div>
-                <div className="rt-urgent-other">
-                  <span className="chip">★ <b>02</b> Mid-match silence</span>
-                  <span className="chip">★ <b>03</b> Cold sign-off</span>
-                  <span className="chip">★ <b>04</b> No take · 04:20</span>
-                  <span className="chip">★ <b>05</b> Chat ignored · 09:00</span>
-                </div>
-              </aside>
-            </article>
-          </section>
-
-          <footer className="rt-foot">
-            <div className="rt-foot-meta">
-              <div className="row"><span>Levlcast · Report 06</span><b>May 11, 2026</b></div>
-              <div className="row"><span>Next stream</span><b>May 13 · 20:00 PT</b></div>
-              <div className="row"><span>Recurring flags</span><b>2 active</b></div>
-              <div className="row"><span>Coach</span><b>Halo-7 · auto-review</b></div>
-            </div>
-          </footer>
         </div>
       </div>
     </>
