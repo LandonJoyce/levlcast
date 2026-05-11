@@ -21,6 +21,19 @@ const HELP_PHRASES = [
 const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
 const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
 
+// Subs to fan out title-searches across when running a Reddit-wide query.
+// Curated to streamer-adjacent communities + content-creator subs + the big
+// game subs where small streamers regularly post about their channels.
+// Reddit blocks unauthed cloud IPs from /search.json so we can't do a true
+// Reddit-wide search; this list is the practical substitute.
+const SEARCH_FANOUT_SUBS = [
+  "TwitchStreamers", "Twitch_Startup", "SmallStreamers", "Twitch", "streaming",
+  "ContentCreators", "NewTubers", "PartneredYoutube",
+  "letsplay", "gaming", "pcgaming",
+  "VALORANT", "leagueoflegends", "DestinyTheGame", "MonsterHunter",
+  "Genshin_Impact", "Minecraft", "Fortnite", "DotA2", "Overwatch",
+];
+
 export async function GET(req: NextRequest) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,31 +60,46 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Pass either ?subreddit=name or ?q=search-text", posts: [] }, { status: 400 });
   }
 
-  // Two upstreams. Arctic Shift mirrors Reddit but only allows search
-  // when scoped by subreddit or author. For Reddit-wide text search we
-  // hit Reddit's own search.json endpoint, which works without auth and
-  // returns the same data shape after a small remap.
-  const url = q
-    ? `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=new&limit=100&t=month`
-    : `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit!)}&limit=100`;
+  // Subreddit mode: single Arctic Shift call.
+  // Search mode: fan out title-searches across SEARCH_FANOUT_SUBS in parallel
+  // and aggregate. Arctic Shift's text endpoints only work when scoped to a
+  // subreddit, and Reddit's own search.json 403s from Vercel cloud IPs, so
+  // fan-out is the practical Reddit-wide search.
+  let children: any[] = [];
 
-  const res = await fetch(url, {
-    headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" },
-  });
-
-  if (!res.ok) {
-    return NextResponse.json({
-      error: `Upstream ${res.status} on ${q ? `q="${q}"` : `r/${subreddit}`}`,
-      posts: [],
+  if (q) {
+    const fetches = SEARCH_FANOUT_SUBS.map(async (sub) => {
+      const u = `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&title=${encodeURIComponent(q)}&limit=25`;
+      try {
+        const r = await fetch(u, {
+          headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" },
+        });
+        if (!r.ok) return [] as any[];
+        const j = await r.json();
+        return (j?.data ?? []) as any[];
+      } catch {
+        return [] as any[];
+      }
     });
+    const results = await Promise.all(fetches);
+    children = results.flat();
+    if (children.length === 0) {
+      return NextResponse.json({
+        error: `No results for "${q}" across ${SEARCH_FANOUT_SUBS.length} subs`,
+        posts: [],
+      });
+    }
+  } else {
+    const r = await fetch(
+      `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit!)}&limit=100`,
+      { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
+    );
+    if (!r.ok) {
+      return NextResponse.json({ error: `Arctic Shift ${r.status} on r/${subreddit}`, posts: [] });
+    }
+    const j = await r.json();
+    children = j?.data ?? [];
   }
-
-  const json = await res.json();
-  // Arctic Shift returns { data: [...] }. Reddit search returns
-  // { data: { children: [ { data: {...} }, ... ] } }. Normalise.
-  const children: any[] = q
-    ? (json?.data?.children ?? []).map((c: any) => c.data ?? c)
-    : (json?.data ?? []);
   const isPromo = !q && subreddit && PROMO_SUBS.has(subreddit.toLowerCase());
   const seenAuthors = new Set<string>();
 
@@ -108,7 +136,11 @@ export async function GET(req: NextRequest) {
       if (!passes) return false;
       seenAuthors.add(p.author);
       return true;
-    });
+    })
+    // Newest first. Fan-out from multiple subs interleaves their feeds, so
+    // we sort here rather than trusting per-sub order.
+    .sort((a, b) => b.created - a.created)
+    .slice(0, 80);
 
   return NextResponse.json({ posts });
 }
