@@ -47,11 +47,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Pass either ?subreddit=name or ?q=search-text", posts: [] }, { status: 400 });
   }
 
-  // Build the Arctic Shift URL for whichever mode the caller picked.
-  // Arctic Shift mirrors the full Reddit corpus; ?q is a substring search
-  // over title + selftext, sorted desc by created_utc when not specified.
+  // Two upstreams. Arctic Shift mirrors Reddit but only allows search
+  // when scoped by subreddit or author. For Reddit-wide text search we
+  // hit Reddit's own search.json endpoint, which works without auth and
+  // returns the same data shape after a small remap.
   const url = q
-    ? `https://arctic-shift.photon-reddit.com/api/posts/search?q=${encodeURIComponent(q)}&limit=100&sort=desc`
+    ? `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=new&limit=100&t=month`
     : `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(subreddit!)}&limit=100`;
 
   const res = await fetch(url, {
@@ -60,13 +61,17 @@ export async function GET(req: NextRequest) {
 
   if (!res.ok) {
     return NextResponse.json({
-      error: `Arctic Shift ${res.status} on ${q ? `q="${q}"` : `r/${subreddit}`}`,
+      error: `Upstream ${res.status} on ${q ? `q="${q}"` : `r/${subreddit}`}`,
       posts: [],
     });
   }
 
-  const data = await res.json();
-  const children: any[] = data.data ?? [];
+  const json = await res.json();
+  // Arctic Shift returns { data: [...] }. Reddit search returns
+  // { data: { children: [ { data: {...} }, ... ] } }. Normalise.
+  const children: any[] = q
+    ? (json?.data?.children ?? []).map((c: any) => c.data ?? c)
+    : (json?.data ?? []);
   const isPromo = !q && subreddit && PROMO_SUBS.has(subreddit.toLowerCase());
   const seenAuthors = new Set<string>();
 
