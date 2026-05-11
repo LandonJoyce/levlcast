@@ -76,9 +76,10 @@ export async function GET(req: NextRequest) {
       const stripped = c.body.trim().replace(/https?:\/\/\S+/g, "").trim();
       if (stripped.length < 30) return false;
       if (seenAuthors.has(c.author)) return false;
-      // Drop anything older than 2 weeks — stale leads rarely convert.
-      const twoWeeksAgoSec = (Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000;
-      if (!c.created || c.created < twoWeeksAgoSec) return false;
+      // Match the 30-day window used on posts. Arctic Shift's mirror runs
+      // ~2 weeks behind so a tighter window comes back empty.
+      const cutoffSec = (Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000;
+      if (!c.created || c.created < cutoffSec) return false;
       const text = c.body.toLowerCase();
       if (!HELP_PHRASES.some((ph) => text.includes(ph))) return false;
       seenAuthors.add(c.author);

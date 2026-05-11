@@ -60,20 +60,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Pass either ?subreddit=name or ?q=search-text", posts: [] }, { status: 400 });
   }
 
-  // Pull fresh posts via Reddit's per-subreddit JSON feeds. Arctic Shift's
-  // mirror runs ~2 weeks behind so anything filtered by recency comes back
-  // empty. Reddit's per-sub /new.json works from cloud IPs (only /search.json
-  // is blocked). For Reddit-wide search we fan out across the curated sub
-  // list and filter the aggregated feed by the query text.
+  // Reddit blocks Vercel cloud IPs on both /search.json AND /r/X/new.json
+  // without OAuth, so we fall back to Arctic Shift. Their mirror runs
+  // ~2 weeks behind real-time, which is why the recency filter below is
+  // generous (30 days, not 14). Real fix for fresh data is wiring up Reddit
+  // OAuth client_credentials, which needs an app registered at
+  // reddit.com/prefs/apps and REDDIT_CLIENT_ID/SECRET in the env.
   const fetchSubFeed = async (sub: string): Promise<any[]> => {
     try {
       const r = await fetch(
-        `https://www.reddit.com/r/${encodeURIComponent(sub)}/new.json?limit=100&raw_json=1`,
-        { headers: { "User-Agent": "LevlCast/1.0 (Reddit outreach tool)", Accept: "application/json" } }
+        `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&limit=100`,
+        { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
       );
       if (!r.ok) return [];
       const j = await r.json();
-      return ((j?.data?.children ?? []) as any[]).map((c) => c.data ?? c);
+      return (j?.data ?? []) as any[];
     } catch {
       return [];
     }
@@ -130,10 +131,11 @@ export async function GET(req: NextRequest) {
       if (p.title === "[deleted]") return false;
       if (seenAuthors.has(p.author)) return false;
       if (q && p.subreddit && NOISE_SUBS.has(p.subreddit.toLowerCase())) return false;
-      // Drop anything older than 2 weeks. Stale posts rarely convert and the
-      // OP usually isn't around to receive the DM anymore.
-      const twoWeeksAgoSec = (Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000;
-      if (!p.created || p.created < twoWeeksAgoSec) return false;
+      // Drop anything older than 30 days. We're using Arctic Shift's mirror
+      // which lags real-time by ~2 weeks, so a tighter window comes back
+      // empty. 30 days is the practical floor that still gives signal.
+      const cutoffSec = (Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000;
+      if (!p.created || p.created < cutoffSec) return false;
       const text = `${p.title} ${p.body}`.toLowerCase();
       // Promo subs skip the phrase filter. q-mode posts still need a phrase
       // match because the Reddit-wide search has too many false positives
