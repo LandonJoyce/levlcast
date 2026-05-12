@@ -9,6 +9,7 @@ const SUBREDDITS = [
   { value: "TwitchStreamers", label: "r/TwitchStreamers" },
   { value: "Twitch_Startup", label: "r/Twitch_Startup" },
   { value: "SmallStreamers", label: "r/SmallStreamers" },
+  { value: "twitchfollowers", label: "r/twitchfollowers" },
   { value: "Twitch", label: "r/Twitch" },
   { value: "streaming", label: "r/streaming" },
   { value: "ContentCreators", label: "r/ContentCreators" },
