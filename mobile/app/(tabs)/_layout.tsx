@@ -20,7 +20,7 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: colors.bg },
+        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen

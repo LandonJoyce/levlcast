@@ -24,10 +24,15 @@ export async function registerForPushNotifications(): Promise<void> {
     // misconfiguration never crashes the app at module load time
     const Notifications = await import('expo-notifications');
 
-    // Configure foreground display — done here, not at module level
+    // Configure foreground display — done here, not at module level.
+    // shouldShowBanner + shouldShowList replaced shouldShowAlert in
+    // expo-notifications 55.0.22; we set both so the handler keeps showing
+    // alerts in foreground on older + newer SDKs without warnings.
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
       }),
