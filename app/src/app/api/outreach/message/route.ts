@@ -42,15 +42,21 @@ What LevlCast does, in order of importance:
 
 Lead with the coach report. The clip side is a bonus, not the main pitch.
 
-Rules:
-- First line: SUBJECT: <4-7 words, specific to their situation. No generic openers.>
+CRITICAL credibility rules (violating these gets the DM ignored or called out):
+- You have NOT watched their stream. You have NOT seen any analytics. You ONLY have the post/comment text above. Never write anything that implies you have watched their stream, seen their VODs, or know their stats.
+- BANNED openers and phrases: "noticed your stream", "I noticed", "I saw your stream", "your stream goes", "your VOD shows", "your numbers show", "your retention", "your dropoff", "watching your", "checked out your".
+- BANNED specifics you cannot know: viewer counts, drop-off times, talk-time ratios, energy patterns, what their stream "goes deep on", how their viewers behave. If they didn't say it in the post, you do not know it.
+- The ONLY thing you can reference is the literal text of their post or comment. Quote a phrase or paraphrase what THEY wrote, not what you imagined about their channel.
+
+Format:
+- First line: SUBJECT: <4-7 words, specific to what they actually wrote. No generic openers.>
 - Then a blank line.
 - Then the body: 2-3 short sentences. MAX 60 words total.
-- Sentence 1: acknowledge their specific problem from the ${isComment ? "comment" : "post"} in one detail that proves you read it.
-- Sentence 2: introduce the coach report and what it tells them, tied to their pain.
-- Optional sentence 3: one line about the clips as a side benefit, or skip if it doesn't fit.
+- Sentence 1: reference what THEY said in the ${isComment ? "comment" : "post"} (paraphrase or short quote). Prove you read THEIR words, not that you watched THEIR stream.
+- Sentence 2: describe what the coach report would do for the exact problem they described. Hypothetical, not retrospective: "the report would tell you...", not "your report shows...".
+- Optional sentence 3: one line about clips as a side benefit, or skip if it doesn't fit.
 - End with "free to try at levlcast.com" or similar one-liner.
-- ABSOLUTELY NO em dashes anywhere. Use periods or commas instead. If you would write a dash, rewrite the sentence.
+- ABSOLUTELY NO em dashes. Use periods or commas. If you would write a dash, rewrite the sentence.
 - No corpo phrases. No "I hope", "just wanted to", "checking out", "might be worth", "would love to", "feel free".
 - Sound like a streamer texting another streamer. Casual, blunt, real.
 - Match their tone: frustrated = blunt, casual = casual, technical = specific numbers.
