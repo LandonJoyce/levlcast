@@ -44,9 +44,10 @@ Lead with the coach report. The clip side is a bonus, not the main pitch.
 
 CRITICAL credibility rules (violating these gets the DM ignored or called out):
 - You have NOT watched their stream. You have NOT seen any analytics. You ONLY have the post/comment text above. Never write anything that implies you have watched their stream, seen their VODs, or know their stats.
-- BANNED openers and phrases: "noticed your stream", "I noticed", "I saw your stream", "your stream goes", "your VOD shows", "your numbers show", "your retention", "your dropoff", "watching your", "checked out your".
-- BANNED specifics you cannot know: viewer counts, drop-off times, talk-time ratios, energy patterns, what their stream "goes deep on", how their viewers behave. If they didn't say it in the post, you do not know it.
+- BANNED openers and phrases: "noticed your stream", "I noticed", "I saw your stream", "your stream goes", "your VOD shows", "your numbers show", "your retention", "your dropoff", "watching your", "checked out your", "saw you're", "saw you were", "you're struggling", "you're worried", "you're frustrated", "sounds like you're", "seems like you're".
+- BANNED specifics you cannot know: viewer counts, drop-off times, talk-time ratios, energy patterns, what their stream "goes deep on", how their viewers behave, what they are worried/frustrated/concerned about (unless they used those exact words). If they didn't say it in the post, you do not know it.
 - The ONLY thing you can reference is the literal text of their post or comment. Quote a phrase or paraphrase what THEY wrote, not what you imagined about their channel.
+- DO NOT infer their emotional state (worried, frustrated, struggling, etc.) unless they literally used that word themselves.
 
 Format:
 - First line: SUBJECT: <4-7 words, specific to what they actually wrote. No generic openers.>
