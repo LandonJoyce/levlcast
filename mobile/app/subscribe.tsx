@@ -12,9 +12,10 @@ import { PurchasesPackage } from 'react-native-purchases';
 const FEATURES = [
   '20 VOD analyses per month',
   '20 clips per month',
-  'Full AI coaching every stream',
-  'YouTube Shorts posting',
-  'Priority processing',
+  'Full AI coaching report on every stream',
+  'Clip editor: trim, captions, vertical 9:16 export',
+  'Highlight reels from your top moments',
+  'YouTube Shorts auto-posting',
 ];
 
 export default function SubscribeScreen() {
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
   content: { padding: 24, paddingBottom: 60 },
 
   // Founding badge
-  foundingBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(124,58,237,0.15)', borderWidth: 1, borderColor: 'rgba(124,58,237,0.35)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 16 },
+  foundingBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(155,106,255,0.15)', borderWidth: 1, borderColor: 'rgba(155,106,255,0.35)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 16 },
   foundingBadgeText: { fontSize: 11, fontWeight: '700', color: colors.accentLight, letterSpacing: 0.3 },
 
   title: { fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.8, marginBottom: 6 },
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
   saveBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
 
   // Price card
-  priceCard: { backgroundColor: 'rgba(124,58,237,0.1)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.3)', padding: 22, marginBottom: 24, minHeight: 72, justifyContent: 'center' },
+  priceCard: { backgroundColor: 'rgba(155,106,255,0.1)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(155,106,255,0.3)', padding: 22, marginBottom: 24, minHeight: 72, justifyContent: 'center' },
   price: { fontSize: 32, fontWeight: '800', color: colors.accentLight },
   pricePer: { fontSize: 16, fontWeight: '400', color: colors.muted },
   cancelNote: { fontSize: 12, color: colors.muted, marginTop: 4 },

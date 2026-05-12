@@ -313,6 +313,12 @@ export default function ClipsScreen() {
                       >
                         <Text style={styles.watchBtnText}>Watch</Text>
                       </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.editBtn}
+                        onPress={() => router.push(`/clip/${clip.id}`)}
+                      >
+                        <Text style={styles.editBtnText}>Edit</Text>
+                      </TouchableOpacity>
                       {ytUrl ? (
                         <TouchableOpacity style={styles.ytPostedBtn} onPress={() => Linking.openURL(ytUrl)}>
                           <Text style={styles.ytPostedBtnText}>On YouTube</Text>
@@ -410,7 +416,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginBottom: 4 },
   subtitle: { fontSize: 13, color: colors.muted },
   emptyCard: { backgroundColor: colors.surface, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 40, alignItems: 'center' },
-  emptyIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(124,58,237,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(155,106,255,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
   emptySub: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19, marginBottom: 20 },
   emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
@@ -428,11 +434,13 @@ const styles = StyleSheet.create({
   captionPreview: { fontSize: 12, color: colors.muted, marginTop: 6, lineHeight: 17 },
   watchBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
   watchBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  editBtn: { backgroundColor: 'rgba(155,106,255,0.15)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(155,106,255,0.4)' },
+  editBtnText: { color: colors.accentLight, fontSize: 13, fontWeight: '700' },
   ytBtn: { backgroundColor: 'rgba(239,68,68,0.85)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
   ytBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   ytPostedBtn: { backgroundColor: 'rgba(74,222,128,0.12)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' },
   ytPostedBtnText: { color: colors.green, fontSize: 12, fontWeight: '700' },
-  regenBtn: { backgroundColor: 'rgba(124,58,237,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', minWidth: 60 },
+  regenBtn: { backgroundColor: 'rgba(155,106,255,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', minWidth: 60 },
   regenBtnText: { color: colors.accentLight, fontSize: 12, fontWeight: '700' },
   deleteBtn: { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', minWidth: 60 },
   deleteBtnText: { color: colors.red, fontSize: 12, fontWeight: '700' },

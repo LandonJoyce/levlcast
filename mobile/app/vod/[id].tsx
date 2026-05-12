@@ -1,8 +1,54 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share, Alert, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
+
+function parseTimeSecs(t: string): number {
+  const parts = t.split(':').map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+}
+
+function twitchTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`;
+}
+
+function twitchVodUrl(twitchVodId: string | null, ts: string): string | null {
+  if (!twitchVodId) return null;
+  return `https://www.twitch.tv/videos/${twitchVodId}?t=${twitchTimestamp(parseTimeSecs(ts))}`;
+}
+
+// Renders prose with inline M:SS or H:MM:SS timestamps as tappable links.
+function LinkedText({ text, color, twitchVodId, style }: { text: string; color: string; twitchVodId: string | null; style?: any }) {
+  if (!text) return null;
+  if (!twitchVodId) return <Text style={style}>{text}</Text>;
+  const re = /\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(<Text key={key++} style={style}>{text.slice(last, m.index)}</Text>);
+    const ts = m[0];
+    const href = twitchVodUrl(twitchVodId, ts);
+    out.push(
+      <Text
+        key={key++}
+        style={[style, { color, fontWeight: '700' }]}
+        onPress={() => href && Linking.openURL(href)}
+      >
+        {ts}
+      </Text>
+    );
+    last = m.index + ts.length;
+  }
+  if (last < text.length) out.push(<Text key={key++} style={style}>{text.slice(last)}</Text>);
+  return <Text style={style}>{out}</Text>;
+}
 
 interface CoachReport {
   overall_score: number;
@@ -13,7 +59,7 @@ interface CoachReport {
   improvements: string[];
   best_moment: { time: string; description: string };
   recommendation: string;
-  next_stream_goals: string[];
+  rewatch_moments?: Array<{ time: string; kind: 'best' | 'worst'; note: string }>;
   cold_open?: { score: 'strong' | 'weak' | 'average'; note: string };
   dead_zones?: Array<{ time: string; duration: number }>;
   momentum_crash?: { time: string; duration_min: number; note: string };
@@ -48,6 +94,7 @@ interface Vod {
   coach_report: CoachReport | null;
   peak_data: Peak[] | null;
   failed_reason: string | null;
+  twitch_vod_id: string | null;
 }
 
 function formatTime(seconds: number): string {
@@ -95,18 +142,25 @@ const COLD_OPEN_CONFIG = {
   weak:    { label: 'Weak Open', color: colors.red },
 };
 
-// Parses **Bold Label** — rest of text and renders bold label + dimmer text
-function BoldLeadText({ text, bulletColor }: { text: string; bulletColor: string }) {
+// Parses **Bold Label** — rest of text and renders bold label + dimmer text.
+// Body timestamps become tappable Twitch deep-links.
+function BoldLeadText({ text, accent, twitchVodId, recurring = false }: { text: string; accent: string; twitchVodId: string | null; recurring?: boolean }) {
   const match = text.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
   if (!match) {
-    return <Text style={styles.bulletText}>{text}</Text>;
+    return <LinkedText text={text} color={accent} twitchVodId={twitchVodId} style={styles.bulletText} />;
   }
   return (
-    <Text style={styles.bulletText}>
-      <Text style={styles.bulletBold}>{match[1]}</Text>
-      <Text style={{ color: colors.muted }}> — </Text>
-      {match[2]}
-    </Text>
+    <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+        <Text style={[styles.bulletBold, { color: accent }]}>{match[1]}</Text>
+        {recurring && (
+          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3, borderWidth: 1, borderColor: accent + '66', backgroundColor: accent + '1A' }}>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: accent, letterSpacing: 0.8, textTransform: 'uppercase' }}>Recurring</Text>
+          </View>
+        )}
+      </View>
+      <LinkedText text={match[2]} color={accent} twitchVodId={twitchVodId} style={styles.bulletText} />
+    </View>
   );
 }
 
@@ -114,10 +168,10 @@ function LockedCard({ label, onUpgrade }: { label: string; onUpgrade: () => void
   return (
     <TouchableOpacity
       onPress={onUpgrade}
-      style={{ backgroundColor: 'rgba(124,58,237,0.07)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', padding: 18, marginBottom: 14, alignItems: 'center', gap: 6 }}
+      style={{ backgroundColor: 'rgba(155,106,255,0.07)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(155,106,255,0.2)', padding: 18, marginBottom: 14, alignItems: 'center', gap: 6 }}
       activeOpacity={0.8}
     >
-      <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(124,58,237,0.7)', letterSpacing: 1, textTransform: 'uppercase' }}>{label}</Text>
+      <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(155,106,255,0.7)', letterSpacing: 1, textTransform: 'uppercase' }}>{label}</Text>
       <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>Unlock with Pro →</Text>
     </TouchableOpacity>
   );
@@ -131,6 +185,7 @@ export default function VodDetailScreen() {
   const [streak, setStreak] = useState(0);
   const [clips, setClips] = useState<Clip[]>([]);
   const [isPro, setIsPro] = useState(false);
+  const [recurringImprovements, setRecurringImprovements] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -145,7 +200,7 @@ export default function VodDetailScreen() {
 
     const [vodRes, prevRes, streakRes, clipsRes, profileRes] = await Promise.all([
       supabase.from('vods')
-        .select('id, title, stream_date, status, coach_report, peak_data, failed_reason')
+        .select('id, title, stream_date, status, coach_report, peak_data, failed_reason, twitch_vod_id')
         .eq('id', id).single(),
       supabase.from('vods')
         .select('coach_report')
@@ -158,7 +213,7 @@ export default function VodDetailScreen() {
         .select('id, title, status, video_url, caption_text, peak_score, start_time_seconds')
         .eq('vod_id', id).eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-      supabase.from('profiles').select('plan, subscription_expires_at').eq('id', user.id).single(),
+      supabase.from('profiles').select('plan, subscription_expires_at, coaching_arc').eq('id', user.id).single(),
     ]);
 
     setVod(vodRes.data as Vod);
@@ -167,6 +222,12 @@ export default function VodDetailScreen() {
     const proActive = profile?.plan === 'pro' &&
       !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
     setIsPro(proActive);
+
+    // Recurring improvements come from the coaching arc — issues that have
+    // shown up across multiple recent streams. Used to badge improvement
+    // items so the user can tell signal from noise.
+    const arc = (profile?.coaching_arc as any) || {};
+    setRecurringImprovements(Array.isArray(arc?.recurring_improvements) ? arc.recurring_improvements : []);
 
     const prevScore = (prevRes.data?.coach_report as any)?.overall_score;
     setPreviousScore(typeof prevScore === 'number' ? prevScore : null);
@@ -220,6 +281,33 @@ export default function VodDetailScreen() {
       Alert.alert('Retry failed', 'Could not start analysis. Try again.');
     } finally {
       setRetrying(false);
+    }
+  }
+
+  async function generateHighlightReel() {
+    if (!id || generatingPeak !== null) return;
+    setGeneratingPeak(-1); // sentinel: reel is being made
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/clips/highlight-reel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ vodId: id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (json?.upgrade) {
+        router.push('/subscribe');
+      } else if (!res.ok) {
+        Alert.alert('Reel failed', json?.message || json?.error || 'Could not start highlight reel.');
+      } else {
+        Alert.alert('Reel building', 'Your highlight reel is rendering. It will show up in your clips list in a minute.');
+        await loadData();
+      }
+    } catch {
+      Alert.alert('Reel failed', 'Could not start highlight reel. Try again.');
+    } finally {
+      setGeneratingPeak(null);
     }
   }
 
@@ -388,10 +476,37 @@ export default function VodDetailScreen() {
           {isPro ? (
             <View style={styles.priorityCard}>
               <Text style={styles.priorityLabel}>#1 PRIORITY</Text>
-              <Text style={styles.priorityText}>{report.recommendation}</Text>
+              <LinkedText text={report.recommendation} color={colors.accent} twitchVodId={vod.twitch_vod_id} style={styles.priorityText} />
             </View>
           ) : (
             <LockedCard label="#1 Priority Fix" onUpgrade={() => router.push('/subscribe')} />
+          )}
+
+          {/* Rewatch Moments — two minutes to study, one win + one mistake */}
+          {isPro && (report.rewatch_moments ?? []).length > 0 && (
+            <View style={styles.rewatchSection}>
+              <Text style={styles.sectionLabel}>REWATCH TWO MINUTES</Text>
+              <Text style={styles.rewatchHint}>60 seconds each. Study before next stream.</Text>
+              {(report.rewatch_moments ?? []).map((m, i) => {
+                const isBest = m.kind === 'best';
+                const accent = isBest ? colors.green : colors.red;
+                const accentBg = isBest ? 'rgba(163,230,53,0.08)' : 'rgba(248,113,113,0.08)';
+                const accentBorder = isBest ? 'rgba(163,230,53,0.25)' : 'rgba(248,113,113,0.25)';
+                const href = twitchVodUrl(vod.twitch_vod_id, m.time);
+                const row = (
+                  <View style={[styles.rewatchRow, { backgroundColor: accentBg, borderColor: accentBorder }]}>
+                    <Text style={[styles.rewatchKind, { color: accent }]}>{isBest ? 'WIN' : 'LESSON'}</Text>
+                    <Text style={styles.rewatchNote} numberOfLines={3}>{m.note}</Text>
+                    <Text style={[styles.rewatchTime, { color: accent }]}>{m.time}{href ? ' ↗' : ''}</Text>
+                  </View>
+                );
+                return href ? (
+                  <TouchableOpacity key={i} onPress={() => Linking.openURL(href)} activeOpacity={0.8}>{row}</TouchableOpacity>
+                ) : (
+                  <View key={i}>{row}</View>
+                );
+              })}
+            </View>
           )}
 
           {/* Clips */}
@@ -429,12 +544,12 @@ export default function VodDetailScreen() {
               {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => (
                 <View key={i} style={styles.bulletRow}>
                   <Text style={[styles.bullet, { color: colors.green }]}>✓</Text>
-                  <BoldLeadText text={s} bulletColor={colors.green} />
+                  <BoldLeadText text={s} accent={colors.green} twitchVodId={vod.twitch_vod_id} />
                 </View>
               ))}
               {!isPro && (report.strengths ?? []).length > 1 && (
                 <TouchableOpacity onPress={() => router.push('/subscribe')} style={{ marginTop: 4 }}>
-                  <Text style={{ fontSize: 12, color: 'rgba(124,58,237,0.7)', fontWeight: '600' }}>+{(report.strengths ?? []).length - 1} more — Unlock with Pro →</Text>
+                  <Text style={{ fontSize: 12, color: 'rgba(155,106,255,0.7)', fontWeight: '600' }}>+{(report.strengths ?? []).length - 1} more — Unlock with Pro →</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -442,36 +557,32 @@ export default function VodDetailScreen() {
             {isPro ? (
               <View style={styles.fixCard}>
                 <Text style={styles.sectionLabel}>FIX FOR NEXT STREAM</Text>
-                {(report.improvements ?? []).map((s, i) => (
-                  <View key={i} style={styles.bulletRow}>
-                    <Text style={[styles.bullet, { color: colors.yellow }]}>→</Text>
-                    <BoldLeadText text={s} bulletColor={colors.yellow} />
-                  </View>
-                ))}
+                {(report.improvements ?? []).map((s, i) => {
+                  // Mark as recurring when the label (or full string) shows
+                  // up in the coaching arc's recurring list. Fuzzy: case-
+                  // insensitive substring match because arc labels may be
+                  // reworded slightly between streams.
+                  const labelMatch = s.match(/^\*\*(.+?)\*\*/);
+                  const label = (labelMatch?.[1] ?? '').toLowerCase();
+                  const sl = s.toLowerCase();
+                  const isRecurring = recurringImprovements.some((r) => {
+                    const rl = r.toLowerCase();
+                    const head = rl.split(':')[0].trim();
+                    return (label && (rl.includes(label) || label.includes(head))) ||
+                      (head && sl.includes(head));
+                  });
+                  return (
+                    <View key={i} style={styles.bulletRow}>
+                      <Text style={[styles.bullet, { color: colors.yellow }]}>→</Text>
+                      <BoldLeadText text={s} accent={colors.yellow} twitchVodId={vod.twitch_vod_id} recurring={isRecurring} />
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               <LockedCard label="Fix For Next Stream" onUpgrade={() => router.push('/subscribe')} />
             )}
           </View>
-
-          {/* Your Missions — GATED */}
-          {isPro ? (
-            (report.next_stream_goals ?? []).length > 0 && (
-              <View style={styles.missionsCard}>
-                <Text style={styles.sectionLabel}>YOUR MISSIONS</Text>
-                {(report.next_stream_goals ?? []).map((goal, i) => (
-                  <View key={i} style={styles.goalRow}>
-                    <View style={styles.goalNumber}>
-                      <Text style={styles.goalNumberText}>{i + 1}</Text>
-                    </View>
-                    <Text style={styles.goalText}>{goal}</Text>
-                  </View>
-                ))}
-              </View>
-            )
-          ) : (
-            <LockedCard label="Your Missions · 3 next-stream goals" onUpgrade={() => router.push('/subscribe')} />
-          )}
 
           {/* Best Moment — GATED */}
           {isPro ? (
@@ -549,7 +660,21 @@ export default function VodDetailScreen() {
       {/* Peak Moments */}
       {peaks.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PEAK MOMENTS ({peaks.length})</Text>
+          <View style={styles.peakHeader}>
+            <Text style={styles.sectionLabel}>PEAK MOMENTS ({peaks.length})</Text>
+            {isPro && peaks.length >= 2 && (
+              <TouchableOpacity
+                style={styles.reelBtn}
+                onPress={generateHighlightReel}
+                disabled={generatingPeak === -1}
+              >
+                {generatingPeak === -1
+                  ? <ActivityIndicator size="small" color={colors.accentLight} />
+                  : <Text style={styles.reelBtnText}>Make Highlight Reel</Text>
+                }
+              </TouchableOpacity>
+            )}
+          </View>
           {peaks.map((p, i) => {
             const alreadyClaimed = claimedStarts.has(Math.round(p.start));
             return (
@@ -621,10 +746,10 @@ const styles = StyleSheet.create({
   // Score hero
   scoreHero: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(124,58,237,0.1)',
+    backgroundColor: 'rgba(155,106,255,0.1)',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.3)',
+    borderColor: 'rgba(155,106,255,0.3)',
     padding: 20,
     marginBottom: 14,
     alignItems: 'flex-start',
@@ -646,12 +771,14 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 11, fontWeight: '700' },
 
   // #1 Priority
-  priorityCard: { backgroundColor: 'rgba(124,58,237,0.1)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.35)', padding: 18, marginBottom: 14 },
+  priorityCard: { backgroundColor: 'rgba(155,106,255,0.1)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(155,106,255,0.35)', padding: 18, marginBottom: 14 },
   priorityLabel: { fontSize: 11, fontWeight: '700', color: colors.accentLight, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
   priorityText: { fontSize: 14, color: colors.text, lineHeight: 22, fontWeight: '500' },
 
   // Shared section
   section: { marginBottom: 14 },
+  reelBtn: { backgroundColor: 'rgba(155,106,255,0.16)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(155,106,255,0.4)' },
+  reelBtnText: { fontSize: 11, fontWeight: '700', color: colors.accentLight, letterSpacing: 0.4 },
 
   // Clips
   clipRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 8, gap: 12 },
@@ -672,11 +799,13 @@ const styles = StyleSheet.create({
   bulletBold: { fontWeight: '800', color: '#fff' },
 
   // Your Missions
-  missionsCard: { backgroundColor: 'rgba(124,58,237,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(124,58,237,0.25)', padding: 18, marginBottom: 14 },
-  goalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
-  goalNumber: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: 'rgba(124,58,237,0.5)', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
-  goalNumberText: { fontSize: 11, fontWeight: '800', color: colors.accentLight },
-  goalText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 19 },
+  // Rewatch moments — Win + Lesson cards
+  rewatchSection: { marginBottom: 18 },
+  rewatchHint: { fontSize: 11, color: colors.muted, marginBottom: 10, letterSpacing: 0.4 },
+  rewatchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  rewatchKind: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4, width: 56 },
+  rewatchNote: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
+  rewatchTime: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
 
   // Best moment
   bestMomentCard: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 14 },

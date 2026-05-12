@@ -49,6 +49,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="vod/[id]" options={{ title: 'Stream Report', headerBackTitle: 'VODs' }} />
+        <Stack.Screen name="clip/[id]" options={{ title: 'Edit Clip', headerBackTitle: 'Clips' }} />
         <Stack.Screen name="subscribe" options={{ title: 'Upgrade to Pro', presentation: 'modal' }} />
       </Stack>
     </ErrorBoundary>

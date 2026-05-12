@@ -35,7 +35,7 @@ export default function DashboardScreen() {
     if (!user) { router.replace('/login'); return; }
 
     const [profileRes, vodsRes, clipsRes, latestRes, streakRes] = await Promise.all([
-      supabase.from('profiles').select('twitch_display_name, twitch_avatar_url, plan').eq('id', user.id).single(),
+      supabase.from('profiles').select('twitch_display_name, twitch_avatar_url, plan, coaching_arc').eq('id', user.id).single(),
       supabase.from('vods').select('id, status, peak_data').eq('user_id', user.id),
       supabase.from('clips').select('id').eq('user_id', user.id).eq('status', 'ready'),
       supabase.from('vods').select('id, title, coach_report, stream_date').eq('user_id', user.id).eq('status', 'ready').order('stream_date', { ascending: false }).limit(1).maybeSingle(),
@@ -132,23 +132,54 @@ export default function DashboardScreen() {
         )}
       </View>
 
+      {/* Pre-Stream Focus — recurring pattern surfaced before next stream */}
+      {(() => {
+        const arc = profile?.coaching_arc as any;
+        const issue = arc?.recurring_improvements?.[0];
+        if (!issue) return null;
+        const example = arc?.recurring_examples?.[0]?.[0];
+        return (
+          <View style={styles.focusCard}>
+            <Text style={styles.focusLabel}>HEADS UP BEFORE YOU STREAM</Text>
+            <Text style={styles.focusText}>{issue}</Text>
+            {example && (
+              <Text style={styles.focusExample}>Try: &ldquo;{example}&rdquo;</Text>
+            )}
+          </View>
+        );
+      })()}
+
       {/* Latest stream score */}
       {latestVod && (latestVod.coach_report as any)?.overall_score !== undefined && (() => {
         const s = (latestVod.coach_report as any).overall_score;
-        const cardBorder = s >= 70 ? 'rgba(74,222,128,0.3)' : s >= 50 ? 'rgba(251,191,36,0.3)' : 'rgba(248,113,113,0.3)';
-        const cardBg = s >= 70 ? 'rgba(74,222,128,0.04)' : s >= 50 ? 'rgba(251,191,36,0.04)' : 'rgba(248,113,113,0.04)';
+        const cardBorder = s >= 70 ? 'rgba(163,230,53,0.3)' : s >= 50 ? 'rgba(245,158,11,0.3)' : 'rgba(248,113,113,0.3)';
+        const cardBg = s >= 70 ? 'rgba(163,230,53,0.04)' : s >= 50 ? 'rgba(245,158,11,0.04)' : 'rgba(248,113,113,0.04)';
+        const history: any[] = (profile?.coaching_arc as any)?.score_history ?? [];
         return (
         <TouchableOpacity style={[styles.scoreCard, { borderColor: cardBorder, backgroundColor: cardBg }]} onPress={() => router.push(`/vod/${latestVod.id}`)}>
           <Text style={styles.scoreCardLabel}>LAST STREAM</Text>
           <View style={styles.scoreCardRow}>
-            <Text style={[styles.scoreCardNumber, { color: scoreColor((latestVod.coach_report as any).overall_score) }]}>
-              {(latestVod.coach_report as any).overall_score}
-            </Text>
+            <Text style={[styles.scoreCardNumber, { color: scoreColor(s) }]}>{s}</Text>
             <View style={styles.scoreCardRight}>
               <Text style={styles.scoreCardTitle} numberOfLines={2}>{latestVod.title}</Text>
               <Text style={styles.scoreCardLink}>View Report →</Text>
             </View>
           </View>
+
+          {/* Score history sparkline — last 6 streams */}
+          {history.length >= 2 && (
+            <View style={styles.sparkRow}>
+              <Text style={styles.sparkLabel}>TRAJECTORY · LAST {Math.min(history.length, 6)}</Text>
+              <View style={styles.sparkBars}>
+                {history.slice(-6).map((h: any, i: number, arr: any[]) => {
+                  const isLast = i === arr.length - 1;
+                  return (
+                    <View key={i} style={[styles.sparkBar, { height: Math.max(6, h.score * 0.5), backgroundColor: isLast ? scoreColor(h.score) : 'rgba(255,255,255,0.15)' }]} />
+                  );
+                })}
+              </View>
+            </View>
+          )}
         </TouchableOpacity>
         );
       })()}
@@ -449,7 +480,7 @@ function CollabFinderCard({ collab, expanded, onToggle }: { collab: any; expande
   // Opted in, no suggestions
   if (suggestions.length === 0) {
     return (
-      <View style={[styles.collabCard, { borderColor: 'rgba(124,58,237,0.2)', backgroundColor: 'rgba(124,58,237,0.04)' }]}>
+      <View style={[styles.collabCard, { borderColor: 'rgba(155,106,255,0.2)', backgroundColor: 'rgba(155,106,255,0.04)' }]}>
         <Text style={styles.collabLabel}>COLLAB FINDER</Text>
         <Text style={styles.collabInsight}>You're in the matching pool. We'll find collab partners for you every Monday.</Text>
       </View>
@@ -459,7 +490,7 @@ function CollabFinderCard({ collab, expanded, onToggle }: { collab: any; expande
   // Has suggestions
   return (
     <TouchableOpacity
-      style={[styles.collabCard, { borderColor: 'rgba(124,58,237,0.2)', backgroundColor: 'rgba(124,58,237,0.04)' }]}
+      style={[styles.collabCard, { borderColor: 'rgba(155,106,255,0.2)', backgroundColor: 'rgba(155,106,255,0.04)' }]}
       onPress={onToggle}
       activeOpacity={0.8}
     >
@@ -483,7 +514,7 @@ function CollabFinderCard({ collab, expanded, onToggle }: { collab: any; expande
               {s.avatar_url ? (
                 <Image source={{ uri: s.avatar_url }} style={styles.collabAvatar} />
               ) : (
-                <View style={[styles.collabAvatar, { backgroundColor: 'rgba(124,58,237,0.2)', alignItems: 'center', justifyContent: 'center' }]}>
+                <View style={[styles.collabAvatar, { backgroundColor: 'rgba(155,106,255,0.2)', alignItems: 'center', justifyContent: 'center' }]}>
                   <Text style={{ color: colors.accentLight, fontSize: 14, fontWeight: '700' }}>{s.display_name?.[0] || '?'}</Text>
                 </View>
               )}
@@ -623,19 +654,19 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   headerAvatar: { width: 42, height: 42, borderRadius: 21, marginRight: 12, flexShrink: 0 },
-  headerAvatarFallback: { backgroundColor: 'rgba(124,58,237,0.2)', alignItems: 'center', justifyContent: 'center' },
+  headerAvatarFallback: { backgroundColor: 'rgba(155,106,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   headerAvatarText: { color: colors.accentLight, fontSize: 16, fontWeight: '800' },
   headerText: { flex: 1, marginRight: 8 },
   greeting: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginBottom: 1 },
   greetingSub: { fontSize: 12, color: colors.muted },
   name: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  proBadge: { backgroundColor: 'rgba(124,58,237,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.accentLight },
+  proBadge: { backgroundColor: 'rgba(155,106,255,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.accentLight },
   proBadgeText: { color: colors.accentLight, fontSize: 12, fontWeight: '700' },
   upgradeBadge: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   upgradeBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
   statCard: { flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 18 },
-  statCardAccent: { borderColor: 'rgba(124,58,237,0.4)', backgroundColor: 'rgba(124,58,237,0.08)' },
+  statCardAccent: { borderColor: 'rgba(155,106,255,0.4)', backgroundColor: 'rgba(155,106,255,0.08)' },
   statValue: { fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -1, marginBottom: 4 },
   statValueAccent: { color: colors.accentLight },
   statLabel: { fontSize: 12, color: colors.muted, fontWeight: '600' },
@@ -643,6 +674,18 @@ const styles = StyleSheet.create({
   actionCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, marginBottom: 12 },
   actionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
   actionSub: { fontSize: 13, color: colors.muted },
+  // Pre-stream focus card — the "heads up" surface above latest score
+  focusCard: { backgroundColor: 'rgba(155,106,255,0.07)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(155,106,255,0.25)', borderLeftWidth: 3, borderLeftColor: colors.accent, padding: 14, marginBottom: 14 },
+  focusLabel: { fontSize: 10, fontWeight: '800', color: colors.accentLight, letterSpacing: 1.2, marginBottom: 6 },
+  focusText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  focusExample: { fontSize: 13, color: colors.textMuted, lineHeight: 19, marginTop: 8, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: 'rgba(155,106,255,0.4)', fontStyle: 'italic' },
+
+  // Score history sparkline inside the last-stream card
+  sparkRow: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  sparkLabel: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1.2, marginBottom: 8 },
+  sparkBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 32 },
+  sparkBar: { flex: 1, borderRadius: 2 },
+
   scoreCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 12 },
   scoreCardLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 },
   scoreCardRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
@@ -650,7 +693,7 @@ const styles = StyleSheet.create({
   scoreCardRight: { flex: 1 },
   scoreCardTitle: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 4, lineHeight: 20 },
   scoreCardLink: { fontSize: 12, color: colors.accentLight, fontWeight: '600' },
-  streakCard: { backgroundColor: 'rgba(124,58,237,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', padding: 16, marginBottom: 24 },
+  streakCard: { backgroundColor: 'rgba(155,106,255,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(155,106,255,0.2)', padding: 16, marginBottom: 24 },
   streakText: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 2 },
   streakSub: { fontSize: 12, color: colors.muted },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 32 },
@@ -658,8 +701,8 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   retryBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
   retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  lockedCard: { backgroundColor: 'rgba(124,58,237,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', padding: 20, marginBottom: 24, alignItems: 'center' },
-  lockedIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(124,58,237,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  lockedCard: { backgroundColor: 'rgba(155,106,255,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(155,106,255,0.2)', padding: 20, marginBottom: 24, alignItems: 'center' },
+  lockedIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(155,106,255,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   lockedIcon: { fontSize: 20 },
   lockedTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 6, textAlign: 'center' },
   lockedDesc: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19, marginBottom: 16 },
@@ -684,7 +727,7 @@ const styles = StyleSheet.create({
   signalStatus: { fontSize: 11, fontWeight: '700', width: 52, textAlign: 'right' },
   burnoutSparkline: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24 },
   burnoutBar: { flex: 1, borderRadius: 2, minHeight: 4 },
-  contentCard: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)', backgroundColor: 'rgba(124,58,237,0.04)', padding: 16, marginBottom: 24 },
+  contentCard: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(155,106,255,0.2)', backgroundColor: 'rgba(155,106,255,0.04)', padding: 16, marginBottom: 24 },
   contentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   contentLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1 },
   contentTopCat: { fontSize: 13, fontWeight: '700', color: colors.accentLight },
@@ -713,7 +756,7 @@ const styles = StyleSheet.create({
   collabMatchScore: { fontSize: 12, fontWeight: '800', color: colors.accentLight },
   collabReason: { fontSize: 10, color: colors.muted, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
   collabExternalBadge: { fontSize: 9, color: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, fontWeight: '700', overflow: 'hidden' },
-  collabMessageBtn: { backgroundColor: 'rgba(124,58,237,0.25)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  collabMessageBtn: { backgroundColor: 'rgba(155,106,255,0.25)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   collabMessageBtnText: { color: colors.accentLight, fontSize: 11, fontWeight: '700' },
   collabTwitchBtn: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   collabTwitchBtnText: { color: colors.muted, fontSize: 11, fontWeight: '700' },

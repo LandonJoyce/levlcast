@@ -7,9 +7,20 @@ import { supabase } from '@/lib/supabase';
 import { restorePurchases } from '@/lib/revenuecat';
 import { colors } from '@/lib/colors';
 
+interface Usage {
+  plan: 'free' | 'pro';
+  founding_member: boolean;
+  on_trial: boolean;
+  analyses_used: number;
+  clips_used: number;
+  analyses_limit: number;
+  clips_limit: number;
+  period_label: string; // "ever" for trial, "this month" for Pro
+}
+
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<any>(null);
-  const [usage, setUsage] = useState<any>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
   const [restoring, setRestoring] = useState(false);
   const router = useRouter();
 
@@ -20,24 +31,25 @@ export default function SettingsScreen() {
   async function loadData() {
     try {
       setLoadError(null);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/login'); return; }
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) { router.replace('/login'); return; }
 
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace('/login'); return; }
 
-      const [profileRes, analysesRes] = await Promise.all([
+      // Pull live counters from the canonical API. trial_records is RLS-
+      // locked so we cannot read it directly from the client.
+      const [profileRes, usageRes] = await Promise.all([
         supabase.from('profiles').select('twitch_display_name, twitch_login, twitch_avatar_url, plan').eq('id', user.id).single(),
-        supabase.from('vods').select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .not('analyzed_at', 'is', null)
-          .gte('analyzed_at', monthStart)
-          .lt('analyzed_at', monthEnd),
+        fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/usage`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }),
       ]);
 
       setProfile(profileRes.data);
-      setUsage({ analyses_this_month: analysesRes.count ?? 0 });
+      if (usageRes.ok) {
+        setUsage(await usageRes.json());
+      }
     } catch (err: any) {
       setLoadError(err?.message || 'Failed to load settings');
     }
@@ -98,9 +110,16 @@ export default function SettingsScreen() {
     );
   }
 
-  const isPro = profile?.plan === 'pro';
-  const analysesUsed = usage?.analyses_this_month || 0;
-  const analysesLimit = isPro ? 20 : 1;
+  const isPro = usage?.plan === 'pro';
+  const analysesUsed = usage?.analyses_used ?? 0;
+  const analysesLimit = usage?.analyses_limit ?? 3;
+  const clipsUsed = usage?.clips_used ?? 0;
+  const clipsLimit = usage?.clips_limit ?? 5;
+  const periodLabel = usage?.period_label ?? 'ever';
+  const usageLabelText = periodLabel === 'ever' ? 'used during trial' : 'this month';
+  const planName = isPro
+    ? (usage?.founding_member ? 'Pro · Founding' : 'Pro')
+    : 'Free Trial';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -125,24 +144,32 @@ export default function SettingsScreen() {
       <Text style={styles.sectionLabel}>Subscription</Text>
       <View style={styles.card}>
         <View style={styles.planRow}>
-          <Text style={styles.planName}>{isPro ? 'Pro' : 'Free'}</Text>
+          <Text style={styles.planName}>{planName}</Text>
           <View style={[styles.planBadge, isPro && styles.planBadgePro]}>
             <Text style={[styles.planBadgeText, isPro && styles.planBadgeTextPro]}>
-              {isPro ? 'Active' : 'Free Plan'}
+              {isPro ? 'Active' : 'Trial'}
             </Text>
           </View>
         </View>
 
+        <View style={styles.usageRow}>
+          <Text style={styles.usageLabel}>Analyses {usageLabelText}</Text>
+          <Text style={styles.usageValue}>{analysesUsed} / {analysesLimit}</Text>
+        </View>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${Math.min((analysesUsed / Math.max(analysesLimit, 1)) * 100, 100)}%` }]} />
+        </View>
+
+        <View style={styles.usageRow}>
+          <Text style={styles.usageLabel}>Clips {usageLabelText}</Text>
+          <Text style={styles.usageValue}>{clipsUsed} / {clipsLimit}</Text>
+        </View>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${Math.min((clipsUsed / Math.max(clipsLimit, 1)) * 100, 100)}%` }]} />
+        </View>
+
         {!isPro && (
           <>
-            <View style={styles.usageRow}>
-              <Text style={styles.usageLabel}>VOD analyses this month</Text>
-              <Text style={styles.usageValue}>{analysesUsed} / {analysesLimit}</Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${Math.min((analysesUsed / analysesLimit) * 100, 100)}%` }]} />
-            </View>
-
             <TouchableOpacity style={styles.upgradeBtn} onPress={() => router.push('/subscribe')}>
               <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </TouchableOpacity>
@@ -215,7 +242,7 @@ const styles = StyleSheet.create({
   planRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   planName: { fontSize: 18, fontWeight: '800', color: colors.text },
   planBadge: { backgroundColor: colors.surface2, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.border },
-  planBadgePro: { backgroundColor: 'rgba(124,58,237,0.15)', borderColor: colors.accentLight },
+  planBadgePro: { backgroundColor: 'rgba(155,106,255,0.15)', borderColor: colors.accentLight },
   planBadgeText: { fontSize: 12, fontWeight: '700', color: colors.muted },
   planBadgeTextPro: { color: colors.accentLight },
   usageRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },

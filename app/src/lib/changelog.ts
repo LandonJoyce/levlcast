@@ -20,6 +20,23 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.13.0 (iOS 1.0.3)",
+    date: "2026-05-11",
+    title: "Mobile parity update",
+    items: [
+      { type: "new", text: "Edit your clips on iOS. Tap Edit on any clip to pick a hook frame, change the caption style, and rewrite caption text. Re-renders without costing a clip." },
+      { type: "new", text: "Highlight reel button on the stream report page. Builds a 27-second multi-cut from your top three peaks in one tap." },
+      { type: "new", text: "Recurring tag on iOS coach reports so you can tell pattern issues apart from one-offs." },
+      { type: "new", text: "Tap any timestamp inside a coach report to open that exact moment on Twitch." },
+      { type: "new", text: "Rewatch Two Minutes section: one win, one lesson, both linked to the Twitch timestamp." },
+      { type: "new", text: "Heads up before you stream card on the iOS dashboard surfaces the one recurring pattern to keep in mind." },
+      { type: "new", text: "Score trajectory sparkline on the last-stream card so you can see your trend at a glance." },
+      { type: "improved", text: "Settings now shows your real trial counters (3 analyses, 5 clips lifetime) instead of the wrong monthly framing." },
+      { type: "improved", text: "Subscribe screen lists the actual Pro features. No more phantom Priority Processing." },
+      { type: "removed", text: "Missions section in coach reports is gone. The recommendation already covers next-stream focus." },
+    ],
+  },
+  {
     version: "v0.12.1",
     date: "2026-05-09",
     title: "Editor Polish",

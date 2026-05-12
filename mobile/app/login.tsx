@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 200,
-    backgroundColor: 'rgba(124,58,237,0.15)',
+    backgroundColor: 'rgba(155,106,255,0.15)',
   },
   content: { width: '100%', maxWidth: 380, alignItems: 'center' },
   logo: {
