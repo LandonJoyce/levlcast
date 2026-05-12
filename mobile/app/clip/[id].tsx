@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
+import { GradButton } from '@/lib/gradient';
 
 const APP_URL = process.env.EXPO_PUBLIC_APP_URL!;
 
@@ -223,12 +224,9 @@ export default function ClipEditorScreen() {
       ))}
 
       {/* Save */}
-      <TouchableOpacity style={s.saveBtn} onPress={save} disabled={saving}>
-        {saving
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={s.saveBtnText}>Save &amp; re-render</Text>
-        }
-      </TouchableOpacity>
+      <GradButton onPress={save} loading={saving} disabled={saving} style={{ marginTop: 20 }} textStyle={{ fontSize: 15 }}>
+        Save &amp; re-render
+      </GradButton>
 
       {clip.video_url && (
         <TouchableOpacity style={s.shareBtn} onPress={shareClip}>

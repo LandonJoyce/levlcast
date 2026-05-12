@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
+import { GradBadge } from '@/lib/gradient';
 
 function scoreColor(score: number) {
   if (score >= 80) return colors.green;
@@ -124,10 +125,10 @@ export default function DashboardScreen() {
           <Text style={styles.greetingSub}>Here's what's happening</Text>
         </View>
         {profile?.plan === 'pro' ? (
-          <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
+          <GradBadge>PRO</GradBadge>
         ) : (
-          <TouchableOpacity style={styles.upgradeBadge} onPress={() => router.push('/subscribe')}>
-            <Text style={styles.upgradeBadgeText}>Upgrade</Text>
+          <TouchableOpacity onPress={() => router.push('/subscribe')} activeOpacity={0.85}>
+            <GradBadge>Upgrade</GradBadge>
           </TouchableOpacity>
         )}
       </View>

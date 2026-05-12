@@ -4,9 +4,11 @@ import {
   ActivityIndicator, Alert, ScrollView, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { getProPackage, getAnnualPackage, purchasePro, restorePurchases } from '@/lib/revenuecat';
 import { colors } from '@/lib/colors';
+import { GradButton, BRAND_COLORS, BRAND_START, BRAND_END } from '@/lib/gradient';
 import { PurchasesPackage } from 'react-native-purchases';
 
 const FEATURES = [
@@ -155,20 +157,15 @@ export default function SubscribeScreen() {
       </View>
 
       {/* Subscribe button */}
-      <TouchableOpacity
-        style={[styles.subscribeBtn, (loading || purchasing) && styles.subscribeBtnDisabled]}
+      <GradButton
         onPress={handlePurchase}
         disabled={loading || purchasing}
-        activeOpacity={0.85}
+        loading={purchasing}
+        style={styles.subscribeWrap}
+        textStyle={{ fontSize: 16 }}
       >
-        {purchasing ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.subscribeBtnText}>
-            {selected === 'annual' ? 'Get Pro — Best Value' : 'Get Pro'}
-          </Text>
-        )}
-      </TouchableOpacity>
+        {selected === 'annual' ? 'Get Pro · Best Value' : 'Get Pro'}
+      </GradButton>
 
       {/* Required: Restore Purchases */}
       <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} disabled={restoring}>
@@ -234,6 +231,7 @@ const styles = StyleSheet.create({
 
   // Buttons
   subscribeBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 16 },
+  subscribeWrap: { marginBottom: 16, borderRadius: 14, shadowColor: '#943DFF', shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
   subscribeBtnDisabled: { opacity: 0.5 },
   subscribeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   restoreBtn: { alignItems: 'center', paddingVertical: 12, marginBottom: 24 },

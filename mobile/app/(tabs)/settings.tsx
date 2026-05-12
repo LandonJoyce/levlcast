@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { restorePurchases } from '@/lib/revenuecat';
 import { colors } from '@/lib/colors';
+import { GradButton, GradBadge } from '@/lib/gradient';
 
 interface Usage {
   plan: 'free' | 'pro';
@@ -170,9 +171,9 @@ export default function SettingsScreen() {
 
         {!isPro && (
           <>
-            <TouchableOpacity style={styles.upgradeBtn} onPress={() => router.push('/subscribe')}>
-              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
-            </TouchableOpacity>
+            <GradButton onPress={() => router.push('/subscribe')} style={{ marginBottom: 12 }}>
+              Upgrade to Pro
+            </GradButton>
 
             {/* Required: subscription disclosure */}
             <Text style={styles.disclosure}>
