@@ -71,6 +71,73 @@ export default async function LandingPage() {
         </div>
       </header>
 
+      {/* ── iOS 1.0.3 release banner ── */}
+      <a
+        href="https://apps.apple.com/us/app/levlcast/id6761281566"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="iOS 1.0.3 update on the App Store"
+        style={{
+          display: "block",
+          textDecoration: "none",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          background:
+            "linear-gradient(90deg, rgba(148,61,255,0.10) 0%, rgba(242,97,121,0.08) 50%, rgba(148,61,255,0.10) 100%)",
+        }}
+      >
+        <div className="ll-con">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 14,
+              flexWrap: "wrap",
+              padding: "10px 0",
+              fontSize: 13,
+              lineHeight: 1.4,
+              color: "rgba(255,255,255,0.85)",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "var(--ll-mono)",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.18em",
+                padding: "3px 8px",
+                borderRadius: 999,
+                color: "#fff",
+                background:
+                  "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              NEW · iOS 1.0.3
+            </span>
+            <span style={{ color: "rgba(255,255,255,0.85)" }}>
+              <b style={{ color: "#fff", fontWeight: 600 }}>Clip editor</b>,{" "}
+              <b style={{ color: "#fff", fontWeight: 600 }}>Highlight Reels</b>, and tap-to-play timestamps on the coach report.
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                color: "#fff",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Update on the App Store
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </span>
+          </div>
+        </div>
+      </a>
+
       {/* ── Hero ── */}
       <section className="ll-hero">
         <div className="ll-con">
