@@ -26,42 +26,37 @@ export async function POST(req: NextRequest) {
     : `Their post:\nTitle: ${postTitle}\n${postBody ? `Body: ${postBody}` : ""}`;
 
   const msg = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6",
     max_tokens: 220,
+    system: `You write cold Reddit DMs for LevlCast. You have ONE source of truth: the post or comment text provided. You cannot see the stream, the VODs, the analytics, or anything else. If it is not in the text, you do not know it.
+
+HARD RULE: Your first sentence must open with a SHORT DIRECT QUOTE from their post or comment — their exact words in quotation marks. Not a paraphrase. Not a topic summary. Their actual words. If their post is a title only, quote the title or a phrase from it.
+
+This quote-first rule exists because past DMs fabricated things like "saw you're worried about keeping people watching" when the person never said that. That destroys credibility instantly.`,
     messages: [
       {
         role: "user",
-        content: `Write a SHORT Reddit DM from someone who built LevlCast to a Twitch streamer who ${isComment ? "commented" : "posted"} asking for help.
+        content: `Write a Reddit DM from the person who built LevlCast to a streamer who ${isComment ? "wrote this comment" : "wrote this post"}.
 
 ${sourceDesc}
 Username: ${authorName}
 
-What LevlCast does, in order of importance:
-1. PRIMARY: Coach report on every VOD. Scores the stream 0-100, names the exact moment viewers dropped off, tells you the one specific thing to fix next stream, tracks your score across streams so you can see real improvement.
-2. SECONDARY: Auto-detects your best moments and cuts them as clips you can edit, caption, and post.
+LevlCast:
+1. Coach report on every VOD: scores 0-100, pinpoints when viewers left, gives one specific thing to fix, tracks improvement over time.
+2. Auto-clips your best moments, you edit captions and post.
 
-Lead with the coach report. The clip side is a bonus, not the main pitch.
-
-CRITICAL credibility rules (violating these gets the DM ignored or called out):
-- You have NOT watched their stream. You have NOT seen any analytics. You ONLY have the post/comment text above. Never write anything that implies you have watched their stream, seen their VODs, or know their stats.
-- BANNED openers and phrases: "noticed your stream", "I noticed", "I saw your stream", "your stream goes", "your VOD shows", "your numbers show", "your retention", "your dropoff", "watching your", "checked out your", "saw you're", "saw you were", "you're struggling", "you're worried", "you're frustrated", "sounds like you're", "seems like you're".
-- BANNED specifics you cannot know: viewer counts, drop-off times, talk-time ratios, energy patterns, what their stream "goes deep on", how their viewers behave, what they are worried/frustrated/concerned about (unless they used those exact words). If they didn't say it in the post, you do not know it.
-- The ONLY thing you can reference is the literal text of their post or comment. Quote a phrase or paraphrase what THEY wrote, not what you imagined about their channel.
-- DO NOT infer their emotional state (worried, frustrated, struggling, etc.) unless they literally used that word themselves.
+Lead with the coach report.
 
 Format:
-- First line: SUBJECT: <4-7 words, specific to what they actually wrote. No generic openers.>
-- Then a blank line.
-- Then the body: 2-3 short sentences. MAX 60 words total.
-- Sentence 1: reference what THEY said in the ${isComment ? "comment" : "post"} (paraphrase or short quote). Prove you read THEIR words, not that you watched THEIR stream.
-- Sentence 2: describe what the coach report would do for the exact problem they described. Hypothetical, not retrospective: "the report would tell you...", not "your report shows...".
-- Optional sentence 3: one line about clips as a side benefit, or skip if it doesn't fit.
-- End with "free to try at levlcast.com" or similar one-liner.
-- ABSOLUTELY NO em dashes. Use periods or commas. If you would write a dash, rewrite the sentence.
-- No corpo phrases. No "I hope", "just wanted to", "checking out", "might be worth", "would love to", "feel free".
-- Sound like a streamer texting another streamer. Casual, blunt, real.
-- Match their tone: frustrated = blunt, casual = casual, technical = specific numbers.
-- Return ONLY the subject line and message. Nothing else.`,
+- Line 1: SUBJECT: <4-7 words taken from or directly referencing what they wrote>
+- Blank line
+- Body: 2-3 sentences, MAX 60 words
+  - Sentence 1: MUST open with a direct quote from their text in quotation marks, then connect it to LevlCast
+  - Sentence 2: what the coach report would do for their specific situation (hypothetical: "the report would..." not "your report shows...")
+  - Sentence 3 (optional): clips as a bonus
+- Final line: "free to try at levlcast.com"
+
+No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". Casual, blunt, like a streamer texting another streamer. Return ONLY the subject and message.`,
       },
     ],
   });
