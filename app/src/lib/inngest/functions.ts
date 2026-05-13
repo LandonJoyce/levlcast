@@ -34,7 +34,7 @@ export const analyzeVod = inngest.createFunction(
   {
     id: "analyze-vod",
     retries: 1,
-    timeouts: { finish: "2h" },
+    timeouts: { finish: "3h" },
     concurrency: {
       limit: 1, // one VOD analysis at a time per user — prevents resource overload
       key: "event.data.userId",
@@ -87,7 +87,7 @@ export const analyzeVod = inngest.createFunction(
       // Split into 15-minute chunks so each Inngest step completes well within
       // Vercel's 10-minute function invocation limit. A single-chunk VOD (<15 min)
       // behaves identically to the old single-step approach.
-      const CHUNK_SECONDS = 900;
+      const CHUNK_SECONDS = 1200;
       const chunks: Array<{ urls: string[]; timeOffset: number }> = [];
       {
         let chunkUrls: string[] = [];
