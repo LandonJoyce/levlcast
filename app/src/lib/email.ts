@@ -517,7 +517,7 @@ export async function sendFeedbackToAdmin(input: {
 
   await resend.emails.send({
     from: "LevlCast Feedback <hello@levlcast.com>",
-    to: "landonjoyce@hotmail.com",
+    to: "mototoka14@gmail.com",
     subject: `[LevlCast feedback · ${input.category}] ${input.fromEmail ?? "anon"}`,
     html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:24px;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;">
