@@ -631,7 +631,7 @@ export const cleanupStuckVods = inngest.createFunction(
   { cron: "*/15 * * * *" },
   async () => {
     const supabase = createAdminClient();
-    const cutoff = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+    const cutoff = new Date(Date.now() - 150 * 60 * 1000).toISOString();
 
     const { data: stuck } = await supabase
       .from("vods")
