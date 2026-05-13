@@ -11,6 +11,9 @@ interface FeedbackRow {
   context: Record<string, unknown> | null;
   read: boolean;
   created_at: string;
+  admin_reply: string | null;
+  admin_reply_at: string | null;
+  user_seen_reply: boolean;
 }
 
 interface Props {
@@ -201,7 +204,26 @@ export function FeedbackInbox({ initialFeedback }: Props) {
                   </details>
                 )}
 
-                <div style={{ display: "flex", gap: 8 }}>
+                <ReplyBox
+                  feedback={f}
+                  onReply={(reply, replyAt) =>
+                    setFeedback((prev) =>
+                      prev.map((row) =>
+                        row.id === f.id
+                          ? {
+                              ...row,
+                              admin_reply: reply,
+                              admin_reply_at: replyAt,
+                              user_seen_reply: false,
+                              read: true,
+                            }
+                          : row
+                      )
+                    )
+                  }
+                />
+
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                   <button
                     onClick={() => toggleRead(f.id, !f.read)}
                     style={{
@@ -237,6 +259,162 @@ export function FeedbackInbox({ initialFeedback }: Props) {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function ReplyBox({
+  feedback,
+  onReply,
+}: {
+  feedback: FeedbackRow;
+  onReply: (reply: string, replyAt: string) => void;
+}) {
+  const [draft, setDraft] = useState(feedback.admin_reply ?? "");
+  const [editing, setEditing] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasReply = !!feedback.admin_reply;
+  const showEditor = editing || !hasReply;
+
+  async function send() {
+    const trimmed = draft.trim();
+    if (trimmed.length < 2) {
+      setError("Reply too short.");
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/feedback/${feedback.id}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reply: trimmed }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json?.error || "Send failed.");
+        setSending(false);
+        return;
+      }
+      onReply(trimmed, new Date().toISOString());
+      setEditing(false);
+    } catch {
+      setError("Network error.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px dashed rgba(155,106,255,0.18)" }}>
+      {hasReply && !editing && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: "#9B6AFF", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Your reply {feedback.user_seen_reply ? "· seen" : "· unread"}
+            </div>
+            <button
+              onClick={() => { setEditing(true); setDraft(feedback.admin_reply ?? ""); }}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#A6B3C9",
+                fontSize: 11,
+                cursor: "pointer",
+                textDecoration: "underline",
+                padding: 0,
+              }}
+            >
+              Edit
+            </button>
+          </div>
+          <p style={{
+            margin: 0,
+            padding: "12px 14px",
+            background: "#0F1626",
+            border: "1px solid rgba(155,106,255,0.2)",
+            borderRadius: 8,
+            fontSize: 13,
+            lineHeight: 1.55,
+            color: "#ECF1FA",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}>
+            {feedback.admin_reply}
+          </p>
+        </>
+      )}
+
+      {showEditor && (
+        <>
+          <div style={{ fontSize: 11, color: "#A6B3C9", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+            {hasReply ? "Edit reply" : "Reply to this user"}
+          </div>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Write your reply. They'll see it on their dashboard and get an email."
+            rows={3}
+            maxLength={4100}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              background: "#070B14",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              color: "#ECF1FA",
+              fontSize: 13,
+              lineHeight: 1.5,
+              fontFamily: "inherit",
+              resize: "vertical",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+            disabled={sending}
+          />
+          {error && <p style={{ margin: "8px 0 0", fontSize: 11, color: "#F87171" }}>{error}</p>}
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            {hasReply && (
+              <button
+                onClick={() => { setEditing(false); setError(null); setDraft(feedback.admin_reply ?? ""); }}
+                disabled={sending}
+                style={{
+                  padding: "7px 14px",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#A6B3C9",
+                  borderRadius: 7,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: sending ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={send}
+              disabled={sending || draft.trim().length < 2}
+              style={{
+                padding: "7px 16px",
+                background: sending || draft.trim().length < 2
+                  ? "rgba(155,106,255,0.25)"
+                  : "linear-gradient(135deg, #9B6AFF, #F26179)",
+                border: "none",
+                color: "#fff",
+                borderRadius: 7,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: sending || draft.trim().length < 2 ? "not-allowed" : "pointer",
+              }}
+            >
+              {sending ? "Sending…" : hasReply ? "Update reply" : "Send reply"}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

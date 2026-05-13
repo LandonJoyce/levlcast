@@ -500,6 +500,45 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Sent to a user when the admin replies to their feedback. The reply
+ * arrives in their inbox AND surfaces on their dashboard via the
+ * AdminReplyCard, so they have two paths back to seeing it.
+ */
+export async function sendFeedbackReplyToUser(input: {
+  to: string;
+  name: string;
+  originalMessage: string;
+  reply: string;
+}): Promise<void> {
+  const safeReply = escapeHtml(input.reply).replace(/\n/g, "<br>");
+  const safeOriginal = escapeHtml(input.originalMessage).replace(/\n/g, "<br>");
+  const safeName = escapeHtml(input.name);
+
+  await resend.emails.send({
+    from: "Landon at LevlCast <hello@levlcast.com>",
+    to: input.to,
+    subject: "Reply to your LevlCast feedback",
+    html: `<!DOCTYPE html>
+<html><body style="margin:0;padding:24px;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;">
+  <div style="max-width:560px;margin:0 auto;background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px 28px;">
+    <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9B6AFF;">LevlCast</p>
+    <h1 style="margin:0 0 20px;font-size:22px;font-weight:800;line-height:1.3;">Hey ${safeName}, Landon here.</h1>
+
+    <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,0.4);font-weight:600;letter-spacing:0.04em;">You wrote:</p>
+    <div style="background:#0A0A0F;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.55);margin-bottom:18px;">${safeOriginal}</div>
+
+    <p style="margin:0 0 8px;font-size:12px;color:#9B6AFF;font-weight:600;letter-spacing:0.04em;">My reply:</p>
+    <div style="background:#0F1626;border:1px solid rgba(155,106,255,0.25);border-radius:10px;padding:16px 18px;font-size:14px;line-height:1.6;color:#ECF1FA;margin-bottom:24px;">${safeReply}</div>
+
+    <a href="https://levlcast.com/dashboard" style="display:inline-block;background:linear-gradient(135deg,#9B6AFF,#F26179);color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;">Open dashboard</a>
+
+    <p style="margin:24px 0 0;font-size:11px;color:rgba(255,255,255,0.3);line-height:1.6;">Reply to this email to continue the conversation, or send another feedback message from the dashboard sidebar.</p>
+  </div>
+</body></html>`,
+  });
+}
+
 export async function sendFeedbackToAdmin(input: {
   category: string;
   message: string;

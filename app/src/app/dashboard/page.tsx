@@ -10,6 +10,7 @@ import type { CoachingArcData } from "@/lib/coaching-arc";
 import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { PreStreamFocus } from "@/components/dashboard/pre-stream-focus";
+import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -200,6 +201,7 @@ export default async function DashboardPage() {
         </div>
 
         <OnboardingChecklist />
+        <AdminReplyCard />
 
         <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "48px 32px", textAlign: "center", position: "relative" }}>
@@ -261,6 +263,7 @@ export default async function DashboardPage() {
       </div>
 
       <OnboardingChecklist />
+      <AdminReplyCard />
       <PreStreamFocus arc={(profile?.coaching_arc as CoachingArcData | null) ?? null} />
 
       {/* Hero focus card */}

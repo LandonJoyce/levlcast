@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FeedbackModal } from "./feedback-modal";
@@ -95,6 +95,24 @@ const Icons = {
 export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSidebarProps) {
   const pathname = usePathname();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [unreadReplies, setUnreadReplies] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/feedback/replies");
+        if (!res.ok) return;
+        const json = await res.json();
+        const list = (json.replies as Array<{ user_seen_reply: boolean }>) ?? [];
+        const unread = list.filter((r) => !r.user_seen_reply).length;
+        if (!cancelled) setUnreadReplies(unread);
+      } catch {
+        // Silent: dot just won't appear.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [pathname]);
   const active = pathname === "/dashboard"
     ? "dashboard"
     : pathname.startsWith("/dashboard/vods")
@@ -182,10 +200,29 @@ export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSi
         <button
           onClick={() => setFeedbackOpen(true)}
           className="sb-link"
-          style={{ fontSize: 12, background: "transparent", border: 0, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}
+          style={{ fontSize: 12, background: "transparent", border: 0, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit", position: "relative" }}
         >
           <span className="ico"><Icons.Chat /></span>
           <span>Send feedback</span>
+          {unreadReplies > 0 && (
+            <span style={{
+              marginLeft: "auto",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 18,
+              height: 18,
+              padding: "0 6px",
+              borderRadius: 999,
+              background: "#F26179",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 700,
+              lineHeight: 1,
+            }}>
+              {unreadReplies}
+            </span>
+          )}
         </button>
         <button
           onClick={handleLogout}
