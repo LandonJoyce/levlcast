@@ -485,3 +485,52 @@ export async function sendActivationEmail(to: string, name: string): Promise<voi
 </html>`,
   });
 }
+
+/**
+ * Notify the admin (landonjoyce@hotmail.com) whenever a user submits
+ * feedback. Body is escaped + truncated server-side so a malicious payload
+ * cannot inject HTML into the email.
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function sendFeedbackToAdmin(input: {
+  category: string;
+  message: string;
+  fromEmail: string | null;
+  twitchLogin: string | null;
+  userId: string | null;
+  context: Record<string, unknown> | null;
+}): Promise<void> {
+  const safeMessage = escapeHtml(input.message).replace(/\n/g, "<br>");
+  const safeCategory = escapeHtml(input.category);
+  const safeFromEmail = escapeHtml(input.fromEmail ?? "(no email on file)");
+  const safeTwitch = escapeHtml(input.twitchLogin ?? "(no twitch login)");
+  const safeUserId = escapeHtml(input.userId ?? "(no user id)");
+  const contextJson = input.context ? escapeHtml(JSON.stringify(input.context, null, 2)) : null;
+
+  await resend.emails.send({
+    from: "LevlCast Feedback <hello@levlcast.com>",
+    to: "landonjoyce@hotmail.com",
+    subject: `[LevlCast feedback · ${input.category}] ${input.fromEmail ?? "anon"}`,
+    html: `<!DOCTYPE html>
+<html><body style="margin:0;padding:24px;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;">
+  <div style="max-width:560px;margin:0 auto;background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;">
+    <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#22D3EE;">LevlCast Feedback</p>
+    <h1 style="margin:0 0 16px;font-size:20px;font-weight:800;">Category: ${safeCategory}</h1>
+    <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,0.5);">From: ${safeFromEmail}</p>
+    <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,0.5);">Twitch: ${safeTwitch}</p>
+    <p style="margin:0 0 18px;font-size:12px;color:rgba(255,255,255,0.5);">User ID: ${safeUserId}</p>
+    <div style="background:#0A0A0F;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;font-size:14px;line-height:1.6;color:rgba(255,255,255,0.9);">${safeMessage}</div>
+    ${contextJson ? `<details style="margin-top:16px;"><summary style="cursor:pointer;font-size:12px;color:rgba(255,255,255,0.5);">Context</summary><pre style="margin:8px 0 0;padding:12px;background:#0A0A0F;border-radius:8px;font-size:11px;color:rgba(255,255,255,0.65);white-space:pre-wrap;word-break:break-word;">${contextJson}</pre></details>` : ""}
+    <p style="margin:20px 0 0;font-size:11px;color:rgba(255,255,255,0.3);">View all feedback at <a href="https://levlcast.com/dashboard/admin/feedback" style="color:#22D3EE;">/dashboard/admin/feedback</a></p>
+  </div>
+</body></html>`,
+  });
+}

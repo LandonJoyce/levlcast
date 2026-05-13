@@ -8,6 +8,7 @@ import { NotificationPrompt } from "@/components/dashboard/notification-prompt";
 import { getUserUsage } from "@/lib/limits";
 import { scoreColorHex } from "@/lib/score-utils";
 import { DownloadClip, CopyCaption, PostToYouTube } from "@/components/dashboard/clip-actions";
+import { FeedbackButton } from "@/components/dashboard/feedback-button";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "...";
@@ -322,9 +323,25 @@ export default async function VodsPage({
                           Working on your coach report — usually about five minutes.
                         </p>
                       ) : v.status === "failed" && v.failed_reason ? (
-                        <p style={{ fontSize: 13, color: "var(--danger)", margin: 0, lineHeight: 1.5 }}>
-                          {v.failed_reason as string}
-                        </p>
+                        <div>
+                          <p style={{ fontSize: 13, color: "var(--danger)", margin: 0, lineHeight: 1.5 }}>
+                            {v.failed_reason as string}
+                          </p>
+                          <div style={{ marginTop: 10 }}>
+                            <FeedbackButton
+                              label="Tell Landon what happened"
+                              defaultCategory="failure"
+                              trigger="vod-failed-card"
+                              context={{
+                                vodId: v.id,
+                                vodTitle: v.title,
+                                durationSeconds: v.duration_seconds,
+                                failedReason: v.failed_reason,
+                              }}
+                              style="subtle"
+                            />
+                          </div>
+                        </div>
                       ) : (
                         <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
                           Run the analysis to get your coach report and best clip.

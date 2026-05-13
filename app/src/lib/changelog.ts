@@ -20,6 +20,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.13.1",
+    date: "2026-05-13",
+    title: "Feedback channel + long stream fixes",
+    items: [
+      { type: "new", text: "Send feedback button in the sidebar. Anything you send goes straight to Landon." },
+      { type: "new", text: "If a stream analysis fails, you can now tell us what happened with one click." },
+      { type: "fix", text: "Long streams (3-4 hours) no longer time out mid-analysis." },
+      { type: "fix", text: "Highlight reel and clip editor no longer fail with an unauthorized error on iOS." },
+    ],
+  },
+  {
     version: "v0.13.0 (iOS 1.0.3)",
     date: "2026-05-11",
     title: "Mobile parity update",
