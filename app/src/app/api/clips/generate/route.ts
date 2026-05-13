@@ -15,7 +15,7 @@
  */
 
 import { waitUntil } from "@vercel/functions";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { getUserUsage, incrementTrialClip } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import { downloadTwitchVodVideo, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
@@ -27,7 +27,7 @@ import { NextResponse } from "next/server";
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const supabase = await createClientFromRequest(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

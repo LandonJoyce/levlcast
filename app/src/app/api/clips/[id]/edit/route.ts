@@ -24,7 +24,7 @@
  *   400, 401, 404, 500
  */
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { cutClip } from "@/lib/ffmpeg";
 import type { CaptionCard, CaptionStyle } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
@@ -53,7 +53,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
+  const supabase = await createClientFromRequest(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

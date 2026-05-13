@@ -13,7 +13,7 @@
  *   500                         — ffmpeg / upload failure
  */
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { extractFrame } from "@/lib/ffmpeg";
 import { uploadToR2 } from "@/lib/r2";
 import { rateLimit } from "@/lib/rate-limit";
@@ -29,10 +29,10 @@ export const maxDuration = 120;
 const FRAME_POSITIONS = [0.1, 0.35, 0.65, 0.9] as const;
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
+  const supabase = await createClientFromRequest(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
