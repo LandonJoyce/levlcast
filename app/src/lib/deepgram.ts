@@ -138,6 +138,12 @@ export async function transcribeFromUrl(url: string, keywords: string[] = []): P
  * Transcribe audio piped through a PassThrough stream — no disk writes.
  * Segments are streamed directly to Deepgram as they download.
  * The caller writes segment data to the returned PassThrough and calls .end() when done.
+ *
+ * We can't generically retry a streaming POST because the body is a single-
+ * consumption stream — by the time the call fails the stream is drained.
+ * Transient 5xx retries therefore have to happen at the Inngest step level
+ * (retries: 1 on analyzeVod). What we DO catch here: surface a clearer
+ * error so the failure email is useful.
  */
 export async function transcribePassThrough(
   stream: PassThrough,
@@ -157,6 +163,17 @@ export async function transcribePassThrough(
 
   if (!res.ok) {
     const body = await res.text();
+    // Deepgram returns 400 "corrupt or unsupported data" when the MPEG-TS
+    // stream is malformed (truncated segment, mixed codecs, ad-insertion
+    // HTML, etc.). The segment-level sync-byte check in twitch.ts catches
+    // the most common cause but ad-codec switches can still slip through.
+    if (res.status === 400 && body.includes("corrupt or unsupported data")) {
+      throw new Error(
+        "Audio stream contained data Deepgram couldn't decode (often caused " +
+        "by an ad-insertion segment with a different codec). Please retry; " +
+        "if it keeps failing, the source VOD has a codec switch we can't process."
+      );
+    }
     throw new Error(`Deepgram ${res.status}: ${body}`);
   }
 

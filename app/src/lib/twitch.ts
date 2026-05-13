@@ -946,6 +946,12 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
  * Stream a specific list of segment URLs into a PassThrough — no disk writes.
  * Throws on repeated failures rather than silently skipping to prevent
  * caption timestamp drift (each skipped segment shifts all subsequent timestamps).
+ *
+ * Each segment buffer is validated as MPEG-TS (first byte 0x47, the sync
+ * byte specified in the MPEG-TS standard) before being written downstream.
+ * Without this check, a CDN error page returned with 200 OK or an unexpected
+ * ad-insertion HTML response would be piped straight to Deepgram, which
+ * then rejects the entire stream as "corrupt or unsupported data".
  */
 export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough {
   const passThrough = new PassThrough();
@@ -956,7 +962,7 @@ export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough 
       let success = false;
       let lastErr: unknown = null;
 
-      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+      for (let attempt = 0; attempt < 4 && !success; attempt++) {
         if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
@@ -964,6 +970,13 @@ export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough 
           const segRes = await fetch(url, { signal: controller.signal });
           if (!segRes.ok) { lastErr = new Error(`HTTP ${segRes.status}`); continue; }
           const buf = Buffer.from(await segRes.arrayBuffer());
+          if (buf.length === 0) { lastErr = new Error("empty segment body"); continue; }
+          // MPEG-TS sync byte must be 0x47 at the start of every 188-byte
+          // packet. Any segment that doesn't begin with it is not valid TS.
+          if (buf[0] !== 0x47) {
+            lastErr = new Error(`non-MPEG-TS payload (first byte 0x${buf[0].toString(16).padStart(2, "0")}, ${buf.length} bytes)`);
+            continue;
+          }
           passThrough.write(buf);
           success = true;
         } catch (err) {
@@ -976,7 +989,7 @@ export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough 
       if (!success) {
         const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
         throw new Error(
-          `Audio segment ${i + 1}/${segmentUrls.length} failed after 3 retries. ${msg}. ` +
+          `Audio segment ${i + 1}/${segmentUrls.length} failed after 4 retries. ${msg}. ` +
           `Skipping it would misalign every subsequent caption timestamp; please retry.`
         );
       }
