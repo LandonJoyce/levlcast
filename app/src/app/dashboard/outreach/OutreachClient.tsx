@@ -99,6 +99,17 @@ export default function OutreachPage() {
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
+  // Fallback for when the AI decides a post isn't a fit (or the post body
+  // was deleted, blocking the quote-first opener). Keeps the casual tone
+  // of an actual LevlCast user reaching out, no fake observations.
+  function useTemplate(lead: Lead) {
+    const body = `yo! saw your ${lead.isComment ? "comment" : "post"}. LevlCast watches your VODs and tells you what to improve next stream. it also has a clipping tool so you don't have to waste time finding moments.
+
+free to try at levlcast.com`;
+    const subject = lead.isComment ? "Built a Twitch coaching tool" : "Built a Twitch coaching tool";
+    setMessages((prev) => ({ ...prev, [lead.id]: { body, subject } }));
+  }
+
   async function generateMessage(lead: Lead) {
     setGenerating(lead.id);
     try {
@@ -307,6 +318,10 @@ export default function OutreachPage() {
                     {messages[lead.id].body.replace(/^\[SKIP\]\s*/, "")}
                   </p>
                   <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
+                    <button onClick={() => useTemplate(lead)}
+                      style={{ fontSize: 12, padding: "7px 14px", background: "rgba(155,106,255,0.12)", border: "1px solid rgba(155,106,255,0.3)", color: "#C9B3FF", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>
+                      Use template
+                    </button>
                     <button onClick={() => generateMessage(lead)} disabled={generating === lead.id} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
                       Try again
                     </button>
