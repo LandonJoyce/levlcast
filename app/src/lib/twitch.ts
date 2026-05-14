@@ -1005,16 +1005,31 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
  * Deepgram has no way to decode the moof/mdat fragments — the moov box
  * contains the track table, codec config, and timescales.
  */
-const FMP4_BOX_TYPES = new Set([
-  "ftyp", "styp", "moov", "moof", "mdat", "sidx", "free", "skip", "mfhd",
-  "tfhd", "trun", "tfdt", "saiz", "saio", "uuid", "pdin", "meta",
-]);
-
 function looksLikeFmp4(buf: Buffer): boolean {
-  // ISO BMFF: first 4 bytes = box size (uint32 BE), next 4 = box type.
+  // ISO BMFF box header: 4-byte size (uint32 BE) + 4-byte type (ASCII).
+  // Validate structurally instead of with a fixed whitelist — Twitch
+  // segments include a wide variety of boxes (ftyp, moov, moof, mdat,
+  // sidx, styp, free, mfhd, emsg, prft, ...) and any new spec addition
+  // would otherwise be misclassified as garbage and trigger a retry loop.
+  //
+  // Structural rules:
+  //   - Buffer is at least 8 bytes (size + type).
+  //   - Box size is either 0 (extends to EOF), 1 (largesize follows),
+  //     or in [8, INT32_MAX]. Anything else is corrupt.
+  //   - Box type is 4 bytes of printable ASCII (letters / digits, plus
+  //     the rare hyphen/space that some legacy boxes allow).
   if (buf.length < 8) return false;
-  const type = buf.subarray(4, 8).toString("ascii");
-  return FMP4_BOX_TYPES.has(type);
+  const size = buf.readUInt32BE(0);
+  const SANE_MAX = 64 * 1024 * 1024; // 64MB — Twitch segments are far smaller
+  if (size !== 0 && size !== 1 && (size < 8 || size > SANE_MAX)) return false;
+  for (let i = 4; i < 8; i++) {
+    const c = buf[i];
+    const isLower = c >= 0x61 && c <= 0x7a; // a-z
+    const isUpper = c >= 0x41 && c <= 0x5a; // A-Z
+    const isDigit = c >= 0x30 && c <= 0x39; // 0-9
+    if (!(isLower || isUpper || isDigit)) return false;
+  }
+  return true;
 }
 
 export function streamSegmentsToPassThrough(
