@@ -1562,11 +1562,60 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     if (worstGaps.length > 0) {
       report.dead_zones = worstGaps.map((g) => ({ time: formatTime(g.start), duration: g.duration }));
     }
+    // Enforce the anti_patterns.quote verbatim rule. The prompt instructs
+    // the model to pull exact phrases from the transcript, but Sonnet can
+    // still drift toward paraphrase. We re-verify every quote against the
+    // normalized transcript and drop entries that don't match — that way
+    // a fabricated quote can't reach the user no matter what the model did.
+    if (report.anti_patterns && report.anti_patterns.length > 0) {
+      report.anti_patterns = verifyAntiPatternQuotes(report.anti_patterns, segments);
+    }
     return report;
   } catch {
     console.error("Failed to parse coach report:", text);
     return null;
   }
+}
+
+/**
+ * Strip an anti_patterns array down to entries whose `quote` appears
+ * verbatim (modulo punctuation, casing, and whitespace) in the transcript.
+ *
+ * Why post-process instead of trusting the prompt: model output is the
+ * canary, not the guarantee. The anti_patterns.quote field is the one
+ * place the report makes a strong factual claim ("you said X"), and a
+ * wrong claim there destroys credibility for the whole report. A cheap
+ * post-process check is the right place to enforce the invariant.
+ */
+function verifyAntiPatternQuotes(
+  antiPatterns: NonNullable<CoachReport["anti_patterns"]>,
+  segments: TranscriptSegment[]
+): NonNullable<CoachReport["anti_patterns"]> {
+  const normalize = (s: string) => s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ") // drop punctuation
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const haystack = normalize(segments.map((s) => s.text).join(" "));
+
+  const verified: typeof antiPatterns = [];
+  const MIN_WORDS = 3;
+  for (const ap of antiPatterns) {
+    const needle = normalize(ap.quote ?? "");
+    const wordCount = needle.split(" ").filter(Boolean).length;
+    if (wordCount < MIN_WORDS) {
+      // A 1-2 word "quote" is barely evidence. Drop it.
+      console.warn(`[coach] dropping anti_pattern with too-short quote: "${ap.quote}"`);
+      continue;
+    }
+    if (!haystack.includes(needle)) {
+      console.warn(`[coach] dropping anti_pattern with unverifiable quote: "${ap.quote}"`);
+      continue;
+    }
+    verified.push(ap);
+  }
+  return verified;
 }
 
 /**
