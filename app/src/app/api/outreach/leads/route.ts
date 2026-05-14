@@ -18,7 +18,7 @@ const HELP_PHRASES = [
   "twitch.tv/",
 ];
 
-const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup"]);
+const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup", "twitchstreaming"]);
 const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
 
 // Subs to fan out title-searches across when running a Reddit-wide query.

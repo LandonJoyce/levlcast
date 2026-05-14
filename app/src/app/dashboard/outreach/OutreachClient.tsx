@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 // Most lead-finding now happens via the Reddit-wide text search below.
 const SUBREDDITS = [
   { value: "TwitchStreamers", label: "r/TwitchStreamers" },
+  { value: "twitchstreaming", label: "r/twitchstreaming" },
   { value: "Twitch_Startup", label: "r/Twitch_Startup" },
   { value: "SmallStreamers", label: "r/SmallStreamers" },
   { value: "twitchfollowers", label: "r/twitchfollowers" },
