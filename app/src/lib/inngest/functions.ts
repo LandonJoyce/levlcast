@@ -107,25 +107,48 @@ export const analyzeVod = inngest.createFunction(
       }
       console.log(`[analyze] ${chunks.length} transcription chunks for ${segmentSetup.urls.length} segments`);
 
-      // Step 1b+: Each chunk is transcribed in its own step — timestamps are
-      // adjusted by the chunk's timeOffset so they're accurate within the full VOD.
-      // Inngest persists each chunk result so retries skip already-done chunks.
-      const allChunkSegments: TranscriptSegment[][] = [];
-      const allChunkWords: CaptionWord[][] = [];
+      // Step 1b+: Transcribe chunks in parallel batches. Each chunk is its
+      // own Inngest step so Inngest persists results across retries.
+      //
+      // BATCH_CONCURRENCY caps in-flight chunks. Going full-parallel on a
+      // long VOD would slam Twitch CDN with hundreds of simultaneous segment
+      // fetches AND spawn N Deepgram streaming sessions at once, both of
+      // which can rate-limit. 4 at a time balances speedup (≈4x faster than
+      // sequential) against staying well under any plausible per-IP cap.
+      //
+      // Inside each batch, Promise.all schedules the step.run() calls in
+      // parallel. Inngest invokes them as separate function invocations so
+      // each gets its own Vercel maxDuration budget and cold-start lifecycle.
+      const BATCH_CONCURRENCY = 4;
+      const allChunkSegments: TranscriptSegment[][] = new Array(chunks.length);
+      const allChunkWords: CaptionWord[][] = new Array(chunks.length);
 
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        const result = await step.run(`transcribe-chunk-${i}`, async () => {
-          console.log(`[analyze] Chunk ${i + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s`);
-          const stream = streamSegmentsToPassThrough(chunk.urls);
-          const { segments, words } = await transcribePassThrough(stream, segmentSetup.keywords);
-          return {
-            segments: segments.map((s) => ({ ...s, start: s.start + chunk.timeOffset, end: s.end + chunk.timeOffset })),
-            words: words.map((w) => ({ ...w, start: w.start + chunk.timeOffset, end: w.end + chunk.timeOffset })),
-          };
+      for (let batchStart = 0; batchStart < chunks.length; batchStart += BATCH_CONCURRENCY) {
+        const batch = chunks
+          .slice(batchStart, batchStart + BATCH_CONCURRENCY)
+          .map((chunk, offset) => ({ chunk, index: batchStart + offset }));
+
+        const results = await Promise.all(
+          batch.map(({ chunk, index }) =>
+            step.run(`transcribe-chunk-${index}`, async () => {
+              console.log(`[analyze] Chunk ${index + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s`);
+              const stream = streamSegmentsToPassThrough(chunk.urls);
+              const { segments, words } = await transcribePassThrough(stream, segmentSetup.keywords);
+              return {
+                segments: segments.map((s) => ({ ...s, start: s.start + chunk.timeOffset, end: s.end + chunk.timeOffset })),
+                words: words.map((w) => ({ ...w, start: w.start + chunk.timeOffset, end: w.end + chunk.timeOffset })),
+              };
+            })
+          )
+        );
+
+        // Place results back into their original chunk slots so timestamps
+        // and ordering stay correct regardless of completion order.
+        results.forEach((result, i) => {
+          const index = batch[i].index;
+          allChunkSegments[index] = result.segments;
+          allChunkWords[index] = result.words;
         });
-        allChunkSegments.push(result.segments);
-        allChunkWords.push(result.words);
       }
 
       const allWords = allChunkWords.flat();
