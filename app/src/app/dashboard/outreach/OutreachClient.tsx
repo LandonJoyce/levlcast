@@ -65,7 +65,7 @@ export default function OutreachPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState<Set<string>>(new Set());
-  const [messages, setMessages] = useState<Record<string, { body: string; subject: string }>>({});
+  const [messages, setMessages] = useState<Record<string, { body: string; subject: string; skip?: boolean }>>({});
   const [generating, setGenerating] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -113,6 +113,19 @@ export default function OutreachPage() {
         }),
       });
       const data = await res.json();
+      if (data.skip) {
+        // Model decided LevlCast isn't a fit for this post. Surface that
+        // verbatim so we don't paper over it with a forced DM.
+        setMessages((prev) => ({
+          ...prev,
+          [lead.id]: {
+            body: `[SKIP] ${data.reason ?? "Not a fit for LevlCast"}`,
+            subject: "Skip — not a fit",
+            skip: true,
+          },
+        }));
+        return;
+      }
       setMessages((prev) => ({ ...prev, [lead.id]: { body: data.message, subject: data.subject ?? (lead.isComment ? "Saw your comment" : "Saw your post") } }));
     } finally {
       setGenerating(null);
@@ -285,7 +298,27 @@ export default function OutreachPage() {
                 </div>
               </div>
 
-              {messages[lead.id] && (
+              {messages[lead.id] && messages[lead.id].skip && (
+                <div style={{ marginTop: 14, padding: "14px 16px", background: "rgba(248,113,113,0.06)", borderRadius: 10, border: "1px dashed rgba(248,113,113,0.35)" }}>
+                  <p style={{ fontSize: 11, color: "#F87171", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 6px" }}>
+                    Not a fit
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "0 0 12px" }}>
+                    {messages[lead.id].body.replace(/^\[SKIP\]\s*/, "")}
+                  </p>
+                  <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
+                    <button onClick={() => generateMessage(lead)} disabled={generating === lead.id} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
+                      Try again
+                    </button>
+                    <button onClick={() => markSent(lead.id, lead.author)}
+                      style={{ fontSize: 12, padding: "6px 12px", background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer" }}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {messages[lead.id] && !messages[lead.id].skip && (
                 <div style={{ marginTop: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid var(--line)" }}>
                   <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "0 0 6px", fontStyle: "italic" }}>
                     Subject: {messages[lead.id].subject}

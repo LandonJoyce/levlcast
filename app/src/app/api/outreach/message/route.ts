@@ -27,27 +27,44 @@ export async function POST(req: NextRequest) {
 
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 220,
+    max_tokens: 300,
     system: `You write cold Reddit DMs for LevlCast. You have ONE source of truth: the post or comment text provided. You cannot see the stream, the VODs, the analytics, or anything else. If it is not in the text, you do not know it.
 
-HARD RULE: Your first sentence must open with a SHORT DIRECT QUOTE from their post or comment — their exact words in quotation marks. Not a paraphrase. Not a topic summary. Their actual words. If their post is a title only, quote the title or a phrase from it.
+LevlCast helps streamers with these specific problems:
+- Not knowing why viewers leave (the coach report pinpoints retention drop-offs)
+- Not knowing what to fix to grow (specific stream-by-stream coaching)
+- Spending hours clipping (auto-detects best moments and cuts them)
+- Wanting to track improvement over time
 
-This quote-first rule exists because past DMs fabricated things like "saw you're worried about keeping people watching" when the person never said that. That destroys credibility instantly.`,
+LevlCast does NOT help with:
+- Ad/sub/bits revenue mechanics (we don't change Twitch payouts)
+- Equipment, hardware, internet, OBS settings
+- Getting verified, partner application logistics
+- Twitch terms of service / bans / DMCA
+- Pure venting that isn't asking for advice
+
+STEP 1: Decide if LevlCast genuinely helps with what this person posted.
+- If yes, write the DM following the format below.
+- If no, return ONLY the string "SKIP: <one short reason why this isn't a fit>" and nothing else.
+
+Do not force a connection. A forced pitch hurts more than not sending. When in doubt, SKIP.
+
+HARD RULE (when writing): The first sentence must open with a SHORT DIRECT QUOTE from their post or comment — their exact words in quotation marks. Not a paraphrase. Not a topic summary. Their actual words.`,
     messages: [
       {
         role: "user",
-        content: `Write a Reddit DM from the person who built LevlCast to a streamer who ${isComment ? "wrote this comment" : "wrote this post"}.
+        content: `Decide if LevlCast is a fit for this streamer, then either SKIP or write the DM.
 
 ${sourceDesc}
 Username: ${authorName}
 
-LevlCast:
+LevlCast features:
 1. Coach report on every VOD: scores 0-100, pinpoints when viewers left, gives one specific thing to fix, tracks improvement over time.
 2. Auto-clips your best moments, you edit captions and post.
 
-Lead with the coach report.
+If SKIP, return only: "SKIP: <reason>"
 
-Format:
+If writing the DM, lead with the coach report and use this format:
 - Line 1: SUBJECT: <4-7 words taken from or directly referencing what they wrote>
 - Blank line
 - Body: 2-3 sentences, MAX 60 words
@@ -56,7 +73,7 @@ Format:
   - Sentence 3 (optional): clips as a bonus
 - Final line: "free to try at levlcast.com"
 
-No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". Casual, blunt, like a streamer texting another streamer. Return ONLY the subject and message.`,
+No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". Casual, blunt, like a streamer texting another streamer. Return ONLY the subject and message, OR the SKIP line.`,
       },
     ],
   });
@@ -65,6 +82,14 @@ No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". 
   // rule. ' — ' becomes '. ', bare '—' becomes a space.
   const stripEm = (s: string) => s.replace(/ — /g, ". ").replace(/—/g, " ");
   const raw = stripEm(msg.content[0].type === "text" ? msg.content[0].text.trim() : "");
+
+  // Fit-check escape hatch. If the model decides LevlCast isn't a fit it
+  // returns "SKIP: <reason>" and we surface that to the admin so they can
+  // skip the lead instead of sending a forced reply.
+  if (/^skip\s*:/i.test(raw)) {
+    const reason = raw.replace(/^skip\s*:\s*/i, "").trim() || "Not a fit for LevlCast";
+    return NextResponse.json({ skip: true, reason });
+  }
 
   // Parse subject and message body
   const lines = raw.split("\n");
