@@ -78,6 +78,11 @@ export const analyzeVod = inngest.createFunction(
         return {
           urls: list.urls,
           startTimes: list.startTimes,
+          // Init segment for fMP4 VODs. Null for legacy MPEG-TS streams.
+          // Passed through chunk-step state so each parallel chunk can
+          // prepend it to its own Deepgram POST. Step state is JSON, so
+          // we keep it base64-encoded.
+          initSegmentBase64: list.initSegmentBase64 ?? null,
           keywords,
           gameCategory: detection.category,
           duration_seconds: vod.duration_seconds as number | null,
@@ -123,6 +128,13 @@ export const analyzeVod = inngest.createFunction(
       const allChunkSegments: TranscriptSegment[][] = new Array(chunks.length);
       const allChunkWords: CaptionWord[][] = new Array(chunks.length);
 
+      // Decode init segment once per analysis. Each parallel chunk reuses
+      // the same Buffer reference (PassThrough does not mutate inputs).
+      // Null for MPEG-TS VODs which don't have an init segment.
+      const initSegment = segmentSetup.initSegmentBase64
+        ? Buffer.from(segmentSetup.initSegmentBase64, "base64")
+        : null;
+
       for (let batchStart = 0; batchStart < chunks.length; batchStart += BATCH_CONCURRENCY) {
         const batch = chunks
           .slice(batchStart, batchStart + BATCH_CONCURRENCY)
@@ -131,8 +143,8 @@ export const analyzeVod = inngest.createFunction(
         const results = await Promise.all(
           batch.map(({ chunk, index }) =>
             step.run(`transcribe-chunk-${index}`, async () => {
-              console.log(`[analyze] Chunk ${index + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s`);
-              const stream = streamSegmentsToPassThrough(chunk.urls);
+              console.log(`[analyze] Chunk ${index + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s${initSegment ? " (fMP4)" : ""}`);
+              const stream = streamSegmentsToPassThrough(chunk.urls, initSegment);
               const { segments, words } = await transcribePassThrough(stream, segmentSetup.keywords);
               return {
                 segments: segments.map((s) => ({ ...s, start: s.start + chunk.timeOffset, end: s.end + chunk.timeOffset })),
@@ -631,14 +643,33 @@ export const analyzeVod = inngest.createFunction(
     } catch (err) {
       // Mark the VOD as failed so the user can see it and retry —
       // without this, the VOD would be stuck in "transcribing" or "analyzing" forever.
-      const message = err instanceof Error ? err.message : String(err);
+      //
+      // Node's undici wraps network errors as `TypeError: fetch failed` with
+      // the real reason on `err.cause`. Without unwrapping we'd surface a
+      // useless "fetch failed" to the user. Same trick for nested AggregateErrors.
+      const unwrap = (e: unknown): string => {
+        if (!(e instanceof Error)) return String(e);
+        const top = e.message;
+        const cause = (e as { cause?: unknown }).cause;
+        if (cause instanceof Error && cause.message && cause.message !== top) {
+          return `${top}: ${cause.message}`;
+        }
+        if (cause && typeof cause === "object" && "message" in cause && typeof (cause as { message: string }).message === "string") {
+          return `${top}: ${(cause as { message: string }).message}`;
+        }
+        return top;
+      };
+      const message = unwrap(err);
       const stack = err instanceof Error ? err.stack : undefined;
       console.error(`[analyze] FAILED vod=${vodId} user=${userId}:`, message);
       if (stack) console.error(`[analyze] Stack:`, stack);
 
+      // Cap failed_reason at 800 chars — long enough for context, short
+      // enough that the failed-card UI doesn't blow out the layout.
+      const truncated = message.length > 800 ? `${message.slice(0, 797)}...` : message;
       await supabase.from("vods").update({
         status: "failed",
-        failed_reason: message,
+        failed_reason: truncated,
       }).eq("id", vodId);
 
       // Re-throw so Inngest marks the run as failed and triggers retry logic

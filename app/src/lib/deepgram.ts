@@ -149,11 +149,14 @@ export async function transcribePassThrough(
   stream: PassThrough,
   keywords: string[] = []
 ): Promise<TranscribeResult> {
+  // Twitch serves both MPEG-TS (.ts) and fragmented MP4 (.m4s) VOD audio
+  // depending on the stream. We can't know which until we look at the first
+  // segment, and the PassThrough may carry either. Omit Content-Type so
+  // Deepgram autodetects from the leading bytes of the audio container.
   const res = await fetch(buildDeepgramUrl(keywords), {
     method: "POST",
     headers: {
       Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
-      "Content-Type": "video/mp2t",
     },
     // @ts-ignore — Node.js streams are valid here
     body: stream,
@@ -163,10 +166,6 @@ export async function transcribePassThrough(
 
   if (!res.ok) {
     const body = await res.text();
-    // Deepgram returns 400 "corrupt or unsupported data" when the MPEG-TS
-    // stream is malformed (truncated segment, mixed codecs, ad-insertion
-    // HTML, etc.). The segment-level sync-byte check in twitch.ts catches
-    // the most common cause but ad-codec switches can still slip through.
     if (res.status === 400 && body.includes("corrupt or unsupported data")) {
       throw new Error(
         "Audio stream contained data Deepgram couldn't decode (often caused " +

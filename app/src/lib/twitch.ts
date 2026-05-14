@@ -841,6 +841,15 @@ export interface VodSegmentList {
   urls: string[];
   /** VOD-relative start time (seconds) of each segment, from #EXTINF cumulative sum */
   startTimes: number[];
+  /**
+   * Init segment bytes for fMP4 streams (contains the ftyp + moov boxes
+   * with codec/timescale metadata). Required at the start of every Deepgram
+   * POST that carries fMP4 media fragments — without it the fragments are
+   * undecodable. Null for legacy MPEG-TS streams which are self-describing.
+   * Stored as a base64 string so it serializes cleanly through Inngest's
+   * step state (Inngest serializes step return values as JSON).
+   */
+  initSegmentBase64?: string | null;
 }
 
 /**
@@ -917,6 +926,21 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
   const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf("/") + 1);
   const subLines = (await subRes.text()).split("\n");
 
+  // #EXT-X-MAP:URI="init.m4s" points to the fMP4 init segment. Twitch sets
+  // this when serving newer VODs as fragmented MP4. Legacy MPEG-TS VODs
+  // don't have it. Format: #EXT-X-MAP:URI="<url-or-path>"[,BYTERANGE="..."]
+  let initSegmentUrl: string | null = null;
+  for (const raw of subLines) {
+    const line = raw.trim();
+    if (!line.startsWith("#EXT-X-MAP")) continue;
+    const m = line.match(/URI="([^"]+)"/);
+    if (m && m[1]) {
+      const u = m[1];
+      initSegmentUrl = u.startsWith("http") ? u : baseUrl + u;
+      break;
+    }
+  }
+
   const urls: string[] = [];
   const startTimes: number[] = [];
   let cursor = 0;
@@ -938,8 +962,32 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
   }
 
   if (urls.length === 0) throw new Error("No segments found in VOD playlist");
-  console.log(`[twitch] segment list: ${urls.length} segments, ~${Math.round(cursor)}s for VOD ${vodId}`);
-  return { urls, startTimes };
+
+  // Download the init segment once. We base64-encode it so Inngest can
+  // safely persist it as part of step state (JSON-serialized) without
+  // truncation or binary-encoding issues. A typical init segment is a
+  // few KB, so the base64 overhead is negligible compared to the audio
+  // segment list (~hundreds of KB for long VODs).
+  let initSegmentBase64: string | null = null;
+  if (initSegmentUrl) {
+    const initRes = await fetch(initSegmentUrl);
+    if (!initRes.ok) {
+      throw new Error(
+        `Failed to fetch fMP4 init segment (HTTP ${initRes.status}). ` +
+        `Twitch served an fMP4 playlist but the init segment is unavailable, ` +
+        `so we cannot decode the media fragments. Please retry.`
+      );
+    }
+    const initBuf = Buffer.from(await initRes.arrayBuffer());
+    if (initBuf.length === 0) {
+      throw new Error("fMP4 init segment was empty. Please retry.");
+    }
+    initSegmentBase64 = initBuf.toString("base64");
+    console.log(`[twitch] init segment loaded: ${initBuf.length} bytes (fMP4 VOD)`);
+  }
+
+  console.log(`[twitch] segment list: ${urls.length} segments, ~${Math.round(cursor)}s for VOD ${vodId}${initSegmentBase64 ? " (fMP4)" : " (MPEG-TS)"}`);
+  return { urls, startTimes, initSegmentBase64 };
 }
 
 /**
@@ -947,16 +995,45 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
  * Throws on repeated failures rather than silently skipping to prevent
  * caption timestamp drift (each skipped segment shifts all subsequent timestamps).
  *
- * Each segment buffer is validated as MPEG-TS (first byte 0x47, the sync
- * byte specified in the MPEG-TS standard) before being written downstream.
- * Without this check, a CDN error page returned with 200 OK or an unexpected
- * ad-insertion HTML response would be piped straight to Deepgram, which
- * then rejects the entire stream as "corrupt or unsupported data".
+ * Each segment buffer is validated as MPEG-TS (legacy .ts files) or fMP4
+ * (newer .m4s segments — Twitch is migrating VODs to fragmented MP4). A
+ * CDN error page returned with 200 OK fails the format check and triggers
+ * a retry instead of poisoning Deepgram's decoder.
+ *
+ * For fMP4 streams, the caller MUST pass the init segment (ftyp + moov)
+ * via initSegment so it's written before the media fragments. Without it
+ * Deepgram has no way to decode the moof/mdat fragments — the moov box
+ * contains the track table, codec config, and timescales.
  */
-export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough {
+const FMP4_BOX_TYPES = new Set([
+  "ftyp", "styp", "moov", "moof", "mdat", "sidx", "free", "skip", "mfhd",
+  "tfhd", "trun", "tfdt", "saiz", "saio", "uuid", "pdin", "meta",
+]);
+
+function looksLikeFmp4(buf: Buffer): boolean {
+  // ISO BMFF: first 4 bytes = box size (uint32 BE), next 4 = box type.
+  if (buf.length < 8) return false;
+  const type = buf.subarray(4, 8).toString("ascii");
+  return FMP4_BOX_TYPES.has(type);
+}
+
+export function streamSegmentsToPassThrough(
+  segmentUrls: string[],
+  initSegment?: Buffer | null
+): PassThrough {
   const passThrough = new PassThrough();
 
   (async () => {
+    // fMP4: write the init segment FIRST. Every Deepgram POST that carries
+    // media fragments needs the moov box at the start of the stream, so we
+    // prepend it here even when this function is called per-chunk.
+    if (initSegment && initSegment.length > 0) {
+      if (!looksLikeFmp4(initSegment)) {
+        throw new Error("fMP4 init segment failed magic-byte check. Source may be corrupt.");
+      }
+      passThrough.write(initSegment);
+    }
+
     for (let i = 0; i < segmentUrls.length; i++) {
       const url = segmentUrls[i];
       let success = false;
@@ -971,10 +1048,17 @@ export function streamSegmentsToPassThrough(segmentUrls: string[]): PassThrough 
           if (!segRes.ok) { lastErr = new Error(`HTTP ${segRes.status}`); continue; }
           const buf = Buffer.from(await segRes.arrayBuffer());
           if (buf.length === 0) { lastErr = new Error("empty segment body"); continue; }
-          // MPEG-TS sync byte must be 0x47 at the start of every 188-byte
-          // packet. Any segment that doesn't begin with it is not valid TS.
-          if (buf[0] !== 0x47) {
-            lastErr = new Error(`non-MPEG-TS payload (first byte 0x${buf[0].toString(16).padStart(2, "0")}, ${buf.length} bytes)`);
+          // Twitch serves VOD audio as either MPEG-TS (legacy, .ts) or
+          // fragmented MP4 (.m4s, newer streams). Accept either:
+          //   - MPEG-TS: first byte is 0x47 (sync byte, per the spec)
+          //   - fMP4: bytes 4-7 are a known ISO BMFF box type
+          // Anything else is a CDN error page or junk that would poison
+          // Deepgram's decoder, so we retry.
+          const isMpegTs = buf[0] === 0x47;
+          const isMp4Box = looksLikeFmp4(buf);
+          if (!isMpegTs && !isMp4Box) {
+            const head = buf.subarray(0, Math.min(8, buf.length)).toString("hex");
+            lastErr = new Error(`unrecognized segment format (head=0x${head}, ${buf.length} bytes)`);
             continue;
           }
           passThrough.write(buf);
