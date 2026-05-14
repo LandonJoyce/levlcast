@@ -34,7 +34,9 @@ import { writeFile, mkdtemp, unlink } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 
-export const maxDuration = 300;
+// Vercel Pro w/ Fluid Compute. Re-burning captions on a clip is fast
+// (~30-60s) but we keep the budget high for users with longer clips.
+export const maxDuration = 600;
 
 const VALID_STYLES: CaptionStyle[] = ["bold", "boxed", "minimal", "classic", "neon", "fire", "impact"];
 

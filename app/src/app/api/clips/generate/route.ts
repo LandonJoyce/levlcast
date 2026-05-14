@@ -24,7 +24,9 @@ import type { CaptionStyle } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 300;
+// Vercel Pro w/ Fluid Compute — clip cutting on long source segments + R2
+// upload can take 3-5 min, so we go above the 300s default.
+export const maxDuration = 800;
 
 export async function POST(request: Request) {
   const supabase = await createClientFromRequest(request);

@@ -17,7 +17,9 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 300;
+// Vercel Pro w/ Fluid Compute. 9:16 vertical export with caption overlay
+// can take 3-5 min on longer clips, plus R2 upload.
+export const maxDuration = 800;
 
 const VALID_LAYOUTS: StreamLayout[] = ["no_cam", "cam_br", "cam_bl", "cam_tr", "cam_tl"];
 
