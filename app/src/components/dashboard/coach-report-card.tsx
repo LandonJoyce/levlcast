@@ -96,10 +96,10 @@ function fmtTimestamp(secs: number) {
 
 // ─── Brand helpers ────────────────────────────────────────────────────────────
 
-const GRAD = "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)";
-const PURPLE = "#9B6AFF";
-const PURPLE_SOFT = "rgba(148,61,255,0.1)";
-const PURPLE_BORDER = "rgba(148,61,255,0.22)";
+const GRAD = "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)";
+const PURPLE = "#FF5800";
+const PURPLE_SOFT = "rgba(255,88,0,0.1)";
+const PURPLE_BORDER = "rgba(255,88,0,0.22)";
 
 const gradText: React.CSSProperties = {
   background: GRAD,
@@ -427,7 +427,7 @@ function CircularDial({ score, displayScore, draw }: { score: number; displaySco
 
 function GradDiv({ my = 28 }: { my?: number }) {
   return (
-    <div style={{ margin: `${my}px 0`, height: 1, background: "linear-gradient(90deg, transparent, rgba(148,61,255,0.25), rgba(242,97,121,0.15), transparent)" }} />
+    <div style={{ margin: `${my}px 0`, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,88,0,0.25), rgba(242,97,121,0.15), transparent)" }} />
   );
 }
 
@@ -598,11 +598,11 @@ export function CoachReportCard({
           cursor: pointer; transition: all .18s ease; flex-shrink: 0;
           position: relative; background: transparent; appearance: none; -webkit-appearance: none;
         }
-        .cr2-check:hover { border-color: rgb(148,61,255); }
+        .cr2-check:hover { border-color: rgb(255,88,0); }
         .cr2-check.done {
-          background: linear-gradient(135deg, rgb(148,61,255), rgb(242,97,121));
+          background: linear-gradient(135deg, rgb(255,88,0), rgb(242,97,121));
           border-color: transparent;
-          box-shadow: 0 0 14px rgba(148,61,255,0.45);
+          box-shadow: 0 0 14px rgba(255,88,0,0.45);
         }
         .cr2-check.done::after {
           content: "✓"; position: absolute; inset: 0;
@@ -625,7 +625,7 @@ export function CoachReportCard({
         border: `1px solid ${PURPLE_BORDER}`,
         color: "#ECF1FA",
         WebkitFontSmoothing: "antialiased",
-        backgroundImage: `radial-gradient(800px 500px at 75% -80px, rgba(148,61,255,0.08), transparent 60%), radial-gradient(600px 400px at 0% 60%, rgba(242,97,121,0.04), transparent 60%)`,
+        backgroundImage: `radial-gradient(800px 500px at 75% -80px, rgba(255,88,0,0.08), transparent 60%), radial-gradient(600px 400px at 0% 60%, rgba(242,97,121,0.04), transparent 60%)`,
       }}>
         {/* gradient bar across the very top of the card */}
         <div style={{ height: 3, background: GRAD }} />
@@ -703,7 +703,7 @@ export function CoachReportCard({
 
             <div style={{ paddingTop: 6 }}>
               <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.32em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ width: 24, height: 1, background: "linear-gradient(90deg, rgb(148,61,255), transparent)", display: "inline-block" }} />
+                <span style={{ width: 24, height: 1, background: "linear-gradient(90deg, rgb(255,88,0), transparent)", display: "inline-block" }} />
                 The Story of This Stream
               </div>
               {report.stream_story ? (
@@ -724,7 +724,7 @@ export function CoachReportCard({
               margin: "0 0 36px",
               padding: "24px 26px 22px",
               borderRadius: 14,
-              background: `linear-gradient(135deg, rgba(148,61,255,0.08), rgba(242,97,121,0.04))`,
+              background: `linear-gradient(135deg, rgba(255,88,0,0.08), rgba(242,97,121,0.04))`,
               border: `1px solid ${PURPLE_BORDER}`,
               position: "relative",
               overflow: "hidden",
@@ -1094,13 +1094,13 @@ export function CoachReportCard({
                         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" width="100%" height={H} style={{ display: "block" }}>
                           <defs>
                             <linearGradient id="wpm-line-grad" x1="0" y1="0" x2="1" y2="0">
-                              <stop offset="0%" stopColor="rgb(148,61,255)" />
+                              <stop offset="0%" stopColor="rgb(255,88,0)" />
                               <stop offset="100%" stopColor="rgb(242,97,121)" />
                             </linearGradient>
                             <linearGradient id="wpm-area-grad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="0%" stopColor="rgb(242,97,121)" stopOpacity="0.3" />
-                              <stop offset="60%" stopColor="rgb(148,61,255)" stopOpacity="0.08" />
-                              <stop offset="100%" stopColor="rgb(148,61,255)" stopOpacity="0" />
+                              <stop offset="60%" stopColor="rgb(255,88,0)" stopOpacity="0.08" />
+                              <stop offset="100%" stopColor="rgb(255,88,0)" stopOpacity="0" />
                             </linearGradient>
                           </defs>
                           <path d={area} fill="url(#wpm-area-grad)" />
@@ -1205,7 +1205,7 @@ export function CoachReportCard({
                     )}
                     {wpmCurve.length >= 3 && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                        <span style={{ display: "inline-block", width: 22, height: 8, background: "linear-gradient(180deg, rgba(242,97,121,0.35), rgba(148,61,255,0.05))", borderTop: "1px solid rgb(242,97,121)", borderRadius: 2 }} />
+                        <span style={{ display: "inline-block", width: 22, height: 8, background: "linear-gradient(180deg, rgba(242,97,121,0.35), rgba(255,88,0,0.05))", borderTop: "1px solid rgb(242,97,121)", borderRadius: 2 }} />
                         Words / min
                       </span>
                     )}
@@ -1251,7 +1251,7 @@ export function CoachReportCard({
 
           {/* ── PRO UNLOCK CTA (free only) ── */}
           {!isPro && (
-            <div style={{ marginTop: 44, padding: "28px 28px 24px", borderRadius: 14, background: `linear-gradient(135deg, rgba(148,61,255,0.10), rgba(242,97,121,0.05))`, border: `1px solid ${PURPLE_BORDER}`, position: "relative", overflow: "hidden" }}>
+            <div style={{ marginTop: 44, padding: "28px 28px 24px", borderRadius: 14, background: `linear-gradient(135deg, rgba(255,88,0,0.10), rgba(242,97,121,0.05))`, border: `1px solid ${PURPLE_BORDER}`, position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: GRAD }} />
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <Lock size={11} style={{ color: PURPLE }} />
@@ -1315,7 +1315,7 @@ export function CoachReportCard({
 
           {/* ── SIGNOFF ── */}
           <footer style={{ marginTop: 44, paddingTop: 24, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
-            <div style={{ height: 1, flex: 1, background: "linear-gradient(90deg, rgba(148,61,255,0.3), rgba(242,97,121,0.2), transparent)", marginBottom: 8 }} />
+            <div style={{ height: 1, flex: 1, background: "linear-gradient(90deg, rgba(255,88,0,0.3), rgba(242,97,121,0.2), transparent)", marginBottom: 8 }} />
           </footer>
           <footer style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginTop: 4 }}>
             <div>
