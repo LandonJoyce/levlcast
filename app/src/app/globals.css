@@ -1747,7 +1747,10 @@
   background: linear-gradient(155deg, rgba(255,88,0,0.04) 0%, rgba(242,97,121,0.025) 50%, rgba(252,208,147,0.015) 100%);
   position: relative;
 }
-.ll-page .ll-plan-pro-outer .ll-plan { border-radius: 0 0 16px 16px; border-top: none; }
+/* Pro card uses the default .ll-plan radius/border (16px all sides).
+   Previously this rule removed the top border + radius for a layout
+   that had a banner sitting on top of the card. That banner no longer
+   renders, so the rule was leaving the Pro card with a flat top edge. */
 .ll-page .ll-plan-pro {
   border-color: rgba(255,255,255,0.18);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 60px -10px rgba(0,0,0,0.6);
