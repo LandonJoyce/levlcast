@@ -43,7 +43,7 @@ export default async function LandingPage() {
             <Link href="/" className="ll-brand">LevlCast</Link>
             <ul className="ll-nav-links">
               <li><a href="/" className="ll-nav-active">Home</a></li>
-              <li><a href="#how">How it works</a></li>
+              <li><a href="#features">How it works</a></li>
               <li><a href="#features">Features</a></li>
               <li><a href="#report">The Report</a></li>
               <li><a href="#pricing">Pricing</a></li>
@@ -324,75 +324,6 @@ export default async function LandingPage() {
 
       </section>
 
-      {/* ── The Loop — editorial walkthrough, no cards/icons ── */}
-      <section
-        className="ll-sec"
-        id="how"
-        style={{
-          background: "rgb(4,4,8)",
-          borderTop: "1px solid rgba(255,255,255,0.07)",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-        }}
-      >
-        <div className="ll-con">
-          <div className="ll-shead">
-            <h2 className="ll-h2">
-              Stream. Sync. <span className="ll-grad-text">Learn.</span> Repeat.
-            </h2>
-          </div>
-
-          <div style={{ maxWidth: 760, marginTop: 24 }}>
-            {[
-              {
-                title: "You stream like you always do.",
-                body: "Nothing changes on your end. No extra software, no overlay, no plugin. Just go live.",
-              },
-              {
-                title: "After the stream, hit Sync.",
-                body: "Your VOD shows up in LevlCast. One button to start the analysis. The full read takes about five minutes.",
-              },
-              {
-                title: "Read what your stream actually did.",
-                body: "Score 0–100 with the exact timestamps that mattered. What pulled viewers in, what made them tab away, the one fix that would've moved the needle.",
-              },
-              {
-                title: "Take the fix into the next stream.",
-                body: "One change at a time. Analyze that stream after. Watch the score move. That's the whole loop.",
-              },
-            ].map((s, i) => (
-              <div
-                key={s.title}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr",
-                  gap: 22,
-                  paddingBlock: "20px 22px",
-                  borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
-                <span style={{
-                  fontFamily: "var(--ll-mono)",
-                  fontSize: 13, fontWeight: 700,
-                  color: "rgba(255,255,255,0.35)",
-                  letterSpacing: "0.06em",
-                  paddingTop: 4,
-                }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <h3 style={{ fontSize: 19, fontWeight: 600, color: "#fff", margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-                    {s.title}
-                  </h3>
-                  <p style={{ fontSize: 15, lineHeight: 1.55, color: "rgba(255,255,255,0.65)", margin: 0 }}>
-                    {s.body}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── Pricing ── */}
       <section className="ll-sec" id="pricing">
         <div className="ll-con">
@@ -521,7 +452,7 @@ export default async function LandingPage() {
             <div className="ll-foot-col">
               <h4>More</h4>
               <ul>
-                <li><a href="#how">How it works</a></li>
+                <li><a href="#features">How it works</a></li>
                 <li><a href="#features">Features</a></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><Link href="/terms">Terms</Link></li>
