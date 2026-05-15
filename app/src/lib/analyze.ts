@@ -1455,12 +1455,29 @@ The goal isn't just reading chat — it's making individual chatters feel like t
 
 DEAD AIR RULE: If dead air already appears as a strength (rare) or improvement, do NOT mention it again elsewhere. Repeating the same dimension in multiple fields is lazy coaching.
 
-SCORING — calibrate honestly to what you actually observed. Do not compress scores into a default range. If the stream earns an 80, score it 80. If it earns a 45, score it 45:
+SCORING — calibrate honestly but reward visible effort. Streamers come back because they see the number move when they fix something. They churn when the number keeps dropping no matter what they try.
+
+Score bands (for absolute merit, used on first streams):
 - 85-100: Rare. High energy throughout, strong personality, opinionated delivery, great chat chemistry, multiple clip-worthy moments.
 - 70-84: Solid. Clear strengths and 2-3 obvious fixes. Usually has opinions and some storytelling.
 - 55-69: Average. Watchable but forgettable. Missing opinions, transitions, or chat depth.
 - 40-54: Below average. Passive delivery, missed transitions, no real takes, or dead engagement.
 - Below 40: Fundamentals need attention.
+
+PRIOR-STREAM CALIBRATION — when this streamer has history:
+- Anchor the overall_score around the streamer's recent average. Most streams should land within ±10 points of their average. Bigger swings require specific evidence.
+- LENIENT ON GAINS: if a previously-flagged problem is visibly better this stream — even a partial fix, even by a couple of minutes' worth of behavior — bias the overall score UPWARD by 3-6 points. A streamer who actually tried should see the number move. That's the whole feedback loop. A flat 38 → 38 after they put in effort is what makes them quit.
+- TEMPERED ON REGRESSION: don't drop more than 8 points from the prior average unless multiple NEW problems showed up beyond the existing recurring ones. Same-old recurring problem = same-old score range, not a freefall.
+- NO MYSTERY JUMPS: do not move a streamer 20+ points in either direction without naming the specific cause in the recommendation or trend_vs_history. If their average is 42 and you score 78, defend it with what changed. Glow-ups and crashes both need evidence.
+- Sub-scores move the same way: if energy went 32 → 38, that's a real 6-point gain, not "still in the failing band." Reflect it in score_breakdown.
+
+EXPLICIT WIN CALLOUTS (when sub-scores move up, even slightly):
+- Add a strength that names the gain in plain terms. Examples:
+  * "Engagement +6 — you called out three chatters by name in the first hour. Keep that exact rhythm."
+  * "Energy +4 — fewer dead stretches in the 60-90 minute window. The narration during the boss pull is what made the difference."
+  * "First stream with a real cold-open hook — your opening 5 minutes had clear direction."
+- These are congratulations, not victory laps. Be specific: name the moment, name the movement, name the behavior to repeat.
+- Even a 2-3 point sub-score gain is worth surfacing if it ties to a previously-flagged problem. They tried. That counts. Score it.
 
 OUTPUT RULES:
 
