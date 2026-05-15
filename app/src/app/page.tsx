@@ -159,11 +159,11 @@ export default async function LandingPage() {
               </a>
             </div>
           </div>
+
+          {/* ── Live activity feed (tucked under the hero CTA) ── */}
+          <LiveActivityFeed />
         </div>
       </section>
-
-      {/* ── Live activity feed ── */}
-      <LiveActivityFeed />
 
       {/* ── Live counter ── */}
       <div className="ll-live-counter">
