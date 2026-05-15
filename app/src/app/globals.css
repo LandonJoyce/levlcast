@@ -1860,7 +1860,9 @@
 }
 .ll-page .ll-phone-front {
   width: 100%; max-width: 520px; display: block;
-  mix-blend-mode: screen;
+  /* mix-blend-mode: screen was lighting the phone PNG's built-in blue
+     shadow/glow against the bg, leaving a visible blue halo behind
+     the second phone. Removed — the PNG already has transparency. */
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
                       linear-gradient(to left, transparent 0%, black 14%, black 100%);
   -webkit-mask-composite: destination-in;
