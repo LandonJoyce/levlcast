@@ -69,8 +69,8 @@ export default async function LiveActivityFeed() {
   return (
     <div className="ll-feed">
       <div className="ll-feed-head">
-        <span className="ll-feed-eyebrow">// recent_reports</span>
-        <span className="ll-feed-meta">last {rows.length} streams</span>
+        <span className="ll-feed-eyebrow">Recent Reports</span>
+        <span className="ll-feed-meta">Last {rows.length} Streams</span>
       </div>
       <div className="ll-feed-scan" aria-hidden="true" />
 

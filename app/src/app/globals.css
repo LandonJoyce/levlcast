@@ -1858,14 +1858,18 @@
   padding: 0 2px 8px;
 }
 .ll-page .ll-feed-eyebrow {
-  font-family: var(--ll-mono); font-size: 11px;
-  letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.32);
+  font-family: var(--ll-display, var(--ll-body));
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.85);
 }
 .ll-page .ll-feed-meta {
-  font-family: var(--ll-mono); font-size: 10px;
-  letter-spacing: 0.08em; text-transform: lowercase;
-  color: rgba(255,255,255,0.22);
+  font-family: var(--ll-display, var(--ll-body));
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  color: rgba(255,255,255,0.4);
 }
 /* Animated scanning line below the header. Suggests "live" without
    needing a pill or dot. Reads as part of the design language. */
