@@ -1822,22 +1822,15 @@
   gap: 48px; align-items: end; min-height: 520px;
   isolation: isolate; /* contain blend modes inside the section */
 }
-/* Brand-warm wash (Option C from design handoff, blue depth swapped
-   for a deep coral so the entire palette stays warm). */
+/* Brand-warm wash. Toned down significantly from the original handoff
+   so the gradient sits behind the phones instead of bleeding through
+   them. One soft orange anchor on the left, one soft warm anchor at
+   the bottom, no screen-blend highlight. */
 .ll-page .ll-cta-block::before {
   content: ""; position: absolute; inset: -10% -5%;
   background:
-    radial-gradient(55% 60% at 78% 60%, rgba(255, 88,  0,  0.42), transparent 70%),
-    radial-gradient(45% 55% at 20% 55%, rgba(255,138, 74,  0.20), transparent 75%),
-    radial-gradient(60% 70% at 50% 95%, rgba(180, 60, 70,  0.45), transparent 75%);
-  filter: blur(2px);
-  z-index: 0;
-  pointer-events: none;
-}
-.ll-page .ll-cta-block::after {
-  content: ""; position: absolute; inset: -10% -5%;
-  background: radial-gradient(30% 30% at 78% 55%, rgba(255,179,154,0.25), transparent 70%);
-  mix-blend-mode: screen;
+    radial-gradient(50% 55% at 25% 55%, rgba(255, 88,  0, 0.18), transparent 70%),
+    radial-gradient(55% 65% at 50% 100%, rgba(180, 60, 70, 0.22), transparent 75%);
   z-index: 0;
   pointer-events: none;
 }
