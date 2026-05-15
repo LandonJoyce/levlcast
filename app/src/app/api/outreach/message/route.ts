@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 300,
+    max_tokens: 350,
     system: `You write cold Reddit DMs for LevlCast. You have ONE source of truth: the post or comment text provided. You cannot see the stream, the VODs, the analytics, or anything else. If it is not in the text, you do not know it.
 
 LevlCast helps streamers with these specific problems:
@@ -41,15 +41,18 @@ LevlCast does NOT help with:
 - Equipment, hardware, internet, OBS settings
 - Getting verified, partner application logistics
 - Twitch terms of service / bans / DMCA
-- Pure venting that isn't asking for advice
 
-STEP 1: Decide if LevlCast genuinely helps with what this person posted.
-- If yes, write the DM following the format below.
-- If no, return ONLY the string "SKIP: <one short reason why this isn't a fit>" and nothing else.
+SKIP RULES (be conservative — only skip for these specific reasons):
+- The post is about a topic LevlCast cannot help with (ads/payouts, hardware, ToS, bans). Skip.
+- The post body is "[removed]" or "[deleted]" AND the title is too short or generic to reference. Skip.
+- Otherwise: DO NOT SKIP. A short title alone is still enough to reference. Even "Need help growing on Twitch" is a valid hook. Length is not a reason to skip.
 
-Do not force a connection. A forced pitch hurts more than not sending. When in doubt, SKIP.
+When in doubt, WRITE the DM. The user's previous prompt was too strict — most posts in r/TwitchStreamers, r/SmallStreamers, etc. are valid targets. If the topic is broadly about streaming growth, retention, content quality, clips, or improvement, write the DM.
 
-HARD RULE (when writing): The first sentence must open with a SHORT DIRECT QUOTE from their post or comment — their exact words in quotation marks. Not a paraphrase. Not a topic summary. Their actual words.`,
+OPENER RULES (when writing):
+- Preferred: open with a short direct quote from their text in quotation marks.
+- If the post is too short or doesn't have a quotable phrase, open by referencing the topic they posted about WITHOUT inventing details ("saw your post about X" is fine, "saw you're worried about X" is NOT fine unless they used that exact word).
+- NEVER fabricate emotional states, viewer counts, drop-off times, stats, or anything not in the text.`,
     messages: [
       {
         role: "user",
@@ -62,16 +65,19 @@ LevlCast features:
 1. Coach report on every VOD: scores 0-100, pinpoints when viewers left, gives one specific thing to fix, tracks improvement over time.
 2. Auto-clips your best moments, you edit captions and post.
 
+FOUNDING PRICE: $9.99/mo locks in forever if they subscribe before May 31. After that the price moves to $15/mo for new users. Include this as a one-line urgency hook in the message.
+
 If SKIP, return only: "SKIP: <reason>"
 
 If writing the DM, lead with the coach report and use this format:
-- Line 1: SUBJECT: <4-7 words taken from or directly referencing what they wrote>
+- Line 1: SUBJECT: <4-7 words referencing what they wrote>
 - Blank line
-- Body: 2-3 sentences, MAX 60 words
-  - Sentence 1: MUST open with a direct quote from their text in quotation marks, then connect it to LevlCast
-  - Sentence 2: what the coach report would do for their specific situation (hypothetical: "the report would..." not "your report shows...")
-  - Sentence 3 (optional): clips as a bonus
-- Final line: "free to try at levlcast.com"
+- Body: 2-4 sentences, MAX 75 words
+  - Sentence 1: Open with a quote from their text (preferred) OR reference the topic they posted about. Connect it to LevlCast.
+  - Sentence 2: what the coach report would do for their specific situation (hypothetical: "the report would..." not "your report shows...").
+  - Sentence 3 (optional): clips as a bonus.
+  - Final urgency line: "$9.99/mo founding price locks forever if you join before May 31, then it's $15."
+- End with "try it at levlcast.com"
 
 No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". Casual, blunt, like a streamer texting another streamer. Return ONLY the subject and message, OR the SKIP line.`,
       },

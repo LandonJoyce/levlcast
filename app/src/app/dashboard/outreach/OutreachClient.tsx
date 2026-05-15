@@ -101,12 +101,13 @@ export default function OutreachPage() {
 
   // Fallback for when the AI decides a post isn't a fit (or the post body
   // was deleted, blocking the quote-first opener). Keeps the casual tone
-  // of an actual LevlCast user reaching out, no fake observations.
+  // of an actual LevlCast user reaching out, no fake observations. Includes
+  // the founding-price urgency so the template doesn't lose conversion lift.
   function useTemplate(lead: Lead) {
     const body = `yo! saw your ${lead.isComment ? "comment" : "post"}. LevlCast watches your VODs and tells you what to improve next stream. it also has a clipping tool so you don't have to waste time finding moments.
 
-free to try at levlcast.com`;
-    const subject = lead.isComment ? "Built a Twitch coaching tool" : "Built a Twitch coaching tool";
+$9.99/mo founding price locks forever if you join before May 31, then it's $15. try it at levlcast.com`;
+    const subject = "Built a Twitch coaching tool";
     setMessages((prev) => ({ ...prev, [lead.id]: { body, subject } }));
   }
 
