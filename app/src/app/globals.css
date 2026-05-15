@@ -1137,7 +1137,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .ll-page {
-  --ll-bg:          rgb(13, 11, 18);
+  --ll-bg:          rgb(9, 11, 27);
   --ll-bg-ink:      rgb(1, 15, 4);
   --ll-bg-card:     rgba(16, 25, 22, 0.6);
   --ll-bg-solid:    rgb(14, 22, 19);
@@ -1327,7 +1327,12 @@
 .ll-page .ll-hero {
   position: relative; text-align: center;
   padding-block: 80px 48px; isolation: isolate;
-  background: linear-gradient(to right, rgb(2,4,12) 0%, rgb(9,16,48) 28%, rgb(9,16,48) 72%, rgb(2,4,12) 100%);
+  /* Inherit the page background so the hero, the laptop mockup, and the
+     sections below it share one continuous dark surface. The previous
+     gradient went heavy on blue (rgb(9,16,48)) in the middle which made
+     the laptop appear to sit on a different color than the rest of the
+     page. Transparent is cleaner — page bg shows through. */
+  background: transparent;
 }
 .ll-page .ll-hero::before { display: none; }
 .ll-page .ll-hero::after { display: none; }
