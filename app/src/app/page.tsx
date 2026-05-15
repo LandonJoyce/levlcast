@@ -325,7 +325,15 @@ export default async function LandingPage() {
       </section>
 
       {/* ── The Loop — editorial walkthrough, no cards/icons ── */}
-      <section className="ll-sec" id="how">
+      <section
+        className="ll-sec"
+        id="how"
+        style={{
+          background: "rgb(4,4,8)",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+        }}
+      >
         <div className="ll-con">
           <div className="ll-shead">
             <h2 className="ll-h2">
