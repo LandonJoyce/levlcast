@@ -1313,27 +1313,6 @@ export function CoachReportCard({
             </div>
           )}
 
-          {/* ── SIGNOFF ── */}
-          <footer style={{ marginTop: 44, paddingTop: 24, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
-            <div style={{ height: 1, flex: 1, background: "linear-gradient(90deg, rgba(255,88,0,0.3), rgba(242,97,121,0.2), transparent)", marginBottom: 8 }} />
-          </footer>
-          <footer style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginTop: 4 }}>
-            <div>
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 17, color: "#A6B3C9", lineHeight: 1.5, margin: 0 }}>
-                Go live.<br />
-                Own your stream.<br />
-                <strong style={{ color: "#ECF1FA", fontWeight: 400 }}>Level up.</strong>
-              </p>
-              <p style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontStyle: "italic", fontSize: 28, color: "#A6B3C9", letterSpacing: "-0.02em", transform: "rotate(-2deg) translateX(-4px)", lineHeight: 1, marginTop: 12, display: "inline-block" }}>
-                LevlCast
-              </p>
-            </div>
-            <div style={{ textAlign: "right", fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4D5876", lineHeight: 1.8 }}>
-              Coach Report<br />
-              Stream Debrief
-            </div>
-          </footer>
-
         </div>
       </div>
 
