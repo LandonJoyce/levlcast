@@ -87,22 +87,6 @@ export default async function LandingPage() {
               color: "rgba(255,255,255,0.85)",
             }}
           >
-            <span
-              style={{
-                fontFamily: "var(--ll-mono)",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.18em",
-                padding: "3px 8px",
-                borderRadius: 999,
-                color: "#fff",
-                background:
-                  "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              FOUNDING · ENDS MAY 31
-            </span>
             <span style={{ color: "rgba(255,255,255,0.85)" }}>
               Subscribe by <b style={{ color: "#fff", fontWeight: 600 }}>May 31</b> to lock in{" "}
               <b style={{ color: "#fff", fontWeight: 600 }}>$9.99/mo forever</b>. Price moves to{" "}
