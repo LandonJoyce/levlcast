@@ -444,7 +444,7 @@ export default async function LandingPage() {
               <h2 className="ll-cta-h">
                 <span className="ll-cta-grad">Go live.</span><br />
                 Own your stream.<br />
-                <span className="ll-cta-grad">Level up.</span>
+                <span className="ll-cta-grad">Levl up.</span>
               </h2>
               <p className="ll-cta-sub">
                 Connect Twitch, hit Sync, and read your first report in under 10 minutes. Free. No credit card.
