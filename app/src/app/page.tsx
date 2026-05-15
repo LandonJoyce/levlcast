@@ -245,7 +245,7 @@ export default async function LandingPage() {
                 I built LevlCast to give newer streamers an actual path forward. Whether you're pushing for affiliate, chasing partner, or just trying to figure out what's not working, nobody should have to guess their way through it.
               </p>
               <div className="ll-trust-person">
-                <div className="ll-trust-avatar" style={{ background: "rgba(255,88,0,0.2)", color: "rgb(255,88,0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="ll-trust-avatar" style={{ background: "rgba(145,70,255,0.25)", color: "#9146FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M4 5l2-3h14v12l-5 5h-4l-3 3H6v-3H2V8l2-3zm14 0H6L4 8v9h3v3l3-3h3.5l4.5-4.5V5zM11 8v5h2V8h-2zm4 0v5h2V8h-2z"/></svg>
                 </div>
                 <div>
@@ -441,12 +441,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-cta-block">
             <div style={{ alignSelf: "center" }}>
-              <h2 className="ll-cta-h">
-                <span className="ll-cta-grad">Go live.</span><br />
-                Own your stream.<br />
-                <span className="ll-cta-grad">Level up.</span>
-              </h2>
-              <p className="ll-cta-sub">
+              <p className="ll-cta-sub" style={{ marginTop: 0 }}>
                 Connect Twitch, hit Sync, and read your first report in under 10 minutes. Free. No credit card.
               </p>
               <div className="ll-badges">
