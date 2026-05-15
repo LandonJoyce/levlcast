@@ -21,7 +21,7 @@ async function getStreamCount(): Promise<number> {
 }
 
 const faqItems = [
-  { q: "How does the analysis work?", a: "You connect your Twitch account, sync your VODs, and hit Analyze. We pull the audio from your stream, run it through our transcription pipeline, and Claude reads the full transcript to find your best moments and weakest points. The whole thing takes about 5 minutes for a 2-hour stream." },
+  { q: "How does the analysis work?", a: "You connect your Twitch account, sync your VODs, and hit Analyze. We pull the audio from your stream, transcribe it, and read the full transcript to find your best moments and weakest points. The whole thing takes about 5 minutes for a 2-hour stream." },
   { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
   { q: "Is it actually free?", a: "Yeah. The free trial gives you 3 full VOD analyses and 5 clips with no credit card. That's enough to see your scores trend, watch a few of your moments turn into clips, and decide if Pro is worth it." },
   { q: "Does it work for my channel?", a: "Any public Twitch channel works: partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
