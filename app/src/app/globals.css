@@ -203,27 +203,27 @@
    Scoped under .dash to avoid affecting landing or anywhere else
    ───────────────────────────────────────────────────────────────────────── */
 .dash {
-  /* surfaces — deep navy matching landing page */
-  --bg: oklch(0.11 0.025 265);
-  --bg-2: oklch(0.09 0.022 265);
-  --surface: oklch(0.15 0.022 265);
-  --surface-2: oklch(0.18 0.022 265);
-  --surface-3: oklch(0.21 0.022 265);
+  /* surfaces — warm anthracite matching landing page (Porsche dark) */
+  --bg: oklch(0.11 0.006 45);
+  --bg-2: oklch(0.09 0.006 45);
+  --surface: oklch(0.15 0.006 45);
+  --surface-2: oklch(0.19 0.006 45);
+  --surface-3: oklch(0.23 0.006 45);
 
   /* ink */
-  --ink: oklch(0.96 0.005 240);
-  --ink-2: oklch(0.78 0.012 240);
-  --ink-3: oklch(0.60 0.015 240);
-  --ink-4: oklch(0.45 0.018 240);
+  --ink: oklch(0.96 0.004 60);
+  --ink-2: oklch(0.78 0.006 60);
+  --ink-3: oklch(0.60 0.008 60);
+  --ink-4: oklch(0.45 0.010 60);
 
   /* lines */
-  --line: oklch(0.24 0.022 265);
-  --line-2: oklch(0.30 0.022 265);
+  --line: oklch(0.25 0.006 45);
+  --line-2: oklch(0.31 0.006 45);
 
-  /* accents — purple primary to match landing gradient */
-  --blue: oklch(0.60 0.22 290);
-  --blue-2: oklch(0.52 0.22 290);
-  --blue-soft: oklch(0.22 0.12 290);
+  /* accents — lava orange primary to match landing gradient */
+  --blue: oklch(0.66 0.22 35);
+  --blue-2: oklch(0.56 0.20 30);
+  --blue-soft: oklch(0.24 0.12 35);
   --green: oklch(0.74 0.15 155);
   --green-2: oklch(0.62 0.15 155);
   --green-soft: oklch(0.22 0.08 155);
@@ -231,8 +231,8 @@
   --warn-soft: oklch(0.28 0.10 80);
   --danger: oklch(0.65 0.20 25);
   --danger-soft: oklch(0.26 0.12 25);
-  --magenta: oklch(0.65 0.20 330);
-  --grad: linear-gradient(135deg, oklch(0.60 0.22 290) 0%, oklch(0.65 0.18 15) 100%);
+  --magenta: oklch(0.66 0.20 12);
+  --grad: linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
 
   --r-sm: 8px;
   --r-md: 12px;
