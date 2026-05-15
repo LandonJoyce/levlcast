@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import FaqAccordion from "@/components/FaqAccordion";
-import StreamerMarquee from "@/components/landing/StreamerMarquee";
+import LiveActivityFeed from "@/components/landing/LiveActivityFeed";
 import LandingProPlan from "@/components/landing/LandingProPlan";
 import LaptopMockup from "@/components/landing/LaptopMockup";
 import { SUPPORTED_GAMES } from "@/lib/analyze";
@@ -162,10 +162,8 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Streamer Marquee ── */}
-      <div className="ll-page-marquee">
-        <StreamerMarquee />
-      </div>
+      {/* ── Live activity feed ── */}
+      <LiveActivityFeed />
 
       {/* ── Live counter ── */}
       <div className="ll-live-counter">
