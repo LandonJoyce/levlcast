@@ -1861,8 +1861,11 @@
 .ll-page .ll-phone-front {
   width: 100%; max-width: 520px; display: block;
   /* mix-blend-mode: screen was lighting the phone PNG's built-in blue
-     shadow/glow against the bg, leaving a visible blue halo behind
-     the second phone. Removed — the PNG already has transparency. */
+     shadow against the bg. Removed. The PNG also has cool ambient
+     lighting baked in, so a tiny warm hue-rotate neutralizes the blue
+     halo around the bezels without making the screen content look
+     wrong. */
+  filter: hue-rotate(-12deg) saturate(0.92);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
                       linear-gradient(to left, transparent 0%, black 14%, black 100%);
   -webkit-mask-composite: destination-in;
