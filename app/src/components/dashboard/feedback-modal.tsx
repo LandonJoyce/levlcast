@@ -256,7 +256,7 @@ export function FeedbackModal({
                   padding: "12px 18px",
                   background: submitting || charCount < MIN_LEN || overlong
                     ? "rgba(155,106,255,0.25)"
-                    : "linear-gradient(135deg, #9B6AFF, #F26179)",
+                    : "linear-gradient(135deg, #FF5800, #F26179)",
                   border: "none",
                   color: "#fff",
                   borderRadius: 10,

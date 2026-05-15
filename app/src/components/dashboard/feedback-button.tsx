@@ -25,7 +25,7 @@ export function FeedbackButton({
   const baseStyle: React.CSSProperties =
     style === "primary"
       ? {
-          background: "linear-gradient(135deg, #9B6AFF, #F26179)",
+          background: "linear-gradient(135deg, #FF5800, #F26179)",
           color: "#fff",
           border: "none",
           padding: "10px 16px",

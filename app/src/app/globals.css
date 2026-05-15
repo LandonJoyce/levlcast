@@ -28,11 +28,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(168, 85, 247, 0.2);
+    background: rgba(255, 88, 0, 0.2);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(168, 85, 247, 0.4);
+    background: rgba(255, 88, 0, 0.4);
   }
 }
 
@@ -59,20 +59,20 @@
 
   .card-accent {
     background: #0e1117;
-    border: 1px solid rgba(168, 85, 247, 0.22);
+    border: 1px solid rgba(255, 88, 0, 0.22);
     border-radius: 16px;
     transition: border-color 600ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 600ms cubic-bezier(0.32, 0.72, 0, 1);
   }
   .card-accent:hover {
-    border-color: rgba(168, 85, 247, 0.35);
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35), 0 0 24px rgba(168, 85, 247, 0.08);
+    border-color: rgba(255, 88, 0, 0.35);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35), 0 0 24px rgba(255, 88, 0, 0.08);
   }
 
   /* Radial purple glow */
   .glow-bg {
     background: radial-gradient(
       ellipse at center,
-      rgba(168, 85, 247, 0.18) 0%,
+      rgba(255, 88, 0, 0.18) 0%,
       transparent 65%
     );
   }
@@ -80,7 +80,7 @@
   .glow-bg-top {
     background: radial-gradient(
       ellipse at 50% 0%,
-      rgba(168, 85, 247, 0.22) 0%,
+      rgba(255, 88, 0, 0.22) 0%,
       transparent 60%
     );
   }
@@ -89,7 +89,7 @@
   .glow-left {
     background: radial-gradient(
       ellipse at 10% 50%,
-      rgba(168, 85, 247, 0.10) 0%,
+      rgba(255, 88, 0, 0.10) 0%,
       transparent 55%
     );
   }
@@ -105,7 +105,7 @@
   .glow-bottom {
     background: radial-gradient(
       ellipse at 50% 100%,
-      rgba(168, 85, 247, 0.14) 0%,
+      rgba(255, 88, 0, 0.14) 0%,
       transparent 55%
     );
   }
@@ -114,7 +114,7 @@
   .grid-bg {
     background-image: radial-gradient(
       circle,
-      rgba(168, 85, 247, 0.12) 1px,
+      rgba(255, 88, 0, 0.12) 1px,
       transparent 1px
     );
     background-size: 28px 28px;
@@ -140,20 +140,20 @@
     background:
       radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 50%),
       radial-gradient(ellipse at 80% 20%, rgba(103, 232, 249, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(255, 88, 0, 0.08) 0%, transparent 50%),
       radial-gradient(ellipse at 10% 70%, rgba(34, 255, 136, 0.04) 0%, transparent 40%);
   }
 
   /* Dashboard subtle glow */
   .dashboard-glow {
     background:
-      radial-gradient(ellipse at 30% 0%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 30% 0%, rgba(255, 88, 0, 0.08) 0%, transparent 50%),
       radial-gradient(ellipse at 70% 0%, rgba(103, 232, 249, 0.04) 0%, transparent 40%);
   }
 
   /* Accent text gradient — logo, headings */
   .text-gradient {
-    background: linear-gradient(125deg, #F0ABFC 0%, #C084FC 45%, #A855F7 100%);
+    background: linear-gradient(125deg, #FCD093 0%, #F26179 45%, #FF5800 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -168,11 +168,11 @@
   .btn-accent {
     @apply bg-accent text-white font-bold rounded-full;
     transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 500ms cubic-bezier(0.32, 0.72, 0, 1), opacity 300ms ease;
-    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0), 0 1px 2px rgba(0,0,0,0.4);
+    box-shadow: 0 0 0 0 rgba(255, 88, 0, 0), 0 1px 2px rgba(0,0,0,0.4);
   }
   .btn-accent:hover {
     transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 0 40px rgba(168, 85, 247, 0.45), 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 0 40px rgba(255, 88, 0, 0.45), 0 8px 24px rgba(0,0,0,0.4);
   }
   .btn-accent:active {
     transform: scale(0.97);

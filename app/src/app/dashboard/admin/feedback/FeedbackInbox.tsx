@@ -30,7 +30,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 const CATEGORY_COLOR: Record<string, string> = {
   failure: "#F87171",
   bug: "#F59E0B",
-  general: "#9B6AFF",
+  general: "#FF5800",
   feature_request: "#22D3EE",
 };
 
@@ -136,7 +136,7 @@ export function FeedbackInbox({ initialFeedback }: Props) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {filtered.map((f) => {
-            const color = CATEGORY_COLOR[f.category] ?? "#9B6AFF";
+            const color = CATEGORY_COLOR[f.category] ?? "#FF5800";
             const ctx = f.context as Record<string, unknown> | null;
             return (
               <div
@@ -313,7 +313,7 @@ function ReplyBox({
       {hasReply && !editing && (
         <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: "#9B6AFF", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            <div style={{ fontSize: 11, color: "#FF5800", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Your reply {feedback.user_seen_reply ? "· seen" : "· unread"}
             </div>
             <button
@@ -402,7 +402,7 @@ function ReplyBox({
                 padding: "7px 16px",
                 background: sending || draft.trim().length < 2
                   ? "rgba(155,106,255,0.25)"
-                  : "linear-gradient(135deg, #9B6AFF, #F26179)",
+                  : "linear-gradient(135deg, #FF5800, #F26179)",
                 border: "none",
                 color: "#fff",
                 borderRadius: 7,

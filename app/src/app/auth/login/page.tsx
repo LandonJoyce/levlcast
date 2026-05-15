@@ -114,8 +114,8 @@ function LoginForm() {
         <div style={{
           marginBottom: 16, padding: "10px 14px", borderRadius: 10,
           fontSize: 13, textAlign: "center",
-          background: "rgba(145,70,255,0.08)",
-          border: "1px solid rgba(145,70,255,0.25)",
+          background: "rgba(255,88,0,0.08)",
+          border: "1px solid rgba(255,88,0,0.25)",
           color: "rgba(255,255,255,0.6)",
           fontFamily: HELV,
         }}>
@@ -141,7 +141,7 @@ function LoginForm() {
         disabled={loading}
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          background: loading ? "rgba(145,70,255,0.5)" : "#9146FF",
+          background: loading ? "rgba(255,88,0,0.5)" : "#FF5800",
           color: "#fff", fontWeight: 700, fontSize: 15, fontFamily: HELV,
           padding: "14px 24px", borderRadius: 12, border: "none",
           cursor: loading ? "not-allowed" : "pointer",
@@ -313,7 +313,7 @@ export default function LoginPage() {
       }}>
         <Suspense fallback={
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 24, height: 24, border: "2px solid rgba(145,70,255,0.5)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+            <div style={{ width: 24, height: 24, border: "2px solid rgba(255,88,0,0.5)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
           </div>
         }>
           <LoginForm />
