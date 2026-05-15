@@ -1850,26 +1850,26 @@
 .ll-page .ll-feed {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 48px 24px 16px;
+  padding: 0 24px 12px;
 }
 .ll-page .ll-feed-head {
   display: flex; align-items: center; gap: 14px;
-  margin-bottom: 18px;
-  padding-bottom: 14px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--ll-line-soft);
 }
 .ll-page .ll-feed-live {
-  font-family: var(--ll-mono); font-size: 11px; font-weight: 700;
+  font-family: var(--ll-mono); font-size: 10px; font-weight: 700;
   letter-spacing: 0.14em;
   color: #A3E635;
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: 7px;
   background: rgba(163,230,53,0.08);
   border: 1px solid rgba(163,230,53,0.28);
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
 }
 .ll-page .ll-feed-dot {
-  width: 6px; height: 6px;
+  width: 5px; height: 5px;
   background: #A3E635;
   border-radius: 50%;
   animation: ll-feed-pulse 2.4s ease-in-out infinite;
@@ -1879,23 +1879,22 @@
   50% { opacity: 0.55; transform: scale(1.4); }
 }
 .ll-page .ll-feed-title {
-  font-family: var(--ll-mono); font-size: 11px;
+  font-family: var(--ll-mono); font-size: 10px;
   letter-spacing: 0.12em; text-transform: uppercase;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.45);
 }
 .ll-page .ll-feed-list { display: flex; flex-direction: column; }
 .ll-page .ll-feed-row {
   display: grid;
-  grid-template-columns: minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(110px, 1fr) minmax(70px, 0.7fr) minmax(110px, 1fr);
+  grid-template-columns: minmax(70px, 0.7fr) minmax(110px, 1fr) minmax(70px, 0.6fr) minmax(110px, 1fr);
   gap: 18px;
   align-items: center;
-  padding: 12px 4px;
+  padding: 9px 4px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
   font-family: var(--ll-mono);
   font-size: 13px;
 }
 .ll-page .ll-feed-row:last-child { border-bottom: none; }
-.ll-page .ll-feed-time { color: rgba(255,255,255,0.45); letter-spacing: 0.02em; }
 .ll-page .ll-feed-dur { color: rgba(255,255,255,0.7); }
 .ll-page .ll-feed-cat {
   font-size: 10px; letter-spacing: 0.1em;
@@ -1913,9 +1912,10 @@
 @media (max-width: 720px) {
   .ll-page .ll-feed-row {
     grid-template-columns: 1fr 1fr;
-    gap: 6px 14px;
+    gap: 4px 14px;
+    padding: 7px 4px;
   }
-  .ll-page .ll-feed-cat { grid-column: 1 / -1; }
+  .ll-page .ll-feed-cat { grid-column: 1 / -1; font-size: 9px; }
   .ll-page .ll-feed-dz { grid-column: 1 / -1; }
 }
 

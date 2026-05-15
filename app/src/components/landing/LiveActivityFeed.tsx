@@ -14,7 +14,6 @@ import { createAdminClient } from "@/lib/supabase/server";
  */
 
 interface FeedRow {
-  analyzed_at: string;
   duration_seconds: number | null;
   coach_report: {
     overall_score?: number;
@@ -31,17 +30,6 @@ const TYPE_LABEL: Record<string, string> = {
   variety: "VARIETY",
   educational: "EDUCATIONAL",
 };
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function fmtDuration(secs: number | null): string {
   if (!secs) return "?";
@@ -61,12 +49,12 @@ async function fetchRecentAnalyses(): Promise<FeedRow[]> {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from("vods")
-      .select("analyzed_at, duration_seconds, coach_report, game_category")
+      .select("duration_seconds, coach_report, game_category")
       .eq("status", "ready")
       .not("analyzed_at", "is", null)
       .not("coach_report", "is", null)
       .order("analyzed_at", { ascending: false })
-      .limit(8);
+      .limit(6);
     return (data as FeedRow[] | null) ?? [];
   } catch {
     return [];
@@ -85,9 +73,7 @@ export default async function LiveActivityFeed() {
           <span className="ll-feed-dot" />
           LIVE
         </span>
-        <span className="ll-feed-title">
-          Recent stream reports
-        </span>
+        <span className="ll-feed-title">Recent stream reports</span>
       </div>
 
       <div className="ll-feed-list">
@@ -98,10 +84,9 @@ export default async function LiveActivityFeed() {
           const typeLabel = TYPE_LABEL[type] ?? type.toUpperCase();
           return (
             <div key={i} className="ll-feed-row">
-              <span className="ll-feed-time">{timeAgo(r.analyzed_at)}</span>
               <span className="ll-feed-dur">{fmtDuration(r.duration_seconds)}</span>
               <span className="ll-feed-cat">{typeLabel}</span>
-              {score !== null && (
+              {score !== null ? (
                 <span
                   className="ll-feed-score"
                   style={{ color: scoreColor(score) }}
@@ -109,11 +94,15 @@ export default async function LiveActivityFeed() {
                   {score}
                   <span className="ll-feed-score-out">/100</span>
                 </span>
+              ) : (
+                <span />
               )}
-              {deadZones > 0 && (
+              {deadZones > 0 ? (
                 <span className="ll-feed-dz">
                   {deadZones} dead {deadZones === 1 ? "zone" : "zones"}
                 </span>
+              ) : (
+                <span />
               )}
             </div>
           );
