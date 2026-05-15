@@ -1904,28 +1904,28 @@
   grid-template-columns: minmax(60px, 0.55fr) minmax(100px, 1fr) minmax(60px, 0.55fr) minmax(100px, 0.9fr);
   gap: 14px;
   align-items: center;
-  padding: 8px 2px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 10px 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   font-family: var(--ll-mono);
-  font-size: 12px;
+  font-size: 13px;
 }
 .ll-page .ll-feed-row:last-child { border-bottom: none; }
-.ll-page .ll-feed-dur { color: rgba(255,255,255,0.65); }
+.ll-page .ll-feed-dur { color: rgba(255,255,255,0.82); }
 .ll-page .ll-feed-cat {
-  font-size: 9px; letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.32);
+  font-size: 11px; letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.58);
 }
 .ll-page .ll-feed-score {
-  font-weight: 700; font-size: 14px;
+  font-weight: 700; font-size: 15px;
   letter-spacing: -0.02em;
 }
 .ll-page .ll-feed-score-out {
-  font-size: 10px; color: rgba(255,255,255,0.22);
+  font-size: 11px; color: rgba(255,255,255,0.42);
   font-weight: 500; margin-left: 2px;
 }
 .ll-page .ll-feed-dz {
-  color: rgba(255,255,255,0.32);
-  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  font-size: 12px;
 }
 @media (max-width: 720px) {
   .ll-page .ll-feed { margin-top: 44px; }
