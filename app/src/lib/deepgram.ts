@@ -27,6 +27,12 @@ const BASE_PARAMS: Record<string, string> = {
   utt_split: "1.5",
   disfluencies: "true",   // keep "uh", "oh", "wait", "what" — critical emotional markers
   diarize: "true",         // tag each utterance with speaker ID so we can filter to the streamer's voice
+  // Multilingual mode. Without this nova-3 defaults to English-only and
+  // non-English streamers (e.g. French, Spanish, German) get reports
+  // saying they were silent because the model dropped every non-English
+  // word. `language=multi` enables code-switching detection — handles
+  // a French streamer who occasionally drops English gaming terms.
+  language: "multi",
 };
 
 /**
