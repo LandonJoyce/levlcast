@@ -1180,7 +1180,6 @@
 .ll-page .ll-game-strip {
   padding: 64px 0 56px;
   position: relative;
-  background: linear-gradient(180deg, transparent 0%, rgba(148,61,255,0.04) 50%, transparent 100%);
 }
 .ll-page .ll-game-strip-head { text-align: center; max-width: 720px; margin: 0 auto 28px; }
 .ll-page .ll-game-strip-eyebrow {
