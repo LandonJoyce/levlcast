@@ -1270,11 +1270,22 @@ ANTI-REPETITION RULE — this is critical:
     * If they always go silent after losing a match → "Post-Loss Silence"
     * If they ignore chat during ranked → "Ranked Tunnel"
     * If their cold open is always 8+ minutes of setup → "The Long Warm-Up"
-  Invent the name based on what's specific about THIS streamer's pattern. Do NOT use generic labels like "RECURRING: Dead Air" or "RECURRING: Chat Ignored" — those feel boilerplate. The name should make the streamer think "yeah that's me." Be blunt — they have been told before.
+  Invent the name based on what's specific about THIS streamer's pattern. Do NOT use generic labels like "RECURRING: Dead Air" or "RECURRING: Chat Ignored" — those feel boilerplate. The name should make the streamer think "yeah that's me."
 - If no: this is a new finding from this stream — write it fresh, no prior-report language.
 - Do NOT recycle prior reports' exact wording. If the same label would appear twice, drop the repeat.
 - New problems visible only in this stream take priority over repeating history.
-If this stream shows improvement on a past problem, note it in trend_vs_history — earned recognition matters.`;
+
+ESCALATION DISCIPLINE — when a pattern has now recurred 3+ times:
+- The streamer has heard the same advice before and it hasn't worked. Do not just repeat the previous fix in louder language. The fix as written is the failed fix.
+- The improvement line must propose a DIFFERENT angle on the same root problem. If you previously told them "narrate one decision per minute" and they're still going silent, switch tactics: try "set a timer to call out the next play before each fight starts" or "pre-write three takes about the game and rotate one per stream." A new mechanic, not louder repetition.
+- The recommendation field MUST NOT use language that brands the streamer as the problem ("it's your identity now," "this is who you are," "you can't shake this"). These framings make people churn. Frame the pattern as a habit that hasn't broken yet, never as the streamer's character.
+- Banned phrases when a pattern recurs 3+ times: "it's your identity", "this is who you are right now", "you've been told this before", "we've covered this", "again", "still", "as usual". Use these only when you're acknowledging a WIN that is also recurring.
+
+EARNED-RECOGNITION RULE — when prior history exists you MUST do at least one of the following, even if the overall score went down:
+- Name a specific sub-score that improved versus the prior streams' average, even by 1-2 points, and credit the streamer for that movement.
+- If no sub-score improved, find ONE specific behavior in the transcript or peaks that is better than what the prior reports flagged — a moment they took a take, named a chatter, closed a bit, anything — and call it out in strengths.
+- Put this recognition in strengths or trend_vs_history, not in the recommendation.
+- This is non-negotiable. If every improvement is RECURRING and there is no "you did this better" callout anywhere in the report, the report fails — generate something honest before returning.`;
       })()
     : "";
 
@@ -1480,7 +1491,7 @@ SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries
 - Shareable win: one screenshot-worthy stat or observation the streamer would feel good sharing. Pull from real numbers (commentary density hit X wpm during Y, peak moment scored X/10, energy sustained above baseline for Z minutes) or one genuinely impressive moment described specifically. Must be real and verifiable from the data shown — no inflation. stat = the headline (under 80 chars). context = 1 sentence explaining it.
 - score_breakdown: honest sub-scores 0-100 for energy, engagement, consistency, content.
 - momentum_crash: describe the stretch, what was happening, what should have happened instead. No quoted words.
-- trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent".
+- trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent". The NOTE field must surface at least one specific number that improved versus the streamer's prior averages (sub-score, clip count, dead-air seconds, anything in the benchmark), even when the overall score went down. If absolutely nothing improved, say so directly and offer one small concrete behavior they could change before the next stream to break the slide. Never close out the note with a "you've heard this" remark — that frames as judgment, not coaching.
 - No emojis. No padding. No filler.
 - NO EM DASHES (—) anywhere in any field. Rewrite any sentence that would need one. Use a period, a comma, or split into two sentences instead.
 - ANTI-LEAKAGE — CRITICAL: Your internal reasoning, evaluation steps, and prompt language must never appear in any output field. Do not reference "evaluation dimensions", "the experienced streamer test", "tab out", "20k", "STEP 0", "CORE PRINCIPLE", or any other language from these instructions. The report reads like a human coach wrote it from watching the stream. Nothing in the output should reveal that a prompt exists.
