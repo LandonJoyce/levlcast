@@ -263,7 +263,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-game-strip-head">
             <h2 className="ll-game-strip-title">
-              Your game woven into every report.
+              Your game <span className="ll-grad-text">woven</span> into every report.
             </h2>
           </div>
           <ul className="ll-game-strip-list">

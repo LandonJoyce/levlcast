@@ -1137,7 +1137,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .ll-page {
-  --ll-bg:          rgb(8, 18, 18);
+  --ll-bg:          rgb(18, 12, 10);
   --ll-bg-ink:      rgb(1, 15, 4);
   --ll-bg-card:     rgba(16, 25, 22, 0.6);
   --ll-bg-solid:    rgb(14, 22, 19);
@@ -1408,7 +1408,9 @@
   transform-style: preserve-3d; transform-origin: 50% 100%;
   will-change: transform, opacity;
   max-width: 880px; margin: 0 auto;
-  filter: drop-shadow(0 40px 80px rgba(0,0,0,0.6));
+  /* Soft directional shadow only — was a heavy radial drop-shadow that
+     read as a black halo on any non-black page background. */
+  filter: drop-shadow(0 20px 30px rgba(0,0,0,0.35));
 }
 .ll-lm-lid {
   position: relative;
@@ -1561,10 +1563,10 @@
   width: 100%;
   max-width: 1600px;
   padding: 20px 40px;
-  background: rgba(148,61,255,0.04);
-  border: 1px solid rgba(148,61,255,0.18);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 20px;
-  box-shadow: 0 0 80px rgba(148,61,255,0.10), 0 40px 80px rgba(0,0,0,0.5);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
 }
 .ll-page .ll-ss-side {
   display: flex;
@@ -1574,11 +1576,10 @@
 .ll-page .ll-ss-frame {
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(148,61,255,0.35);
+  border: 1px solid rgba(255,255,255,0.10);
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.06) inset,
-    0 24px 64px rgba(0,0,0,0.7),
-    0 0 60px rgba(148,61,255,0.18);
+    0 24px 64px rgba(0,0,0,0.7);
 }
 .ll-page .ll-ss-frame img {
   display: block;
