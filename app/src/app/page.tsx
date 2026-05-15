@@ -71,12 +71,10 @@ export default async function LandingPage() {
         </div>
       </header>
 
-      {/* ── iOS 1.0.3 release banner ── */}
-      <a
-        href="https://apps.apple.com/us/app/levlcast/id6761281566"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="iOS 1.0.3 update on the App Store"
+      {/* ── Founding price banner ── */}
+      <Link
+        href="/auth/login"
+        aria-label="Lock the $9.99 founding price before May 31"
         style={{
           display: "block",
           textDecoration: "none",
@@ -113,11 +111,12 @@ export default async function LandingPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              NEW · iOS 1.0.3
+              FOUNDING · ENDS MAY 31
             </span>
             <span style={{ color: "rgba(255,255,255,0.85)" }}>
-              <b style={{ color: "#fff", fontWeight: 600 }}>Clip editor</b>,{" "}
-              <b style={{ color: "#fff", fontWeight: 600 }}>Highlight Reels</b>, and tap-to-play timestamps on the coach report.
+              Subscribe by <b style={{ color: "#fff", fontWeight: 600 }}>May 31</b> to lock in{" "}
+              <b style={{ color: "#fff", fontWeight: 600 }}>$9.99/mo forever</b>. Price moves to{" "}
+              <b style={{ color: "#fff", fontWeight: 600 }}>$15/mo</b> for everyone after.
             </span>
             <span
               style={{
@@ -129,14 +128,14 @@ export default async function LandingPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              Update on the App Store
+              Claim founding price
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </span>
           </div>
         </div>
-      </a>
+      </Link>
 
       {/* ── Hero ── */}
       <section className="ll-hero">
