@@ -1,0 +1,38 @@
+═══════════════════════════════════════════════════════════
+LevlCast 1.0.3 — App Store Connect release notes
+═══════════════════════════════════════════════════════════
+
+WHAT'S NEW (paste into the "What's New in This Version" box)
+───────────────────────────────────────────────────────────
+
+Edit your clips on iOS: pick a hook frame, change the caption style, and rewrite captions. Save and re-render in seconds.
+
+Highlight Reel: build a 27-second multi-cut from your top three peaks in one tap.
+
+Tap any timestamp inside a coach report to open that exact moment on Twitch.
+
+New Rewatch Two Minutes section: one win, one lesson, both linked.
+
+Heads up before you stream: surfaces the one recurring pattern to keep in mind.
+
+Score trajectory sparkline on your last stream card.
+
+Plus accurate trial counters, the real Pro feature list, and our new brand colors throughout.
+
+
+APP REVIEW NOTES (paste into the "Notes" box)
+───────────────────────────────────────────────────────────
+
+Demo account:
+  Email:    levlcast8@gmail.com
+  Password: LevlCast123
+  Twitch login (for the in-app OAuth flow): levlcasttest
+
+This account is configured as Pro so all features are testable.
+
+This update adds clip editing on iOS, a one-tap highlight reel, and longitudinal coaching surfaces (recurring badges, rewatch moments, pre-stream focus). No new permissions are requested. All subscriptions remain Apple IAP via RevenueCat. No third-party login changes.
+
+
+PHONE NUMBER / EMAIL (paste if Apple asks for fresh contact info)
+───────────────────────────────────────────────────────────
+  Email: support@levlcast.com

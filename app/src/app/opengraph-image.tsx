@@ -69,8 +69,8 @@ export default function Image() {
         {/* Badge */}
         <div
           style={{
-            background: "rgba(168,85,247,0.15)",
-            border: "2px solid rgba(168,85,247,0.5)",
+            background: "rgba(255,88,0,0.15)",
+            border: "2px solid rgba(255,88,0,0.5)",
             color: "#C084FC",
             fontSize: 20,
             fontWeight: 700,

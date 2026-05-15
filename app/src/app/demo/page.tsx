@@ -161,11 +161,11 @@ export default function DemoPage() {
         {/* Bottom CTA */}
         <div style={{
           marginTop: 48, padding: "36px 32px", borderRadius: 16,
-          background: "linear-gradient(135deg, rgba(148,61,255,0.12), rgba(242,97,121,0.06))",
-          border: "1px solid rgba(148,61,255,0.25)",
+          background: "linear-gradient(135deg, rgba(255,88,0,0.12), rgba(242,97,121,0.06))",
+          border: "1px solid rgba(255,88,0,0.25)",
           textAlign: "center",
         }}>
-          <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(148,61,255,0.8)", marginBottom: 14 }}>
+          <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,88,0,0.8)", marginBottom: 14 }}>
             Ready for your own report?
           </p>
           <h2 style={{ fontSize: 26, fontWeight: 700, color: "#ECF1FA", margin: "0 0 12px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
@@ -179,7 +179,7 @@ export default function DemoPage() {
             style={{
               display: "inline-flex", alignItems: "center", gap: 10,
               fontSize: 15, fontWeight: 700, padding: "14px 28px", borderRadius: 10,
-              background: "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)",
+              background: "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)",
               color: "#fff", textDecoration: "none",
             }}
           >

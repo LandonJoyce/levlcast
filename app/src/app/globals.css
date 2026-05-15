@@ -1217,13 +1217,13 @@
   transition: all 150ms;
 }
 .ll-page .ll-game-strip-pill:hover {
-  background: rgba(148,61,255,0.1);
-  border-color: rgba(148,61,255,0.35);
+  background: rgba(255,88,0,0.1);
+  border-color: rgba(255,88,0,0.35);
   transform: translateY(-1px);
 }
 .ll-page .ll-game-strip-pill-more {
-  background: linear-gradient(135deg, rgba(148,61,255,0.12), rgba(242,97,121,0.08));
-  border-color: rgba(148,61,255,0.35);
+  background: linear-gradient(135deg, rgba(255,88,0,0.12), rgba(242,97,121,0.08));
+  border-color: rgba(255,88,0,0.35);
   color: rgba(255,255,255,0.85);
   font-style: italic;
   font-weight: 500;
@@ -1294,7 +1294,7 @@
   background: var(--ll-grad-h); -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; font-weight: 500;
   text-decoration: underline; text-underline-offset: 4px;
-  text-decoration-color: rgb(148,61,255);
+  text-decoration-color: rgb(255,88,0);
 }
 .ll-page .ll-nav-cta { display: inline-flex; align-items: center; gap: 8px; }
 .ll-page .ll-nav-cta-mobile { display: none; }
@@ -1350,7 +1350,7 @@
 .ll-pm-glow {
   position: absolute; inset: -50px -20px;
   background: radial-gradient(ellipse at 50% 65%,
-    rgba(148,61,255,0.4) 0%, rgba(242,97,121,0.15) 40%, transparent 68%);
+    rgba(255,88,0,0.32) 0%, rgba(242,97,121,0.18) 40%, transparent 68%);
   filter: blur(24px);
   pointer-events: none; z-index: 0;
 }
@@ -1509,8 +1509,8 @@
 .ll-page .ll-card-ba {
   position: relative; border: 1px solid var(--ll-line-soft); border-radius: 16px;
   padding: 48px;
-  background-image: url("/la/card-bg.png"); background-size: cover; background-position: center;
-  box-shadow: inset 0 5px 88px 1px rgba(255,255,255,0.06);
+  background: linear-gradient(155deg, rgba(255,88,0,0.05) 0%, rgba(242,97,121,0.03) 50%, rgba(252,208,147,0.02) 100%);
+  box-shadow: inset 0 5px 88px 1px rgba(255,255,255,0.04);
   min-height: 380px; display: flex; flex-direction: column; gap: 28px;
 }
 .ll-page .ll-ba-tag {
@@ -1625,7 +1625,7 @@
   filter: blur(60px); z-index: -1; opacity: 0.5;
 }
 .ll-page .ll-glow-cyan   { right: -60px; bottom: -80px; background: var(--ll-cyan); }
-.ll-page .ll-glow-purple { left: -60px; bottom: -80px; background: rgb(148,61,255); }
+.ll-page .ll-glow-purple { left: -60px; bottom: -80px; background: rgb(255,88,0); }
 .ll-page .ll-glow-peach  { right: -40px; top: -80px; background: rgb(252,208,147); }
 .ll-page .ll-glow-coral  { left: -40px; top: -80px; background: rgb(242,97,121); }
 
@@ -1687,7 +1687,7 @@
 }
 .ll-page .ll-yt-thumb {
   aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 10px;
-  background: linear-gradient(135deg,rgba(148,61,255,0.35),rgba(37,244,244,0.25));
+  background: linear-gradient(135deg,rgba(255,88,0,0.35),rgba(37,244,244,0.25));
   background-size: cover; background-position: center 30%;
   display: grid; place-items: center;
   position: relative; overflow: hidden;
@@ -1744,7 +1744,7 @@
 .ll-page .ll-plan {
   border: 1px solid rgba(255,255,255,0.12); border-radius: 16px;
   padding: 36px; display: flex; flex-direction: column; gap: 22px;
-  background-image: url("/la/pricing-bg.png"); background-size: cover; background-position: center;
+  background: linear-gradient(155deg, rgba(255,88,0,0.04) 0%, rgba(242,97,121,0.025) 50%, rgba(252,208,147,0.015) 100%);
   position: relative; overflow: hidden;
 }
 .ll-page .ll-plan-pro-outer .ll-plan { border-radius: 0 0 16px 16px; border-top: none; }
@@ -1793,8 +1793,8 @@
   opacity: 0.25; pointer-events: none; user-select: none;
 }
 .ll-page .ll-trust-card-featured {
-  border-color: rgba(148,61,255,0.35);
-  background: rgba(148,61,255,0.06);
+  border-color: rgba(255,88,0,0.35);
+  background: rgba(255,88,0,0.06);
 }
 .ll-page .ll-trust-card-featured::before { opacity: 0.4; }
 .ll-page .ll-trust-quote { font-size: 17px; line-height: 1.65; margin: 0; color: var(--ll-fg); position: relative; z-index: 1; padding-top: 24px; }
@@ -1803,7 +1803,7 @@
 .ll-page .ll-trust-avatar {
   width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
   display: grid; place-items: center; font-size: 15px; font-weight: 700;
-  border: 2px solid rgba(148,61,255,0.5);
+  border: 2px solid rgba(255,88,0,0.5);
 }
 .ll-page .ll-trust-name { font-size: 14px; font-weight: 600; }
 .ll-page .ll-trust-role { font-size: 12px; color: var(--ll-fg-dim); margin-top: 1px; }
@@ -2014,7 +2014,7 @@
   background: rgba(255,255,255,0.03); overflow: hidden;
   transition: border-color 0.2s;
 }
-.ll-page .faq-item.open { border-color: rgba(148,61,255,0.4); }
+.ll-page .faq-item.open { border-color: rgba(255,88,0,0.4); }
 .ll-page .faq-q {
   display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: 18px 22px; background: transparent; border: 0;
@@ -2022,7 +2022,7 @@
   cursor: pointer; font-family: var(--ll-body);
 }
 .ll-page .faq-q .chev { transition: transform 0.25s ease; color: rgba(255,255,255,0.4); flex-shrink: 0; margin-left: 16px; }
-.ll-page .faq-item.open .faq-q .chev { transform: rotate(180deg); color: rgb(148,61,255); }
+.ll-page .faq-item.open .faq-q .chev { transform: rotate(180deg); color: rgb(255,88,0); }
 .ll-page .faq-a {
   padding: 0 22px 18px; color: var(--ll-fg-mute); font-size: 14px; line-height: 1.7;
 }

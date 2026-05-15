@@ -619,7 +619,7 @@ export function CoachReportCard({
       `}</style>
 
       <div className="cr2-wrap" style={{
-        background: "#0C111C",
+        background: "var(--surface, #181311)",
         borderRadius: 16,
         overflow: "hidden",
         border: `1px solid ${PURPLE_BORDER}`,

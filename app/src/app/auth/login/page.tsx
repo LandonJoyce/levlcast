@@ -12,7 +12,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 const HELV = '"Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif';
-const GRAD = "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)";
+const GRAD = "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)";
 
 const SELLING_POINTS = [
   {
@@ -218,13 +218,13 @@ export default function LoginPage() {
         <div style={{
           position: "absolute", top: -120, left: -100,
           width: 520, height: 420, borderRadius: "50%",
-          background: "radial-gradient(ellipse, rgba(148,61,255,0.32) 0%, rgba(242,97,121,0.12) 45%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(255,88,0,0.32) 0%, rgba(242,97,121,0.12) 45%, transparent 70%)",
           filter: "blur(50px)", pointerEvents: "none",
         }} />
         <div style={{
           position: "absolute", bottom: -120, right: -120,
           width: 460, height: 380, borderRadius: "50%",
-          background: "radial-gradient(ellipse, rgba(242,97,121,0.22) 0%, rgba(148,61,255,0.08) 45%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(242,97,121,0.22) 0%, rgba(255,88,0,0.08) 45%, transparent 70%)",
           filter: "blur(60px)", pointerEvents: "none",
         }} />
 
@@ -259,7 +259,7 @@ export default function LoginPage() {
                   background: GRAD,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   marginTop: 2,
-                  boxShadow: "0 4px 12px -4px rgba(148,61,255,0.5)",
+                  boxShadow: "0 4px 12px -4px rgba(255,88,0,0.5)",
                 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />

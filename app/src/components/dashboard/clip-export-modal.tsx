@@ -224,7 +224,7 @@ export function ClipExportModal({
       padding: 24,
     }} onClick={onClose}>
       <div style={{
-        background: "#0C111C",
+        background: "var(--surface, #181311)",
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: 16,
         padding: "28px 28px 24px",
@@ -318,7 +318,7 @@ export function ExportClipButton({ clipId, clipTitle }: { clipId: string; clipTi
     <>
       <button
         onClick={() => setOpen(true)}
-        style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "8px 12px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)", color: "#fff", cursor: "pointer", width: "100%", justifyContent: "center" }}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "8px 12px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)", color: "#fff", cursor: "pointer", width: "100%", justifyContent: "center" }}
       >
         Export for TikTok / Shorts
         <span style={{ fontSize: 9, fontFamily: "monospace", letterSpacing: "0.1em", padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(251,191,36,0.5)", background: "rgba(251,191,36,0.08)", color: "rgb(251,191,36)", fontWeight: 700, textTransform: "uppercase" }}>

@@ -142,8 +142,8 @@ export function FeedbackInbox({ initialFeedback }: Props) {
               <div
                 key={f.id}
                 style={{
-                  background: f.read ? "#0C111C" : "#0F1626",
-                  border: `1px solid ${f.read ? "rgba(255,255,255,0.06)" : "rgba(155,106,255,0.25)"}`,
+                  background: f.read ? "var(--surface, #181311)" : "var(--surface-2, #1F1B17)",
+                  border: `1px solid ${f.read ? "rgba(255,255,255,0.06)" : "rgba(255,88,0,0.28)"}`,
                   borderRadius: 12,
                   padding: "18px 20px",
                 }}

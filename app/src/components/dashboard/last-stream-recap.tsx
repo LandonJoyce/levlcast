@@ -58,7 +58,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
     ? "You slipped a little."
     : "Holding steady.";
 
-  const GRAD = "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)";
+  const GRAD = "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)";
   const gradText: React.CSSProperties = {
     background: GRAD,
     WebkitBackgroundClip: "text",
@@ -70,7 +70,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
     <div style={{
       margin: "0 0 36px",
       borderRadius: 14,
-      background: "linear-gradient(135deg, rgba(148,61,255,0.07), rgba(242,97,121,0.04))",
+      background: "linear-gradient(135deg, rgba(255,88,0,0.07), rgba(242,97,121,0.04))",
       border: "1px solid rgba(242,97,121,0.2)",
       overflow: "hidden",
       position: "relative",

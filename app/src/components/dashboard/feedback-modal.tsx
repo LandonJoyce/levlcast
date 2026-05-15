@@ -108,7 +108,7 @@ export function FeedbackModal({
     >
       <div
         style={{
-          background: "#0C111C",
+          background: "var(--surface, #181311)",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 16,
           padding: "28px 28px 24px",

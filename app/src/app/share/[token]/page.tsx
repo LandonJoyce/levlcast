@@ -92,7 +92,7 @@ export default async function SharePage({
   const color = scoreColor(score);
   const trend = TREND_LABEL[report.energy_trend] ?? "Consistent";
 
-  const GRAD = "linear-gradient(135deg, rgb(148,61,255) 0%, rgb(242,97,121) 100%)";
+  const GRAD = "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)";
   const HELV = '"Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif';
   const labelStyle: React.CSSProperties = {
     fontFamily: HELV, fontSize: 11, fontWeight: 600,
@@ -106,7 +106,7 @@ export default async function SharePage({
       <div style={{
         position: "fixed", top: -100, left: "50%", transform: "translateX(-50%)",
         width: 720, height: 520, borderRadius: "50%",
-        background: "radial-gradient(ellipse, rgba(148,61,255,0.18) 0%, rgba(242,97,121,0.08) 40%, transparent 70%)",
+        background: "radial-gradient(ellipse, rgba(255,88,0,0.18) 0%, rgba(242,97,121,0.08) 40%, transparent 70%)",
         pointerEvents: "none", zIndex: 0,
       }} />
 
@@ -316,8 +316,8 @@ export default async function SharePage({
         {/* Best moment — pull quote with gradient accent */}
         {report.best_moment && (
           <div style={{
-            background: "linear-gradient(135deg, rgba(148,61,255,0.08), rgba(242,97,121,0.04))",
-            border: "1px solid rgba(148,61,255,0.22)",
+            background: "linear-gradient(135deg, rgba(255,88,0,0.08), rgba(242,97,121,0.04))",
+            border: "1px solid rgba(255,88,0,0.22)",
             borderRadius: 12, padding: "16px 18px", marginBottom: 24,
             position: "relative",
           }}>
@@ -343,8 +343,8 @@ export default async function SharePage({
 
         {/* CTA */}
         <div style={{
-          background: "linear-gradient(135deg, rgba(148,61,255,0.12), rgba(242,97,121,0.08))",
-          border: "1px solid rgba(148,61,255,0.25)",
+          background: "linear-gradient(135deg, rgba(255,88,0,0.12), rgba(242,97,121,0.08))",
+          border: "1px solid rgba(255,88,0,0.25)",
           borderRadius: 14, padding: "22px 20px", textAlign: "center",
         }}>
           <p style={{ ...labelStyle, marginBottom: 10,
@@ -370,7 +370,7 @@ export default async function SharePage({
               background: GRAD,
               color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em",
               padding: "11px 22px", borderRadius: 10, textDecoration: "none",
-              boxShadow: "0 6px 24px -6px rgba(148,61,255,0.5)",
+              boxShadow: "0 6px 24px -6px rgba(255,88,0,0.5)",
             }}
           >
             Analyze my stream free

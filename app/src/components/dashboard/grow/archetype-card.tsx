@@ -162,7 +162,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const CATEGORY_GLOW: Record<string, { text: string; shadow: string; border: string; bg: string }> = {
-  hype:        { text: "text-purple-300", shadow: "0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.2)", border: "border-purple-500/40", bg: "bg-purple-500/10" },
+  hype:        { text: "text-purple-300", shadow: "0 0 20px rgba(255,88,0,0.5), 0 0 40px rgba(255,88,0,0.2)", border: "border-purple-500/40", bg: "bg-purple-500/10" },
   funny:       { text: "text-yellow-300", shadow: "0 0 20px rgba(250,204,21,0.5), 0 0 40px rgba(250,204,21,0.2)",  border: "border-yellow-500/40", bg: "bg-yellow-500/10" },
   educational: { text: "text-blue-300",   shadow: "0 0 20px rgba(59,130,246,0.5), 0 0 40px rgba(59,130,246,0.2)",   border: "border-blue-500/40",   bg: "bg-blue-500/10" },
   emotional:   { text: "text-red-300",    shadow: "0 0 20px rgba(239,68,68,0.5), 0 0 40px rgba(239,68,68,0.2)",     border: "border-red-500/40",    bg: "bg-red-500/10" },
