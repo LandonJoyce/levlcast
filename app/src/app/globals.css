@@ -1865,11 +1865,11 @@
      phone is visible. Also fades the top edge into the bg. */
   -webkit-mask-image:
     linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
-    linear-gradient(to right, black 0%, black 70%, transparent 78%);
+    linear-gradient(to right, black 0%, black 64%, transparent 70%);
   -webkit-mask-composite: destination-in;
   mask-image:
     linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
-    linear-gradient(to right, black 0%, black 70%, transparent 78%);
+    linear-gradient(to right, black 0%, black 64%, transparent 70%);
   mask-composite: intersect;
 }
 
