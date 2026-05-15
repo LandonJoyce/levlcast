@@ -1860,17 +1860,16 @@
 }
 .ll-page .ll-phone-front {
   width: 100%; max-width: 520px; display: block;
-  /* mix-blend-mode: screen was lighting the phone PNG's built-in blue
-     shadow against the bg. Removed. The PNG also has cool ambient
-     lighting baked in, so a tiny warm hue-rotate neutralizes the blue
-     halo around the bezels without making the screen content look
-     wrong. */
-  filter: hue-rotate(-12deg) saturate(0.92);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
-                      linear-gradient(to left, transparent 0%, black 14%, black 100%);
+  /* The newphone.png asset has TWO phones baked in (front + back).
+     Mask clips the right portion of the image so only the first
+     phone is visible. Also fades the top edge into the bg. */
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
+    linear-gradient(to right, black 0%, black 58%, transparent 64%);
   -webkit-mask-composite: destination-in;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
-              linear-gradient(to left, transparent 0%, black 14%, black 100%);
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, black 14%, black 100%),
+    linear-gradient(to right, black 0%, black 58%, transparent 64%);
   mask-composite: intersect;
 }
 
