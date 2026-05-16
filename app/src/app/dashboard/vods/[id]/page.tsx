@@ -181,7 +181,14 @@ export default async function VodPunchPage({
   return (
     <>
       <VodStatusPoller hasProcessing={isVodProcessing || hasProcessingClip} />
-      {isFirstScore && <FirstScoreCelebration score={currentScore!} />}
+      {isFirstScore && (
+        <FirstScoreCelebration
+          vodId={vod.id}
+          score={currentScore!}
+          recommendation={coachReport?.recommendation ?? null}
+          existingToken={vod.share_token as string | null}
+        />
+      )}
 
       {/* Back */}
       <div>
@@ -259,7 +266,12 @@ export default async function VodPunchPage({
               </div>
             )}
             <div style={{ flex: 1 }} />
-            <ShareReportButton vodId={vod.id} existingToken={vod.share_token} score={currentScore} />
+            <ShareReportButton
+              vodId={vod.id}
+              existingToken={vod.share_token}
+              score={currentScore}
+              recommendation={coachReport?.recommendation ?? null}
+            />
           </div>
 
           {/* Best clip — capped height keeps the rest of the report (coach

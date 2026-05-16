@@ -187,6 +187,7 @@ export default async function VodReportPage({
           vodId={vod.id}
           existingToken={vod.share_token}
           score={currentScore}
+          recommendation={coachReport?.recommendation ?? null}
           variant="prominent"
         />
       </div>

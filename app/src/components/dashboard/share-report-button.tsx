@@ -7,15 +7,54 @@ interface Props {
   vodId: string;
   existingToken?: string | null;
   score?: number;
+  /** Optional recommendation pulled from the coach report — used in tweet body. */
+  recommendation?: string | null;
   variant?: "compact" | "prominent";
 }
 
 const SITE = "https://www.levlcast.com";
 
-function buildTweet(url: string, score?: number): string {
-  const text = score !== undefined
-    ? `Just got my LevlCast coach report — ${score}/100.\n\nReal coaching from your VOD, not vibes.`
-    : `Just got my LevlCast coach report.\n\nReal coaching from your VOD, not vibes.`;
+/**
+ * Score-tier reaction line. Tweets without an angle perform worse than
+ * tweets with a reaction the audience can argue with, so the line adapts
+ * to the score: high scores get a confident flex, low scores get a
+ * self-deprecating "cooked me" angle that bait sympathy/agreement.
+ */
+function reactionLine(score: number): string {
+  if (score >= 85) return "Cooking. Stream's clicking.";
+  if (score >= 70) return "Honest read. Going to apply this next stream.";
+  if (score >= 55) return "Fair take. Lots to fix but the path is clear.";
+  if (score >= 40) return "Tough love but specific. Better than 'just stream more'.";
+  return "AI cooked me but at least it was specific. Next stream's going to hit different.";
+}
+
+/** Truncate to ~140 chars at a word boundary, no trailing punctuation. */
+function trimForTweet(text: string, max = 140): string {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= max) return collapsed;
+  const cut = collapsed.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut).replace(/[.,;:!?\-]$/, "");
+}
+
+function buildTweet(url: string, score?: number, recommendation?: string | null): string {
+  const lines: string[] = [];
+  if (score !== undefined) {
+    lines.push(`${score}/100 on my stream coach report.`);
+    lines.push("");
+    lines.push(reactionLine(score));
+  } else {
+    lines.push("Got my stream coach report.");
+    lines.push("");
+    lines.push("Honest AI read on my full VOD.");
+  }
+  if (recommendation && recommendation.trim().length > 0) {
+    lines.push("");
+    lines.push(`Biggest takeaway: ${trimForTweet(recommendation, 140)}`);
+  }
+  lines.push("");
+  lines.push("Get yours free:");
+  const text = lines.join("\n");
   return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
 }
 
@@ -27,7 +66,7 @@ function XIcon({ size = 13 }: { size?: number }) {
   );
 }
 
-export function ShareReportButton({ vodId, existingToken, score, variant = "compact" }: Props) {
+export function ShareReportButton({ vodId, existingToken, score, recommendation, variant = "compact" }: Props) {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState<string | null>(
@@ -60,7 +99,7 @@ export function ShareReportButton({ vodId, existingToken, score, variant = "comp
 
   function shareToX() {
     if (!url) return;
-    window.open(buildTweet(url, score), "_blank", "noopener,noreferrer");
+    window.open(buildTweet(url, score, recommendation), "_blank", "noopener,noreferrer");
   }
 
   async function revoke() {
