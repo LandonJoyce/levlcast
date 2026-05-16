@@ -5,6 +5,12 @@ import LandingProPlan from "@/components/landing/LandingProPlan";
 import LaptopMockup from "@/components/landing/LaptopMockup";
 import { SUPPORTED_GAMES } from "@/lib/analyze";
 
+// Re-fetch the streams-analyzed counter and the recent-reports feed once
+// per minute. Without this, Next.js caches the server-rendered HTML and
+// the counter / feed stay frozen at whatever they were when the page was
+// first built — which makes the live numbers feel dead.
+export const revalidate = 60;
+
 /* ─── Data ─── */
 async function getStreamCount(): Promise<number> {
   try {
