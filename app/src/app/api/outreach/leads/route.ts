@@ -19,7 +19,11 @@ const HELP_PHRASES = [
 ];
 
 const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup", "twitchstreaming"]);
-const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
+// Authors to never surface as leads — bots, deleted accounts, and our own
+// promo accounts so we don't recommend writing a message to ourselves.
+const SKIP = new Set(["automoderator", "[deleted]", "reddit", "bmwdouche"]);
+// Reddit flairs that indicate the post is self-promotion, not a help request.
+const SKIP_FLAIRS = new Set(["self promotion", "self-promotion", "promo", "advertisement"]);
 
 // Subs to fan out title-searches across when running a Reddit-wide query.
 // Curated to streamer-adjacent communities + content-creator subs + the big
@@ -130,6 +134,7 @@ export async function GET(req: NextRequest) {
       if (!p.author || SKIP.has(p.author.toLowerCase())) return false;
       if (p.title === "[deleted]") return false;
       if (seenAuthors.has(p.author)) return false;
+      if (p.flair && SKIP_FLAIRS.has(p.flair.toLowerCase())) return false;
       if (q && p.subreddit && NOISE_SUBS.has(p.subreddit.toLowerCase())) return false;
       // Drop anything older than 30 days. We're using Arctic Shift's mirror
       // which lags real-time by ~2 weeks, so a tighter window comes back
