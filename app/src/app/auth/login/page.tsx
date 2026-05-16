@@ -44,7 +44,11 @@ function LoginForm() {
     if (error && ERROR_MESSAGES[error]) {
       setErrorMsg(ERROR_MESSAGES[error]);
     }
-    if (/android/i.test(navigator.userAgent)) {
+    // Show the mobile-browser warning on any mobile device. Android routes
+    // OAuth URLs via system intent so the Twitch login can open in whichever
+    // browser is set as default for that link, not the one the user started
+    // in. iOS handles this more cleanly but still occasionally pops Safari.
+    if (/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)) {
       setShowAndroidTip(true);
     }
   }, [searchParams]);
@@ -112,14 +116,20 @@ function LoginForm() {
 
       {showAndroidTip && (
         <div style={{
-          marginBottom: 16, padding: "10px 14px", borderRadius: 10,
-          fontSize: 13, textAlign: "center",
+          marginBottom: 16, padding: "12px 14px", borderRadius: 10,
+          fontSize: 12.5, textAlign: "left",
           background: "rgba(255,88,0,0.08)",
           border: "1px solid rgba(255,88,0,0.25)",
-          color: "rgba(255,255,255,0.6)",
+          color: "rgba(255,255,255,0.7)",
           fontFamily: HELV,
+          lineHeight: 1.55,
         }}>
-          On Android, if the Twitch app opens, tap <strong style={{ color: "rgba(255,255,255,0.85)" }}>Cancel</strong> and select your browser to continue.
+          <div style={{ fontWeight: 700, color: "rgba(255,255,255,0.92)", marginBottom: 6, fontSize: 12 }}>
+            Heads up on mobile
+          </div>
+          Twitch login can open in a different browser or the Twitch app.{" "}
+          <strong style={{ color: "rgba(255,255,255,0.9)" }}>That&apos;s normal.</strong>{" "}
+          Finish signing in wherever it lands — you&apos;ll be redirected back to LevlCast in that same browser. Or download the iOS app for the cleanest flow.
         </div>
       )}
 
