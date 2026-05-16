@@ -64,10 +64,17 @@ export default function VodsScreen() {
         method: 'POST',
         headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
       });
-      if (!res.ok) throw new Error('Sync failed');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Alert.alert('Sync failed', json?.error || 'Could not reach Twitch. Try again in a minute.');
+        return;
+      }
+      if (json?.synced === 0 && json?.total === 0 && json?.message) {
+        Alert.alert('No streams found', json.message);
+      }
       await loadVods();
     } catch {
-      Alert.alert('Sync failed', 'Could not sync VODs. Try again.');
+      Alert.alert('Sync failed', 'Network error. Check your connection and try again.');
     } finally {
       setSyncing(false);
     }

@@ -29,15 +29,40 @@ export async function POST(request: Request) {
   }
 
   // 2. Get profile + the user's stored Twitch tokens
-  const { data: profile } = await supabase
+  const admin = createAdminClient();
+
+  let { data: profile } = await supabase
     .from("profiles")
     .select("twitch_id, twitch_access_token, twitch_refresh_token")
     .eq("id", user.id)
     .single();
 
+  // Mobile signups bypass the web /auth/callback route, so their profile
+  // never gets Twitch fields backfilled. If twitch_id is missing, pull it
+  // from the session user_metadata (set by Supabase on OAuth) and patch
+  // the profile row so future calls work.
+  if (!profile?.twitch_id) {
+    const meta = user.user_metadata as Record<string, string | undefined>;
+    const twitchId = meta?.provider_id || meta?.sub;
+    if (twitchId) {
+      await admin.from("profiles").upsert(
+        {
+          id: user.id,
+          twitch_id: twitchId,
+          twitch_login: meta?.name || meta?.preferred_username || "",
+          twitch_display_name: meta?.nickname || meta?.full_name || "",
+          twitch_avatar_url: meta?.avatar_url || meta?.picture || "",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+      profile = { twitch_id: twitchId, twitch_access_token: "", twitch_refresh_token: "" };
+    }
+  }
+
   if (!profile?.twitch_id) {
     return NextResponse.json(
-      { error: "Twitch account not linked" },
+      { error: "Twitch is still connecting. Give it a minute after signup, then try again." },
       { status: 400 }
     );
   }
@@ -49,7 +74,6 @@ export async function POST(request: Request) {
   // and Helix returns an empty list for app tokens against those channels.
   // Falls back to app token if user token is missing/expired and refresh
   // also fails.
-  const admin = createAdminClient();
 
   let twitchVods: Awaited<ReturnType<typeof fetchTwitchVods>> = [];
   let lastError: string | null = null;
@@ -101,7 +125,11 @@ export async function POST(request: Request) {
   console.log(`[twitch/vods] user=${user.id} fetched ${twitchVods.length} via ${usedToken}`);
 
   if (twitchVods.length === 0) {
-    return NextResponse.json({ synced: 0, total: 0 });
+    return NextResponse.json({
+      synced: 0,
+      total: 0,
+      message: "No past broadcasts found on Twitch. Make sure VODs are enabled in your Twitch settings, then stream once and try again.",
+    });
   }
 
   // 5. Check which VODs we already have
