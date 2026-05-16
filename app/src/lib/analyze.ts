@@ -65,6 +65,64 @@ function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment
 }
 
 /**
+ * Detect when the actual live stream starts inside the VOD.
+ *
+ * Twitch VODs include the entire broadcast, including any "Starting Soon" /
+ * BRB pre-stream period. Many streamers run a clip playlist or hype reel
+ * during BRB — those clips contain the streamer's own voice from past
+ * streams, so diarization can't strip them. Without this detector, the
+ * coach AI sees that audio as the stream's intro and scores the streamer
+ * for content that wasn't actually their live stream.
+ *
+ * Heuristic: scan forward through the first 25 minutes and find the first
+ * 3-minute window where the streamer is "live-stream busy" — sustained
+ * speech (>=45% of the window) with no internal gap longer than 45
+ * seconds. Pre-stream playlists have characteristic structure (short clip
+ * bursts followed by transition gaps); a continuous 3-minute block of
+ * dense speech is what live streaming actually looks like.
+ *
+ * Returns the offset (in seconds, rounded down to nearest 5s) where the
+ * live stream begins. Returns 0 when:
+ *   - the detected start is within the first 2 minutes (no real BRB)
+ *   - no clear sustained block is found (be conservative — never trim)
+ *   - the transcript is too short to analyze
+ */
+function detectStreamStartOffset(segments: TranscriptSegment[]): number {
+  if (segments.length < 30) return 0;
+
+  const SCAN_MAX_SEC = 25 * 60;
+  const PROBE_SEC = 180;          // 3-minute probe window
+  const MIN_SPEECH_FRAC = 0.45;   // >=45% of window must be speech
+  const MAX_INTERNAL_GAP = 45;    // no internal silence > 45s
+  const MIN_PROBE_SEGS = 8;       // need at least 8 utterances in the window
+  const MIN_OFFSET_TO_TRIM = 120; // only trim if at least 2 min into the VOD
+
+  for (const seed of segments) {
+    if (seed.start > SCAN_MAX_SEC) break;
+
+    const winEnd = seed.start + PROBE_SEC;
+    const winSegs = segments.filter((s) => s.start >= seed.start && s.end <= winEnd);
+    if (winSegs.length < MIN_PROBE_SEGS) continue;
+
+    const speechTime = winSegs.reduce((sum, s) => sum + (s.end - s.start), 0);
+    if (speechTime / PROBE_SEC < MIN_SPEECH_FRAC) continue;
+
+    let maxGap = 0;
+    for (let j = 1; j < winSegs.length; j++) {
+      const gap = winSegs[j].start - winSegs[j - 1].end;
+      if (gap > maxGap) maxGap = gap;
+    }
+    if (maxGap > MAX_INTERNAL_GAP) continue;
+
+    if (seed.start < MIN_OFFSET_TO_TRIM) return 0;
+
+    return Math.floor(seed.start / 5) * 5;
+  }
+
+  return 0;
+}
+
+/**
  * Build a transcript string from segments, with explicit pause markers.
  * Pauses of 8+ seconds are marked so Claude understands the stream's rhythm.
  */
@@ -434,6 +492,16 @@ export async function detectPeaks(
   // Strip non-streamer voices (game NPCs, co-streamers, background audio)
   // before sending to Claude — only analyze what the streamer actually said
   segments = filterDominantSpeaker(segments);
+
+  // Trim pre-stream BRB / "Starting Soon" playlist content. Clips made from
+  // a pre-stream highlight reel would be re-clipping old content; the live
+  // stream is what we actually want to mine for moments.
+  const streamStartOffset = detectStreamStartOffset(segments);
+  if (streamStartOffset > 0) {
+    const before = segments.length;
+    segments = segments.filter((s) => s.start >= streamStartOffset);
+    console.log(`[analyze] Pre-stream trim: dropped ${before - segments.length} segments before ${streamStartOffset}s (BRB / starting-soon)`);
+  }
 
   const vodDuration = segments.length > 0 ? segments[segments.length - 1].end : 0;
 
@@ -1162,6 +1230,17 @@ export async function generateCoachReport(
 
   if (segments.length === 0) return null;
 
+  // Trim pre-stream BRB / "Starting Soon" content. See detectStreamStartOffset
+  // for the heuristic. This is the same trim applied in detectPeaks so the
+  // coach report and clip detection share the same notion of "the stream".
+  const streamStartOffset = detectStreamStartOffset(segments);
+  if (streamStartOffset > 0) {
+    const before = segments.length;
+    segments = segments.filter((s) => s.start >= streamStartOffset);
+    console.log(`[coach] Pre-stream trim: dropped ${before - segments.length} segments before ${streamStartOffset}s (BRB / starting-soon)`);
+    if (segments.length === 0) return null;
+  }
+
   const vodDuration = segments[segments.length - 1].end;
   const totalMinutes = Math.round(vodDuration / 60);
 
@@ -1351,15 +1430,23 @@ IMPORTANT: This transcript has been pre-filtered using speaker diarization to in
 SILENCE CONTEXT — read this before judging dead air:
 Dead air gaps in the transcript CAN mean the streamer was silent, BUT they can also mean:
 - The streamer was watching content (a video, movie, short film, YouTube video) — silence during watch-alongs is NORMAL and expected. No one wants the streamer talking over every second of a video.
-- The streamer had intro music/BRB screen playing while setting up — the first 3-5 minutes of a stream are setup time. Do NOT score this as a cold open problem. Reading chat, adjusting audio, warming up, sipping coffee before going into the bit is normal stream behavior. Judge the opening only from the moment the streamer is actively engaging.
 - The streamer was in an intense gameplay moment where focus silence is natural (clutch plays, boss fights, tense situations).
 - The game itself has cinematic cutscenes the streamer is watching.
 
 Only flag silence as a real problem when the streamer SHOULD have been talking but wasn't — during downtime, between matches, during loading screens, or when chat is active and being ignored. Intentional silence during content consumption or intense gameplay is not dead air.
+${streamStartOffset > 0 ? `
+PRE-STREAM CONTENT WAS DETECTED AND TRIMMED:
+The first ${Math.round(streamStartOffset / 60)} minute${streamStartOffset >= 120 ? "s" : ""} of the VOD (${formatTime(0)}–${formatTime(streamStartOffset)}) were a "Starting Soon" / BRB screen — likely a clip playlist, hype reel, or pre-stream loop where the streamer was not yet live. That section has been REMOVED from the transcript you see below. The transcript starts at ${formatTime(streamStartOffset)}, which is the actual stream start.
 
+DO NOT score the streamer on cold-open quality, dead air, hype, or any other dimension based on what happened before ${formatTime(streamStartOffset)}. That content was not their live stream. The "opening" you evaluate is the first few minutes AFTER the stream started — i.e. from ${formatTime(streamStartOffset)} onward.
+
+If you mention setup time or BRB anywhere, frame it neutrally — the streamer ran a pre-stream segment, that is fine, do not penalize it.
+` : `
+SETUP-TIME NOTE: The first 3-5 minutes of a stream can be setup time — reading chat, adjusting audio, warming up before going into the bit. Do not score normal setup behavior as a cold-open problem. Judge the opening from the moment the streamer is actively engaging.
+`}
 STREAM INFO:
 - Title: "${vodTitle}"
-- Duration: ${totalMinutes} minutes
+- Duration: ${totalMinutes} minutes${streamStartOffset > 0 ? ` (live content only — pre-stream BRB trimmed)` : ""}
 - Commentary density: ${commentaryDensity} wpm (when actively speaking)
 
 WPM TARGETS BY STREAMER TYPE — apply the range matching what you identify in Step 1:
