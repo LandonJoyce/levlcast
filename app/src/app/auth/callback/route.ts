@@ -141,9 +141,9 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<vo
     return;
   }
 
-  // 10 min minimum (skip tiny test streams), 6 hour max (free-tier rule)
+  // 10 min minimum (skip tiny test streams), 4 hour max (free-tier rule)
   const MIN_DURATION = 10 * 60;
-  const MAX_DURATION = 6 * 60 * 60;
+  const MAX_DURATION = 4 * 60 * 60;
   const eligible = vods.find((v) => {
     const dur = parseTwitchDuration(v.duration);
     return dur >= MIN_DURATION && dur <= MAX_DURATION;
