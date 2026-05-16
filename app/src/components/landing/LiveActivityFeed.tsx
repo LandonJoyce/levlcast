@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
  * anonymized data pulled from actual analyzed VODs.
  *
  * Privacy: NO twitch_login, NO stream title, NO user_id is rendered.
- * We expose only: time-ago, duration, score, dead-zone count, and
+ * We expose only: time-ago, duration, score, dead-air time, and
  * streamer-type category. None of this can identify a specific streamer.
  *
  * Re-fetched per request — Next.js caches at the route level. If we
@@ -19,8 +19,32 @@ interface FeedRow {
     overall_score?: number;
     streamer_type?: string;
     dead_zones?: Array<{ time: string; duration: number }>;
+    dead_air_seconds?: number;
+    dead_air_pct?: number;
   } | null;
   game_category: string | null;
+}
+
+/**
+ * Build the dead-air label for a row. Prefer the total `dead_air_seconds`
+ * stored on newer reports — older reports only have the worst-5-gaps array,
+ * which gave every long stream the same "5 dead zones" string. For old
+ * reports we sum the worst-5 durations as a floor (the real total is at
+ * least this much, so it's never misleading high).
+ */
+function deadAirLabel(report: FeedRow["coach_report"]): string | null {
+  if (!report) return null;
+
+  let seconds = report.dead_air_seconds;
+  if (seconds === undefined || seconds === null) {
+    const sum = report.dead_zones?.reduce((acc, g) => acc + (g.duration || 0), 0);
+    seconds = sum && sum > 0 ? sum : undefined;
+  }
+  if (!seconds || seconds < 30) return null;
+
+  if (seconds < 60) return `${seconds}s dead air`;
+  const m = Math.round(seconds / 60);
+  return `${m}m dead air`;
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -77,7 +101,7 @@ export default async function LiveActivityFeed() {
       <div className="ll-feed-list">
         {rows.map((r, i) => {
           const score = r.coach_report?.overall_score ?? null;
-          const deadZones = r.coach_report?.dead_zones?.length ?? 0;
+          const dzLabel = deadAirLabel(r.coach_report);
           const type = r.coach_report?.streamer_type ?? "gaming";
           const typeLabel = TYPE_LABEL[type] ?? type.toUpperCase();
           return (
@@ -95,10 +119,8 @@ export default async function LiveActivityFeed() {
               ) : (
                 <span />
               )}
-              {deadZones > 0 ? (
-                <span className="ll-feed-dz">
-                  {deadZones} dead {deadZones === 1 ? "zone" : "zones"}
-                </span>
+              {dzLabel ? (
+                <span className="ll-feed-dz">{dzLabel}</span>
               ) : (
                 <span />
               )}

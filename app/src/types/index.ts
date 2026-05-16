@@ -105,8 +105,12 @@ export interface CoachReport {
   viewer_retention_risk: RetentionRisk;
   /** How strong the stream's opening was (first 5 minutes). */
   cold_open?: { score: "strong" | "average" | "weak"; note: string };
-  /** Longest silence/low-energy gaps detected in the stream. */
+  /** Longest silence/low-energy gaps detected in the stream (worst 5 only). */
   dead_zones?: Array<{ time: string; duration: number }>;
+  /** Total dead-air time across the whole stream, in seconds. */
+  dead_air_seconds?: number;
+  /** Dead air as a percentage of total stream duration (0-100). */
+  dead_air_pct?: number;
   /** Two specific minutes to rewatch — one model-behavior moment, one teachable mistake. */
   rewatch_moments?: Array<{ time: string; kind: "best" | "worst"; note: string }>;
   /** The moment that should've been THE clip but wasn't fully realized. */

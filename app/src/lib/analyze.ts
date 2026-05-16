@@ -614,6 +614,10 @@ export interface CoachReport {
   // streamer would feel good sharing on Twitter/Discord.
   shareable_win?: { stat: string; context: string };
   dead_zones?: Array<{ time: string; duration: number }>;
+  /** Total dead-air time across the whole stream, in seconds. */
+  dead_air_seconds?: number;
+  /** Dead air as a percentage of total stream duration (0-100). */
+  dead_air_pct?: number;
   // 2-4 sentence narrative summary of what this stream was about — shown before scores
   stream_story?: string;
   // 1-2 sentences on the viewer community this content attracts and whether this stream served them
@@ -1677,6 +1681,10 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     if (worstGaps.length > 0) {
       report.dead_zones = worstGaps.map((g) => ({ time: formatTime(g.start), duration: g.duration }));
     }
+    // Total dead-air signal — used by the public feed so the displayed value
+    // reflects the magnitude of dead air, not just the worst-5-gaps cap.
+    report.dead_air_seconds = Math.round(totalDeadAirSeconds);
+    report.dead_air_pct = deadAirPct;
     // Enforce the anti_patterns.quote verbatim rule. The prompt instructs
     // the model to pull exact phrases from the transcript, but Sonnet can
     // still drift toward paraphrase. We re-verify every quote against the
