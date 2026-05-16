@@ -40,8 +40,38 @@ export default function LoginScreen() {
         const match = result.url.match(/[?&]code=([^&]+)/);
         const code = match?.[1];
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { data: exchanged, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
+
+          // Send the Twitch provider tokens to our server so they can be
+          // saved on the profile row. Without this, mobile signups end up
+          // with NULL twitch_access_token / twitch_refresh_token because
+          // the tokens only exist on-device for an instant after exchange.
+          // The server's app-token fallback works for most channels, but
+          // user-bound tokens are required to see age-gated (18+) VODs.
+          const providerToken = exchanged?.session?.provider_token;
+          const providerRefreshToken = exchanged?.session?.provider_refresh_token;
+          const sessionAccessToken = exchanged?.session?.access_token;
+          if ((providerToken || providerRefreshToken) && sessionAccessToken) {
+            try {
+              await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/auth/mobile-link`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${sessionAccessToken}`,
+                },
+                body: JSON.stringify({
+                  provider_token: providerToken,
+                  provider_refresh_token: providerRefreshToken,
+                }),
+              });
+            } catch (linkErr) {
+              // Non-fatal — login still succeeds, sync will fall back to app token
+              console.warn('mobile-link failed:', linkErr);
+            }
+          }
+
           router.replace('/(tabs)/dashboard');
         } else {
           throw new Error('No code in callback URL');
