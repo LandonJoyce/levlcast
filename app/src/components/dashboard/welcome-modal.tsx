@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Twitch, Star, Zap } from "lucide-react";
 
 const STORAGE_KEY = "levlcast_welcome_seen";
@@ -51,44 +50,45 @@ function ScorePreview() {
 
 const STEPS = [
   { icon: Twitch, color: "#9146FF", label: "Sync VODs", time: "~30 sec" },
-  { icon: Star,   color: "#a78bfa", label: "Get scored", time: "~5 min"  },
+  { icon: Star,   color: "#FFB08C", label: "Get scored", time: "~5 min"  },
   { icon: Zap,    color: "#facc15", label: "Make clips", time: "~1 min"  },
 ];
 
 export default function WelcomeModal({ name }: { name: string }) {
   const [visible, setVisible] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
   }, []);
 
+  // Dismiss closes the modal and stays on /dashboard so the user sees
+  // the live OnboardingHero progress immediately. The auto-analyze
+  // started in the auth callback is already running in the background.
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, "1");
     setVisible(false);
-    router.push("/dashboard/vods");
   }
 
   if (!visible) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={dismiss} />
 
       <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ background: "rgba(10,9,20,0.99)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-56 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.9), transparent)" }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-56 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,88,0,0.9), transparent)" }} />
 
         <div className="px-7 pt-8 pb-7">
           {/* Header */}
           <div className="text-center mb-5">
-            <div className="w-2 h-2 rounded-full bg-violet-400 mx-auto mb-3" style={{ boxShadow: "0 0 10px rgba(139,92,246,0.9)" }} />
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-2">
+            <div className="w-2 h-2 rounded-full mx-auto mb-3" style={{ background: "#FF5800", boxShadow: "0 0 10px rgba(255,88,0,0.9)" }} />
+            <p className="text-[10px] font-extrabold uppercase tracking-widest mb-2" style={{ color: "#FF5800" }}>
               Welcome, {name}
             </p>
             <h2 className="text-xl font-black tracking-tight text-white leading-snug">
-              Your streams have a score.
+              Your first report is already on the way.
               <br />
-              <span className="text-white/45">Let&apos;s find yours.</span>
+              <span className="text-white/45">Here&apos;s what just started.</span>
             </h2>
           </div>
 
@@ -118,24 +118,18 @@ export default function WelcomeModal({ name }: { name: string }) {
           </div>
 
           {/* Habit anchor — turn LevlCast into an every-stream reflex */}
-          <div className="mb-6 rounded-xl px-3.5 py-3 text-center" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.18)" }}>
+          <div className="mb-6 rounded-xl px-3.5 py-3 text-center" style={{ background: "rgba(255,88,0,0.06)", border: "1px solid rgba(255,88,0,0.18)" }}>
             <p className="text-[11px] text-white/70 leading-relaxed">
-              <span className="text-violet-300 font-bold">After every stream</span>, sync LevlCast. Watch your score climb stream by stream.
+              <span className="font-bold" style={{ color: "#FFB08C" }}>After every stream</span>, hit Sync. Watch your score move week to week.
             </p>
           </div>
 
           {/* CTA */}
           <button
             onClick={dismiss}
-            className="w-full bg-accent text-white font-black py-3.5 rounded-xl text-sm tracking-wide transition-all hover:-translate-y-0.5 hover:shadow-[0_0_28px_rgba(124,58,237,0.5)] active:scale-[0.98]"
+            className="w-full bg-accent text-white font-black py-3.5 rounded-xl text-sm tracking-wide transition-all hover:-translate-y-0.5 hover:shadow-[0_0_28px_rgba(255,88,0,0.5)] active:scale-[0.98]"
           >
-            Get My Score →
-          </button>
-          <button
-            onClick={dismiss}
-            className="w-full text-center text-[11px] text-white/20 hover:text-white/45 transition-colors mt-2.5 py-1"
-          >
-            I&apos;ll explore on my own
+            Show me the progress →
           </button>
         </div>
       </div>

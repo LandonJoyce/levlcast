@@ -9,6 +9,8 @@ import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
 import type { CoachingArcData } from "@/lib/coaching-arc";
 import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
+import { OnboardingHero } from "@/components/dashboard/onboarding-hero";
+import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { PreStreamFocus } from "@/components/dashboard/pre-stream-focus";
 import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
 
@@ -191,42 +193,39 @@ export default async function DashboardPage() {
 
   // ─── Empty state — no streams analyzed yet ─────────────
   if (totalAnalyzed === 0) {
+    // Detect whether an analysis is currently running so we can poll the
+    // page and reload the moment it flips to ready. The OnboardingHero
+    // component does its own deeper query for the in-progress row's
+    // title/status — this is just the cheap boolean for the poller.
+    const { count: inProgressCount } = await supabase
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .in("status", ["transcribing", "analyzing"]);
+    const hasInProgressAnalysis = (inProgressCount ?? 0) > 0;
+
     return (
       <>
         <WelcomeModal name={displayName} />
+        <VodStatusPoller hasProcessing={hasInProgressAnalysis} />
+
         <div className="page-head">
           <span className="page-eyebrow">§ 01 · Today&apos;s focus</span>
           <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
-          <p className="page-sub">Let&apos;s analyze your first stream.</p>
+          <p className="page-sub">
+            {hasInProgressAnalysis
+              ? "Your first report is being made right now."
+              : "Let's analyze your first stream."}
+          </p>
         </div>
 
-        <OnboardingChecklist />
         <AdminReplyCard />
-
-        <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "48px 32px", textAlign: "center", position: "relative" }}>
-            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(600px 280px at 50% 0%, color-mix(in oklab, var(--blue) 18%, transparent), transparent 70%)", pointerEvents: "none" }} />
-            <div style={{ position: "relative" }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px", borderRadius: 999, background: "color-mix(in oklab, var(--blue-soft) 50%, transparent)", border: "1px solid color-mix(in oklab, var(--blue) 35%, transparent)", color: "var(--blue)", fontFamily: "var(--font-geist-mono), monospace", fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 18 }}>
-                Start Here
-              </div>
-              <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.1, margin: "0 0 10px", color: "var(--ink)" }}>
-                Get your first coaching report, free.
-              </h2>
-              <p style={{ margin: "0 auto 24px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
-                Sync your Twitch VODs, pick one, and our AI will score your stream 0–100 with a coaching report that tells you exactly what to fix.
-              </p>
-              <Link href="/dashboard/vods" className="btn btn-blue">
-                <Icons.Twitch /> Sync your VODs <Icons.Arrow />
-              </Link>
-            </div>
-          </div>
-        </div>
+        <OnboardingHero name={displayName} />
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
           {[
             { n: "01", t: "Sync from Twitch", b: "One click. We pull your VOD library, read-only, no setup." },
-            { n: "02", t: "AI watches every minute", b: "Scored on energy, engagement, consistency, and content." },
+            { n: "02", t: "Every minute scored", b: "Stream rated on energy, engagement, consistency, and content." },
             { n: "03", t: "Get your coach report", b: "Stream story, priority fix, 3 strengths, growth-killers flagged with quotes." },
           ].map((s) => (
             <div key={s.n} className="card card-pad">
