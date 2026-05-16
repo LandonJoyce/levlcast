@@ -23,7 +23,9 @@ export function SyncButton() {
       }
 
       if (json.synced === 0) {
-        setResult("Already up to date");
+        // total === 0 means Twitch returned no past broadcasts at all
+        // (likely VODs disabled). API sends a clearer message in that case.
+        setResult(json.message || (json.total === 0 ? "No streams found on Twitch" : "Already up to date"));
       } else {
         setResult(`Synced ${json.synced} new VOD${json.synced > 1 ? "s" : ""}`);
         router.refresh();
