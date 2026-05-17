@@ -3,6 +3,8 @@ import FaqAccordion from "@/components/FaqAccordion";
 import LiveActivityFeed from "@/components/landing/LiveActivityFeed";
 import LandingProPlan from "@/components/landing/LandingProPlan";
 import LaptopMockup from "@/components/landing/LaptopMockup";
+import CountUp from "@/components/landing/CountUp";
+import UrlPasteHero from "@/components/landing/UrlPasteHero";
 import { SUPPORTED_GAMES } from "@/lib/analyze";
 
 // Re-fetch the streams-analyzed counter and the recent-reports feed once
@@ -37,7 +39,7 @@ const faqItems = [
 /* ─── Page ─── */
 export default async function LandingPage() {
   const streamCount = await getStreamCount();
-  const displayCount = streamCount > 0 ? `${streamCount}+` : "50+";
+  const counterTarget = streamCount > 0 ? streamCount : 50;
 
   return (
     <div className="ll-page">
@@ -123,12 +125,10 @@ export default async function LandingPage() {
           <div className="ll-hero-center" style={{ padding: 0, maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
             <p className="ll-lede">
-              LevlCast watches your VOD and tells you exactly what to fix. Score, timestamps, and clips ready to post.
+              Paste your last VOD. LevlCast watches the whole thing and tells you exactly what to fix. Score, timestamps, and clips ready to post.
             </p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-              <Link href="/auth/login" className="ll-btn ll-btn-grad" style={{ fontSize: 17, padding: "16px 28px" }}>
-                Get Your First Report Free
-              </Link>
+              <UrlPasteHero />
               <Link href="/demo" style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 textDecoration: "none", fontSize: 14,
@@ -157,7 +157,9 @@ export default async function LandingPage() {
 
       {/* ── Live counter ── */}
       <div className="ll-live-counter">
-        <span className="ll-live-num">{displayCount}</span>
+        <span className="ll-live-num">
+          <CountUp target={counterTarget} duration={1800} suffix="+" />
+        </span>
         <span className="ll-live-label">streams <span className="ll-grad-text">analyzed</span> and counting</span>
       </div>
 

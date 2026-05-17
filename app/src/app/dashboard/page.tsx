@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import DashScoreRing from "@/components/dashboard/DashScoreRing";
 import { scoreColorVar, rankFor } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
+import PendingVodHandler from "@/components/dashboard/pending-vod-handler";
 import { UnpostedClipsCard } from "@/components/dashboard/unposted-clips-card";
 import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
 import type { CoachingArcData } from "@/lib/coaching-arc";
@@ -207,6 +208,7 @@ export default async function DashboardPage() {
     return (
       <>
         <WelcomeModal name={displayName} />
+        <PendingVodHandler />
         <VodStatusPoller hasProcessing={hasInProgressAnalysis} />
 
         <div className="page-head">
@@ -247,6 +249,7 @@ export default async function DashboardPage() {
   return (
     <>
       <WelcomeModal name={displayName} />
+      <PendingVodHandler />
 
       {/* Header strip */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>

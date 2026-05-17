@@ -105,7 +105,7 @@ export default async function LiveActivityFeed() {
           const type = r.coach_report?.streamer_type ?? "gaming";
           const typeLabel = TYPE_LABEL[type] ?? type.toUpperCase();
           return (
-            <div key={i} className="ll-feed-row">
+            <div key={i} className="ll-feed-row ll-feed-row-anim" style={{ animationDelay: `${i * 90}ms` }}>
               <span className="ll-feed-dur">{fmtDuration(r.duration_seconds)}</span>
               <span className="ll-feed-cat">{typeLabel}</span>
               {score !== null ? (
