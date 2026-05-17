@@ -18,33 +18,110 @@ interface FeedRow {
   coach_report: {
     overall_score?: number;
     streamer_type?: string;
+    energy_trend?: "building" | "declining" | "consistent" | "volatile";
+    viewer_retention_risk?: "low" | "medium" | "high";
+    cold_open?: { score?: "strong" | "average" | "weak" };
+    closing?: { score?: "strong" | "average" | "weak" };
+    strengths?: string[];
+    improvements?: string[];
     dead_zones?: Array<{ time: string; duration: number }>;
     dead_air_seconds?: number;
     dead_air_pct?: number;
+    score_breakdown?: { energy?: number; engagement?: number; consistency?: number; content?: number };
   } | null;
+  peak_data: unknown;
   game_category: string | null;
 }
 
+interface Highlight {
+  text: string;
+  /** Positive (green), neutral/info (white-ish), or negative (amber/red) */
+  tone: "positive" | "neutral" | "negative";
+}
+
+function deadAirSeconds(report: FeedRow["coach_report"]): number {
+  if (!report) return 0;
+  if (typeof report.dead_air_seconds === "number") return report.dead_air_seconds;
+  // Fall back for old reports that don't have the total field — sum the
+  // worst-5 gaps as a floor. Always an underestimate, never inflated.
+  return report.dead_zones?.reduce((acc, g) => acc + (g.duration || 0), 0) ?? 0;
+}
+
+function fmtSeconds(secs: number): string {
+  if (secs < 60) return `${secs}s`;
+  return `${Math.round(secs / 60)}m`;
+}
+
 /**
- * Build the dead-air label for a row. Prefer the total `dead_air_seconds`
- * stored on newer reports — older reports only have the worst-5-gaps array,
- * which gave every long stream the same "5 dead zones" string. For old
- * reports we sum the worst-5 durations as a floor (the real total is at
- * least this much, so it's never misleading high).
+ * Pick the single most headline-worthy signal for this row. Priority is
+ * ordered so the feed reads as varied — high-scoring streams lead with
+ * a positive, struggling streams lead with the most actionable problem.
+ *
+ * The whole reason this function exists: when every row says "Xm dead
+ * air" the feed makes it look like dead air is the only thing we
+ * measure. Real coach reports surface energy trend, retention risk,
+ * cold-open quality, viral peaks, etc. Different rows should highlight
+ * different angles so the feed feels like a real analytics product.
  */
-function deadAirLabel(report: FeedRow["coach_report"]): string | null {
+function pickHighlight(row: FeedRow): Highlight | null {
+  const report = row.coach_report;
   if (!report) return null;
 
-  let seconds = report.dead_air_seconds;
-  if (seconds === undefined || seconds === null) {
-    const sum = report.dead_zones?.reduce((acc, g) => acc + (g.duration || 0), 0);
-    seconds = sum && sum > 0 ? sum : undefined;
-  }
-  if (!seconds || seconds < 30) return null;
+  const score = report.overall_score ?? null;
+  const peaks = Array.isArray(row.peak_data) ? row.peak_data.length : 0;
+  const dur = row.duration_seconds ?? 0;
+  const deadSecs = deadAirSeconds(report);
+  const deadPct = report.dead_air_pct ?? (dur > 0 ? Math.round((deadSecs / dur) * 100) : 0);
 
-  if (seconds < 60) return `${seconds}s dead air`;
-  const m = Math.round(seconds / 60);
-  return `${m}m dead air`;
+  // ── Positives first when the stream is genuinely strong ─────────────
+  if (score !== null && score >= 75) {
+    if (peaks >= 3) return { text: `${peaks} viral moments`, tone: "positive" };
+    if (report.energy_trend === "building") return { text: "energy building", tone: "positive" };
+    if (report.cold_open?.score === "strong") return { text: "strong opener", tone: "positive" };
+    if (report.closing?.score === "strong") return { text: "built to finish", tone: "positive" };
+    if (report.viewer_retention_risk === "low") return { text: "sticky stream", tone: "positive" };
+  }
+
+  // ── Standout signals for any score range ────────────────────────────
+  if (peaks >= 4) return { text: `${peaks} viral moments`, tone: "positive" };
+  if (report.energy_trend === "building" && score !== null && score >= 60) {
+    return { text: "energy building", tone: "positive" };
+  }
+
+  // ── Real problems — pick the biggest single issue ───────────────────
+  if (report.viewer_retention_risk === "high") {
+    return { text: "high churn risk", tone: "negative" };
+  }
+  if (deadPct >= 25 && deadSecs >= 60) {
+    return { text: `${fmtSeconds(deadSecs)} dead air`, tone: "negative" };
+  }
+  if (report.cold_open?.score === "weak") {
+    return { text: "weak cold open", tone: "negative" };
+  }
+  if (report.energy_trend === "declining") {
+    return { text: "energy fading", tone: "negative" };
+  }
+  if (report.closing?.score === "weak") {
+    return { text: "stream fizzled", tone: "negative" };
+  }
+  if (deadSecs >= 30) {
+    return { text: `${fmtSeconds(deadSecs)} dead air`, tone: "negative" };
+  }
+
+  // ── Neutral fallbacks ──────────────────────────────────────────────
+  if (peaks >= 2) return { text: `${peaks} clip moments`, tone: "neutral" };
+  if (report.energy_trend === "consistent" && score !== null && score >= 60) {
+    return { text: "steady energy", tone: "positive" };
+  }
+  return null;
+}
+
+function highlightColor(tone: Highlight["tone"]): string {
+  switch (tone) {
+    case "positive": return "rgba(163,230,53,0.85)";
+    case "negative": return "rgba(255,176,140,0.85)";
+    default:         return "rgba(255,255,255,0.55)";
+  }
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -73,7 +150,7 @@ async function fetchRecentAnalyses(): Promise<FeedRow[]> {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from("vods")
-      .select("duration_seconds, coach_report, game_category")
+      .select("duration_seconds, coach_report, peak_data, game_category")
       .eq("status", "ready")
       .not("analyzed_at", "is", null)
       .not("coach_report", "is", null)
@@ -101,7 +178,7 @@ export default async function LiveActivityFeed() {
       <div className="ll-feed-list">
         {rows.map((r, i) => {
           const score = r.coach_report?.overall_score ?? null;
-          const dzLabel = deadAirLabel(r.coach_report);
+          const highlight = pickHighlight(r);
           const type = r.coach_report?.streamer_type ?? "gaming";
           const typeLabel = TYPE_LABEL[type] ?? type.toUpperCase();
           return (
@@ -119,8 +196,10 @@ export default async function LiveActivityFeed() {
               ) : (
                 <span />
               )}
-              {dzLabel ? (
-                <span className="ll-feed-dz">{dzLabel}</span>
+              {highlight ? (
+                <span className="ll-feed-dz" style={{ color: highlightColor(highlight.tone) }}>
+                  {highlight.text}
+                </span>
               ) : (
                 <span />
               )}
