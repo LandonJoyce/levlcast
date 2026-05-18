@@ -6,7 +6,7 @@ import Link from "next/link";
 const FEATURES = [
   "35 VOD analyses / month",
   "60 hours of analysis / month",
-  "Streams up to 8 hours each",
+  "Streams up to 10 hours each",
   "35 clips per month",
   "Post to YouTube Shorts",
   "Priority processing",

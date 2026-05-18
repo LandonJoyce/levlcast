@@ -149,16 +149,25 @@ export async function POST(request: Request) {
     );
   }
 
-  // Per-plan duration cap. Free trial: 4h. Pro / Founding: 8h (matches the
-  // chunked-transcription pipeline's tested ceiling). Previously this was a
-  // flat 4h block that hit Pro users on long streams — Chrysta (founding
-  // partner) bounced off this on signup until manually granted, fix here.
+  // Per-plan duration cap. Free trial: 4h. Pro / Founding: 8h. Pro Plus: 10h
+  // (matches the chunked-transcription pipeline's tested ceiling). The cap
+  // exists because while chunking handles long streams, each additional hour
+  // adds Deepgram + Claude cost, and we want plan-aligned ceilings.
   const dur = parseTwitchDuration(vodMeta.duration);
-  const maxDuration = usage.on_trial ? 4 * 60 * 60 : 8 * 60 * 60;
+  const maxDuration = usage.on_trial
+    ? 4 * 60 * 60
+    : usage.pro_plus
+    ? 10 * 60 * 60
+    : 8 * 60 * 60;
   if (dur > maxDuration) {
-    const message = usage.on_trial
-      ? "That stream is over 4 hours. Free analysis is capped at 4 hours — go Pro to analyze longer streams."
-      : "That stream is over 8 hours. We can't reliably transcribe streams longer than 8 hours yet.";
+    let message: string;
+    if (usage.on_trial) {
+      message = "That stream is over 4 hours. Free analysis is capped at 4 hours — go Pro to analyze longer streams.";
+    } else if (usage.pro_plus) {
+      message = "That stream is over 10 hours. We can't reliably transcribe streams longer than 10 hours yet.";
+    } else {
+      message = "That stream is over 8 hours. Pro caps per-stream at 8h. Upgrade to Pro Plus for streams up to 10 hours.";
+    }
     return NextResponse.json({ error: message }, { status: 400 });
   }
   if (dur < 5 * 60) {
