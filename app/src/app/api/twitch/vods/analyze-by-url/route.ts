@@ -144,13 +144,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // Free-tier duration cap (4h)
+  // Per-plan duration cap. Free trial: 4h. Pro / Founding: 8h (matches the
+  // chunked-transcription pipeline's tested ceiling). Previously this was a
+  // flat 4h block that hit Pro users on long streams — Chrysta (founding
+  // partner) bounced off this on signup until manually granted, fix here.
   const dur = parseTwitchDuration(vodMeta.duration);
-  if (dur > 4 * 60 * 60) {
-    return NextResponse.json(
-      { error: "That stream is over 4 hours. Free analysis is capped at 4 hours — go Pro to analyze longer streams." },
-      { status: 400 }
-    );
+  const maxDuration = usage.on_trial ? 4 * 60 * 60 : 8 * 60 * 60;
+  if (dur > maxDuration) {
+    const message = usage.on_trial
+      ? "That stream is over 4 hours. Free analysis is capped at 4 hours — go Pro to analyze longer streams."
+      : "That stream is over 8 hours. We can't reliably transcribe streams longer than 8 hours yet.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
   if (dur < 5 * 60) {
     return NextResponse.json(
