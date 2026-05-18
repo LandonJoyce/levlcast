@@ -47,6 +47,11 @@ export const FREE_TRIAL_LIMITS = {
 export const PRO_LIMITS = {
   analyses_per_month: 15,
   clips_per_month: 20,
+  // Hour cap added 2026-05-18 to protect margin on heavy 8h-stream users.
+  // Math at $9.99 founding price: 20h × $0.33 blended (Deepgram + Claude)
+  // = $6.60 analysis cost + ~$2 fixed (clips, R2, Stripe) = $8.60. Leaves
+  // $1.39 margin even at max usage. Average user (8-12h/mo) won't notice.
+  hours_per_month: 20,
 };
 
 // Founding members subscribed before the Pro limit was dropped to 15/20 and
@@ -54,6 +59,9 @@ export const PRO_LIMITS = {
 export const FOUNDING_LIMITS = {
   analyses_per_month: 20,
   clips_per_month: 20,
+  // Small thanks-bonus on hours too: 5 more than standard Pro. Slight loss
+  // at absolute max usage but founding LTV plays make up for it.
+  hours_per_month: 25,
 };
 
 // Kept for backwards-compatible imports — semantically the *trial* limits now.
@@ -82,6 +90,18 @@ export interface UserUsage {
   // Existing callers used these names; left in place to avoid a wide refactor.
   analyses_this_month: number;
   clips_this_month: number;
+
+  // Hour-based cap (Pro / Founding only). Free trial uses count-only since
+  // they get 3 analyses lifetime and the per-analysis 4h cap is enough.
+  // hours_used = sum of duration_seconds (in hours) for completed-this-month
+  // + currently-in-progress VODs. hours_limit = 0 for free users.
+  hours_used: number;
+  hours_limit: number;
+  /** True iff the user has BOTH count AND hour budget left. Mirrors can_analyze. */
+  can_analyze_count: boolean;
+  can_analyze_hours: boolean;
+  /** Reason can_analyze is false, when applicable. */
+  block_reason: "count_cap" | "hours_cap" | null;
 }
 
 export async function getUserUsage(
@@ -136,6 +156,7 @@ export async function getUserUsage(
     }
 
     const limit = FREE_TRIAL_LIMITS;
+    const canAnalyzeCount = analysesUsed < limit.analyses_lifetime;
     return {
       plan: "free",
       founding_member: false,
@@ -144,11 +165,18 @@ export async function getUserUsage(
       clips_used: clipsUsed,
       analyses_limit: limit.analyses_lifetime,
       clips_limit: limit.clips_lifetime,
-      can_analyze: analysesUsed < limit.analyses_lifetime,
+      can_analyze: canAnalyzeCount,
       can_generate_clip: clipsUsed < limit.clips_lifetime,
       period_label: "ever",
       analyses_this_month: analysesUsed,
       clips_this_month: clipsUsed,
+      // Free trial uses count-only — the per-analysis 4h cap already
+      // bounds total hours to ~12 lifetime, no separate hour cap needed.
+      hours_used: 0,
+      hours_limit: 0,
+      can_analyze_count: canAnalyzeCount,
+      can_analyze_hours: true,
+      block_reason: canAnalyzeCount ? null : "count_cap",
     };
   }
 
@@ -162,7 +190,13 @@ export async function getUserUsage(
 
   // Primary: count from usage_logs — tamper-proof because only the admin
   // client (Inngest) writes to it. Deleting or re-syncing VODs has no effect.
-  const [{ data: usageLog }, { count: inProgress }] = await Promise.all([
+  // Also pull duration_seconds for completed + in-progress VODs to compute
+  // the monthly hour count (separate cap from raw analysis count).
+  const [
+    { data: usageLog },
+    { data: completedVods },
+    { data: inProgressVods },
+  ] = await Promise.all([
     supabase
       .from("usage_logs")
       .select("analyses_count")
@@ -171,12 +205,33 @@ export async function getUserUsage(
       .single(),
     supabase
       .from("vods")
-      .select("id", { count: "exact", head: true })
+      .select("duration_seconds")
+      .eq("user_id", userId)
+      .eq("status", "ready")
+      .gte("analyzed_at", monthStart)
+      .lt("analyzed_at", monthEnd),
+    supabase
+      .from("vods")
+      .select("duration_seconds")
       .eq("user_id", userId)
       .in("status", ["transcribing", "analyzing"]),
   ]);
 
   const completedThisMonth = usageLog?.analyses_count ?? 0;
+  const inProgress = inProgressVods?.length ?? 0;
+
+  // Hours used = sum of (duration_seconds) for completed-this-month + in-progress.
+  // Same accounting model as the analyses count — in-progress counts so two
+  // simultaneous long analyses can't both squeak past the cap.
+  const completedSeconds = (completedVods ?? []).reduce(
+    (sum, v) => sum + ((v.duration_seconds as number | null) ?? 0),
+    0
+  );
+  const inProgressSeconds = (inProgressVods ?? []).reduce(
+    (sum, v) => sum + ((v.duration_seconds as number | null) ?? 0),
+    0
+  );
+  const hoursUsed = (completedSeconds + inProgressSeconds) / 3600;
 
   // Count clips generated this month — includes deleted ones so users can't
   // bypass the limit by deleting clips and regenerating them.
@@ -188,8 +243,15 @@ export async function getUserUsage(
     .gte("created_at", monthStart)
     .lt("created_at", monthEnd);
 
-  const analyses_used = completedThisMonth + (inProgress ?? 0);
+  const analyses_used = completedThisMonth + inProgress;
   const clips_used = clipsThisMonth ?? 0;
+
+  const canAnalyzeCount = analyses_used < monthlyLimits.analyses_per_month;
+  const canAnalyzeHours = hoursUsed < monthlyLimits.hours_per_month;
+  const canAnalyze = canAnalyzeCount && canAnalyzeHours;
+  const blockReason: UserUsage["block_reason"] = canAnalyze
+    ? null
+    : !canAnalyzeCount ? "count_cap" : "hours_cap";
 
   return {
     plan: "pro",
@@ -199,11 +261,16 @@ export async function getUserUsage(
     clips_used,
     analyses_limit: monthlyLimits.analyses_per_month,
     clips_limit: monthlyLimits.clips_per_month,
-    can_analyze: analyses_used < monthlyLimits.analyses_per_month,
+    can_analyze: canAnalyze,
     can_generate_clip: clips_used < monthlyLimits.clips_per_month,
     period_label: "this month",
     analyses_this_month: analyses_used,
     clips_this_month: clips_used,
+    hours_used: Math.round(hoursUsed * 10) / 10, // round to 1 decimal for UI
+    hours_limit: monthlyLimits.hours_per_month,
+    can_analyze_count: canAnalyzeCount,
+    can_analyze_hours: canAnalyzeHours,
+    block_reason: blockReason,
   };
 }
 

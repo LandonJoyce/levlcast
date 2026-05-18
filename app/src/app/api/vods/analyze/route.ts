@@ -37,9 +37,14 @@ export async function POST(request: Request) {
 
   const usage = await getUserUsage(user.id, supabase);
   if (!usage.can_analyze) {
-    const message = usage.on_trial
-      ? `You've used all ${usage.analyses_limit} analyses on your free trial. Subscribe to keep analyzing streams.`
-      : `You've used all ${usage.analyses_limit} analyses for this month.`;
+    let message: string;
+    if (usage.on_trial) {
+      message = `You've used all ${usage.analyses_limit} analyses on your free trial. Subscribe to keep analyzing streams.`;
+    } else if (usage.block_reason === "hours_cap") {
+      message = `You've used ${usage.hours_used}h of your ${usage.hours_limit}h monthly analysis budget. Resets at the start of next month.`;
+    } else {
+      message = `You've used all ${usage.analyses_limit} analyses for this month.`;
+    }
     return NextResponse.json(
       { error: "limit_reached", message, upgrade: true },
       { status: 403 }
