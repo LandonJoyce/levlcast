@@ -2,8 +2,9 @@ import Stripe from "stripe";
 
 export const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID!;
 export const STRIPE_PRO_ANNUAL_PRICE_ID = process.env.STRIPE_PRO_ANNUAL_PRICE_ID;
+export const STRIPE_PRO_PLUS_PRICE_ID = process.env.STRIPE_PRO_PLUS_PRICE_ID;
 
-export type CheckoutPlan = "monthly" | "annual";
+export type CheckoutPlan = "monthly" | "annual" | "pro_plus";
 
 export function priceIdForPlan(plan: CheckoutPlan): string {
   if (plan === "annual") {
@@ -11,6 +12,12 @@ export function priceIdForPlan(plan: CheckoutPlan): string {
       throw new Error("STRIPE_PRO_ANNUAL_PRICE_ID is not set");
     }
     return STRIPE_PRO_ANNUAL_PRICE_ID;
+  }
+  if (plan === "pro_plus") {
+    if (!STRIPE_PRO_PLUS_PRICE_ID) {
+      throw new Error("STRIPE_PRO_PLUS_PRICE_ID is not set");
+    }
+    return STRIPE_PRO_PLUS_PRICE_ID;
   }
   return STRIPE_PRO_PRICE_ID;
 }

@@ -64,6 +64,18 @@ function getCurrentPeriodEnd(sub: Stripe.Subscription): number | undefined {
 }
 
 /**
+ * Detect whether a subscription is on the Pro Plus tier by checking its
+ * price ids against STRIPE_PRO_PLUS_PRICE_ID. Used to flip the
+ * `pro_plus` boolean on profiles so the limits.ts gate applies the
+ * higher 35/60/35 caps.
+ */
+function isProPlusSubscription(sub: Stripe.Subscription): boolean {
+  const proPlusPriceId = process.env.STRIPE_PRO_PLUS_PRICE_ID;
+  if (!proPlusPriceId) return false;
+  return sub.items.data.some((item) => item.price.id === proPlusPriceId);
+}
+
+/**
  * Resolve the subscription id off an Invoice. The `invoice.subscription`
  * field is being phased out in newer Stripe API versions; the canonical
  * locations are `invoice.parent.subscription_details.subscription` or
@@ -143,8 +155,11 @@ export async function POST(request: Request) {
         // Founding-member tagging stopped on 2026-05-06 when Pro dropped from 20/20 to 15/20.
         // Existing founding members are flagged manually via SQL and keep their 20/20 cap forever.
         // New subscribers get the standard 15/20 cap.
+        // Pro Plus tier flips pro_plus=true so limits.ts applies the 35/60/35 caps.
+        const isProPlus = isProPlusSubscription(sub);
         await admin.from("profiles").update({
           plan: "pro",
+          pro_plus: isProPlus,
           stripe_customer_id: customerId,
           subscription_expires_at: expiresAt,
           updated_at: new Date().toISOString(),
@@ -235,8 +250,13 @@ export async function POST(request: Request) {
           console.warn(`[webhook/stripe] subscription.updated — active sub ${sub.id} but no current_period_end, writing NULL expiry`);
         }
 
+        // Re-evaluate Pro Plus on every update so tier changes (Pro → Pro Plus
+        // upgrade, Pro Plus → Pro downgrade) flip the limits flag correctly.
+        const isProPlus = isActive && isProPlusSubscription(sub);
+
         await admin.from("profiles").update({
           plan: isActive ? "pro" : "free",
+          pro_plus: isProPlus,
           subscription_expires_at: expiresAt,
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
@@ -260,6 +280,7 @@ export async function POST(request: Request) {
 
         await admin.from("profiles").update({
           plan: "free",
+          pro_plus: false,
           subscription_expires_at: null,
           updated_at: new Date().toISOString(),
         }).eq("id", userId);

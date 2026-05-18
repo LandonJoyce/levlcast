@@ -1734,6 +1734,17 @@
 
 /* ── Pricing ── */
 .ll-page .ll-pricing { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 832px; margin: 0 auto; align-items: start; }
+/* 3-column variant for Free / Pro / Pro Plus layout */
+.ll-page .ll-pricing-3 { grid-template-columns: 1fr 1fr 1fr; max-width: 1180px; }
+@media (max-width: 1000px) {
+  .ll-page .ll-pricing-3 { grid-template-columns: 1fr; max-width: 480px; }
+}
+/* Pro Plus tile — subtle premium gradient border vs the gold of Pro */
+.ll-page .ll-plan-plus {
+  background: linear-gradient(180deg, rgba(155,106,255,0.06) 0%, rgba(255,255,255,0.025) 100%);
+  border: 1px solid rgba(155,106,255,0.30);
+  box-shadow: 0 0 32px -6px rgba(155,106,255,0.20) inset;
+}
 .ll-page .ll-plan-pro-outer { display: flex; flex-direction: column; }
 .ll-page .ll-plan-founding-banner {
   background: var(--ll-grad-h);

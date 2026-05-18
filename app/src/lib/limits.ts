@@ -64,6 +64,18 @@ export const FOUNDING_LIMITS = {
   hours_per_month: 25,
 };
 
+// Pro Plus tier — $29.99/mo. For power users who hit the Pro 20h cap.
+// Math at max usage: 60h × $0.33 = $19.80 + 35 clips × $0.15 = $5.25 + $2
+// fixed = $27.05 worst case against $29.99 revenue = ~10% margin floor.
+// Average user (~35h, 15 clips) costs ~$16.50 = healthy 45% margin.
+// NOT eligible for partner discount codes (CHRYSTA20 etc.) — those apply
+// to standard Pro only, set in the Stripe coupon's product scope.
+export const PRO_PLUS_LIMITS = {
+  analyses_per_month: 35,
+  clips_per_month: 35,
+  hours_per_month: 60,
+};
+
 // Kept for backwards-compatible imports — semantically the *trial* limits now.
 export const FREE_LIMITS = {
   analyses_per_month: FREE_TRIAL_LIMITS.analyses_lifetime,
@@ -73,6 +85,8 @@ export const FREE_LIMITS = {
 export interface UserUsage {
   plan: "free" | "pro";
   founding_member: boolean;
+  /** Pro Plus tier — $29.99/mo with 35/60/35 limits. Mutually beneficial with founding_member. */
+  pro_plus: boolean;
   /** True for free users — they're on the lifetime trial, not a monthly free tier. */
   on_trial: boolean;
   /** Used count for the active period (this month for Pro, lifetime for trial). */
@@ -111,7 +125,7 @@ export async function getUserUsage(
   // Get plan from profile — also check expiry so lapsed subscriptions auto-downgrade
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, subscription_expires_at, founding_member, twitch_id")
+    .select("plan, subscription_expires_at, founding_member, pro_plus, twitch_id")
     .eq("id", userId)
     .single();
 
@@ -160,6 +174,7 @@ export async function getUserUsage(
     return {
       plan: "free",
       founding_member: false,
+      pro_plus: false,
       on_trial: true,
       analyses_used: analysesUsed,
       clips_used: clipsUsed,
@@ -180,8 +195,15 @@ export async function getUserUsage(
     };
   }
 
-  // ─── PRO / FOUNDING (monthly) ─────────────────────────────────────────
-  const monthlyLimits = isFoundingMember ? FOUNDING_LIMITS : PRO_LIMITS;
+  // ─── PRO / FOUNDING / PRO PLUS (monthly) ──────────────────────────────
+  // Priority: pro_plus wins (they're paying $29.99 for the higher tier),
+  // then founding_member (grandfathered 20/20), else standard Pro.
+  const isProPlus = profile?.pro_plus === true;
+  const monthlyLimits = isProPlus
+    ? PRO_PLUS_LIMITS
+    : isFoundingMember
+    ? FOUNDING_LIMITS
+    : PRO_LIMITS;
 
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -256,6 +278,7 @@ export async function getUserUsage(
   return {
     plan: "pro",
     founding_member: isFoundingMember,
+    pro_plus: isProPlus,
     on_trial: false,
     analyses_used,
     clips_used,

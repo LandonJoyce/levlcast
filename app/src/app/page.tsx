@@ -344,9 +344,9 @@ export default async function LandingPage() {
       <section className="ll-sec" id="pricing">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2"><span className="ll-grad-text">Two plans.</span> No tricks</h2>
+            <h2 className="ll-h2">Pick the plan <span className="ll-grad-text">that fits</span></h2>
           </div>
-          <div className="ll-pricing">
+          <div className="ll-pricing ll-pricing-3">
             {/* Free trial */}
             <article className="ll-plan">
               <div>
@@ -356,7 +356,7 @@ export default async function LandingPage() {
               <div className="ll-plan-price">$0 <small>to start</small></div>
               <hr className="ll-plan-sep" />
               <ul className="ll-plan-feats">
-                {["3 full VOD analyses", "5 clips on the house", "Streams up to 6 hours", "Full coaching report + score", "iOS app + web"].map((f) => (
+                {["3 full VOD analyses (lifetime)", "5 clips on the house", "Streams up to 4 hours each", "Full coaching report + score", "iOS app + web"].map((f) => (
                   <li key={f}>
                     <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
@@ -375,6 +375,32 @@ export default async function LandingPage() {
 
             {/* Pro */}
             <LandingProPlan />
+
+            {/* Pro Plus */}
+            <article className="ll-plan ll-plan-plus">
+              <div>
+                <div className="ll-plan-name">Pro Plus</div>
+                <div className="ll-plan-cycle">For heavy streamers</div>
+              </div>
+              <div className="ll-plan-price">$29.99 <small>/ month</small></div>
+              <hr className="ll-plan-sep" />
+              <ul className="ll-plan-feats">
+                {["35 VOD analyses / month", "60 hours of analysis / month", "Streams up to 8 hours each", "35 clips per month", "Post to YouTube Shorts", "Priority processing", "Everything in Pro"].map((f) => (
+                  <li key={f}>
+                    <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth/login?plan=pro_plus" className="ll-btn ll-btn-grad ll-btn-arrow">
+                Get Pro Plus
+                <span className="ll-btn-arrow-circle">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+              </Link>
+            </article>
           </div>
         </div>
       </section>
