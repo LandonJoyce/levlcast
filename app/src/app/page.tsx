@@ -127,6 +127,14 @@ export default async function LandingPage() {
             <p className="ll-lede">
               Paste your last VOD. LevlCast watches the whole thing and tells you exactly what to fix. Score, timestamps, and clips ready to post.
             </p>
+            <p style={{
+              fontSize: 14, fontStyle: "italic",
+              color: "rgba(255,255,255,0.55)",
+              margin: "-6px 0 22px",
+              letterSpacing: "-0.005em",
+            }}>
+              Each stream sharpens the next report.
+            </p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
               <UrlPasteHero />
               <Link href="/demo" style={{
