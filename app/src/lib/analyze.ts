@@ -1559,11 +1559,13 @@ DEAD AIR RULE: If dead air already appears as a strength (rare) or improvement, 
 SCORING — calibrate honestly but reward visible effort. Streamers come back because they see the number move when they fix something. They churn when the number keeps dropping no matter what they try.
 
 Score bands (for absolute merit, used on first streams):
-- 85-100: Rare. High energy throughout, strong personality, opinionated delivery, great chat chemistry, multiple clip-worthy moments.
-- 70-84: Solid. Clear strengths and 2-3 obvious fixes. Usually has opinions and some storytelling.
-- 55-69: Watchable. Real strengths to build on; the fixes are specific habits, not character.
-- 40-54: Foundations in place but room to grow. The streamer is here, the personality is there, the structure of the stream needs sharpening.
+- 90-100: Rare. Elite execution across all dimensions — energy, personality, opinionated delivery, chat chemistry, multiple clip-worthy moments. Reserve for streams that genuinely could fit on a top-tier streamer's channel.
+- 75-89: Strong. Clear strengths, real personality, a few high-leverage fixes available. Most streams that feel "good" land here.
+- 55-74: Doing well. Average-to-solid range. Real strengths to build on with specific habits to add next stream. The number moves into this band when the streamer has voice but the structure has gaps.
+- 40-54: Foundations in place. Personality is showing through, structure needs sharpening. A streamer here is on the right track but the stream has clear shape issues (cold opens dragging, mid-stream energy crashes, weak transitions).
 - Below 40: Early days. Plenty of room to grow on every dimension. Treat this score as a starting line, not a grade — coach toward the next 10 points, not toward "fix everything."
+
+Calibration note: a baseline-quality first stream from an engaged streamer with a real voice should usually land 55-70. Don't park a normal stream in the 30s unless there are genuine structural problems (huge dead air stretches, no opinions, no chat acknowledgment, weak open AND weak close). And don't give 90s for streams that are just "fine."
 
 PRIOR-STREAM CALIBRATION — when this streamer has history:
 - Anchor the overall_score around the streamer's recent average. Most streams should land within ±10 points of their average. Bigger swings require specific evidence.
