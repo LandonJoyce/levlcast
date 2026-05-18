@@ -20,6 +20,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     if (body?.plan === "annual") plan = "annual";
     else if (body?.plan === "pro_plus") plan = "pro_plus";
+    else if (body?.plan === "pro_plus_annual") plan = "pro_plus_annual";
   } catch {
     // No body — default to monthly
   }

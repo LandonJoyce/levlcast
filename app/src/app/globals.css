@@ -1739,11 +1739,11 @@
 @media (max-width: 1000px) {
   .ll-page .ll-pricing-3 { grid-template-columns: 1fr; max-width: 480px; }
 }
-/* Pro Plus tile — subtle premium gradient border vs the gold of Pro */
+/* Pro Plus tile — brand orange glow to read as premium step up */
 .ll-page .ll-plan-plus {
-  background: linear-gradient(180deg, rgba(155,106,255,0.06) 0%, rgba(255,255,255,0.025) 100%);
-  border: 1px solid rgba(155,106,255,0.30);
-  box-shadow: 0 0 32px -6px rgba(155,106,255,0.20) inset;
+  background: linear-gradient(180deg, rgba(255,88,0,0.08) 0%, rgba(255,255,255,0.025) 100%);
+  border: 1px solid rgba(255,88,0,0.35);
+  box-shadow: 0 0 32px -6px rgba(255,88,0,0.25) inset;
 }
 .ll-page .ll-plan-pro-outer { display: flex; flex-direction: column; }
 .ll-page .ll-plan-founding-banner {

@@ -2,6 +2,7 @@
 import FaqAccordion from "@/components/FaqAccordion";
 import LiveActivityFeed from "@/components/landing/LiveActivityFeed";
 import LandingProPlan from "@/components/landing/LandingProPlan";
+import LandingProPlusPlan from "@/components/landing/LandingProPlusPlan";
 import LaptopMockup from "@/components/landing/LaptopMockup";
 import CountUp from "@/components/landing/CountUp";
 import UrlPasteHero from "@/components/landing/UrlPasteHero";
@@ -377,30 +378,7 @@ export default async function LandingPage() {
             <LandingProPlan />
 
             {/* Pro Plus */}
-            <article className="ll-plan ll-plan-plus">
-              <div>
-                <div className="ll-plan-name">Pro Plus</div>
-                <div className="ll-plan-cycle">For heavy streamers</div>
-              </div>
-              <div className="ll-plan-price">$29.99 <small>/ month</small></div>
-              <hr className="ll-plan-sep" />
-              <ul className="ll-plan-feats">
-                {["35 VOD analyses / month", "60 hours of analysis / month", "Streams up to 8 hours each", "35 clips per month", "Post to YouTube Shorts", "Priority processing", "Everything in Pro"].map((f) => (
-                  <li key={f}>
-                    <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
-                    </svg>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth/login?plan=pro_plus" className="ll-btn ll-btn-grad ll-btn-arrow">
-                Get Pro Plus
-                <span className="ll-btn-arrow-circle">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </span>
-              </Link>
-            </article>
+            <LandingProPlusPlan />
           </div>
         </div>
       </section>
