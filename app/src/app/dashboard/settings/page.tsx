@@ -108,10 +108,13 @@ export default async function SettingsPage({
           <div style={{ padding: "18px 22px 22px" }}>
             <SubscriptionSection
               plan={usage.plan}
+              proPlus={usage.pro_plus}
               analysesUsed={usage.analyses_used}
               analysesLimit={usage.analyses_limit}
               clipsUsed={usage.clips_used}
               clipsLimit={usage.clips_limit}
+              hoursUsed={usage.hours_used}
+              hoursLimit={usage.hours_limit}
               periodLabel={usage.period_label}
               onTrial={usage.on_trial}
               hasStripeSubscription={!!profile?.stripe_customer_id}

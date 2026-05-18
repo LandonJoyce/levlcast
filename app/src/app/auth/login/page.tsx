@@ -44,6 +44,14 @@ function LoginForm() {
     if (error && ERROR_MESSAGES[error]) {
       setErrorMsg(ERROR_MESSAGES[error]);
     }
+    // If the user came here from a "Get Pro" / "Get Pro Plus" landing button
+    // (?plan=monthly|annual|pro_plus|pro_plus_annual) stash the plan slug so
+    // the dashboard can resume the Stripe checkout after OAuth completes.
+    // OAuth redirects strip query params, so localStorage is the bridge.
+    const planParam = searchParams.get("plan");
+    if (planParam && /^(monthly|annual|pro_plus|pro_plus_annual)$/.test(planParam)) {
+      try { localStorage.setItem("levlcast_pending_checkout", planParam); } catch {}
+    }
     // Show the mobile-browser warning on any mobile device. Android routes
     // OAuth URLs via system intent so the Twitch login can open in whichever
     // browser is set as default for that link, not the one the user started

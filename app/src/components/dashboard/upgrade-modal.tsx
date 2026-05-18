@@ -7,20 +7,46 @@ interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   reason: string;
+  /** Pre-select a tier when opening (e.g. from "Upgrade to Pro Plus" CTA). */
+  initialTier?: "pro" | "pro_plus";
 }
 
-type Plan = "monthly" | "annual";
+type Tier = "pro" | "pro_plus";
+type Cycle = "monthly" | "annual";
 
-const FEATURES = [
-  "15 VOD analyses per month",
-  "20 clip generations per month",
-  "Full coaching report on every stream",
-  "Priority processing",
-];
+/** Stripe checkout plan slug for a tier + cycle combo. */
+function planSlug(tier: Tier, cycle: Cycle): string {
+  if (tier === "pro_plus") return cycle === "annual" ? "pro_plus_annual" : "pro_plus";
+  return cycle === "annual" ? "annual" : "monthly";
+}
 
-const PLAN_DETAILS: Record<Plan, { price: string; cycle: string; sub: string; badge?: string }> = {
-  monthly: { price: "$9.99", cycle: "/month", sub: "cancel anytime" },
-  annual:  { price: "$99",   cycle: "/year",  sub: "save $20.88 vs monthly", badge: "Save 17%" },
+const PRICE: Record<Tier, Record<Cycle, { price: string; cycle: string; sub: string; equiv?: string }>> = {
+  pro: {
+    monthly: { price: "$9.99", cycle: "/month", sub: "cancel anytime" },
+    annual:  { price: "$99",   cycle: "/year",  sub: "save $20.88 vs monthly", equiv: "~$8.25/mo" },
+  },
+  pro_plus: {
+    monthly: { price: "$29.99", cycle: "/month", sub: "for heavy streamers" },
+    annual:  { price: "$299",   cycle: "/year",  sub: "save $60.88 vs monthly", equiv: "~$24.92/mo" },
+  },
+};
+
+const FEATURES: Record<Tier, string[]> = {
+  pro: [
+    "15 VOD analyses / month",
+    "20 hours of analysis / month",
+    "Streams up to 8 hours each",
+    "20 clips per month",
+    "Post to YouTube Shorts",
+  ],
+  pro_plus: [
+    "35 VOD analyses / month",
+    "60 hours of analysis / month",
+    "Streams up to 10 hours each",
+    "35 clips per month",
+    "Priority processing",
+    "Everything in Pro",
+  ],
 };
 
 function StripeBadge() {
@@ -41,10 +67,11 @@ function StripeBadge() {
   );
 }
 
-export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
+export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro" }: UpgradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [plan, setPlan] = useState<Plan>("monthly");
+  const [tier, setTier] = useState<Tier>(initialTier);
+  const [cycle, setCycle] = useState<Cycle>("monthly");
 
   async function handleUpgrade() {
     setLoading(true);
@@ -53,7 +80,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan: planSlug(tier, cycle) }),
       });
       const json = await res.json();
       if (!res.ok || !json.url) {
@@ -70,7 +97,15 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
 
   if (!isOpen) return null;
 
-  const details = PLAN_DETAILS[plan];
+  const details = PRICE[tier][cycle];
+  const isProPlus = tier === "pro_plus";
+  const tierAccent = isProPlus ? "rgb(255,88,0)" : "var(--blue)";
+  const tierAccentSoft = isProPlus
+    ? "rgba(255,88,0,0.12)"
+    : "color-mix(in oklab, var(--blue-soft) 30%, var(--surface-2))";
+  const tierAccentBorder = isProPlus
+    ? "rgba(255,88,0,0.35)"
+    : "color-mix(in oklab, var(--blue) 30%, var(--line))";
 
   return (
     <div
@@ -86,7 +121,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
         border: "1px solid var(--line-2)",
         borderRadius: 20,
         width: "100%",
-        maxWidth: 420,
+        maxWidth: 460,
         boxShadow: "0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
         overflow: "hidden",
       }}>
@@ -96,11 +131,11 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
           padding: "20px 24px 0",
         }}>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--blue)", margin: 0 }}>
-              Pro
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: tierAccent, margin: 0 }}>
+              {isProPlus ? "Pro Plus" : "Pro"}
             </p>
             <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", margin: "2px 0 0", color: "var(--ink)" }}>
-              Upgrade to Pro
+              Upgrade to {isProPlus ? "Pro Plus" : "Pro"}
             </h2>
           </div>
           <button
@@ -115,26 +150,52 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
           </button>
         </div>
 
-        <div style={{ padding: "16px 24px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ padding: "16px 24px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
           <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>{reason}</p>
 
-          {/* Plan toggle */}
+          {/* Tier picker */}
           <div style={{
             display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
             background: "var(--surface-2)", borderRadius: 10, padding: 4,
             border: "1px solid var(--line)",
           }}>
-            {(["monthly", "annual"] as const).map((p) => {
-              const active = plan === p;
+            {(["pro", "pro_plus"] as const).map((t) => {
+              const active = tier === t;
+              const label = t === "pro_plus" ? "Pro Plus" : "Pro";
               return (
                 <button
-                  key={p}
-                  onClick={() => setPlan(p)}
+                  key={t}
+                  onClick={() => setTier(t)}
+                  style={{
+                    padding: "9px 12px", borderRadius: 7, border: "none",
+                    background: active ? "var(--surface)" : "transparent",
+                    color: active ? "var(--ink)" : "var(--ink-3)",
+                    fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+                    transition: "all 120ms",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Cycle picker */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
+            background: "var(--surface-2)", borderRadius: 10, padding: 4,
+            border: "1px solid var(--line)",
+          }}>
+            {(["monthly", "annual"] as const).map((c) => {
+              const active = cycle === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setCycle(c)}
                   style={{
                     position: "relative",
-                    padding: "9px 12px",
-                    borderRadius: 7,
-                    border: "none",
+                    padding: "9px 12px", borderRadius: 7, border: "none",
                     background: active ? "var(--surface)" : "transparent",
                     color: active ? "var(--ink)" : "var(--ink-3)",
                     fontSize: 13, fontWeight: 600, cursor: "pointer",
@@ -143,8 +204,8 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
                     transition: "all 120ms",
                   }}
                 >
-                  {p}
-                  {p === "annual" && (
+                  {c}
+                  {c === "annual" && (
                     <span style={{
                       position: "absolute", top: -7, right: -4,
                       fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
@@ -159,19 +220,24 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
 
           {/* Price block */}
           <div style={{
-            background: "color-mix(in oklab, var(--blue-soft) 30%, var(--surface-2))",
-            border: "1px solid color-mix(in oklab, var(--blue) 30%, var(--line))",
+            background: tierAccentSoft,
+            border: `1px solid ${tierAccentBorder}`,
             borderRadius: 12, padding: "14px 16px",
           }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
               <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)" }}>{details.price}</span>
               <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{details.cycle} · {details.sub}</span>
             </div>
+            {details.equiv && (
+              <p style={{ fontSize: 11, color: "var(--green)", margin: "4px 0 0", fontWeight: 600 }}>
+                {details.equiv}
+              </p>
+            )}
           </div>
 
-          {/* Features */}
+          {/* Features (adapt to tier) */}
           <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
-            {FEATURES.map((f) => (
+            {FEATURES[tier].map((f) => (
               <li key={f} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: "var(--ink-2)" }}>
                 <span style={{
                   flexShrink: 0, width: 18, height: 18, borderRadius: "50%",
@@ -196,17 +262,27 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
             disabled={loading}
             style={{
               width: "100%",
-              background: loading ? "var(--surface-3)" : "linear-gradient(135deg, var(--blue), var(--green))",
+              background: loading
+                ? "var(--surface-3)"
+                : isProPlus
+                ? "linear-gradient(135deg, rgb(255,88,0), rgb(242,97,121))"
+                : "linear-gradient(135deg, var(--blue), var(--green))",
               color: "#fff",
               fontSize: 14, fontWeight: 700,
               padding: "13px 20px",
               borderRadius: 12, border: "none", cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.7 : 1,
               transition: "opacity 150ms",
-              boxShadow: loading ? "none" : "0 6px 20px -6px color-mix(in oklab, var(--blue) 60%, transparent)",
+              boxShadow: loading
+                ? "none"
+                : isProPlus
+                ? "0 6px 20px -6px rgba(255,88,0,0.5)"
+                : "0 6px 20px -6px color-mix(in oklab, var(--blue) 60%, transparent)",
             }}
           >
-            {loading ? "Redirecting to checkout..." : `Upgrade to Pro: ${details.price}${details.cycle}`}
+            {loading
+              ? "Redirecting to checkout..."
+              : `Upgrade to ${isProPlus ? "Pro Plus" : "Pro"}: ${details.price}${details.cycle}`}
           </button>
 
           {/* Stripe badge */}
