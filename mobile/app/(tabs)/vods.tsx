@@ -95,7 +95,15 @@ export default function VodsScreen() {
 
       const json = await res.json();
       if (json.upgrade) {
+        // Free user hit the lifetime cap — route to subscribe screen.
         router.push('/subscribe');
+      } else if (json.error === 'limit_reached') {
+        // Pro user hit their monthly cap. Show the explainer alert with
+        // the API's message ("You've used Xh of Yh..." or "...all 15
+        // analyses this month"). Don't push to /subscribe — they already
+        // pay and Pro Plus is web-only by design.
+        Alert.alert('Monthly limit reached', json.message ?? "You've used your analyses for this month. Resets at the start of next month.");
+        await loadVods();
       } else {
         await loadVods();
       }

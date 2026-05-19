@@ -46,7 +46,16 @@ export async function POST(request: Request) {
       message = `You've used all ${usage.analyses_limit} analyses for this month.`;
     }
     return NextResponse.json(
-      { error: "limit_reached", message, upgrade: true },
+      {
+        error: "limit_reached",
+        message,
+        // `upgrade: true` for Free users (subscribe path) only. Paid users
+        // hitting a count or hour cap get `upgrade: false` so mobile shows
+        // an alert with the message instead of routing them to /subscribe
+        // (which is meaningless when they already have Pro).
+        upgrade: usage.on_trial,
+        on_trial: usage.on_trial,
+      },
       { status: 403 }
     );
   }

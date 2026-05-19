@@ -274,6 +274,8 @@ export default function VodDetailScreen() {
       const json = await res.json();
       if (json.upgrade) {
         router.push('/subscribe');
+      } else if (json.error === 'limit_reached') {
+        Alert.alert('Monthly limit reached', json.message ?? "You've used your analyses for this month. Resets at the start of next month.");
       } else {
         await loadData();
       }
@@ -298,6 +300,8 @@ export default function VodDetailScreen() {
       const json = await res.json().catch(() => ({}));
       if (json?.upgrade) {
         router.push('/subscribe');
+      } else if (json?.error === 'limit_reached') {
+        Alert.alert('Monthly clip limit reached', json.message ?? "You've used your clips for this month. Resets at the start of next month.");
       } else if (!res.ok) {
         Alert.alert('Reel failed', json?.message || json?.error || 'Could not start highlight reel.');
       } else {
@@ -325,6 +329,8 @@ export default function VodDetailScreen() {
       const json = await res.json();
       if (json.upgrade) {
         router.push('/subscribe');
+      } else if (json.error === 'limit_reached') {
+        Alert.alert('Monthly clip limit reached', json.message ?? "You've used your clips for this month. Resets at the start of next month.");
       } else if (json.error) {
         Alert.alert('Clip generation', json.message || json.error);
       } else {

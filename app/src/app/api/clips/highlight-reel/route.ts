@@ -68,7 +68,15 @@ export async function POST(request: Request) {
       ? `You've used all ${usage.clips_limit} clips on your free trial. Subscribe to keep clipping.`
       : `You've reached your ${usage.clips_limit} clip limit for this month.`;
     return NextResponse.json(
-      { error: "limit_reached", message, upgrade: true },
+      {
+        error: "limit_reached",
+        message,
+        // upgrade: true only for Free users. Pro users get upgrade: false
+        // so callers show "wait until next month" instead of pushing to a
+        // subscribe screen they don't need.
+        upgrade: usage.on_trial,
+        on_trial: usage.on_trial,
+      },
       { status: 403 }
     );
   }
