@@ -83,6 +83,11 @@ export async function POST(request: Request) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.levlcast.com";
 
+  // Only attribute the referral when the promo actually resolved. If the
+  // cookie holds a stale or invalid code (shouldn't happen post /r/[code]
+  // validation, but defense-in-depth), don't pollute payout metadata.
+  const attributedReferral = referralPromoId ? referralCode : undefined;
+
   // Stripe rule: a checkout session can't have both `discounts` and
   // `allow_promotion_codes`. When we have a resolved referral, pre-apply
   // it via `discounts`. Otherwise leave `allow_promotion_codes` on so
@@ -97,13 +102,13 @@ export async function POST(request: Request) {
       metadata: {
         user_id: user.id,
         plan,
-        ...(referralCode ? { referral_code: referralCode } : {}),
+        ...(attributedReferral ? { referral_code: attributedReferral } : {}),
       },
     },
     metadata: {
       user_id: user.id,
       plan,
-      ...(referralCode ? { referral_code: referralCode } : {}),
+      ...(attributedReferral ? { referral_code: attributedReferral } : {}),
     },
   };
 
