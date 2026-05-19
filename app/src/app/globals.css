@@ -12,11 +12,32 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Suppress the default grey flash iOS Safari paints on every tap.
+       Looks unprofessional and out of place on a dark-theme app where
+       buttons/links already have their own hover/active states. */
+    -webkit-tap-highlight-color: transparent;
+    /* Lock text-size adjustment so iOS Safari doesn't bump font sizes
+       in landscape mode (a leftover-from-2010 behavior that breaks
+       carefully sized typography on our hero). */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
     @apply bg-bg text-white font-sans;
     overflow-x: hidden;
+    /* iOS Safari respects this when the user pulls down past the top —
+       keeps the rubber-band background dark instead of flashing white. */
+    background-color: rgb(8, 8, 13);
+  }
+
+  /* Buttons should never inherit the default Safari styling. Otherwise
+     they get the system blue tint and a chunky inner border. */
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   /* Scrollbar — thin, matches dark theme */
@@ -2029,8 +2050,14 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
-  color: #fff; font-size: 15px; font-family: var(--ll-body);
+  /* 16px minimum prevents iOS Safari from auto-zooming on focus.
+     Any smaller font-size on an input triggers the zoom-in animation
+     which leaves the page in a zoomed-in state until the user pinches
+     out — bad UX since 80% of our traffic is mobile. */
+  color: #fff; font-size: 16px; font-family: var(--ll-body);
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
   transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 .ll-page .ll-url-hero-input::placeholder { color: rgba(255,255,255,0.36); }

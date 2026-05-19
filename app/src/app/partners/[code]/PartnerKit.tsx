@@ -187,7 +187,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
         </div>
 
         {/* Hero */}
-        <header style={{ marginBottom: 56 }}>
+        <header className="pk-hero" style={{ marginBottom: 56 }}>
           <p
             style={{
               fontFamily: HELV, fontSize: 11, fontWeight: 700,
@@ -198,9 +198,11 @@ export function PartnerKit({ data }: PartnerKitProps) {
             Welcome aboard
           </p>
           <h1
+            className="pk-hero-h1"
             style={{
               fontFamily: SERIF, fontSize: 52, lineHeight: 1.05, fontWeight: 400,
               letterSpacing: "-0.02em", margin: "0 0 18px",
+              wordBreak: "break-word",
             }}
           >
             Your <em style={{ ...{ background: GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" } }}>{code}</em> kit.
@@ -215,10 +217,23 @@ export function PartnerKit({ data }: PartnerKitProps) {
           </p>
         </header>
 
+        {/* Mobile responsive overrides for the kit. Inline styles + media
+            queries don't mix, so a tiny scoped style block handles the
+            mobile-only adjustments instead of dragging in a CSS module. */}
+        <style>{`
+          @media (max-width: 600px) {
+            .pk-hero-h1 { font-size: 36px !important; }
+            .pk-deal-grid { grid-template-columns: 1fr !important; }
+            .pk-banner-grid { grid-template-columns: 1fr 1fr !important; }
+            .pk-link-row { flex-direction: column !important; align-items: stretch !important; }
+            .pk-link-row > button { width: 100% !important; }
+          }
+        `}</style>
+
         {/* Deal numbers */}
         <section style={{ marginBottom: 56 }}>
           <SectionLabel>The deal</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="pk-deal-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <StatTile label="Viewer discount" value={`${discountPct}% off`} accent="#A3E635" />
             <StatTile label="Your cut" value={`${REV_SHARE_PCT}%`} accent="#FFB08C" />
           </div>
@@ -236,6 +251,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
         <section style={{ marginBottom: 56 }}>
           <SectionLabel>Your link</SectionLabel>
           <div
+            className="pk-link-row"
             style={{
               background: "linear-gradient(180deg, rgba(255,88,0,0.08) 0%, rgba(255,255,255,0.025) 100%)",
               border: "1px solid rgba(255,88,0,0.35)",
@@ -354,7 +370,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
           >
             Drop into OBS as an image source, or use as a pinned chat image. If you need a different format (Twitch panel, story-sized, etc.) just ask.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div className="pk-banner-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             {[
               { size: "320 × 209", path: `/partners/${code.toLowerCase()}/overlay-320.png` },
               { size: "400 × 262", path: `/partners/${code.toLowerCase()}/overlay-400.png` },
