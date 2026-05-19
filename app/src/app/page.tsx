@@ -6,6 +6,7 @@ import LandingProPlusPlan from "@/components/landing/LandingProPlusPlan";
 import LaptopMockup from "@/components/landing/LaptopMockup";
 import CountUp from "@/components/landing/CountUp";
 import UrlPasteHero from "@/components/landing/UrlPasteHero";
+import ReferralBadge from "@/components/landing/ReferralBadge";
 import { SUPPORTED_GAMES } from "@/lib/analyze";
 
 // Re-fetch the streams-analyzed counter and the recent-reports feed once
@@ -124,6 +125,7 @@ export default async function LandingPage() {
       <section className="ll-hero">
         <div className="ll-con">
           <div className="ll-hero-center" style={{ padding: 0, maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+            <ReferralBadge />
             <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
             <p className="ll-lede">
               Paste your last VOD. LevlCast watches the whole thing and tells you exactly what to fix. Score, timestamps, and clips ready to post.
