@@ -33,10 +33,28 @@ export interface Peak {
 }
 
 /**
- * Filter transcript segments to only the dominant speaker.
- * Deepgram diarization assigns a speaker ID to each utterance. The speaker
- * with the most total talking time is the streamer — game NPCs, music, and
- * other voices will have far less speaking time and are filtered out.
+ * Filter transcript segments to keep only the streamer's voice.
+ *
+ * Deepgram diarization assigns a speaker ID per utterance. In a typical
+ * stream the streamer is the single most-talking voice and everyone else
+ * (NPCs, music, occasional chatters) has far less speaking time.
+ *
+ * BUT — Deepgram's diarization is not stable across long streams. The
+ * same person's voice can get split into multiple speaker IDs when
+ * acoustic conditions change over hours (game audio louder/quieter, mic
+ * positioning, voice timbre shift, excitement level). Storm reported the
+ * dead-air detector flagged 9 silent minutes around 1h1m when he was
+ * actively talking with a chatter — almost certainly his secondary ID
+ * got dropped here. Real fake-silence bug eating user trust.
+ *
+ * Fix: keep the top speaker AND any other speakers whose total speaking
+ * time is at least 20% of the top speaker's. That threshold:
+ *   - Captures split-into-multiple-IDs streamers (secondary IDs always
+ *     have a healthy share of total time, since they're the same person)
+ *   - Still strips genuine background voices (a chatter who spoke 100s
+ *     out of a 3-hour stream is well under 20% of the dominant speaker)
+ *   - Strips music vocals, game NPCs, voice clips played during BRB
+ *
  * Falls back to the full segment list if no speaker data is present.
  */
 function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment[] {
@@ -53,12 +71,26 @@ function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment
   const entries = Object.entries(speakerTime).sort(([, a], [, b]) => b - a);
   if (entries.length === 0) return segments;
 
-  const dominant = Number(entries[0][0]);
-  const filtered = segments.filter((s) => s.speaker === undefined || s.speaker === dominant);
+  // Always keep the top speaker. Then add any speaker whose total time is
+  // at least 20% of the top speaker's — almost certainly the same person
+  // whose ID got split by diarization mid-stream.
+  const SECONDARY_KEEP_THRESHOLD = 0.20;
+  const topSeconds = Number(entries[0][1]);
+  const keepIds = new Set<number>();
+  for (const [idStr, secs] of entries) {
+    if (Number(secs) / topSeconds >= SECONDARY_KEEP_THRESHOLD) {
+      keepIds.add(Number(idStr));
+    }
+  }
+
+  const filtered = segments.filter((s) => s.speaker === undefined || keepIds.has(s.speaker));
 
   const removed = segments.length - filtered.length;
-  if (removed > 0) {
-    console.log(`[analyze] Diarization: dominant speaker=${dominant} (${Math.round(speakerTime[dominant])}s), removed ${removed} segments from other speakers`);
+  if (removed > 0 || keepIds.size > 1) {
+    const keptDetail = Array.from(keepIds)
+      .map((id) => `${id}=${Math.round(speakerTime[id])}s`)
+      .join(", ");
+    console.log(`[analyze] Diarization: kept ${keepIds.size} speaker(s) (${keptDetail}), removed ${removed} segments from other speakers`);
   }
 
   return filtered;
