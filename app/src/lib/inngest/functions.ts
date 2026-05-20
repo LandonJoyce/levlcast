@@ -256,7 +256,8 @@ export const analyzeVod = inngest.createFunction(
       const coachReport = await step.run("generate-coach-report", async () => {
         const { data: vod } = await supabase.from("vods").select("title, chat_pulse").eq("id", vodId).single();
         const title = vod?.title || "Stream";
-        const pulseText = formatPulseForPrompt(vod?.chat_pulse as ChatBucket[] | null | undefined);
+        const chatBuckets = (vod?.chat_pulse as ChatBucket[] | null | undefined) ?? undefined;
+        const pulseText = formatPulseForPrompt(chatBuckets);
 
         // Last 3 prior reports — only VODs streamed BEFORE this one so coaching
         // advice never references streams that hadn't happened yet at stream time
@@ -299,7 +300,7 @@ export const analyzeVod = inngest.createFunction(
           });
 
         console.log(`[analyze] Stage 3/4: generating coach report (${peaks.length} peaks, ${priorReports.length} prior reports)`);
-        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined);
+        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets);
         if (!report) {
           throw new Error("Failed to generate coaching report. AI returned invalid response.");
         }

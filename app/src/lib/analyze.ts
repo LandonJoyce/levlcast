@@ -20,6 +20,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
+import type { ChatBucket } from "./chat-pulse";
 
 export interface Peak {
   title: string;
@@ -1255,7 +1256,8 @@ export async function generateCoachReport(
   vodTitle: string,
   peaks: Peak[],
   priorReports?: PriorCoachSummary[],
-  chatPulse?: string
+  chatPulse?: string,
+  chatBuckets?: ChatBucket[]
 ): Promise<CoachReport | null> {
   const anthropic = new Anthropic();
 
@@ -1295,15 +1297,43 @@ export async function generateCoachReport(
   const peakContextBlock = buildPeakContextWindows(peaks, segments);
 
   // ── Dead air analysis ──
+  // Threshold = 15s (not 10s): natural pauses while reading chat / lining up a
+  // shot / lore-reading in an RPG are common at 10-14s and shouldn't be flagged
+  // as a coaching problem. Real dead air a viewer would actually notice starts
+  // around 15s+.
+  //
+  // Chat-aware filter: if chat was active during a candidate gap (>= 3 messages
+  // in any overlapping bucket), the streamer was almost certainly engaging
+  // even if Deepgram missed quiet/mumbled speech. Skip those — they're false
+  // positives caused by transcription gaps, not actual dead air.
+  const CHAT_ACTIVE_MIN_MSGS = 3;
+  function gapHasActiveChat(gapStart: number, gapEnd: number): boolean {
+    if (!chatBuckets || chatBuckets.length === 0) return false;
+    for (const b of chatBuckets) {
+      if (b.end <= gapStart) continue;
+      if (b.start >= gapEnd) break;
+      if (b.count >= CHAT_ACTIVE_MIN_MSGS) return true;
+    }
+    return false;
+  }
   interface DeadAirGap { start: number; end: number; duration: number }
   const deadAirGaps: DeadAirGap[] = [];
   let totalDeadAirSeconds = 0;
+  let chatSuppressedGaps = 0;
   for (let i = 1; i < segments.length; i++) {
     const gap = segments[i].start - segments[i - 1].end;
-    if (gap >= 10) {
-      deadAirGaps.push({ start: segments[i - 1].end, end: segments[i].start, duration: Math.round(gap) });
-      totalDeadAirSeconds += gap;
+    if (gap < 15) continue;
+    const gapStart = segments[i - 1].end;
+    const gapEnd = segments[i].start;
+    if (gapHasActiveChat(gapStart, gapEnd)) {
+      chatSuppressedGaps++;
+      continue;
     }
+    deadAirGaps.push({ start: gapStart, end: gapEnd, duration: Math.round(gap) });
+    totalDeadAirSeconds += gap;
+  }
+  if (chatSuppressedGaps > 0) {
+    console.log(`[coach] Dead-air filter: suppressed ${chatSuppressedGaps} gaps where chat was active (likely quiet/mumbled speech, not silence)`);
   }
   const deadAirPct = vodDuration > 0 ? Math.round((totalDeadAirSeconds / vodDuration) * 100) : 0;
   const worstGaps = [...deadAirGaps].sort((a, b) => b.duration - a.duration).slice(0, 5);
