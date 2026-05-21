@@ -21,7 +21,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
 import { detectSustainedSilence, formatSustainedSilence, type ChatBucket } from "./chat-pulse";
-import { computePacingProfile, formatPacingForPrompt } from "./pacing";
 
 export interface Peak {
   title: string;
@@ -1347,13 +1346,6 @@ export async function generateCoachReport(
   const overallWPM = calcWPM(segments);
   const commentaryDensity = calcCommentaryDensity(segments);
 
-  // ── Pacing telemetry — sentence variance + punctuation density ──
-  // Raw numbers only. The TONE INTERPRETATION RULES in the system prompt
-  // tell Claude how to read these (low variance + low WPM = fatigue,
-  // low variance + high WPM = hype repetition).
-  const pacingProfile = computePacingProfile(segments);
-  const pacingBlock = formatPacingForPrompt(pacingProfile);
-
   // ── Sustained community silence — extended chat-dead window ──
   // Gated by isPulseViable() inside detectSustainedSilence(). Tiny streams
   // / late-night runs that never had healthy baseline chat are filtered
@@ -1498,13 +1490,6 @@ CORE PRINCIPLE: You watched this specific stream. You know what happened. Every 
 
 If you write a strength, you name the exact moment that showed it and tell them how to recreate it. If you write an improvement, you name when and where the problem showed up and give a fix that only makes sense for this specific stream.
 
-CRITICAL TELEMETRY INTERPRETATION RULES (apply whenever the user prompt includes a Pacing Profile or Sustained Community Silence block):
-1. Isolate monotone from intensity. Low sentence-length variance is NOT automatically a problem. Cross-reference it with the per-minute WPM in the energy sparkline:
-   - Low variance + low or flat WPM (sustained below the type's normal range) = real delivery fatigue / monotone drone. Coach it.
-   - Low variance + high WPM (above the type's normal range) = intentional staccato hype — short repeated callouts during a gameplay loop ("Nice. Let's go. Yeah."). This is a strength, not a flaw. Don't flag it.
-   - High exclamation density (>20/1k) signals active emotional delivery; high question density (>15/1k) signals chat-inviting voice. Use these to back claims about energy or chat engagement, not to score in isolation.
-2. Contextualize sustained community silence. If a "Sustained Community Silence" block was given, the baseline shown there is already trusted (low-baseline streams are filtered out before this block reaches you). Address the window as an engagement gap and tie it to what the streamer was doing during that timestamp in the transcript. Do not invent silence windows that weren't given to you. If no block was provided, do not claim there was sustained silence — at most cite the dead-air summary above.
-
 CATEGORY COACHING STANDARDS — apply the section matching the streamer type you identify:
 ${categoryGuideBlock}${gameModuleBlock}`;
 
@@ -1567,7 +1552,7 @@ ${peaksSummary}
 ${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this carefully — this is the raw evidence for what made the best moments work or why moments are missing):
 ${peakContextBlock}` : ""}
 
-${chatPulse ? chatPulse + "\n" : ""}${sustainedSilenceBlock ? sustainedSilenceBlock + "\n\n" : ""}${pacingBlock ? pacingBlock + "\n\n" : ""}STREAM TRANSCRIPT SAMPLES (problem-weighted — opening, closing, and worst-energy zones with wpm labels):
+${chatPulse ? chatPulse + "\n" : ""}${sustainedSilenceBlock ? sustainedSilenceBlock + "\n\n" : ""}STREAM TRANSCRIPT SAMPLES (problem-weighted — opening, closing, and worst-energy zones with wpm labels):
 ${transcriptSamples}
 
 STEP 0 — FIND THE STREAM'S STORY (do this first, before anything else):
