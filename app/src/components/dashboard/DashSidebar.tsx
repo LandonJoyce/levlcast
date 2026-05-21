@@ -13,13 +13,16 @@ interface DashSidebarProps {
   };
   vodCount?: number;
   clipCount?: number;
+  collabPendingCount?: number;
   isPro?: boolean;
+  showCollabs?: boolean;
 }
 
-const navItems = [
+const baseNavItems = [
   { id: "dashboard",    label: "Dashboard",   href: "/dashboard" },
   { id: "vods",         label: "VODs",        href: "/dashboard/vods" },
   { id: "clips",        label: "Clips",       href: "/dashboard/clips" },
+  { id: "collabs",      label: "Collabs",     href: "/dashboard/collabs" },
   { id: "connections",  label: "Connections", href: "/dashboard/connections" },
   { id: "account",      label: "Account",     href: "/dashboard/settings" },
 ];
@@ -90,9 +93,17 @@ const Icons = {
       <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
+  Collab: () => (
+    <svg viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.6"/>
+      <circle cx="16" cy="13" r="3" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M3 20c0-3 2.5-5 6-5M21 20c0-2.4-1.7-4-4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  ),
 };
 
-export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSidebarProps) {
+export default function DashSidebar({ user, vodCount, clipCount, collabPendingCount, isPro, showCollabs }: DashSidebarProps) {
+  const navItems = baseNavItems.filter((it) => it.id !== "collabs" || showCollabs);
   const pathname = usePathname();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [unreadReplies, setUnreadReplies] = useState(0);
@@ -119,6 +130,8 @@ export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSi
     ? "vods"
     : pathname.startsWith("/dashboard/clips")
     ? "clips"
+    : pathname.startsWith("/dashboard/collabs")
+    ? "collabs"
     : pathname.startsWith("/dashboard/connections")
     ? "connections"
     : pathname.startsWith("/dashboard/settings")
@@ -130,6 +143,7 @@ export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSi
       case "dashboard":   return <Icons.Grid />;
       case "vods":        return <Icons.Vid />;
       case "clips":       return <Icons.Clip />;
+      case "collabs":     return <Icons.Collab />;
       case "connections": return <Icons.Link />;
       case "outreach":    return <Icons.Target />;
       case "account":     return <Icons.User />;
@@ -153,6 +167,7 @@ export default function DashSidebar({ user, vodCount, clipCount, isPro }: DashSi
         const isActive = active === it.id;
         const badge = it.id === "vods" && vodCount !== undefined ? String(vodCount)
                     : it.id === "clips" && clipCount !== undefined ? String(clipCount)
+                    : it.id === "collabs" && collabPendingCount && collabPendingCount > 0 ? String(collabPendingCount)
                     : null;
         return (
           <Link key={it.id} href={it.href} className={`sb-link ${isActive ? "active" : ""}`}>

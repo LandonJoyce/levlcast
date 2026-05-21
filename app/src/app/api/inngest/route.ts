@@ -1,6 +1,6 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
-import { analyzeVod, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, computeCollabSuggestions, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods } from "@/lib/inngest/functions";
+import { analyzeVod, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods } from "@/lib/inngest/functions";
 
 // Vercel Pro w/ Fluid Compute caps at 800s. Each Inngest step (every
 // transcribe-chunk, clip generation, etc.) runs under this budget. Some
@@ -10,5 +10,5 @@ export const maxDuration = 800;
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [analyzeVod, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, computeCollabSuggestions, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods],
+  functions: [analyzeVod, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods],
 });

@@ -24,7 +24,6 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
-import { buildUserProfile, scoreMatch, findExternalStreamers } from "@/lib/collab";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
@@ -1413,195 +1412,13 @@ JSON only: { "insight": "...", "recommendation": "..." }`,
   }
 );
 
-// ─── Collab Matching ──────────────────────────────────────────────────────
-// Runs every Monday at 9:30 AM UTC (after burnout + content reports).
-// For each user who has opted in to collab matching, computes the top 5
-// best matches from other opted-in users based on content style, audience
-// size, quality level, and complementary strengths.
+// (Collab algorithmic matching removed 2026-05-21 with collab finder v2.
+// New design uses live opt-in users + user-initiated interest sends, so no
+// precomputed cache. See migration 025_collab_finder_v2.sql.)
 
-export const computeCollabSuggestions = inngest.createFunction(
-  { id: "compute-collab-suggestions" },
-  { cron: "30 9 * * 1" }, // every Monday 9:30am UTC
-  async ({ step }) => {
-    const supabase = createAdminClient();
-
-    const collabUsers = await step.run("find-collab-users", async () => {
-      const { data } = await supabase
-        .from("collab_profiles")
-        .select("user_id, preferred_categories, min_followers, max_followers")
-        .eq("enabled", true);
-
-      return data || [];
-    });
-
-    if (collabUsers.length < 2) return { processed: 0, reason: "need at least 2 opted-in users" };
-
-    const profiles = await step.run("build-profiles", async () => {
-      const userIds = collabUsers.map((u: any) => u.user_id);
-
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("id, twitch_display_name, twitch_avatar_url")
-        .in("id", userIds);
-
-      const { data: vodRows } = await supabase
-        .from("vods")
-        .select("user_id, peak_data, coach_report")
-        .in("user_id", userIds)
-        .eq("status", "ready")
-        .not("peak_data", "is", null)
-        .not("coach_report", "is", null);
-
-      const { data: followerRows } = await supabase
-        .from("follower_snapshots")
-        .select("user_id, follower_count")
-        .in("user_id", userIds)
-        .eq("platform", "twitch")
-        .order("snapped_at", { ascending: false });
-
-      const { data: burnoutRows } = await supabase
-        .from("burnout_snapshots")
-        .select("user_id, score")
-        .in("user_id", userIds)
-        .order("computed_at", { ascending: false });
-
-      const latestFollowers: Record<string, number> = {};
-      for (const row of followerRows || []) {
-        if (!latestFollowers[row.user_id]) latestFollowers[row.user_id] = row.follower_count;
-      }
-
-      const latestBurnout: Record<string, number> = {};
-      for (const row of burnoutRows || []) {
-        if (!latestBurnout[row.user_id]) latestBurnout[row.user_id] = row.score;
-      }
-
-      const vodsByUser: Record<string, any[]> = {};
-      for (const vod of vodRows || []) {
-        if (!vodsByUser[vod.user_id]) vodsByUser[vod.user_id] = [];
-        vodsByUser[vod.user_id].push(vod);
-      }
-
-      const result: Record<string, ReturnType<typeof buildUserProfile>> = {};
-      for (const p of profileRows || []) {
-        const vods = vodsByUser[p.id] || [];
-        if (vods.length < 3) continue;
-        result[p.id] = buildUserProfile(
-          p.id,
-          p.twitch_display_name || "Streamer",
-          p.twitch_avatar_url,
-          latestFollowers[p.id] || 0,
-          vods,
-          latestBurnout[p.id] || 0
-        );
-      }
-
-      return result;
-    });
-
-    let processed = 0;
-
-    for (const collabUser of collabUsers) {
-      const userId = collabUser.user_id;
-      const userProfile = profiles[userId];
-      if (!userProfile) continue;
-
-      try {
-        await step.run(`match-${userId.slice(0, 8)}`, async () => {
-        const preferences = {
-          minFollowers: collabUser.min_followers || undefined,
-          maxFollowers: collabUser.max_followers || undefined,
-          preferredCategories: collabUser.preferred_categories || undefined,
-        };
-
-        // 1. Internal matches (other LevlCast users)
-        const internalMatches: { matchUserId: string; score: number; reasons: string[] }[] = [];
-
-        for (const [candidateId, candidateProfile] of Object.entries(profiles)) {
-          if (candidateId === userId) continue;
-          const match = scoreMatch(userProfile, candidateProfile, preferences);
-          if (match) internalMatches.push(match);
-        }
-
-        internalMatches.sort((a, b) => b.score - a.score);
-
-        for (const m of internalMatches.slice(0, 3)) {
-          // Delete existing suggestion for this pair, then insert fresh
-          await supabase.from("collab_suggestions")
-            .delete()
-            .eq("user_id", userId)
-            .eq("match_user_id", m.matchUserId);
-
-          await supabase.from("collab_suggestions").insert({
-            user_id: userId,
-            match_user_id: m.matchUserId,
-            match_score: m.score,
-            reasons: m.reasons,
-            is_external: false,
-            status: "new",
-            computed_at: new Date().toISOString(),
-          });
-        }
-
-        // 2. External matches (any Twitch streamer)
-        // Get this user's twitch_id to exclude from results
-        const { data: userRow } = await supabase
-          .from("profiles")
-          .select("twitch_id")
-          .eq("id", userId)
-          .single();
-
-        // Exclude this user + all other LevlCast users from external results
-        const { data: allTwitchIds } = await supabase
-          .from("profiles")
-          .select("twitch_id")
-          .in("id", Object.keys(profiles));
-        const excludeIds = (allTwitchIds || []).map((r: any) => r.twitch_id).filter(Boolean);
-        if (userRow?.twitch_id) excludeIds.push(userRow.twitch_id);
-
-        try {
-          // Game names are not derived in the cron (requires per-user Claude call).
-          // External matching via the on-demand /api/collab/refresh route handles this.
-          const externalMatches = await findExternalStreamers(userProfile, [], excludeIds, 5);
-
-          for (const em of externalMatches) {
-            // Delete old suggestion for this external streamer if exists, then insert fresh
-            await supabase.from("collab_suggestions")
-              .delete()
-              .eq("user_id", userId)
-              .eq("twitch_id", em.streamer.twitchId);
-
-            await supabase.from("collab_suggestions").insert({
-              user_id: userId,
-              match_user_id: null,
-              twitch_id: em.streamer.twitchId,
-              twitch_login: em.streamer.login,
-              twitch_display_name: em.streamer.displayName,
-              twitch_avatar_url: em.streamer.avatarUrl,
-              follower_count: em.streamer.followerCount,
-              is_external: true,
-              match_score: em.score,
-              reasons: em.reasons,
-              status: "new",
-              computed_at: new Date().toISOString(),
-            });
-          }
-        } catch (err) {
-          console.warn(`[collab] External search failed for ${userId}:`, err);
-        }
-
-        processed++;
-      });
-      } catch (err) {
-        console.error(`[collab] Failed for user ${userId.slice(0, 8)}:`, err);
-      }
-    }
-
-    return { processed };
-  }
-);
 
 // ─── Weekly Manager Digest ────────────────────────────────────────────────
-// Runs every Monday at 9:45 AM UTC (after burnout, content, collab crons).
+// Runs every Monday at 9:45 AM UTC (after burnout + content crons).
 // Compiles a weekly summary for each active user with Claude-generated
 // headline and action items. Sends push notification.
 
@@ -1658,9 +1475,9 @@ export const compileWeeklyDigest = inngest.createFunction(
             .eq("user_id", userId)
             .order("period_start", { ascending: false })
             .limit(1).maybeSingle(),
-          supabase.from("collab_suggestions")
+          supabase.from("collab_interests")
             .select("id")
-            .eq("user_id", userId).eq("status", "new"),
+            .eq("recipient_id", userId).eq("status", "pending"),
         ]);
 
         const vods = vodsRes.data || [];
@@ -1694,7 +1511,7 @@ export const compileWeeklyDigest = inngest.createFunction(
           : null);
 
         const collabSummary = collabCount > 0
-          ? `${collabCount} new collab match${collabCount > 1 ? "es" : ""} waiting for you.`
+          ? `${collabCount} new collab interest${collabCount > 1 ? "s" : ""} waiting in your inbox.`
           : null;
 
         let headline = `${streamsCount} stream${streamsCount !== 1 ? "s" : ""} this week`;
@@ -1721,7 +1538,7 @@ This week's data:
 - Follower change: ${followerDelta >= 0 ? "+" : ""}${followerDelta}
 - Health status: ${healthSummary || "No data yet"}
 - Content insight: ${contentSummary || "No data yet"}
-- Collab matches: ${collabCount}
+- Collab interests pending: ${collabCount}
 
 Generate:
 1. "headline": One punchy sentence summarizing the week. Encouraging but honest. No fluff.
@@ -1740,7 +1557,7 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
           console.warn(`[digest] Claude failed for ${userId}:`, err);
           if (avgScore && avgScore < 70) actionItems.push("Review your latest coach report for quick wins.");
           if (peaksFound > 0 && clipsGenerated === 0) actionItems.push("You have peaks waiting. Generate some clips.");
-          if (collabCount > 0) actionItems.push("Check your new collab matches.");
+          if (collabCount > 0) actionItems.push("Check your new collab interests.");
         }
 
         await supabase.from("weekly_digests").upsert(

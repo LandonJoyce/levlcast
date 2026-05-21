@@ -573,3 +573,139 @@ export async function sendFeedbackToAdmin(input: {
 </body></html>`,
   });
 }
+
+/**
+ * Notify a streamer that someone sent them a collab interest. We intentionally
+ * do NOT include the sender's full intro message in the subject line so it
+ * doesn't show up in their inbox preview (could be socially awkward / spammy
+ * looking). The body shows the intro inline; the CTA opens the inbox in the
+ * dashboard.
+ */
+export async function sendCollabInterestEmail(
+  to: string,
+  recipientName: string,
+  senderName: string,
+  introText: string
+): Promise<void> {
+  // Plain-text escape — the intro is user-generated so we must not let it
+  // smuggle HTML into the email body. Simple character replacement is enough
+  // since we're inserting into text nodes, not attributes.
+  const safeIntro = introText
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const safeSender = senderName
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const safeRecipient = recipientName
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  await resend.emails.send({
+    from: "LevlCast <hello@levlcast.com>",
+    to,
+    subject: `${senderName} wants to collab`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Collab interest</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#22D3EE;">Hey ${safeRecipient}</p>
+          <h1 style="margin:0 0 14px;font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;">${safeSender} reached out about a collab.</h1>
+          <p style="margin:0 0 22px;font-size:14px;color:rgba(255,255,255,0.6);line-height:1.6;">They sent this through the LevlCast Collab Finder. Their Discord stays private unless you accept.</p>
+
+          <div style="background:#1a1a22;border-radius:12px;padding:16px 18px;margin-bottom:26px;border-left:3px solid #22D3EE;">
+            <p style="margin:0;font-size:14px;line-height:1.55;color:#ffffff;white-space:pre-wrap;">${safeIntro}</p>
+          </div>
+
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#7C3AED;border-radius:12px;">
+              <a href="https://levlcast.com/dashboard/collabs" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">
+                Review in dashboard →
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <tr><td style="padding-top:20px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.25);">
+            LevlCast · <a href="https://levlcast.com/dashboard/settings" style="color:rgba(255,255,255,0.25);text-decoration:underline;">Manage Collab Finder</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+  });
+}
+
+/**
+ * Notify the original sender that the recipient accepted their collab interest
+ * and reveal the recipient's Discord handle inline.
+ */
+export async function sendCollabAcceptedEmail(
+  to: string,
+  senderName: string,
+  recipientName: string,
+  discordHandle: string
+): Promise<void> {
+  const safeSender = senderName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeRecipient = recipientName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Discord handles are pre-validated to /^[a-z0-9._]{2,32}$/ at write time
+  // so they're already safe — but we escape anyway as defense in depth.
+  const safeHandle = discordHandle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  await resend.emails.send({
+    from: "LevlCast <hello@levlcast.com>",
+    to,
+    subject: `${recipientName} accepted your collab interest`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Collab accepted</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#34D399;">Hey ${safeSender}</p>
+          <h1 style="margin:0 0 14px;font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;">${safeRecipient} is in. Take it from here.</h1>
+          <p style="margin:0 0 22px;font-size:14px;color:rgba(255,255,255,0.6);line-height:1.6;">Their Discord is below. The Collab Finder's job ends here on purpose. Real conversations happen on your platforms.</p>
+
+          <div style="background:#1a1a22;border-radius:12px;padding:18px 20px;margin-bottom:26px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);">Discord</p>
+            <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${safeHandle}</p>
+          </div>
+
+          <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.35);line-height:1.55;">
+            Add them on Discord and reference LevlCast in the request so they know who you are.
+          </p>
+        </td></tr>
+
+        <tr><td style="padding-top:20px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.25);">
+            LevlCast · <a href="https://levlcast.com/dashboard/collabs" style="color:rgba(255,255,255,0.25);text-decoration:underline;">Open dashboard</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+  });
+}

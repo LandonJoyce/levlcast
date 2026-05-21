@@ -21,12 +21,12 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, twitch_avatar_url, twitch_login, plan, subscription_expires_at")
+    .select("twitch_display_name, twitch_avatar_url, twitch_login, plan, subscription_expires_at, collab_opt_in")
     .eq("id", user.id)
     .single();
 
   // Counts for sidebar badges
-  const [{ count: vodCount }, { count: clipCount }] = await Promise.all([
+  const [{ count: vodCount }, { count: clipCount }, { count: collabPendingCount }] = await Promise.all([
     supabase
       .from("vods")
       .select("id", { count: "exact", head: true })
@@ -37,6 +37,11 @@ export default async function DashboardLayout({
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("status", "ready"),
+    supabase
+      .from("collab_interests")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id)
+      .eq("status", "pending"),
   ]);
 
   const userData = {
@@ -60,7 +65,9 @@ export default async function DashboardLayout({
           user={userData}
           vodCount={vodCount ?? 0}
           clipCount={clipCount ?? 0}
+          collabPendingCount={collabPendingCount ?? 0}
           isPro={isPro}
+          showCollabs={profile?.collab_opt_in === true}
         />
         <main className="main">
           <DashTopbar />
