@@ -67,7 +67,7 @@ export default async function DashboardLayout({
           clipCount={clipCount ?? 0}
           collabPendingCount={collabPendingCount ?? 0}
           isPro={isPro}
-          showCollabs={profile?.collab_opt_in === true}
+          showCollabs
         />
         <main className="main">
           <DashTopbar />

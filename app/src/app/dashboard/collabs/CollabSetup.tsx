@@ -4,7 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * CollabSection — Settings card for the double-opt-in collab marketplace.
+ * CollabSetup — full-page opt-in flow shown on /dashboard/collabs when the
+ * user hasn't opted in yet. Same component is also used (in compact mode)
+ * by opted-in users to update their Discord handle and preferences.
  *
  * GATES (enforced both here for UX and server-side for security):
  *   1. user must have ≥1 ready coach report (passed in as `hasReadyVod`)
@@ -35,7 +37,7 @@ interface Props {
 // only accepts lowercase so the server normalizes too as defense-in-depth.
 const DISCORD_RE = /^[a-zA-Z0-9._]{2,32}$/;
 
-export function CollabSection({
+export function CollabSetup({
   initialDiscordHandle,
   initialOptIn,
   initialCollabTypes,

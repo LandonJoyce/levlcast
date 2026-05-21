@@ -2,7 +2,6 @@
 import { getUserUsage } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
-import { CollabSection } from "./collab-section";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -44,22 +43,6 @@ export default async function SettingsPage({
 
   const usage = await getUserUsage(user.id, supabase);
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
-
-  // Gate check for the Collab section — needs at least one ready VOD with a
-  // coach report. We re-validate this server-side on the opt-in toggle too.
-  const { count: readyVodCount } = await supabase
-    .from("vods")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .not("coach_report", "is", null);
-  const hasReadyVod = (readyVodCount ?? 0) >= 1;
-
-  const collabPrefs = (profile?.collab_preferences as { collab_types?: string[] } | null) ?? null;
-  const initialCollabTypes = (collabPrefs?.collab_types ?? []).filter(
-    (t): t is "co_stream" | "variety_swap" | "podcast" =>
-      t === "co_stream" || t === "variety_swap" || t === "podcast"
-  );
 
   return (
     <>
@@ -185,14 +168,6 @@ export default async function SettingsPage({
           </div>
         </div>
       </div>
-
-      {/* Collab Finder settings */}
-      <CollabSection
-        initialDiscordHandle={(profile?.discord_handle as string | null) ?? null}
-        initialOptIn={(profile?.collab_opt_in as boolean | null) ?? false}
-        initialCollabTypes={initialCollabTypes}
-        hasReadyVod={hasReadyVod}
-      />
 
       {/* Delete account — bare, no danger-zone framing */}
       <div style={{ marginTop: 12 }}>
