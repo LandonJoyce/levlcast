@@ -462,6 +462,95 @@ export function isPulseViable(buckets: ChatBucket[] | null | undefined): boolean
 }
 
 /**
+ * Sustained community silence — a *prolonged* window where chat velocity
+ * is well below this stream's own baseline. Different signal from the
+ * spike-shaped DROP_THRESHOLD bucket detection in summarizePulse(): that
+ * one catches sudden drops, this one catches slow drag.
+ *
+ * Gated by isPulseViable() upstream — callers should only invoke this on
+ * pulses we already trust statistically. There is no separate floor here
+ * because the viability gate already filters out tiny / late-night
+ * streams where any chat is noise.
+ */
+export interface SustainedSilenceWindow {
+  start: number;
+  end: number;
+  /** Average velocity (relative to stream avg) inside the window. */
+  windowVelocity: number;
+  /** Stream-wide baseline velocity (always 1.0 by construction). */
+  baselineVelocity: number;
+  /** Messages-per-minute inside the window. */
+  windowMsgsPerMin: number;
+  /** Messages-per-minute across the whole stream (the baseline being compared). */
+  baselineMsgsPerMin: number;
+}
+
+const SUSTAINED_SILENCE_VELOCITY = 0.4;   // window avg must be <40% of baseline
+const SUSTAINED_SILENCE_MIN_BUCKETS = 6;  // at 30s buckets = 3 min minimum
+
+export function detectSustainedSilence(buckets: ChatBucket[]): SustainedSilenceWindow | null {
+  if (!isPulseViable(buckets)) return null;
+  if (buckets.length < SUSTAINED_SILENCE_MIN_BUCKETS) return null;
+
+  // Velocity is already normalized in bucketChat() — avg bucket has v=1.
+  // Find the longest run of consecutive low-velocity buckets, then return
+  // it only if it clears the minimum-length bar.
+  let bestStartIdx = -1;
+  let bestEndIdx = -1;
+  let runStart = -1;
+  for (let i = 0; i < buckets.length; i++) {
+    if (buckets[i].velocity < SUSTAINED_SILENCE_VELOCITY) {
+      if (runStart < 0) runStart = i;
+      const runLen = i - runStart + 1;
+      const bestLen = bestEndIdx - bestStartIdx + 1;
+      if (runLen > bestLen) {
+        bestStartIdx = runStart;
+        bestEndIdx = i;
+      }
+    } else {
+      runStart = -1;
+    }
+  }
+
+  if (bestStartIdx < 0 || bestEndIdx - bestStartIdx + 1 < SUSTAINED_SILENCE_MIN_BUCKETS) {
+    return null;
+  }
+
+  const slice = buckets.slice(bestStartIdx, bestEndIdx + 1);
+  const sliceCount = slice.reduce((s, b) => s + b.count, 0);
+  const sliceMinutes = (slice[slice.length - 1].end - slice[0].start) / 60;
+  const windowMsgsPerMin = sliceMinutes > 0 ? sliceCount / sliceMinutes : 0;
+  const windowVelocity = slice.reduce((s, b) => s + b.velocity, 0) / slice.length;
+
+  const totalCount = buckets.reduce((s, b) => s + b.count, 0);
+  const totalMinutes = (buckets[buckets.length - 1].end - buckets[0].start) / 60;
+  const baselineMsgsPerMin = totalMinutes > 0 ? totalCount / totalMinutes : 0;
+
+  return {
+    start: slice[0].start,
+    end: slice[slice.length - 1].end,
+    windowVelocity,
+    baselineVelocity: 1.0,
+    windowMsgsPerMin,
+    baselineMsgsPerMin,
+  };
+}
+
+/**
+ * Render a sustained-silence window as a prompt block. Returns "" when
+ * no window was detected so callers can splat unconditionally.
+ */
+export function formatSustainedSilence(window: SustainedSilenceWindow | null): string {
+  if (!window) return "";
+  return [
+    "**Sustained Community Silence (chat went quiet for an extended stretch — engagement gap, not a brief dip):**",
+    `  Window: ${fmtTime(window.start)} to ${fmtTime(window.end)}`,
+    `  Window chat velocity: ${window.windowMsgsPerMin.toFixed(1)} msgs/min`,
+    `  Stream baseline velocity: ${window.baselineMsgsPerMin.toFixed(1)} msgs/min`,
+  ].join("\n");
+}
+
+/**
  * Outliers-first prompt formatter. Instead of dumping the whole pulse on
  * Claude (which lets it wander), we hand-pick the moments that pass our
  * statistical bars — high-velocity community moments, sudden vibe shifts,
