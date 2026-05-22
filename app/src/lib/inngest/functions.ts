@@ -1814,13 +1814,16 @@ export const autoSyncTwitchVods = inngest.createFunction(
           const newVods = twitchVods.filter((v) => !existingIds.has(v.id));
           if (newVods.length === 0) continue;
 
-          const rows = newVods.map((v) => mapVodToRow(v, profile.id));
+          const rows = newVods
+            .map((v) => mapVodToRow(v, profile.id))
+            .filter((r): r is NonNullable<typeof r> => r !== null);
+          if (rows.length === 0) continue;
           const { error: insertError } = await supabase.from("vods").insert(rows);
           if (insertError) {
             console.error(`[auto-sync] Insert failed for ${profile.id.slice(0, 8)}:`, insertError.message);
             continue;
           }
-          totalSynced += newVods.length;
+          totalSynced += rows.length;
 
           // Find their email + count of prior analyzed VODs for the email tone
           const { data: { user } } = await supabase.auth.admin.getUserById(profile.id);

@@ -132,7 +132,11 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<vo
 
   // Bulk-insert all recent VODs as pending so the dashboard isn't empty when
   // the user lands. The chosen VOD is then claimed and queued separately.
-  const rows = vods.map((v) => mapVodToRow(v, userId));
+  // Skip any VOD with broken Twitch metadata so they never appear in the list.
+  const rows = vods
+    .map((v) => mapVodToRow(v, userId))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  if (rows.length === 0) return;
   const { error: insertErr } = await admin
     .from("vods")
     .upsert(rows, { onConflict: "twitch_vod_id" });

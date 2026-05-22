@@ -1278,13 +1278,30 @@ export async function fetchTwitchVodChat(
   return messages;
 }
 
-/** Convert a raw Twitch VOD into the shape we store in Supabase */
+/**
+ * Twitch sometimes returns nonsensically large durations on the Helix API
+ * (we've observed values like "873h22m33s" on VODs from normal-length
+ * streams). Twitch's documented max VOD length is 48 hours. Anything
+ * larger is broken metadata and would blow up downstream cost/cap math,
+ * so we treat it as a sync-time veto: mapVodToRow returns null and the
+ * caller filters it out before insert.
+ */
+const MAX_PLAUSIBLE_VOD_SECONDS = 48 * 3600;
+
+/** Convert a raw Twitch VOD into the shape we store in Supabase. */
 export function mapVodToRow(vod: TwitchVod, userId: string) {
+  const duration_seconds = parseTwitchDuration(vod.duration);
+  if (duration_seconds > MAX_PLAUSIBLE_VOD_SECONDS || duration_seconds < 0) {
+    console.warn(
+      `[twitch] Skipping VOD ${vod.id} with implausible duration ${duration_seconds}s ("${vod.duration}") — Twitch metadata bug.`
+    );
+    return null;
+  }
   return {
     user_id: userId,
     twitch_vod_id: vod.id,
     title: vod.title,
-    duration_seconds: parseTwitchDuration(vod.duration),
+    duration_seconds,
     thumbnail_url: buildThumbnail(vod.thumbnail_url),
     stream_date: vod.created_at,
     status: "pending" as const,

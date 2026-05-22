@@ -142,10 +142,11 @@ export async function POST(request: Request) {
 
   const existingIds = new Set(existing?.map((e) => e.twitch_vod_id) || []);
 
-  // 6. Insert only new VODs
+  // 6. Insert only new VODs (skip any with implausible Twitch metadata)
   const newVods = twitchVods
     .filter((v) => !existingIds.has(v.id))
-    .map((v) => mapVodToRow(v, user.id));
+    .map((v) => mapVodToRow(v, user.id))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 
   if (newVods.length === 0) {
     return NextResponse.json({

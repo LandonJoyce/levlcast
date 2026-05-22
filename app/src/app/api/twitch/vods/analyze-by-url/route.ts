@@ -180,6 +180,12 @@ export async function POST(request: Request) {
   // Upsert the VOD as pending. If the row already exists and is already
   // analyzed, just return its id so the client can navigate there.
   const row = mapVodToRow(vodMeta, user.id);
+  if (!row) {
+    return NextResponse.json(
+      { error: "That VOD's metadata looks broken on Twitch's end (impossible duration). Try a different VOD." },
+      { status: 400 }
+    );
+  }
   const { data: upserted, error: upsertErr } = await admin
     .from("vods")
     .upsert(row, { onConflict: "twitch_vod_id" })
