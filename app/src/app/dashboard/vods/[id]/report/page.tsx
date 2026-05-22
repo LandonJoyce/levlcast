@@ -192,9 +192,9 @@ export default async function VodReportPage({
         />
       </div>
 
-      {/* TL;DR hero — the score, the one fix, the action. Sits above the
-          detailed breakdown so users always read the summary first instead
-          of getting buried in sub-scores and anti-patterns. */}
+      {/* TL;DR hero — lead with the WIN (best moment), then the one fix.
+          Same data, different emphasis: casual users get the positive
+          deliverable first instead of being judged before they scroll. */}
       {coachReport && (
         (() => {
           const punchLine: string | null = coachReport?.punch_line ?? null;
@@ -202,9 +202,24 @@ export default async function VodReportPage({
             ? (coachReport.recommendation as string).replace(/ — /g, ". ").replace(/—/g, " ")
             : null;
           const oneFix = punchLine ?? fallbackFix;
+          const bestMoment = (coachReport as { best_moment?: { time?: string; description?: string } } | null)?.best_moment;
+          const bestMomentText = bestMoment?.description ?? null;
+          const bestMomentTime = bestMoment?.time ?? null;
           const topReadyClip = readyClips.sort(
             (a, b) => ((b.peak_score as number) ?? 0) - ((a.peak_score as number) ?? 0)
           )[0];
+          // Build a Twitch deep link if we have a timestamp for the best moment.
+          const bestMomentTwitchLink = bestMomentTime && vod.twitch_vod_id
+            ? (() => {
+                const [mm, ss] = bestMomentTime.split(":").map((n) => parseInt(n, 10) || 0);
+                const totalSec = (mm || 0) * 60 + (ss || 0);
+                return `https://www.twitch.tv/videos/${vod.twitch_vod_id}?t=${twitchTimestamp(totalSec)}`;
+              })()
+            : null;
+
+          // If we don't have anything to show, render nothing rather than an empty box.
+          if (!bestMomentText && !oneFix) return null;
+
           return (
             <div
               style={{
@@ -212,7 +227,7 @@ export default async function VodReportPage({
                 padding: "20px 24px",
                 background: "var(--surface)",
                 border: "1px solid var(--line)",
-                borderLeft: `3px solid ${scoreColor}`,
+                borderLeft: `3px solid ${bestMomentText ? "#A3E635" : scoreColor}`,
                 borderRadius: 12,
                 display: "grid",
                 gridTemplateColumns: "1fr auto",
@@ -221,26 +236,48 @@ export default async function VodReportPage({
               }}
             >
               <div style={{ minWidth: 0 }}>
-                {oneFix && (
+                {bestMomentText && (
                   <>
                     <p className="mono-label" style={{ color: "var(--ink-3)", marginBottom: 8 }}>
-                      The one thing to fix next stream
+                      Your best moment {bestMomentTime ? `· ${bestMomentTime}` : ""}
                     </p>
                     <p style={{ fontSize: 16, lineHeight: 1.55, color: "var(--ink)", margin: 0, fontWeight: 500 }}>
-                      {oneFix}
+                      {bestMomentText}
                     </p>
                   </>
                 )}
+                {oneFix && (
+                  <div style={{ marginTop: bestMomentText ? 14 : 0, paddingTop: bestMomentText ? 14 : 0, borderTop: bestMomentText ? "1px solid var(--line)" : "none" }}>
+                    <p className="mono-label" style={{ color: "var(--ink-3)", marginBottom: 6 }}>
+                      One thing to try next stream
+                    </p>
+                    <p style={{ fontSize: 14, lineHeight: 1.55, color: "var(--ink-2)", margin: 0 }}>
+                      {oneFix}
+                    </p>
+                  </div>
+                )}
               </div>
-              {topReadyClip && (
-                <Link
-                  href={`/dashboard/clips/${topReadyClip.id}/edit`}
-                  className="btn btn-blue"
-                  style={{ fontSize: 13, padding: "10px 16px", whiteSpace: "nowrap", textDecoration: "none" }}
-                >
-                  Open clip in editor →
-                </Link>
-              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                {topReadyClip && (
+                  <Link
+                    href={`/dashboard/clips/${topReadyClip.id}/edit`}
+                    className="btn btn-blue"
+                    style={{ fontSize: 13, padding: "10px 16px", whiteSpace: "nowrap", textDecoration: "none" }}
+                  >
+                    Open clip in editor →
+                  </Link>
+                )}
+                {bestMomentTwitchLink && (
+                  <a
+                    href={bestMomentTwitchLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 12, color: "var(--ink-3)", textDecoration: "underline", whiteSpace: "nowrap" }}
+                  >
+                    Watch on Twitch
+                  </a>
+                )}
+              </div>
             </div>
           );
         })()

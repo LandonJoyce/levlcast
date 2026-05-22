@@ -126,9 +126,9 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-hero-center" style={{ padding: 0, maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <ReferralBadge />
-            <h1 className="ll-h1">Stop guessing what killed your <span className="ll-grad-text">stream</span></h1>
+            <h1 className="ll-h1">See what your <span className="ll-grad-text">audience saw</span></h1>
             <p className="ll-lede">
-              Paste your last VOD. LevlCast watches the whole thing and tells you exactly what to fix. Score, timestamps, and clips ready to post.
+              Paste your last VOD. LevlCast watches the whole thing and shows you what landed, what didn&apos;t, and the clips your fans want.
             </p>
             <p style={{
               fontSize: 14, fontStyle: "italic",
@@ -136,7 +136,7 @@ export default async function LandingPage() {
               margin: "-6px 0 22px",
               letterSpacing: "-0.005em",
             }}>
-              Each stream sharpens the next report.
+              Your stream from the outside. Free to try, no card.
             </p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
               <UrlPasteHero />
