@@ -126,7 +126,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-hero-center" style={{ padding: 0, maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <ReferralBadge />
-            <h1 className="ll-h1">See what your <span className="ll-grad-text">audience saw</span></h1>
+            <h1 className="ll-h1">See the stream your <span className="ll-grad-text">viewers saw</span></h1>
             <p className="ll-lede">
               Paste your last VOD. LevlCast watches the whole thing and shows you what landed, what didn&apos;t, and the clips your fans want.
             </p>
