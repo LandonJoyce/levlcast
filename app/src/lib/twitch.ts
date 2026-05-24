@@ -65,9 +65,16 @@ export async function refreshTwitchToken(
 /**
  * Get a Twitch App Access Token using client credentials.
  * Cached in memory until expiry.
+ *
+ * Pass `forceRefresh: true` to bust the cache. Use this when a downstream
+ * Twitch call returns 401 — Twitch invalidates ALL previously-issued app
+ * access tokens when the client secret is rotated, but the cached `expiresAt`
+ * in this module doesn't know about that. The result is a stale cached token
+ * that 401s on every use until module-instance death. Loco_Flare hit exactly
+ * this on 2026-05-24 right after we rotated the secret.
  */
-export async function getAppAccessToken(): Promise<string> {
-  if (cachedAppToken && Date.now() < cachedAppToken.expiresAt) {
+export async function getAppAccessToken(forceRefresh = false): Promise<string> {
+  if (!forceRefresh && cachedAppToken && Date.now() < cachedAppToken.expiresAt) {
     return cachedAppToken.token;
   }
 
@@ -92,6 +99,11 @@ export async function getAppAccessToken(): Promise<string> {
     expiresAt: Date.now() + (json.expires_in - 60) * 1000,
   };
   return cachedAppToken.token;
+}
+
+/** Invalidate the in-memory app-token cache. Call after a Twitch call returns 401. */
+export function invalidateAppTokenCache() {
+  cachedAppToken = null;
 }
 
 interface TwitchVod {

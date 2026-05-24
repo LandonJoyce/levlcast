@@ -1,5 +1,5 @@
 import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
-import { fetchTwitchVods, getAppAccessToken, mapVodToRow, refreshTwitchToken } from "@/lib/twitch";
+import { fetchTwitchVods, getAppAccessToken, invalidateAppTokenCache, mapVodToRow, refreshTwitchToken } from "@/lib/twitch";
 import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { sendPush } from "@/lib/push";
@@ -107,18 +107,40 @@ export async function POST(request: Request) {
   }
 
   // Attempt 3: app token. Last resort — won't see age-gated channels.
+  // If first try 401s, bust the cached app token and retry ONCE: Twitch
+  // invalidates app tokens when the client secret is rotated, and our
+  // in-memory cache can keep returning a dead token until the function
+  // instance dies. Force-refresh fixes it.
   if (twitchVods.length === 0 && usedToken === "none") {
     try {
       const appToken = await getAppAccessToken();
       twitchVods = await fetchTwitchVods(profile.twitch_id, appToken, 40);
       usedToken = "app";
     } catch (err) {
-      lastError = err instanceof Error ? err.message : String(err);
-      console.error(`[twitch/vods] all token paths failed for user=${user.id}:`, lastError);
-      return NextResponse.json(
-        { error: "Failed to fetch VODs from Twitch", detail: lastError },
-        { status: 502 }
-      );
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes(" 401")) {
+        console.warn(`[twitch/vods] app token returned 401 for user=${user.id}, busting cache and retrying`);
+        invalidateAppTokenCache();
+        try {
+          const freshAppToken = await getAppAccessToken(true);
+          twitchVods = await fetchTwitchVods(profile.twitch_id, freshAppToken, 40);
+          usedToken = "app";
+        } catch (err2) {
+          lastError = err2 instanceof Error ? err2.message : String(err2);
+          console.error(`[twitch/vods] app token retry failed for user=${user.id}:`, lastError);
+          return NextResponse.json(
+            { error: "Failed to fetch VODs from Twitch", detail: lastError },
+            { status: 502 }
+          );
+        }
+      } else {
+        lastError = msg;
+        console.error(`[twitch/vods] all token paths failed for user=${user.id}:`, lastError);
+        return NextResponse.json(
+          { error: "Failed to fetch VODs from Twitch", detail: lastError },
+          { status: 502 }
+        );
+      }
     }
   }
 
