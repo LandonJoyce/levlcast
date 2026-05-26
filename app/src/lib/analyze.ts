@@ -465,7 +465,11 @@ REALITY CHECK — apply this before returning:
 - 0 clips is a valid and honest result. If nothing clears the bar, return an empty array. Do not invent clips.
 - Returning 3 mediocre clips to fill a quota is worse than returning 1 great one.
 - If you have 1 strong clip and 2 weak ones, return 1.
-- The streamer would rather have 1 clip they're proud to post than 3 they skip past.`;
+- The streamer would rather have 1 clip they're proud to post than 3 they skip past.
+
+━━━ STRICT OUTPUT RULE ━━━
+
+Your entire response must be a JSON array and nothing else. No preamble, no reflection ("Looking at this transcript..."), no commentary, no markdown code fences. The first character of your response must be \`[\` and the last character must be \`]\`. If you have zero clips, the response is exactly \`[]\`.`;
 }
 
 async function runPeakDetection(
@@ -484,16 +488,74 @@ async function runPeakDetection(
   }), 3, 1000);
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
-  try {
-    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    const peaks: Peak[] = stripEmDashes(JSON.parse(cleaned));
-    return peaks
-      .filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE)
-      .map((p) => snapToUtteranceBoundaries(p, segments));
-  } catch {
-    console.error("Failed to parse Claude peak response:", text);
+  const peaks = parsePeaksFromClaudeText(text);
+  if (peaks === null) {
+    console.error("Failed to parse Claude peak response (no JSON array found):", text.slice(0, 400));
     return [];
   }
+  return peaks
+    .filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE)
+    .map((p) => snapToUtteranceBoundaries(p, segments));
+}
+
+/**
+ * Best-effort parser for Claude's peak-detection response.
+ *
+ * Returns the parsed Peak[] or null if no recoverable JSON array exists.
+ *
+ * Layered strategy because Claude occasionally prefaces JSON output with
+ * stream-of-consciousness reasoning ("Looking at this transcript, I need
+ * to be honest with myself...") despite the strict-output instruction:
+ *   1. Strip code fences + trim, try direct JSON.parse on the whole string.
+ *   2. If that fails, find the first balanced [...] block (bracket-counted,
+ *      string-aware) anywhere in the text and parse that.
+ *   3. If THAT fails, return null and let the caller log + degrade to no
+ *      peaks (the coach report still ships).
+ */
+function parsePeaksFromClaudeText(text: string): Peak[] | null {
+  const stripped = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+  // Strategy 1: whole-string parse
+  try {
+    const parsed = JSON.parse(stripped);
+    if (Array.isArray(parsed)) return stripEmDashes(parsed) as Peak[];
+  } catch {
+    // fall through
+  }
+
+  // Strategy 2: extract first balanced JSON array. Bracket count while
+  // skipping over string literals so a `[` inside a quoted caption doesn't
+  // confuse the counter.
+  const start = stripped.indexOf("[");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < stripped.length; i++) {
+    const ch = stripped[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) {
+        const candidate = stripped.slice(start, i + 1);
+        try {
+          const parsed = JSON.parse(candidate);
+          if (Array.isArray(parsed)) {
+            console.warn("[analyze] Peak parse recovered from preamble. Stripped " + start + " leading chars.");
+            return stripEmDashes(parsed) as Peak[];
+          }
+        } catch {
+          // Malformed even after extraction. Give up.
+        }
+        return null;
+      }
+    }
+  }
+  return null;
 }
 
 // How long each transcript chunk is when splitting long VODs.
