@@ -82,16 +82,34 @@ export async function POST(request: Request) {
     }
   }
 
-  // Founding members have no stream length cap — they subscribed early with that promise.
-  // Free: up to 4 hours. Pro: up to 10 hours.
-  if (!usage.founding_member) {
-    const { data: vodMeta } = await supabase
-      .from("vods")
-      .select("duration_seconds")
-      .eq("id", vodId)
-      .eq("user_id", user.id)
-      .single();
+  // Look up the VOD's duration once and run both bounds checks against it.
+  // We always check the lower bound (sub-5-min streams produce garbage reports);
+  // founding members skip the upper bound only.
+  const { data: vodMeta } = await supabase
+    .from("vods")
+    .select("duration_seconds")
+    .eq("id", vodId)
+    .eq("user_id", user.id)
+    .single();
 
+  // MIN duration — reject anything under 5 minutes. Twitch sometimes auto-saves
+  // 0-15 second stubs when a stream aborts immediately. The AI pipeline has no
+  // basis to score those and produces hallucinated low-confidence reports that
+  // damage credibility and waste user analysis credits. Per
+  // feedback_coach_credibility: wrong specifics destroy trust in the whole report.
+  const MIN_ANALYZABLE_SECONDS = 300; // 5 minutes
+  if (vodMeta?.duration_seconds != null && vodMeta.duration_seconds < MIN_ANALYZABLE_SECONDS) {
+    return NextResponse.json(
+      {
+        error: "vod_too_short",
+        message: "This stream is too short to analyze. We need at least 5 minutes of content for a coach report.",
+      },
+      { status: 400 }
+    );
+  }
+
+  // MAX duration — founding members exempt.
+  if (!usage.founding_member) {
     const isPro = usage.plan === "pro";
     const maxSeconds = isPro ? 36000 : 14400; // 10h pro, 4h free
     if (vodMeta?.duration_seconds && vodMeta.duration_seconds > maxSeconds) {

@@ -65,6 +65,23 @@ export const analyzeVod = inngest.createFunction(
 
         if (!vod) throw new Error("VOD not found");
         console.log(`[analyze] VOD: "${vod.title}" twitch_id=${vod.twitch_vod_id} duration=${vod.duration_seconds}s`);
+
+        // Min-duration guard (defense in depth — the route also checks this).
+        // Twitch sometimes auto-saves 0-15s stubs for aborted streams; analysis
+        // produces hallucinated reports on those. Refuse early so the credit
+        // increment at step 4 never fires for a too-short VOD.
+        const MIN_ANALYZABLE_SECONDS = 5 * 60;
+        if ((vod.duration_seconds as number | null) != null && (vod.duration_seconds as number) < MIN_ANALYZABLE_SECONDS) {
+          await supabase
+            .from("vods")
+            .update({
+              status: "failed",
+              failed_reason: `Stream too short to analyze (${vod.duration_seconds}s). Needs at least 5 minutes of content.`,
+            })
+            .eq("id", vodId);
+          throw new NonRetriableError(`VOD ${vodId} too short to analyze (${vod.duration_seconds}s)`);
+        }
+
         await supabase.from("vods").update({ status: "transcribing" }).eq("id", vodId);
 
         const detection = detectGame(vod.title ?? "");

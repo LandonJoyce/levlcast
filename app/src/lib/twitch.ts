@@ -1297,8 +1297,14 @@ export async function fetchTwitchVodChat(
  * larger is broken metadata and would blow up downstream cost/cap math,
  * so we treat it as a sync-time veto: mapVodToRow returns null and the
  * caller filters it out before insert.
+ *
+ * Lower bound: Twitch sometimes auto-saves 0-15 second stubs when a
+ * stream aborts immediately. The AI analysis pipeline produces
+ * hallucinated low-confidence reports on those because there's nothing
+ * to actually score. Sub-5-min VODs never make it into the user's list.
  */
 const MAX_PLAUSIBLE_VOD_SECONDS = 48 * 3600;
+const MIN_ANALYZABLE_VOD_SECONDS = 5 * 60; // 5 minutes — see analyze route
 
 /** Convert a raw Twitch VOD into the shape we store in Supabase. */
 export function mapVodToRow(vod: TwitchVod, userId: string) {
@@ -1306,6 +1312,12 @@ export function mapVodToRow(vod: TwitchVod, userId: string) {
   if (duration_seconds > MAX_PLAUSIBLE_VOD_SECONDS || duration_seconds < 0) {
     console.warn(
       `[twitch] Skipping VOD ${vod.id} with implausible duration ${duration_seconds}s ("${vod.duration}") — Twitch metadata bug.`
+    );
+    return null;
+  }
+  if (duration_seconds < MIN_ANALYZABLE_VOD_SECONDS) {
+    console.warn(
+      `[twitch] Skipping VOD ${vod.id} too short to analyze (${duration_seconds}s) — likely aborted stream stub.`
     );
     return null;
   }
