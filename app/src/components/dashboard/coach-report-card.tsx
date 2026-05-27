@@ -754,7 +754,7 @@ export function CoachReportCard({
               </div>
               <h3 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.2, color: "#ECF1FA", margin: "0 0 6px", fontWeight: 400, letterSpacing: "-0.01em" }}>
                 One report is a snapshot.{" "}
-                <em style={{ fontStyle: "italic", ...gradText }}>The delta is the coaching.</em>
+                <em style={{ fontStyle: "italic", ...gradText }}>What changes between streams is the coaching.</em>
               </h3>
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 18px" }}>
                 Free is 1 stream/month. You can't see what changed because there's nothing to compare to. Pro tracks every stream so you can prove what's working.
@@ -768,14 +768,14 @@ export function CoachReportCard({
                   const realDelta = recapDelta;
                   const tiles = realDelta ? [
                     {
-                      label: "Score delta",
+                      label: "Score change",
                       value: realDelta.score.delta > 0
                         ? `+${realDelta.score.delta}`
                         : `${realDelta.score.delta}`,
                       color: realDelta.score.delta >= 0 ? "#A3E635" : "#F87171",
                     },
                     {
-                      label: realDelta.biggestWin?.key ? `${realDelta.biggestWin.key} delta` : "Sub-score win",
+                      label: realDelta.biggestWin?.key ? `${realDelta.biggestWin.key} change` : "Biggest win",
                       value: realDelta.biggestWin
                         ? (realDelta.biggestWin.delta > 0 ? `+${realDelta.biggestWin.delta}` : `${realDelta.biggestWin.delta}`)
                         : "?",
@@ -789,7 +789,7 @@ export function CoachReportCard({
                       color: realDelta.deadAir?.improved ? "#A3E635" : "#F87171",
                     },
                   ] : [
-                    { label: "Score delta", value: "track", color: "#A3E635" },
+                    { label: "Score change", value: "track", color: "#A3E635" },
                     { label: "Recurring patterns", value: "track", color: "#A3E635" },
                     { label: "Dead air trend", value: "track", color: "#A3E635" },
                   ];

@@ -51,17 +51,17 @@ export function TrialBanner({
   // the moment of paywall-hit, and references the cross-stream tracking they
   // genuinely cannot access without Pro.
   const headline = exhausted
-    ? "Trial used up. Cross-stream tracking is locked."
+    ? "Trial used up. You can't track what's changing."
     : analysesExhausted
-      ? "Out of analyses. Pro unlocks the delta view."
+      ? "Out of analyses. Pro shows what changes between streams."
       : lastAnalysis
         ? "One free analysis left. Make it count."
         : "Free trial";
 
   const subline = exhausted
-    ? "Your reports are still here, but you can't compare them or track what changed. Pro is $9.99 a month."
+    ? "Your reports are still here, but you can't compare them or see what's improving. Pro is $9.99 a month."
     : analysesExhausted
-      ? "You've used all 3. Pro is 15 analyses a month + the score-delta view that only works across multiple reports."
+      ? "You've used all 3. Pro is 15 analyses a month plus the stream-to-stream view that only works once you have more than one report."
       : `${analysesLeft} ${analysesLeft === 1 ? "analysis" : "analyses"} and ${clipsLeft} ${clipsLeft === 1 ? "clip" : "clips"} remaining.`;
 
   return (

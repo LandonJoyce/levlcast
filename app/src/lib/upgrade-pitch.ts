@@ -73,7 +73,7 @@ export async function buildUpgradePitch(
   if (scored.length === 0) {
     return {
       reason:
-        "Pro is built around tracking your stream over time. You'll see the score change between every stream, what's actually improving, and what keeps slipping. Single reports are diagnosis. The delta is the coaching.",
+        "Pro is built around tracking your stream over time. You'll see the score change between every stream, what's actually improving, and what keeps slipping. Single reports just diagnose. The change between them is where the coaching lives.",
       peekMetrics: {
         latestScore: null,
         scoreDelta: null,
@@ -143,22 +143,22 @@ function composeReason(args: {
         : "flat";
     const deadAirNote = deadAirDelta != null && Math.abs(deadAirDelta) >= 2
       ? deadAirDelta < 0
-        ? ` Your dead air dropped ${Math.abs(deadAirDelta)} points — that's real, and it only shows up across multiple reports.`
-        : ` Your dead air climbed ${deadAirDelta} points — exactly the pattern Pro flags before it becomes a habit.`
+        ? ` Your dead air dropped ${Math.abs(deadAirDelta)} points. That's real progress, and it only shows up when you have more than one report to compare.`
+        : ` Your dead air climbed ${deadAirDelta} points. That's exactly the pattern Pro flags before it becomes a habit.`
       : "";
-    return `You've analyzed ${reportCount} streams averaging ${avgScore}/100. Your latest stream came in ${direction} vs the one before.${deadAirNote} One report is a snapshot. The delta is the coaching. Pro tracks every stream so you can prove what's working.`;
+    return `You've analyzed ${reportCount} streams averaging ${avgScore}/100. Your latest stream came in ${direction} vs the one before.${deadAirNote} One report just diagnoses. Watching what changes between streams is where the coaching actually happens. Pro tracks every stream so you can prove what's working.`;
   }
 
   // Exactly 1 report — frame around what they JUST saw + what comes next.
   if (reportCount === 1 && latestScore != null) {
     const tier = latestScore >= 70
-      ? `That's a strong run — top 15% of streamers using LevlCast.`
+      ? `That's a strong run, top 15% of streamers using LevlCast.`
       : latestScore >= 55
         ? `Solid baseline.`
         : `That's your starting line, not a verdict.`;
-    return `You just got your first report: ${latestScore}/100. ${tier} The real coaching kicks in when you have a SECOND report to compare against — Pro tracks the delta on every stream so you can prove you're actually improving instead of guessing.`;
+    return `You just got your first report: ${latestScore}/100. ${tier} The real coaching kicks in when you have a SECOND report to compare against. Pro tracks what changes between every stream so you can prove you're actually improving instead of guessing.`;
   }
 
   // Fallback — shouldn't usually hit since buildUpgradePitch handles zero reports above.
-  return "Pro tracks every stream so you can prove what's actually working. One report is a snapshot. The delta is the coaching.";
+  return "Pro tracks every stream so you can prove what's actually working. One report just diagnoses. The change between streams is where the coaching lives.";
 }
