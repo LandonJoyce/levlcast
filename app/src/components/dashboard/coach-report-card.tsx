@@ -707,7 +707,7 @@ export function CoachReportCard({
                 </div>
               ) : (
                 <div style={{ marginTop: 16, fontSize: 13, color: "#4D5876", fontStyle: "italic" }}>
-                  {previousScore !== undefined ? "Cross-stream tracking unlocks with Pro" : "First report — Pro tracks the change from here"}
+                  {previousScore !== undefined ? "Cross-stream tracking unlocks with Pro" : "First report. Pro tracks the change from here."}
                 </div>
               )}
               {isPersonalBest && draw && (
@@ -1324,7 +1324,7 @@ export function CoachReportCard({
               </div>
 
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 20px" }}>
-                One report tells you where you stand. The longitudinal track score deltas across streams, recurring weaknesses, what you fixed and what you didn&apos;t is where the actual coaching lives.
+                One report tells you where you stand. Tracking score changes across streams, recurring weaknesses, what you fixed and what you didn&apos;t is where the actual coaching lives.
               </p>
 
               <button
@@ -1353,7 +1353,7 @@ export function CoachReportCard({
                 Your <strong style={{ color: PURPLE, fontWeight: 600 }}>next stream</strong> is the one that matters.
               </p>
               <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: 0 }}>
-                One report is a snapshot. The delta between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t that&apos;s how coaching actually works.
+                One report is a snapshot. The change between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t that&apos;s how coaching actually works.
               </p>
             </div>
           )}

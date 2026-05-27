@@ -143,7 +143,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-04-27",
     title: "Last Stream Recap",
     items: [
-      { type: "new", text: "Coach reports now open with a Last Stream Recap: score delta, sub-score moves, dead-air change, and which of last stream's missions you actually pulled off" },
+      { type: "new", text: "Coach reports now open with a Last Stream Recap: score change, sub-score moves, dead-air change, and which of last stream's missions you actually pulled off" },
       { type: "new", text: "Recurring weaknesses across streams get explicitly flagged: 'still happening this stream AND last'. The system remembers what you've been working on" },
       { type: "new", text: "Cleared anti-patterns are surfaced as wins ('was flagged last stream, gone this stream')" },
       { type: "improved", text: "Mission status pills (Done / Slipped / Ongoing) match each prior goal against the actual numbers from this stream" },

@@ -20,7 +20,7 @@ export async function sendNewVodEmail(
     : `${vodCount} new streams ready to analyze`;
 
   const headline = hasPriorAnalyses
-    ? "Track the delta from last stream."
+    ? "Track what changed since last stream."
     : "Your stream is ready for its first coach report.";
 
   const subhead = hasPriorAnalyses

@@ -63,7 +63,7 @@ export function AudienceSnapshotCard({ buckets }: { buckets: ChatBucket[] }) {
     body = "When chat is small, every message matters. Use names back, react to what they say, and the next stream usually doubles.";
   } else {
     headline = "Building an audience.";
-    body = "Chat was active enough to track the trend, not enough to draw a meaningful timeline. The Last Stream Recap above will measure your delta as this number grows.";
+    body = "Chat was active enough to track the trend, not enough to draw a meaningful timeline. The Last Stream Recap above will measure how this changes as it grows.";
   }
 
   return (
