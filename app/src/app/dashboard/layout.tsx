@@ -4,6 +4,7 @@ import DashSidebar from "@/components/dashboard/DashSidebar";
 import DashTopbar from "@/components/dashboard/DashTopbar";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { getUserUsage } from "@/lib/limits";
+import { buildUpgradePitch } from "@/lib/upgrade-pitch";
 
 /**
  * Dashboard layout — new dash-shell (sidebar + topbar + content grid).
@@ -58,6 +59,14 @@ export default async function DashboardLayout({
 
   const usage = await getUserUsage(user.id, supabase);
 
+  // Personalize the upgrade pitch using the user's actual reports.
+  // Only matters for trial users — Pro users never see the banner. We
+  // still compute it cheaply so a user who just bumped against the cap
+  // sees their real numbers in the modal, not a generic teaser.
+  const upgradePitch = usage.on_trial
+    ? await buildUpgradePitch(user.id, supabase)
+    : null;
+
   return (
     <div className="dash">
       <div className="dash-shell">
@@ -72,12 +81,13 @@ export default async function DashboardLayout({
         <main className="main">
           <DashTopbar />
           <div className="content">
-            {usage.on_trial && (
+            {usage.on_trial && upgradePitch && (
               <TrialBanner
                 analysesUsed={usage.analyses_used}
                 analysesLimit={usage.analyses_limit}
                 clipsUsed={usage.clips_used}
                 clipsLimit={usage.clips_limit}
+                personalizedReason={upgradePitch.reason}
               />
             )}
             {children}

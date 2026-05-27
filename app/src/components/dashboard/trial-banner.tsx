@@ -10,26 +10,34 @@ import { UpgradeModal } from "@/components/dashboard/upgrade-modal";
  * shifts to a "trial used up" state with a direct upgrade CTA when both
  * counters are exhausted. Lives in the dashboard layout so every page
  * shows a consistent state.
+ *
+ * The `personalizedReason` prop carries the upgrade-pitch text built
+ * server-side from the user's actual reports (lib/upgrade-pitch.ts).
+ * Surfaced in the UpgradeModal when the user clicks the CTA so they
+ * see their real numbers, not a generic feature list.
  */
 export function TrialBanner({
   analysesUsed,
   analysesLimit,
   clipsUsed,
   clipsLimit,
+  personalizedReason,
 }: {
   analysesUsed: number;
   analysesLimit: number;
   clipsUsed: number;
   clipsLimit: number;
+  personalizedReason: string;
 }) {
   const [open, setOpen] = useState(false);
   const analysesLeft = Math.max(0, analysesLimit - analysesUsed);
   const clipsLeft = Math.max(0, clipsLimit - clipsUsed);
   const exhausted = analysesLeft === 0 && clipsLeft === 0;
+  const analysesExhausted = analysesLeft === 0;
   const lastAnalysis = analysesLeft === 1;
 
   // Tone shifts as the trial drains.
-  const tone = exhausted ? "danger" : analysesLeft === 0 || clipsLeft === 0 ? "warn" : "neutral";
+  const tone = exhausted ? "danger" : analysesExhausted || clipsLeft === 0 ? "warn" : "neutral";
 
   const accent =
     tone === "danger"
@@ -38,15 +46,23 @@ export function TrialBanner({
         ? "var(--orange, #d97706)"
         : "var(--blue)";
 
+  // Cap-hit copy specifically calls out what the user LOSES by not upgrading,
+  // not what they gain. Loss aversion converts better than feature lists at
+  // the moment of paywall-hit, and references the cross-stream tracking they
+  // genuinely cannot access without Pro.
   const headline = exhausted
-    ? "Your free trial is used up. Subscribe to keep going."
-    : lastAnalysis
-      ? "Your last free analysis. Make it count."
-      : "Free trial";
+    ? "Trial used up. Cross-stream tracking is locked."
+    : analysesExhausted
+      ? "Out of analyses. Pro unlocks the delta view."
+      : lastAnalysis
+        ? "One free analysis left. Make it count."
+        : "Free trial";
 
   const subline = exhausted
-    ? "Pro is $9.99/month and resets monthly with 15 analyses and 20 clips."
-    : `${analysesLeft} ${analysesLeft === 1 ? "analysis" : "analyses"} and ${clipsLeft} ${clipsLeft === 1 ? "clip" : "clips"} remaining.`;
+    ? "Your reports are still here, but you can't compare them or track what changed. Pro is $9.99 a month."
+    : analysesExhausted
+      ? "You've used all 3. Pro is 15 analyses a month + the score-delta view that only works across multiple reports."
+      : `${analysesLeft} ${analysesLeft === 1 ? "analysis" : "analyses"} and ${clipsLeft} ${clipsLeft === 1 ? "clip" : "clips"} remaining.`;
 
   return (
     <>
@@ -91,7 +107,7 @@ export function TrialBanner({
       <UpgradeModal
         isOpen={open}
         onClose={() => setOpen(false)}
-        reason="Your trial gives you a taste. Pro unlocks 15 analyses and 20 clips every month plus highlight reels and the full coach report."
+        reason={personalizedReason}
       />
     </>
   );

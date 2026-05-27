@@ -8,6 +8,7 @@ import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
 import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { scoreColorHex } from "@/lib/score-utils";
+import { buildUpgradePitch } from "@/lib/upgrade-pitch";
 
 const Icons = {
   Back: () => (
@@ -92,6 +93,11 @@ export default async function VodReportPage({
   const isPro =
     profileForPlan?.plan === "pro" &&
     !(profileForPlan.subscription_expires_at && new Date(profileForPlan.subscription_expires_at) < new Date());
+
+  // Personalized upgrade pitch using the user's actual reports — fed to
+  // the locked-tease modal inside CoachReportCard so the conversion
+  // moment references real numbers instead of a generic feature list.
+  const upgradePitch = isPro ? null : await buildUpgradePitch(user!.id, supabase);
 
   const peaks = (vod.peak_data as any[]) || [];
   const coachReport = vod.coach_report as any;
@@ -303,6 +309,7 @@ export default async function VodReportPage({
               ? ((profileForPlan!.coaching_arc as { recurring_improvements?: string[] }).recurring_improvements ?? [])
               : []
           }
+          personalizedUpgradeReason={upgradePitch?.reason}
         />
       ) : (
         <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>

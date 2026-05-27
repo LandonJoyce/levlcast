@@ -456,7 +456,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [],
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [], personalizedUpgradeReason,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -476,6 +476,13 @@ export function CoachReportCard({
    * badging — older reports without arc data won't show any badges.
    */
   recurringImprovements?: string[];
+  /**
+   * Personalized upgrade pitch text built server-side from the user's
+   * actual reports (lib/upgrade-pitch.ts). Surfaces in the UpgradeModal
+   * opened from this card so free users see their real numbers instead
+   * of a generic feature pitch. Falls back to a sane default if absent.
+   */
+  personalizedUpgradeReason?: string;
 }) {
   // Strip em dashes from stored report text — old records in the DB may have them
   // even though new reports are cleaned at parse time in lib/analyze.ts
@@ -681,19 +688,28 @@ export function CoachReportCard({
                 Performance Score
               </div>
               <CircularDial score={report.overall_score} displayScore={displayScore} draw={draw} />
-              {/* Delta */}
-              <div style={{
-                marginTop: 16, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 20,
-                color: delta !== null && delta > 0 ? "#A3E635" : delta !== null && delta < 0 ? "#F87171" : "#6F7C95",
-                fontStyle: "italic", display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                opacity: draw ? 1 : 0, transform: draw ? "translateY(0)" : "translateY(4px)",
-                transition: "opacity 500ms ease 1.5s, transform 500ms ease 1.5s",
-              }}>
-                {delta !== null
-                  ? <>{delta > 0 ? "↗" : delta < 0 ? "↘" : "→"} {delta > 0 ? `+${delta}` : delta} from last stream</>
-                  : <span style={{ fontSize: 13, color: "#4D5876" }}>First report</span>
-                }
-              </div>
+              {/* Delta — Pro-only. Free users see the real value below in
+                  the locked tease (blurred), which is the whole funnel hook.
+                  Showing the real "+6 from last stream" up here would leak
+                  the cross-stream insight Pro is selling. */}
+              {isPro ? (
+                <div style={{
+                  marginTop: 16, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 20,
+                  color: delta !== null && delta > 0 ? "#A3E635" : delta !== null && delta < 0 ? "#F87171" : "#6F7C95",
+                  fontStyle: "italic", display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                  opacity: draw ? 1 : 0, transform: draw ? "translateY(0)" : "translateY(4px)",
+                  transition: "opacity 500ms ease 1.5s, transform 500ms ease 1.5s",
+                }}>
+                  {delta !== null
+                    ? <>{delta > 0 ? "↗" : delta < 0 ? "↘" : "→"} {delta > 0 ? `+${delta}` : delta} from last stream</>
+                    : <span style={{ fontSize: 13, color: "#4D5876" }}>First report</span>
+                  }
+                </div>
+              ) : (
+                <div style={{ marginTop: 16, fontSize: 13, color: "#4D5876", fontStyle: "italic" }}>
+                  {previousScore !== undefined ? "Cross-stream tracking unlocks with Pro" : "First report — Pro tracks the change from here"}
+                </div>
+              )}
               {isPersonalBest && draw && (
                 <div style={{ marginTop: 14, fontSize: 12, color: "#fbbf24", letterSpacing: "0.04em" }}>
                   New personal best
@@ -745,11 +761,40 @@ export function CoachReportCard({
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
-                {[
-                  { label: "Score delta", value: "+6", color: "#A3E635" },
-                  { label: "Mic energy", value: "+12%", color: "#A3E635" },
-                  { label: "Dead air", value: "-3min", color: "#A3E635" },
-                ].map((m) => (
+                {(() => {
+                  // Use the REAL recapDelta values when present (returning user
+                  // with a previous report). Falls back to evergreen feature
+                  // labels for first-time users so we never blur fake numbers.
+                  const realDelta = recapDelta;
+                  const tiles = realDelta ? [
+                    {
+                      label: "Score delta",
+                      value: realDelta.score.delta > 0
+                        ? `+${realDelta.score.delta}`
+                        : `${realDelta.score.delta}`,
+                      color: realDelta.score.delta >= 0 ? "#A3E635" : "#F87171",
+                    },
+                    {
+                      label: realDelta.biggestWin?.key ? `${realDelta.biggestWin.key} delta` : "Sub-score win",
+                      value: realDelta.biggestWin
+                        ? (realDelta.biggestWin.delta > 0 ? `+${realDelta.biggestWin.delta}` : `${realDelta.biggestWin.delta}`)
+                        : "?",
+                      color: (realDelta.biggestWin?.delta ?? 0) >= 0 ? "#A3E635" : "#F87171",
+                    },
+                    {
+                      label: "Dead air change",
+                      value: realDelta.deadAir
+                        ? `${realDelta.deadAir.improved ? "-" : "+"}${Math.abs(realDelta.deadAir.currentTotalSec - realDelta.deadAir.prevTotalSec)}s`
+                        : "?",
+                      color: realDelta.deadAir?.improved ? "#A3E635" : "#F87171",
+                    },
+                  ] : [
+                    { label: "Score delta", value: "track", color: "#A3E635" },
+                    { label: "Recurring patterns", value: "track", color: "#A3E635" },
+                    { label: "Dead air trend", value: "track", color: "#A3E635" },
+                  ];
+                  return tiles;
+                })().map((m) => (
                   <div key={m.label} style={{
                     position: "relative", padding: "14px 12px", borderRadius: 10,
                     background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
@@ -1319,7 +1364,10 @@ export function CoachReportCard({
       <UpgradeModal
         isOpen={upgradeOpen}
         onClose={() => setUpgradeOpen(false)}
-        reason="Unlock all fixes, growth-killer flags, and 15 VOD analyses per month with full clip generation."
+        reason={
+          personalizedUpgradeReason ??
+          "Unlock all fixes, growth-killer flags, and 15 VOD analyses per month with full clip generation."
+        }
       />
     </>
   );
