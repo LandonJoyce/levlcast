@@ -28,6 +28,7 @@ import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyE
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_TRIAL_LIMITS, FOUNDING_LIMITS, PRO_LIMITS } from "@/lib/limits";
+import { startTrialDiscountIfNeeded } from "@/lib/trial-discount";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -376,6 +377,11 @@ export const analyzeVod = inngest.createFunction(
           if (twitchId) {
             await incrementTrialAnalysis(twitchId);
           }
+
+          // Start the 72-hour upgrade discount window. Idempotent — only
+          // writes when the column is still null, so this only fires for the
+          // user's first-ever completed analysis.
+          await startTrialDiscountIfNeeded(userId, supabase);
         } else {
           // Pro / founding — monthly counter
           const { data: usageLog } = await supabase
