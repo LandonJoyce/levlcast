@@ -269,7 +269,7 @@ export default async function DashboardPage() {
 
       <OnboardingChecklist />
       <AdminReplyCard />
-      <PreStreamFocus arc={(profile?.coaching_arc as CoachingArcData | null) ?? null} />
+      {isPro && <PreStreamFocus arc={(profile?.coaching_arc as CoachingArcData | null) ?? null} />}
 
       {/* Hero focus card */}
       <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
@@ -285,7 +285,7 @@ export default async function DashboardPage() {
               From your latest stream: <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
             </p>
             <div className="row gap-sm" style={{ marginTop: 6, flexWrap: "wrap" }}>
-              {delta !== null && (
+              {isPro && delta !== null && (
                 <span className={`chip ${delta >= 0 ? "g" : "r"}`}>
                   <Icons.Trend /> {delta >= 0 ? "+" : ""}{delta} vs previous
                 </span>
@@ -310,8 +310,10 @@ export default async function DashboardPage() {
         <UnpostedClipsCard clips={unpostedClips} isYouTubeConnected={isYouTubeConnected} />
       )}
 
-      {/* Coaching Arc — shows once 3+ streams analyzed */}
-      {profile?.coaching_arc && (
+      {/* Coaching Arc — Pro-only. The whole point of the arc is cross-stream
+          longitudinal coaching, which is the value we're selling on the paywall.
+          Free users see locked teasers inside their report instead. */}
+      {isPro && profile?.coaching_arc && (
         <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
       )}
 

@@ -88,6 +88,7 @@ export default async function VodPunchPage({
     { count: priorAnalyzedCount },
     { data: processingClip },
     { data: allClipsForVod },
+    { data: profile },
   ] = await Promise.all([
     supabase
       .from("clips")
@@ -141,7 +142,16 @@ export default async function VodPunchPage({
       .eq("user_id", user!.id)
       .eq("vod_id", id)
       .in("status", ["ready", "processing"]),
+    supabase
+      .from("profiles")
+      .select("plan, subscription_expires_at")
+      .eq("id", user!.id)
+      .single(),
   ]);
+
+  const isPro =
+    profile?.plan === "pro" &&
+    !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
 
   const coachReport = vod.coach_report as any;
   const peaks = (vod.peak_data as any[]) ?? [];
@@ -254,7 +264,7 @@ export default async function VodPunchPage({
                   {currentScore}
                 </span>
                 <span style={{ fontSize: 18, color: "var(--ink-3)", fontWeight: 500 }}>/100</span>
-                {scoreDelta !== null && (
+                {isPro && scoreDelta !== null && (
                   <span style={{
                     fontSize: 16, fontWeight: 700,
                     color: scoreDelta > 0 ? "var(--green)" : scoreDelta < 0 ? "var(--danger)" : "var(--ink-3)",

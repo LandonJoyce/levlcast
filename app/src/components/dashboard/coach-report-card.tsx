@@ -911,7 +911,20 @@ export function CoachReportCard({
           )}
 
           {/* ── 3. REWATCH MOMENTS ── two specific minutes to study, one win one mistake */}
-          {(report.rewatch_moments ?? []).length > 0 && (
+          {/* Locked for free: rewatch moments are pure actionable insight
+              ("rewatch 23:14, you lost chat right after this clutch"). Free
+              gets a count tease so they know there's more under the lock. */}
+          {!isPro && (report.rewatch_moments ?? []).length > 0 && (
+            <div style={{ margin: "0 0 36px" }}>
+              <LockedSection
+                label={`${(report.rewatch_moments ?? []).length} Rewatch Moment${(report.rewatch_moments ?? []).length !== 1 ? "s" : ""}`}
+                hint="Two specific minutes from this stream to study before going live again. Pro reveals the timestamps and what to watch for."
+                height={140}
+                onUpgrade={openUpgrade}
+              />
+            </div>
+          )}
+          {isPro && (report.rewatch_moments ?? []).length > 0 && (
             <div style={{ margin: "0 0 36px", padding: "24px 26px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
                 Rewatch <em style={{ fontStyle: "italic", ...gradText }}>two minutes.</em>
@@ -951,7 +964,20 @@ export function CoachReportCard({
           )}
 
           {/* ── 4. OPENING / CLOSING ── */}
-          {(report.cold_open?.note || report.closing?.note) && (
+          {/* Locked for free: per the gating spec, the closing note is locked,
+              and the opening note is actionable structural feedback too. Free
+              sees only the count of analyzed sections. */}
+          {!isPro && (report.cold_open?.note || report.closing?.note) && (
+            <div style={{ margin: "0 0 36px" }}>
+              <LockedSection
+                label="Opening & Closing"
+                hint="Pro shows how you opened and closed this stream and what to change about the first and last 60 seconds, the most retention-critical windows."
+                height={140}
+                onUpgrade={openUpgrade}
+              />
+            </div>
+          )}
+          {isPro && (report.cold_open?.note || report.closing?.note) && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 36px" }}>
               {report.cold_open?.note && (
                 <ArcCard
@@ -1007,7 +1033,20 @@ export function CoachReportCard({
           )}
 
           {/* ── 6. LAST STREAM RECAP ── */}
-          {recapDelta && <LastStreamRecap delta={recapDelta} />}
+          {/* Pro-only. This card is the literal cross-stream proof we sell on
+              the paywall; showing it for free hands the value away. Free users
+              with a prior report get a locked teaser pointing at the upgrade. */}
+          {recapDelta && isPro && <LastStreamRecap delta={recapDelta} />}
+          {recapDelta && !isPro && (
+            <div style={{ margin: "0 0 28px" }}>
+              <LockedSection
+                label="Last Stream Recap"
+                hint="Pro shows score change vs last stream, biggest win, biggest regression, dead-air change, and which weaknesses came back."
+                height={180}
+                onUpgrade={openUpgrade}
+              />
+            </div>
+          )}
 
           {/* ── 6b. LONGITUDINAL TREND ── */}
           {isPro && report.trend_vs_history && report.trend_vs_history.direction !== "first_stream" && (() => {
@@ -1036,7 +1075,19 @@ export function CoachReportCard({
           })()}
 
           {/* ── 7. SCORE TRAJECTORY ── */}
-          {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
+          {/* Pro-only. Same reason as the Last Stream Recap above: the trend
+              line across streams IS the cross-stream insight Pro is selling. */}
+          {trajectory && trajectory.length >= 2 && isPro && <ScoreTrajectory points={trajectory} />}
+          {trajectory && trajectory.length >= 2 && !isPro && (
+            <div style={{ margin: "0 0 28px" }}>
+              <LockedSection
+                label="Score Trajectory"
+                hint="Pro plots your score across every stream so you can see whether you're actually trending up."
+                height={160}
+                onUpgrade={openUpgrade}
+              />
+            </div>
+          )}
 
           {/* ── STREAM TIMELINE ── */}
           {(gaps.length > 0 || (chatPulse && chatPulse.length > 0)) && totalSecs > 0 && (
@@ -1183,7 +1234,9 @@ export function CoachReportCard({
                         </div>
                       );
                     })}
-                    {report.best_moment && (() => {
+                    {/* Pro-only: the marker leaks WHERE the best moment is.
+                        Free sees the locked Best Moment card below the timeline. */}
+                    {isPro && report.best_moment && (() => {
                       const pct = (parseTimeSecs(report.best_moment.time) / totalSecs) * 100;
                       if (pct < 0 || pct > 100) return null;
                       return (
@@ -1224,7 +1277,7 @@ export function CoachReportCard({
                         </span>
                       </>
                     )}
-                    {report.best_moment && (
+                    {isPro && report.best_moment && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                         <span style={{ display: "inline-block", width: 2, height: 14, background: "#A3E635", boxShadow: "0 0 5px rgba(163,230,53,0.6)" }} />
                         Best moment
@@ -1272,7 +1325,7 @@ export function CoachReportCard({
                         <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.08em", textTransform: "uppercase" }}>Gaps · longest {fmtDur(Math.max(...gaps.map(g => g.duration)))}</div>
                       </div>
                     </div>
-                    {report.best_moment && (
+                    {report.best_moment && isPro && (
                       <div style={{ flex: 1, minWidth: 180, padding: "12px 16px", borderRadius: 8, background: "rgba(163,230,53,0.05)", border: "1px solid rgba(163,230,53,0.18)" }}>
                         <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
                           Best moment ·{" "}
@@ -1286,6 +1339,16 @@ export function CoachReportCard({
                         <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.55 }}>
                           {clean(report.best_moment.description)}
                         </div>
+                      </div>
+                    )}
+                    {report.best_moment && !isPro && (
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <LockedSection
+                          label="Best Moment"
+                          hint="Pro reveals the timestamp and what made it the highest-leverage moment of this stream."
+                          height={90}
+                          onUpgrade={openUpgrade}
+                        />
                       </div>
                     )}
                   </div>
