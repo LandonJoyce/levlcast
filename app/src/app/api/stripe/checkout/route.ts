@@ -131,7 +131,16 @@ export async function POST(request: Request) {
   if (referralPromoId) {
     sessionParams.discounts = [{ promotion_code: referralPromoId }];
   } else if (shouldApplyTrialDiscount) {
-    sessionParams.discounts = [{ coupon: trialDiscountCouponId! }];
+    // Accept either a coupon id (cou_xxx) or a promotion code id (promo_xxx)
+    // in STRIPE_TRIAL_DISCOUNT_COUPON_ID — they go in different Stripe fields
+    // and which one Stripe Dashboard surfaces depends on whether the user
+    // created via Coupons or Promotion Codes tab.
+    const id = trialDiscountCouponId!;
+    if (id.startsWith("promo_")) {
+      sessionParams.discounts = [{ promotion_code: id }];
+    } else {
+      sessionParams.discounts = [{ coupon: id }];
+    }
   } else {
     sessionParams.allow_promotion_codes = true;
   }
