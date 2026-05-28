@@ -11,7 +11,18 @@ interface PartnerKitProps {
   };
 }
 
-const REV_SHARE_PCT = 30;
+/**
+ * Map the partner's viewer-discount % to their rev share %. Tier 1 founding
+ * partners (20% off) get 30%; Tier 2 standard partners (15% off) get 25%.
+ * Unknown discount percents default to the Tier 2 rate so we never overpromise.
+ * Tier definitions live in [[partner-rev-share-tiers]] memory.
+ */
+function revSharePctFor(discountPct: number | null): number {
+  if (discountPct === 20) return 30;
+  if (discountPct === 15) return 25;
+  return 25;
+}
+
 const HELV = '"Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif';
 const SERIF = '"Instrument Serif", Georgia, serif';
 const GRAD = "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)";
@@ -132,6 +143,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
   // (CHRYSTA20 → 20%) so the page never shows a missing-data feel.
   const numericSuffix = code.match(/(\d{1,2})$/);
   const discountPct = data.percentOff ?? (numericSuffix ? parseInt(numericSuffix[1], 10) : 20);
+  const revSharePct = revSharePctFor(discountPct);
   const referralUrl = `https://www.levlcast.com/r/${code}`;
   const bioCopy = `LevlCast | ${code} for ${discountPct}% off → levlcast.com/r/${code}`;
 
@@ -235,7 +247,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
           <SectionLabel>The deal</SectionLabel>
           <div className="pk-deal-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <StatTile label="Viewer discount" value={`${discountPct}% off`} accent="#A3E635" />
-            <StatTile label="Your cut" value={`${REV_SHARE_PCT}%`} accent="#FFB08C" />
+            <StatTile label="Your cut" value={`${revSharePct}%`} accent="#FFB08C" />
           </div>
           <p
             style={{
@@ -243,7 +255,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
               color: "rgba(255,255,255,0.55)", margin: "16px 0 0",
             }}
           >
-            Your viewers lock in {discountPct}% off Pro forever as long as they stay subscribed. You take {REV_SHARE_PCT}% of every Pro signup that comes through your code, every month they keep paying. Cancellations stop the payout. Renewals keep it going.
+            Your viewers lock in {discountPct}% off Pro forever as long as they stay subscribed. You take {revSharePct}% of every Pro signup that comes through your code, every month they keep paying. Cancellations stop the payout. Renewals keep it going.
           </p>
         </section>
 
@@ -425,7 +437,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
           >
             <li>Viewer clicks your link. The {discountPct}% off applies automatically at Stripe checkout.</li>
             <li>Their subscription gets tagged with <code style={{ fontFamily: '"JetBrains Mono", monospace', background: "rgba(255,255,255,0.05)", padding: "1px 6px", borderRadius: 4, fontSize: 13 }}>referral_code: {code}</code> in metadata.</li>
-            <li>Each month, Landon pulls active subscribers tagged with your code and pays you {REV_SHARE_PCT}% of net revenue.</li>
+            <li>Each month, Landon pulls active subscribers tagged with your code and pays you {revSharePct}% of net revenue.</li>
             <li>Cancellations stop your payouts. Renewals keep them going.</li>
             <li>First payout clears after Stripe&apos;s 7-day chargeback window on the initial subscription.</li>
           </ol>
