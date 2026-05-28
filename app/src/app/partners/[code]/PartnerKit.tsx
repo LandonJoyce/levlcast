@@ -371,54 +371,48 @@ export function PartnerKit({ data }: PartnerKitProps) {
           </div>
         </section>
 
-        {/* Banner assets */}
+        {/* Banner asset — single per-partner image. Resized in their own
+            tool if they need a different dimension; one source image keeps
+            the kit page simple and the upload workflow fast. */}
         <section style={{ marginBottom: 56 }}>
-          <SectionLabel>Banner overlays</SectionLabel>
+          <SectionLabel>Your banner</SectionLabel>
           <p
             style={{
               fontFamily: HELV, fontSize: 14, lineHeight: 1.6,
               color: "rgba(255,255,255,0.65)", margin: "0 0 18px",
             }}
           >
-            Drop into OBS as an image source, or use as a pinned chat image. If you need a different format (Twitch panel, story-sized, etc.) just ask.
+            Drop into OBS as an image source, use as a pinned chat image, or post to socials. If you need a different format (Twitch panel, story-sized, etc.) just ask.
           </p>
-          <div className="pk-banner-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-            {[
-              { size: "320 × 209", path: `/partners/${code.toLowerCase()}/overlay-320.png` },
-              { size: "400 × 262", path: `/partners/${code.toLowerCase()}/overlay-400.png` },
-              { size: "480 × 314", path: `/partners/${code.toLowerCase()}/overlay-480.png` },
-            ].map(({ size, path }) => (
-              <a
-                key={size}
-                href={path}
-                download
-                style={{
-                  display: "block",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 10,
-                  padding: "16px 14px",
-                  textAlign: "center",
-                  textDecoration: "none",
-                  transition: "all 150ms ease",
-                }}
-              >
-                <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "#ECF1FA", margin: "0 0 8px", fontWeight: 600 }}>
-                  {size}
-                </p>
-                <p style={{ fontFamily: HELV, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#FF5800", margin: 0 }}>
-                  Download ↓
-                </p>
-              </a>
-            ))}
-          </div>
+          <a
+            href={`/partners/${code.toLowerCase()}/banner.png`}
+            download
+            style={{
+              display: "block",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 10,
+              padding: "20px 18px",
+              textAlign: "center",
+              textDecoration: "none",
+              transition: "all 150ms ease",
+              maxWidth: 320,
+            }}
+          >
+            <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "#ECF1FA", margin: "0 0 8px", fontWeight: 600 }}>
+              {code} banner
+            </p>
+            <p style={{ fontFamily: HELV, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#FF5800", margin: 0 }}>
+              Download ↓
+            </p>
+          </a>
           <p
             style={{
               fontFamily: HELV, fontSize: 11.5, lineHeight: 1.55,
               color: "rgba(255,255,255,0.35)", margin: "12px 0 0",
             }}
           >
-            Banners are generated per partner. If yours aren&apos;t uploaded yet, reply to the email this kit came from and Landon will send them within the day.
+            If your banner isn&apos;t uploaded yet, reply to the email this kit came from and Landon will send one within the day.
           </p>
         </section>
 
