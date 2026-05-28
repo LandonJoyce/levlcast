@@ -564,6 +564,29 @@ const CHUNK_SECONDS = 20 * 60;
 // Overlap between adjacent chunks so moments on boundaries aren't split.
 const CHUNK_OVERLAP = 2 * 60;
 
+// Hard cap on Claude peak-detection chunks per VOD. Without this, a 12-hour
+// stream produces ~37 chunks at the base 20-min size and racks up $4-6 in
+// Claude spend in one analyze run. Capping at 12 caps per-VOD spend at
+// ~$1.50 regardless of stream length. Chunk size is scaled up adaptively
+// for long VODs so we still cover the whole stream — see computeChunkSeconds.
+const MAX_PEAK_CHUNKS = 12;
+
+/**
+ * Decide chunk length for peak detection. Short VODs use the base 20-min
+ * size; long VODs scale chunk size up to keep total chunks <= MAX_PEAK_CHUNKS.
+ * Output is in seconds, always >= CHUNK_SECONDS.
+ *
+ * Math: at base size the effective stride is CHUNK_SECONDS - CHUNK_OVERLAP.
+ * For long VODs we solve chunkSize so vodDurationSec / (chunkSize - overlap)
+ * lands at MAX_PEAK_CHUNKS exactly, then ceil for safety.
+ */
+function computeChunkSeconds(vodDurationSec: number): number {
+  const baseStride = CHUNK_SECONDS - CHUNK_OVERLAP;
+  const chunksAtBase = Math.ceil(vodDurationSec / baseStride);
+  if (chunksAtBase <= MAX_PEAK_CHUNKS) return CHUNK_SECONDS;
+  return Math.ceil(vodDurationSec / MAX_PEAK_CHUNKS) + CHUNK_OVERLAP;
+}
+
 // Maximum peaks returned per VOD. Most streams have 1-2 strong clips and
 // a few good-but-not-great ones. Surfacing 5 lets the streamer pick which
 // moments to spend their clip quota on — feedback consistently asked for
@@ -607,12 +630,17 @@ export async function detectPeaks(
 
   // Build overlapping chunks so moments on boundaries aren't lost.
   // Each chunk overlaps the next by CHUNK_OVERLAP seconds.
+  // Chunk size scales with VOD length to keep total chunk count <= MAX_PEAK_CHUNKS,
+  // so an 11h stream uses ~57-min chunks (12 calls) instead of 20-min chunks
+  // (37 calls) — same coverage, ~3x cheaper.
+  const chunkSeconds = computeChunkSeconds(vodDuration);
+  console.log(`[analyze] Peak chunking: vod=${Math.round(vodDuration / 60)}min, chunkSize=${Math.round(chunkSeconds / 60)}min, projectedChunks=${Math.ceil(vodDuration / (chunkSeconds - CHUNK_OVERLAP))}`);
   const chunks: TranscriptSegment[][] = [];
   let chunkStart = 0;
   while (chunkStart < vodDuration) {
-    const chunkEnd = chunkStart + CHUNK_SECONDS;
+    const chunkEnd = chunkStart + chunkSeconds;
     chunks.push(segments.filter((s) => s.start >= chunkStart && s.start < chunkEnd));
-    chunkStart += CHUNK_SECONDS - CHUNK_OVERLAP;
+    chunkStart += chunkSeconds - CHUNK_OVERLAP;
   }
 
   const allPeaks: Peak[] = [];
