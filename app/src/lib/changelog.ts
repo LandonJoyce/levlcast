@@ -20,6 +20,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.13.2",
+    date: "2026-05-27",
+    title: "Pro report unlocks the coaching",
+    items: [
+      { type: "improved", text: "Cross-stream tracking, score trajectory, rewatch moments, opening/closing breakdown, and best-moment analysis are now Pro features. Free reports still show your score, stream story, and a strength, plus the timeline so you can see what we found." },
+      { type: "improved", text: "Plain-language report copy throughout. No more 'delta' language." },
+    ],
+  },
+  {
     version: "v0.13.1",
     date: "2026-05-13",
     title: "Feedback channel + long stream fixes",
