@@ -41,7 +41,7 @@ const FEATURES: Record<Tier, string[]> = {
   ],
   pro_plus: [
     "35 VOD analyses / month",
-    "60 hours of analysis / month",
+    "50 hours of analysis / month",
     "Streams up to 10 hours each",
     "35 clips per month",
     "Priority processing",

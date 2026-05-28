@@ -65,15 +65,19 @@ export const FOUNDING_LIMITS = {
 };
 
 // Pro Plus tier — $29.99/mo. For power users who hit the Pro 20h cap.
-// Math at max usage: 60h × $0.33 = $19.80 + 35 clips × $0.15 = $5.25 + $2
-// fixed = $27.05 worst case against $29.99 revenue = ~10% margin floor.
-// Average user (~35h, 15 clips) costs ~$16.50 = healthy 45% margin.
+// Hour cap dropped from 60h → 50h on 2026-05-28 to guarantee at least
+// $5 margin per user even at worst-case blended cost ($0.50/hour).
+// Math at max usage: 50h × $0.30 blended (post-chunking-fix) = $15 +
+// 35 clips × ~$0.02 = $0.70 + $2 fixed = $17.70 against $29.99 revenue
+// = ~$12 margin in the realistic case. Worst case ($0.50/hr): 50h × $0.50
+// = $25 cost, $4.99 margin floor.
+// Average user (~30h, 15 clips) costs ~$11 = healthy 60% margin.
 // NOT eligible for partner discount codes (CHRYSTA20 etc.) — those apply
 // to standard Pro only, set in the Stripe coupon's product scope.
 export const PRO_PLUS_LIMITS = {
   analyses_per_month: 35,
   clips_per_month: 35,
-  hours_per_month: 60,
+  hours_per_month: 50,
 };
 
 // Kept for backwards-compatible imports — semantically the *trial* limits now.

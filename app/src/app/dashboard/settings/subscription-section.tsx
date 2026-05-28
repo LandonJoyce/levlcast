@@ -197,7 +197,7 @@ export function SubscriptionSection({
         initialTier={upgradeInitialTier}
         reason={
           upgradeInitialTier === "pro_plus"
-            ? "Pro Plus bumps you to 35 analyses, 60 hours, and 35 clips per month. Streams up to 10 hours each."
+            ? "Pro Plus bumps you to 35 analyses, 50 hours, and 35 clips per month. Streams up to 10 hours each."
             : "Upgrade to Pro for 15 VOD analyses and 20 clip generations per month."
         }
       />
