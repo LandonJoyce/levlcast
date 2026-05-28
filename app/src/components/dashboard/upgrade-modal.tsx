@@ -9,16 +9,6 @@ interface UpgradeModalProps {
   reason: string;
   /** Pre-select a tier when opening (e.g. from "Upgrade to Pro Plus" CTA). */
   initialTier?: "pro" | "pro_plus";
-  /** First-analysis trial discount (only applies to Pro monthly). When the
-      window is open, show discounted pricing and a small countdown so the
-      streamer feels the deadline. Stripe checkout applies the coupon
-      automatically — the streamer doesn't have to type a code. */
-  trialDiscount?: {
-    expiresAtIso: string;
-    discountedMonthly: number;
-    standardMonthly: number;
-    durationMonths: number;
-  } | null;
 }
 
 type Tier = "pro" | "pro_plus";
@@ -77,24 +67,11 @@ function StripeBadge() {
   );
 }
 
-export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro", trialDiscount = null }: UpgradeModalProps) {
+export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro" }: UpgradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tier, setTier] = useState<Tier>(initialTier);
   const [cycle, setCycle] = useState<Cycle>("monthly");
-
-  // Discount only applies to Pro monthly. When the user picks Pro Plus or
-  // annual, fall back to standard price + a small note explaining why.
-  const discountApplies = !!trialDiscount && tier === "pro" && cycle === "monthly";
-
-  const countdownLabel = (() => {
-    if (!trialDiscount) return null;
-    const ms = new Date(trialDiscount.expiresAtIso).getTime() - Date.now();
-    if (ms <= 0) return null;
-    const hours = Math.floor(ms / (60 * 60 * 1000));
-    const mins = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
-    return hours >= 1 ? `${hours}h ${mins}m left` : `${mins}m left`;
-  })();
 
   async function handleUpgrade() {
     setLoading(true);
@@ -247,38 +224,14 @@ export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro", tri
             border: `1px solid ${tierAccentBorder}`,
             borderRadius: 12, padding: "14px 16px",
           }}>
-            {discountApplies && trialDiscount ? (
-              <>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)" }}>
-                    ${trialDiscount.discountedMonthly.toFixed(2)}
-                  </span>
-                  <span style={{ fontSize: 13, color: "var(--ink-3)" }}>/month for {trialDiscount.durationMonths} months</span>
-                  <span style={{ fontSize: 13, color: "var(--ink-3)", textDecoration: "line-through" }}>
-                    ${trialDiscount.standardMonthly.toFixed(2)}
-                  </span>
-                </div>
-                <p style={{ fontSize: 11, color: "var(--green)", margin: "4px 0 0", fontWeight: 600 }}>
-                  Discount auto-applied at checkout{countdownLabel ? ` · ${countdownLabel}` : ""}
-                </p>
-              </>
-            ) : (
-              <>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)" }}>{details.price}</span>
-                  <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{details.cycle} · {details.sub}</span>
-                </div>
-                {details.equiv && (
-                  <p style={{ fontSize: 11, color: "var(--green)", margin: "4px 0 0", fontWeight: 600 }}>
-                    {details.equiv}
-                  </p>
-                )}
-                {trialDiscount && tier === "pro" && cycle === "annual" && (
-                  <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "4px 0 0" }}>
-                    The {Math.round((1 - trialDiscount.discountedMonthly / trialDiscount.standardMonthly) * 100)}% trial discount applies to monthly only.
-                  </p>
-                )}
-              </>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)" }}>{details.price}</span>
+              <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{details.cycle} · {details.sub}</span>
+            </div>
+            {details.equiv && (
+              <p style={{ fontSize: 11, color: "var(--green)", margin: "4px 0 0", fontWeight: 600 }}>
+                {details.equiv}
+              </p>
             )}
           </div>
 
@@ -329,9 +282,7 @@ export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro", tri
           >
             {loading
               ? "Redirecting to checkout..."
-              : discountApplies && trialDiscount
-                ? `Upgrade to Pro: $${trialDiscount.discountedMonthly.toFixed(2)}/mo for ${trialDiscount.durationMonths} months`
-                : `Upgrade to ${isProPlus ? "Pro Plus" : "Pro"}: ${details.price}${details.cycle}`}
+              : `Upgrade to ${isProPlus ? "Pro Plus" : "Pro"}: ${details.price}${details.cycle}`}
           </button>
 
           {/* Stripe badge */}

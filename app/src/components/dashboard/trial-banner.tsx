@@ -22,19 +22,12 @@ export function TrialBanner({
   clipsUsed,
   clipsLimit,
   personalizedReason,
-  trialDiscount,
 }: {
   analysesUsed: number;
   analysesLimit: number;
   clipsUsed: number;
   clipsLimit: number;
   personalizedReason: string;
-  trialDiscount?: {
-    expiresAtIso: string;
-    discountedMonthly: number;
-    standardMonthly: number;
-    durationMonths: number;
-  } | null;
 }) {
   const [open, setOpen] = useState(false);
   const analysesLeft = Math.max(0, analysesLimit - analysesUsed);
@@ -115,7 +108,6 @@ export function TrialBanner({
         isOpen={open}
         onClose={() => setOpen(false)}
         reason={personalizedReason}
-        trialDiscount={trialDiscount ?? null}
       />
     </>
   );

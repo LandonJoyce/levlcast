@@ -456,7 +456,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [], personalizedUpgradeReason, trialDiscount = null,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [], personalizedUpgradeReason,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -483,17 +483,6 @@ export function CoachReportCard({
    * of a generic feature pitch. Falls back to a sane default if absent.
    */
   personalizedUpgradeReason?: string;
-  /**
-   * 72-hour first-analysis discount status. When passed and active, the
-   * UpgradeModal opened from this card surfaces discounted pricing + a
-   * countdown to create deadline pressure at the highest-intent moment.
-   */
-  trialDiscount?: {
-    expiresAtIso: string;
-    discountedMonthly: number;
-    standardMonthly: number;
-    durationMonths: number;
-  } | null;
 }) {
   // Strip em dashes from stored report text — old records in the DB may have them
   // even though new reports are cleaned at parse time in lib/analyze.ts
@@ -836,9 +825,7 @@ export function CoachReportCard({
                   cursor: "pointer", letterSpacing: "0.01em",
                 }}
               >
-                {trialDiscount
-                  ? `Unlock Pro · $${trialDiscount.discountedMonthly.toFixed(2)}/mo for ${trialDiscount.durationMonths} months`
-                  : "Unlock Pro · $9.99/month"}{" "}
+                Unlock Pro · $9.99/month{" "}
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
               </button>
             </div>
@@ -1413,9 +1400,7 @@ export function CoachReportCard({
                   cursor: "pointer", letterSpacing: "0.01em",
                 }}
               >
-                {trialDiscount
-                  ? `Unlock Pro · $${trialDiscount.discountedMonthly.toFixed(2)}/mo for ${trialDiscount.durationMonths} months`
-                  : "Unlock Pro · $9.99/month"}{" "}
+                Unlock Pro · $9.99/month{" "}
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
               </button>
             </div>
@@ -1446,7 +1431,6 @@ export function CoachReportCard({
           personalizedUpgradeReason ??
           "Unlock all fixes, growth-killer flags, and 15 VOD analyses per month with full clip generation."
         }
-        trialDiscount={trialDiscount}
       />
     </>
   );

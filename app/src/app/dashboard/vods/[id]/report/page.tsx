@@ -9,7 +9,6 @@ import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/componen
 import { ShareReportButton } from "@/components/dashboard/share-report-button";
 import { scoreColorHex } from "@/lib/score-utils";
 import { buildUpgradePitch } from "@/lib/upgrade-pitch";
-import { computeTrialDiscountStatus, TRIAL_DISCOUNT_DURATION_MONTHS } from "@/lib/trial-discount";
 
 const Icons = {
   Back: () => (
@@ -88,7 +87,7 @@ export default async function VodReportPage({
     supabase.from("vods").select("status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(20),
     // Prior stats also filtered to streams before this one
     supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(50),
-    supabase.from("profiles").select("plan, subscription_expires_at, coaching_arc, trial_discount_started_at").eq("id", user!.id).single(),
+    supabase.from("profiles").select("plan, subscription_expires_at, coaching_arc").eq("id", user!.id).single(),
   ]);
 
   const isPro =
@@ -99,14 +98,6 @@ export default async function VodReportPage({
   // the locked-tease modal inside CoachReportCard so the conversion
   // moment references real numbers instead of a generic feature list.
   const upgradePitch = isPro ? null : await buildUpgradePitch(user!.id, supabase);
-
-  // 72-hour discount window applies to non-Pro users who already completed
-  // at least one analysis. Surfaced in the locked-tease modal as discounted
-  // pricing + a countdown so the streamer feels the deadline at the moment
-  // of highest intent.
-  const trialDiscount = isPro
-    ? null
-    : computeTrialDiscountStatus(profileForPlan?.trial_discount_started_at ?? null);
 
   const peaks = (vod.peak_data as any[]) || [];
   const coachReport = vod.coach_report as any;
@@ -319,16 +310,6 @@ export default async function VodReportPage({
               : []
           }
           personalizedUpgradeReason={upgradePitch?.reason}
-          trialDiscount={
-            trialDiscount?.isActive && trialDiscount.expiresAt
-              ? {
-                  expiresAtIso: trialDiscount.expiresAt,
-                  discountedMonthly: trialDiscount.discountedMonthly,
-                  standardMonthly: trialDiscount.standardMonthly,
-                  durationMonths: TRIAL_DISCOUNT_DURATION_MONTHS,
-                }
-              : null
-          }
         />
       ) : (
         <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>

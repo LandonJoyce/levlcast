@@ -20,14 +20,6 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
-    version: "v0.13.3",
-    date: "2026-05-28",
-    title: "First-analysis upgrade window",
-    items: [
-      { type: "new", text: "Finish your first analysis and you have 72 hours to upgrade at 20% off for your first 3 months ($7.99/month). Discount applies automatically at checkout, no codes to type." },
-    ],
-  },
-  {
     version: "v0.13.2",
     date: "2026-05-27",
     title: "Pro report unlocks the coaching",

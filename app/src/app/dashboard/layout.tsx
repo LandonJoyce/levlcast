@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import DashSidebar from "@/components/dashboard/DashSidebar";
 import DashTopbar from "@/components/dashboard/DashTopbar";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
-import { TrialDiscountBanner } from "@/components/dashboard/trial-discount-banner";
 import { getUserUsage } from "@/lib/limits";
 import { buildUpgradePitch } from "@/lib/upgrade-pitch";
-import { computeTrialDiscountStatus, TRIAL_DISCOUNT_DURATION_MONTHS } from "@/lib/trial-discount";
 
 /**
  * Dashboard layout — new dash-shell (sidebar + topbar + content grid).
@@ -24,7 +22,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, twitch_avatar_url, twitch_login, plan, subscription_expires_at, collab_opt_in, trial_discount_started_at")
+    .select("twitch_display_name, twitch_avatar_url, twitch_login, plan, subscription_expires_at, collab_opt_in")
     .eq("id", user.id)
     .single();
 
@@ -69,13 +67,6 @@ export default async function DashboardLayout({
     ? await buildUpgradePitch(user.id, supabase)
     : null;
 
-  // 72-hour discount window opens after the user's first analysis. Only
-  // surface on the dashboard while they're still on trial — once they
-  // upgrade, the banner has no purpose. Pro users never see it.
-  const trialDiscount = usage.on_trial
-    ? computeTrialDiscountStatus(profile?.trial_discount_started_at ?? null)
-    : null;
-
   return (
     <div className="dash">
       <div className="dash-shell">
@@ -90,15 +81,6 @@ export default async function DashboardLayout({
         <main className="main">
           <DashTopbar />
           <div className="content">
-            {trialDiscount?.isActive && trialDiscount.expiresAt && upgradePitch && (
-              <TrialDiscountBanner
-                expiresAtIso={trialDiscount.expiresAt}
-                discountedMonthly={trialDiscount.discountedMonthly}
-                standardMonthly={trialDiscount.standardMonthly}
-                durationMonths={TRIAL_DISCOUNT_DURATION_MONTHS}
-                personalizedReason={upgradePitch.reason}
-              />
-            )}
             {usage.on_trial && upgradePitch && (
               <TrialBanner
                 analysesUsed={usage.analyses_used}
@@ -106,16 +88,6 @@ export default async function DashboardLayout({
                 clipsUsed={usage.clips_used}
                 clipsLimit={usage.clips_limit}
                 personalizedReason={upgradePitch.reason}
-                trialDiscount={
-                  trialDiscount?.isActive && trialDiscount.expiresAt
-                    ? {
-                        expiresAtIso: trialDiscount.expiresAt,
-                        discountedMonthly: trialDiscount.discountedMonthly,
-                        standardMonthly: trialDiscount.standardMonthly,
-                        durationMonths: TRIAL_DISCOUNT_DURATION_MONTHS,
-                      }
-                    : null
-                }
               />
             )}
             {children}

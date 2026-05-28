@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { stripe, priceIdForPlan, type CheckoutPlan } from "@/lib/stripe";
-import { computeTrialDiscountStatus } from "@/lib/trial-discount";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
@@ -65,24 +64,9 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("stripe_customer_id, twitch_display_name, trial_discount_started_at")
+    .select("stripe_customer_id, twitch_display_name")
     .eq("id", user.id)
     .single();
-
-  // First-analysis 72-hour discount. Applies only to monthly Pro checkout.
-  // Partner referral wins if both are present (partner needs attribution).
-  // Annual + Pro Plus intentionally skipped: annual is one upfront charge so
-  // a 3-month repeating coupon would behave oddly, and Pro Plus is its own
-  // segment with its own conversion model.
-  const trialDiscount = computeTrialDiscountStatus(
-    (profile as { trial_discount_started_at: string | null } | null)?.trial_discount_started_at ?? null
-  );
-  const trialDiscountCouponId = process.env.STRIPE_TRIAL_DISCOUNT_COUPON_ID;
-  const shouldApplyTrialDiscount =
-    trialDiscount.isActive &&
-    !referralPromoId &&
-    plan === "monthly" &&
-    !!trialDiscountCouponId;
 
   // Reuse existing Stripe customer so payment methods are remembered
   let customerId = profile?.stripe_customer_id as string | undefined;
@@ -130,17 +114,6 @@ export async function POST(request: Request) {
 
   if (referralPromoId) {
     sessionParams.discounts = [{ promotion_code: referralPromoId }];
-  } else if (shouldApplyTrialDiscount) {
-    // Accept either a coupon id (cou_xxx) or a promotion code id (promo_xxx)
-    // in STRIPE_TRIAL_DISCOUNT_COUPON_ID — they go in different Stripe fields
-    // and which one Stripe Dashboard surfaces depends on whether the user
-    // created via Coupons or Promotion Codes tab.
-    const id = trialDiscountCouponId!;
-    if (id.startsWith("promo_")) {
-      sessionParams.discounts = [{ promotion_code: id }];
-    } else {
-      sessionParams.discounts = [{ coupon: id }];
-    }
   } else {
     sessionParams.allow_promotion_codes = true;
   }
