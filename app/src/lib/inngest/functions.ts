@@ -58,12 +58,22 @@ export const analyzeVod = inngest.createFunction(
         console.log(`[analyze] Stage 1/4: fetching segment list for vod=${vodId} user=${userId}`);
         const { data: vod } = await supabase
           .from("vods")
-          .select("twitch_vod_id, title, duration_seconds")
+          .select("twitch_vod_id, title, duration_seconds, status")
           .eq("id", vodId)
           .eq("user_id", userId)
           .single();
 
         if (!vod) throw new Error("VOD not found");
+
+        // Dedupe guard: if the VOD is already analyzed (status=ready), exit
+        // early. Pairs with the event idempotency key set at send-sites —
+        // catches the case where the event slipped past Inngest dedup
+        // (e.g. >24h apart) or where a race let two events through.
+        // Prevents double-billing Claude on the same VOD.
+        if (vod.status === "ready") {
+          console.log(`[analyze] skip — vod ${vodId} is already 'ready', dedupe guard`);
+          throw new NonRetriableError(`VOD ${vodId} already analyzed (status=ready)`);
+        }
         console.log(`[analyze] VOD: "${vod.title}" twitch_id=${vod.twitch_vod_id} duration=${vod.duration_seconds}s`);
 
         // Min-duration guard (defense in depth — the route also checks this).

@@ -217,6 +217,10 @@ export async function POST(request: Request) {
   }
 
   await inngest.send({
+    // Idempotency key — landing paste-URL flow can fire twice if the user
+    // double-clicks "Analyze" before the spinner appears. Inngest dedupes
+    // within 24h so we don't double-bill Claude on the same VOD.
+    id: `vod-analyze-${claimed.id}`,
     name: "vod/analyze",
     data: { vodId: claimed.id, userId: user.id },
   });

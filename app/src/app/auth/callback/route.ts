@@ -168,6 +168,10 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<vo
   if (!claimed) return;
 
   await inngest.send({
+    // Idempotency key — if this same event fires twice (auth callback hit
+    // twice, browser retried OAuth, etc.) Inngest dedupes within 24h so we
+    // don't double-bill Claude on the same VOD.
+    id: `vod-analyze-${claimed.id}`,
     name: "vod/analyze",
     data: { vodId: claimed.id, userId },
   });

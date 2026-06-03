@@ -149,8 +149,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Analysis already in progress" }, { status: 409 });
   }
 
-  // Fire Inngest event — analysis runs in background, no timeout risk
+  // Fire Inngest event — analysis runs in background, no timeout risk.
+  // Idempotency key dedupes double-click / retry storms within 24h so the
+  // same VOD can't get billed twice. Range analyses use a range-specific
+  // key so partial-segment re-analyses don't collide with the full one.
+  const idempotencyId = hasRange
+    ? `vod-analyze-${vodId}-${startSeconds}-${endSeconds}`
+    : `vod-analyze-${vodId}`;
   await inngest.send({
+    id: idempotencyId,
     name: "vod/analyze",
     data: {
       vodId,
