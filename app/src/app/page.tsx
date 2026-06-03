@@ -74,7 +74,7 @@ export default async function LandingPage() {
       {/* ── Founding price banner ── */}
       <Link
         href="/auth/login"
-        aria-label="Lock the $9.99 founding price before May 31"
+        aria-label="Lock the $9.99 founding price before June 30"
         style={{
           display: "block",
           textDecoration: "none",
@@ -98,9 +98,9 @@ export default async function LandingPage() {
             }}
           >
             <span style={{ color: "rgba(255,255,255,0.85)" }}>
-              Subscribe by <b style={{ color: "#fff", fontWeight: 600 }}>May 31</b> to lock in{" "}
+              Subscribe by <b style={{ color: "#fff", fontWeight: 600 }}>June 30</b> to lock in{" "}
               <b style={{ color: "#fff", fontWeight: 600 }}>$9.99/mo forever</b>. Price moves to{" "}
-              <b style={{ color: "#fff", fontWeight: 600 }}>$15/mo</b> for everyone after.
+              <b style={{ color: "#fff", fontWeight: 600 }}>$14.99/mo</b> for everyone after.
             </span>
             <span
               style={{
