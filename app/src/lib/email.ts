@@ -390,7 +390,7 @@ export async function sendClipReadyEmail(
           <table cellpadding="0" cellspacing="0">
             <tr><td style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.4);border-radius:12px;">
               <a href="${upgradeUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#a78bfa;text-decoration:none;">
-                Upgrade to Pro — $9.99/mo →
+                Upgrade to Pro · $14.99/mo →
               </a>
             </td></tr>
           </table>

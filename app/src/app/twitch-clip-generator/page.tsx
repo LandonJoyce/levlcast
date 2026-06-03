@@ -79,7 +79,7 @@ const faqs = [
   },
   {
     q: "What does the clip generator cost?",
-    a: "Free trial: 3 full VOD analyses and 5 clips, no credit card. Pro is $9.99/month or $99/year for 15 analyses and 20 clips every month after that.",
+    a: "Free trial: 3 full VOD analyses and 5 clips, no credit card. Pro is $14.99/month or $99/year for 15 analyses and 20 clips every month after that.",
   },
 ];
 
@@ -94,7 +94,7 @@ const structuredData = {
   url: "https://www.levlcast.com/twitch-clip-generator",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Pro", price: "9.99", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "14.99", priceCurrency: "USD" },
   ],
 };
 

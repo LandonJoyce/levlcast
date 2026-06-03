@@ -106,7 +106,7 @@ export default function OutreachPage() {
   function useTemplate(lead: Lead) {
     const body = `yo! saw your ${lead.isComment ? "comment" : "post"}. LevlCast watches your VODs and tells you what to improve next stream. it also has a clipping tool so you don't have to waste time finding moments.
 
-$9.99/mo founding price locks forever if you join before May 31, then it's $15. try it at levlcast.com`;
+3 free analyses, no card. try it at levlcast.com`;
     const subject = "Built a Twitch coaching tool";
     setMessages((prev) => ({ ...prev, [lead.id]: { body, subject } }));
   }

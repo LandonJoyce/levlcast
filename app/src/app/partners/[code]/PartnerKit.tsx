@@ -366,7 +366,7 @@ export function PartnerKit({ data }: PartnerKitProps) {
                 color: "rgba(255,255,255,0.85)", margin: 0,
               }}
             >
-              The founding $9.99/mo price ends <strong style={{ color: "#FFB08C" }}>May 31</strong>. After that, new subs pay $14.99/mo. Anyone using your code before then keeps the $9.99 rate forever. Real urgency for your community.
+              Pro is $14.99/mo and your code stacks <strong style={{ color: "#FFB08C" }}>{discountPct}% off forever</strong>, so your viewers pay roughly ${(14.99 * (1 - discountPct / 100)).toFixed(2)}/mo for life. The discount auto-applies at checkout, no code typing needed.
             </p>
           </div>
         </section>

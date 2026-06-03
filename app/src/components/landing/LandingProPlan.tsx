@@ -80,10 +80,10 @@ export default function LandingProPlan() {
           {annual ? (
             <>
               <span>$99 <small>/ year</small></span>
-              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontWeight: 400 }}>$119.88</span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontWeight: 400 }}>$179.88</span>
             </>
           ) : (
-            <span>$9.99 <small>/ month</small></span>
+            <span>$14.99 <small>/ month</small></span>
           )}
         </div>
 

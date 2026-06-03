@@ -65,7 +65,7 @@ LevlCast features:
 1. Coach report on every VOD: scores 0-100, pinpoints when viewers left, gives one specific thing to fix, tracks improvement over time.
 2. Auto-clips your best moments, you edit captions and post.
 
-FOUNDING PRICE: $9.99/mo locks in forever if they subscribe before May 31. After that the price moves to $15/mo for new users. Include this as a one-line urgency hook in the message.
+PRICE: $14.99/mo or 3 free analyses to try with no card. Mention the free trial as the soft hook, not the paid price.
 
 If SKIP, return only: "SKIP: <reason>"
 
@@ -76,7 +76,7 @@ If writing the DM, lead with the coach report and use this format:
   - Sentence 1: Open with a quote from their text (preferred) OR reference the topic they posted about. Connect it to LevlCast.
   - Sentence 2: what the coach report would do for their specific situation (hypothetical: "the report would..." not "your report shows...").
   - Sentence 3 (optional): clips as a bonus.
-  - Final urgency line: "$9.99/mo founding price locks forever if you join before May 31, then it's $15."
+  - Final line: "3 free analyses, no card. try it at levlcast.com"
 - End with "try it at levlcast.com"
 
 No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". Casual, blunt, like a streamer texting another streamer. Return ONLY the subject and message, OR the SKIP line.`,

@@ -121,7 +121,7 @@ export function SubscriptionSection({
               onClick={() => { setUpgradeInitialTier("pro"); setUpgradeOpen(true); }}
               className="bg-accent hover:opacity-85 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-opacity"
             >
-              Upgrade to Pro $9.99/month
+              Upgrade to Pro $14.99/month
             </button>
           </div>
         ) : (

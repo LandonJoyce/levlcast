@@ -52,7 +52,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-bold text-white mb-3">4. Subscription and Billing</h2>
             <p className="mb-3">
-              LevlCast offers a free tier and a paid Pro tier at $9.99/month. Subscriptions renew automatically unless cancelled before the renewal date.
+              LevlCast offers a free tier and a paid Pro tier at $14.99/month. Subscriptions renew automatically unless cancelled before the renewal date.
             </p>
             <p>
               Payments are processed securely via PayPal (web) and RevenueCat (iOS). We do not store your payment details. Refunds are handled on a case-by-case basis contact us at support@levlcast.com.

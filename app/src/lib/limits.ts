@@ -3,8 +3,9 @@
  *
  * PLAN LIMITS:
  *   Free trial:     3 VOD analyses + 5 clips LIFETIME (one-time, per Twitch ID)
- *   Pro:            15 VOD analyses/month, 20 clips/month — $9.99/mo founding price
- *   Founding (20/20): grandfathered users who subscribed before the limit drop
+ *   Pro:            15 VOD analyses/month, 20 clips/month — $14.99/mo (was $9.99 founding through 2026-06-03)
+ *   Founding (20/20): grandfathered users who subscribed before the limit drop;
+ *                    all $9.99 subscribers keep their original rate via Stripe.
  *
  * FREE TRIAL — BYPASS-PROOF:
  *   Free users do not get a monthly refresh. They get 3 analyses + 5 clips,
@@ -48,9 +49,10 @@ export const PRO_LIMITS = {
   analyses_per_month: 15,
   clips_per_month: 20,
   // Hour cap added 2026-05-18 to protect margin on heavy 8h-stream users.
-  // Math at $9.99 founding price: 20h × $0.33 blended (Deepgram + Claude)
-  // = $6.60 analysis cost + ~$2 fixed (clips, R2, Stripe) = $8.60. Leaves
-  // $1.39 margin even at max usage. Average user (8-12h/mo) won't notice.
+  // Math at $14.99 price (post 2026-06-03): 20h × $0.25 blended (Deepgram +
+  // Claude, post chunking fix) = $5 analysis cost + ~$2 fixed = $7. Leaves
+  // ~$8 margin even at max usage. Average user (8-12h/mo) won't notice.
+  // Grandfathered $9.99 subs still net ~$1-3 margin at the cap.
   hours_per_month: 20,
 };
 

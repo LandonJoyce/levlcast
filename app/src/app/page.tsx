@@ -74,7 +74,7 @@ export default async function LandingPage() {
       {/* ── Founding price banner ── */}
       <Link
         href="/auth/login"
-        aria-label="Lock the $9.99 founding price before June 30"
+        aria-label="LevlCast Pro is $14.99 a month"
         style={{
           display: "block",
           textDecoration: "none",
@@ -98,9 +98,9 @@ export default async function LandingPage() {
             }}
           >
             <span style={{ color: "rgba(255,255,255,0.85)" }}>
-              Subscribe by <b style={{ color: "#fff", fontWeight: 600 }}>June 30</b> to lock in{" "}
-              <b style={{ color: "#fff", fontWeight: 600 }}>$9.99/mo forever</b>. Price moves to{" "}
-              <b style={{ color: "#fff", fontWeight: 600 }}>$14.99/mo</b> for everyone after.
+              Pro is{" "}
+              <b style={{ color: "#fff", fontWeight: 600 }}>$14.99/mo</b>. Try every feature free for{" "}
+              <b style={{ color: "#fff", fontWeight: 600 }}>3 analyses</b>. Cancel anytime.
             </span>
             <span
               style={{
@@ -112,7 +112,7 @@ export default async function LandingPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              Claim founding price
+              Start free
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>

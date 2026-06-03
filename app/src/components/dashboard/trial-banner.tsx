@@ -59,7 +59,7 @@ export function TrialBanner({
         : "Free trial";
 
   const subline = exhausted
-    ? "Your reports are still here, but you can't compare them or see what's improving. Pro is $9.99 a month."
+    ? "Your reports are still here, but you can't compare them or see what's improving. Pro is $14.99 a month."
     : analysesExhausted
       ? "You've used all 3. Pro is 15 analyses a month plus the stream-to-stream view that only works once you have more than one report."
       : `${analysesLeft} ${analysesLeft === 1 ? "analysis" : "analyses"} and ${clipsLeft} ${clipsLeft === 1 ? "clip" : "clips"} remaining.`;

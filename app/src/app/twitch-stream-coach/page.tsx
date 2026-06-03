@@ -48,7 +48,7 @@ const comparisonRows = [
   { label: "What it reviews", generic: "General streaming theory", coach: "Your actual last stream" },
   { label: "Specificity", generic: "\"Be more engaging\"", coach: "\"You went silent at 34:12 for 47 seconds\"" },
   { label: "Output format", generic: "Long blog posts", coach: "Scored report + one priority" },
-  { label: "Cost", generic: "$60–$150/hr for a real coach", coach: "Free to start, $9.99/mo Pro" },
+  { label: "Cost", generic: "$60–$150/hr for a real coach", coach: "Free to start, $14.99/mo Pro" },
   { label: "Available", generic: "Booked two weeks out", coach: "Every stream, automatically" },
 ];
 
@@ -86,7 +86,7 @@ const structuredData = {
   url: "https://www.levlcast.com/twitch-stream-coach",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Pro", price: "9.99", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "14.99", priceCurrency: "USD" },
   ],
 };
 

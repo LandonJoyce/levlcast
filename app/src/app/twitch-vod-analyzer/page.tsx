@@ -76,7 +76,7 @@ const faqs = [
   },
   {
     q: "Is the Twitch VOD analyzer really free?",
-    a: "Yes no credit card required. The free plan includes one VOD analysis per month. Pro is $9.99/month or $99/year for 15 analyses and 20 clips per month.",
+    a: "Yes no credit card required. The free plan includes one VOD analysis per month. Pro is $14.99/month or $99/year for 15 analyses and 20 clips per month.",
   },
   {
     q: "How long does VOD analysis take?",
@@ -99,7 +99,7 @@ const structuredData = {
   url: "https://www.levlcast.com/twitch-vod-analyzer",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Pro", price: "9.99", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "14.99", priceCurrency: "USD" },
   ],
 };
 

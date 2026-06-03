@@ -359,7 +359,7 @@ function LockedSection({
           onClick={onUpgrade}
           style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700, padding: "8px 18px", borderRadius: 8, background: GRAD, border: "none", color: "#fff", cursor: "pointer" }}
         >
-          Unlock with Pro · $9.99/mo
+          Unlock with Pro · $14.99/mo
         </button>
       </div>
     </div>
@@ -825,7 +825,7 @@ export function CoachReportCard({
                   cursor: "pointer", letterSpacing: "0.01em",
                 }}
               >
-                Unlock Pro · $9.99/month{" "}
+                Unlock Pro · $14.99/month{" "}
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
               </button>
             </div>
@@ -1400,7 +1400,7 @@ export function CoachReportCard({
                   cursor: "pointer", letterSpacing: "0.01em",
                 }}
               >
-                Unlock Pro · $9.99/month{" "}
+                Unlock Pro · $14.99/month{" "}
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
               </button>
             </div>

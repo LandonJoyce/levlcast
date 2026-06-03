@@ -182,9 +182,9 @@ export default function DashSidebar({ user, vodCount, clipCount, collabPendingCo
 
       {!isPro && (
         <div className="upgrade" style={{ margin: "0 0 14px" }}>
-          <div className="eb">Founding Member</div>
+          <div className="eb">Pro</div>
           <h4>Unlock Pro</h4>
-          <p>Full report on every stream + auto-clipping. $9.99/mo locked for life.</p>
+          <p>Full report on every stream + auto-clipping. $14.99/mo, cancel anytime.</p>
           <Link href="/dashboard/settings" className="btn btn-blue" style={{ padding: "7px 12px", fontSize: 12 }}>
             Upgrade <Icons.Arrow />
           </Link>
