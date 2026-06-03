@@ -79,7 +79,7 @@ export default function LandingProPlan() {
         <div className="ll-plan-price" style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           {annual ? (
             <>
-              <span>$99 <small>/ year</small></span>
+              <span>$149 <small>/ year</small></span>
               <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontWeight: 400 }}>$179.88</span>
             </>
           ) : (
@@ -92,7 +92,7 @@ export default function LandingProPlan() {
             fontSize: 12, color: "#A3E635", fontWeight: 600,
             marginTop: -8, marginBottom: 4, letterSpacing: "0.02em",
           }}>
-            Equivalent to $8.25/mo
+            Equivalent to $12.41/mo
           </div>
         )}
 
@@ -108,7 +108,7 @@ export default function LandingProPlan() {
         </ul>
 
         <Link href="/auth/login" className="ll-btn ll-btn-grad ll-btn-arrow">
-          {annual ? "Get Pro — $99/year" : "Get Pro"}
+          {annual ? "Get Pro · $149/year" : "Get Pro"}
           <span className="ll-btn-arrow-circle"><ArrowIcon /></span>
         </Link>
 
@@ -122,7 +122,7 @@ export default function LandingProPlan() {
               textDecoration: "underline", textUnderlineOffset: 3,
             }}
           >
-            Switch to annual and save $20.88
+            Switch to annual and save $30.88
           </button>
         )}
       </article>
