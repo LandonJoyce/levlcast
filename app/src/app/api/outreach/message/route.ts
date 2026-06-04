@@ -72,22 +72,32 @@ If SKIP, return only: "SKIP: <reason>"
 If writing the DM, lead with the coach report and use this format:
 - Line 1: SUBJECT: <4-7 words referencing what they wrote>
 - Blank line
-- Body: 2-4 sentences, MAX 75 words
-  - Sentence 1: Open with a quote from their text (preferred) OR reference the topic they posted about. Connect it to LevlCast.
-  - Sentence 2: what the coach report would do for their specific situation (hypothetical: "the report would..." not "your report shows...").
-  - Sentence 3 (optional): clips as a bonus.
-  - Final line: "3 free analyses, no card. try it at levlcast.com"
-- End with "try it at levlcast.com"
+- Body: 2-3 sentences, MAX 45 words total. Tight. No filler.
+  - Sentence 1: Open with a quote from their text (preferred) OR reference the specific topic. Connect it to LevlCast in the same sentence.
+  - Sentence 2: what the report would do for THEIR situation. Hypothetical phrasing ("the report would...") not assertions ("your report shows...").
+  - Optional third: clips as a bonus, only if it adds value.
+- Final line on its own: "3 free analyses, no card. try it at levlcast.com"
 
-No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". Casual, blunt, like a streamer texting another streamer. Return ONLY the subject and message, OR the SKIP line.`,
+ABSOLUTELY NO DASHES of any kind. No em dashes (—), no en dashes (–), no double hyphens (--), no single hyphens used as separators. Rewrite the sentence if you'd reach for one. Use periods, commas, or colons.
+
+No "I hope", "just wanted to", "might be worth", "would love to", "feel free to". Casual, blunt, like a streamer texting another streamer. Short over polished.
+
+Return ONLY the subject and message, OR the SKIP line.`,
       },
     ],
   });
 
-  // Strip em dashes the model occasionally slips in despite the explicit
-  // rule. ' — ' becomes '. ', bare '—' becomes a space.
-  const stripEm = (s: string) => s.replace(/ — /g, ". ").replace(/—/g, " ");
-  const raw = stripEm(msg.content[0].type === "text" ? msg.content[0].text.trim() : "");
+  // Strip every dash variant the model might slip in despite the prompt rule.
+  // Sequence matters: longer/spaced patterns first, then bare characters.
+  //   ' — ' / ' – ' / ' -- ' / ' - '  -> '. '   (sentence break)
+  //   bare '—' / '–' / '--'           -> ' '    (avoid double space awareness; collapse later)
+  // Final pass collapses any accidental double spaces.
+  const stripDashes = (s: string) =>
+    s
+      .replace(/\s+(?:—|–|--|- )\s+/g, ". ")
+      .replace(/—|–|--/g, " ")
+      .replace(/\s{2,}/g, " ");
+  const raw = stripDashes(msg.content[0].type === "text" ? msg.content[0].text.trim() : "");
 
   // Fit-check escape hatch. If the model decides LevlCast isn't a fit it
   // returns "SKIP: <reason>" and we surface that to the admin so they can
@@ -104,8 +114,8 @@ No em dashes. No "I hope", "just wanted to", "might be worth", "would love to". 
 
   const subjectLine = lines.find((l) => l.toLowerCase().startsWith("subject:"));
   if (subjectLine) {
-    subject = stripEm(subjectLine.replace(/^subject:\s*/i, "").trim());
-    message = stripEm(
+    subject = stripDashes(subjectLine.replace(/^subject:\s*/i, "").trim());
+    message = stripDashes(
       lines
         .slice(lines.indexOf(subjectLine) + 1)
         .join("\n")
