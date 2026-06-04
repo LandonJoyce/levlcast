@@ -69,20 +69,24 @@ PRICE: $14.99/mo or 3 free analyses to try with no card. Mention the free trial 
 
 If SKIP, return only: "SKIP: <reason>"
 
-If writing the DM, lead with the coach report and use this format:
-- Line 1: SUBJECT: <4-7 words referencing what they wrote>
-- Blank line
-- Body: 2-3 sentences, MAX 45 words total. Tight. No filler.
-  - Sentence 1: Open with a quote from their text (preferred) OR reference the specific topic. Connect it to LevlCast in the same sentence.
-  - Sentence 2: what the report would do for THEIR situation. Hypothetical phrasing ("the report would...") not assertions ("your report shows...").
-  - Optional third: clips as a bonus, only if it adds value.
-- Final line on its own: "3 free analyses, no card. try it at levlcast.com"
+If writing the DM, output EXACTLY this shape (no markdown, no extra commentary):
 
-ABSOLUTELY NO DASHES of any kind. No em dashes (—), no en dashes (–), no double hyphens (--), no single hyphens used as separators. Rewrite the sentence if you'd reach for one. Use periods, commas, or colons.
+SUBJECT: <4 to 7 words about what they posted>
 
-No "I hope", "just wanted to", "might be worth", "would love to", "feel free to". Casual, blunt, like a streamer texting another streamer. Short over polished.
+<body sentence one referencing their exact topic and connecting to LevlCast>
+<body sentence two on what the report would do for their situation, hypothetical "would" not "does">
+<optional sentence three on clips, only if it adds value>
 
-Return ONLY the subject and message, OR the SKIP line.`,
+3 free analyses, no card. try it at levlcast.com
+
+Hard rules for the body:
+- 2 or 3 sentences total, 45 words MAX (excluding the CTA line)
+- No dashes of any kind: no em (—), no en (–), no double hyphen (--), no single hyphen as a separator. Use periods, commas, or colons.
+- No "I hope", "just wanted to", "might be worth", "would love to", "feel free to"
+- Casual, blunt, like a streamer texting another streamer
+- The SUBJECT line stays short. The body goes on its own lines BELOW the subject. Never put body content into the SUBJECT line.
+
+Return ONLY the formatted output above, OR a SKIP line.`,
       },
     ],
   });
@@ -114,13 +118,42 @@ Return ONLY the subject and message, OR the SKIP line.`,
 
   const subjectLine = lines.find((l) => l.toLowerCase().startsWith("subject:"));
   if (subjectLine) {
-    subject = stripDashes(subjectLine.replace(/^subject:\s*/i, "").trim());
-    message = stripDashes(
+    const rawSubject = stripDashes(subjectLine.replace(/^subject:\s*/i, "").trim());
+    let restAfterSubject = stripDashes(
       lines
         .slice(lines.indexOf(subjectLine) + 1)
         .join("\n")
         .trim()
     );
+
+    // Defense: the model occasionally collapses body into the SUBJECT line
+    // ("SUBJECT: short hook full pitch sentence two CTA…"). Anything longer
+    // than ~12 words clearly isn't a real subject — take the first sentence
+    // as the subject and shove the rest into the message body so the user
+    // never sees a paragraph in the title field.
+    const subjectWordCount = rawSubject.split(/\s+/).filter(Boolean).length;
+    if (subjectWordCount > 12) {
+      const firstSentenceEnd = rawSubject.search(/[.!?](\s|$)/);
+      if (firstSentenceEnd > 0) {
+        subject = rawSubject.slice(0, firstSentenceEnd).trim();
+        const overflow = rawSubject.slice(firstSentenceEnd + 1).trim();
+        restAfterSubject = overflow
+          ? `${overflow}\n\n${restAfterSubject}`.trim()
+          : restAfterSubject;
+      } else {
+        // No sentence boundary — fall back to first ~7 words as subject.
+        const words = rawSubject.split(/\s+/);
+        subject = words.slice(0, 7).join(" ");
+        const overflow = words.slice(7).join(" ");
+        restAfterSubject = overflow
+          ? `${overflow}\n\n${restAfterSubject}`.trim()
+          : restAfterSubject;
+      }
+    } else {
+      subject = rawSubject;
+    }
+
+    message = restAfterSubject;
   }
 
   return NextResponse.json({ message, subject });
