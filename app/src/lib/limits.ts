@@ -2,13 +2,13 @@
  * lib/limits.ts — subscription plan limits and usage enforcement.
  *
  * PLAN LIMITS:
- *   Free trial:     3 VOD analyses + 5 clips LIFETIME (one-time, per Twitch ID)
+ *   Free trial:     2 VOD analyses + 5 clips LIFETIME (one-time, per Twitch ID)
  *   Pro:            15 VOD analyses/month, 20 clips/month — $14.99/mo (was $9.99 founding through 2026-06-03)
  *   Founding (20/20): grandfathered users who subscribed before the limit drop;
  *                    all $9.99 subscribers keep their original rate via Stripe.
  *
  * FREE TRIAL — BYPASS-PROOF:
- *   Free users do not get a monthly refresh. They get 3 analyses + 5 clips,
+ *   Free users do not get a monthly refresh. They get 2 analyses + 5 clips,
  *   ever. Counters live in the trial_records table keyed by twitch_id, not
  *   by profile.id, so deleting and re-creating a Supabase account with the
  *   same Twitch login does NOT reset the trial. RLS on trial_records blocks
@@ -41,7 +41,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export const FREE_TRIAL_LIMITS = {
-  analyses_lifetime: 3,
+  // Dropped from 3 to 2 on 2026-06-05. Rationale: with 3, free users had
+  // enough data to self-coach across multiple reports and never hit the
+  // moment where the cross-stream pitch lands. At 2, their second report
+  // renders with LastStreamRecap and Score Trajectory both locked +
+  // blurred in-place — the strongest conversion moment in the product.
+  // Clips stay at 5 (essentially free on R2, no reason to gate).
+  analyses_lifetime: 2,
   clips_lifetime: 5,
 };
 
@@ -112,7 +118,7 @@ export interface UserUsage {
   clips_this_month: number;
 
   // Hour-based cap (Pro / Founding only). Free trial uses count-only since
-  // they get 3 analyses lifetime and the per-analysis 4h cap is enough.
+  // they get 2 analyses lifetime and the per-analysis 4h cap is enough.
   // hours_used = sum of duration_seconds (in hours) for completed-this-month
   // + currently-in-progress VODs. hours_limit = 0 for free users.
   hours_used: number;

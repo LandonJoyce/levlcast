@@ -65,7 +65,7 @@ LevlCast features:
 1. Coach report on every VOD: scores 0-100, pinpoints when viewers left, gives one specific thing to fix, tracks improvement over time.
 2. Auto-clips your best moments, you edit captions and post.
 
-PRICE: $14.99/mo or 3 free analyses to try with no card. Mention the free trial as the soft hook, not the paid price.
+PRICE: $14.99/mo or 2 free analyses to try with no card. Mention the free trial as the soft hook, not the paid price.
 
 If SKIP, return only: "SKIP: <reason>"
 
@@ -77,7 +77,7 @@ SUBJECT: <4 to 7 words about what they posted>
 <body sentence two on what the report would do for their situation, hypothetical "would" not "does">
 <optional sentence three on clips, only if it adds value>
 
-3 free analyses, no card. try it at levlcast.com
+2 free analyses, no card. try it at levlcast.com
 
 Hard rules for the body:
 - 2 or 3 sentences total, 45 words MAX (excluding the CTA line)

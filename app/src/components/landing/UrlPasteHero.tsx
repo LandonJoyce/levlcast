@@ -96,7 +96,7 @@ export default function UrlPasteHero() {
         {error ? (
           <span className="ll-url-hero-error">{error}</span>
         ) : (
-          <span>Sign in with Twitch. 3 free analyses, no card.</span>
+          <span>Sign in with Twitch. 2 free analyses, no card.</span>
         )}
       </p>
     </form>
