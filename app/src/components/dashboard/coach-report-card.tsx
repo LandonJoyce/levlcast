@@ -456,7 +456,7 @@ interface ChatPulseBucket {
 }
 
 export function CoachReportCard({
-  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [], personalizedUpgradeReason,
+  report, previousScore, previousReport, streak = 0, isPersonalBest = false, streamerTitle, isPro = true, streamDurationSeconds, chatPulse, trajectory, wordTimestamps, twitchVodId, recurringImprovements = [], personalizedUpgradeReason, comparisonIsSameType = false, currentStreamerType,
 }: {
   report: CoachReport;
   previousScore?: number;
@@ -483,6 +483,16 @@ export function CoachReportCard({
    * of a generic feature pitch. Falls back to a sane default if absent.
    */
   personalizedUpgradeReason?: string;
+  /**
+   * True when previousReport was selected as a same-streamer-type stream.
+   * Drives comparison labels: "vs your last gaming stream" reads honest
+   * when types match, "vs your last stream (different category)" reads
+   * honest when they don't. Without this flag the user sees raw deltas
+   * across mixed content types and assumes they regressed.
+   */
+  comparisonIsSameType?: boolean;
+  /** Current stream's streamer_type — used to label same-type comparisons. */
+  currentStreamerType?: string;
 }) {
   // Strip em dashes from stored report text — old records in the DB may have them
   // even though new reports are cleaned at parse time in lib/analyze.ts
@@ -733,6 +743,90 @@ export function CoachReportCard({
               )}
             </div>
           </section>
+
+          {/* ── PROGRESS ON PRIOR FIX (Pro only, only when prior report exists) ── */}
+          {/* The retention element of the entire report: did the streamer
+              address last stream's #1 priority? Coaching only feels real when
+              the user can see "you fixed X" or "you regressed on Y" pinned
+              to a concrete prior ask. Always rendered above the rest of the
+              report so it's the first thing the streamer sees after the score. */}
+          {isPro && report.progress_on_prior_fix?.prior_priority && report.progress_on_prior_fix.evidence && (() => {
+            const p = report.progress_on_prior_fix;
+            const STATUS_STYLE: Record<typeof p.status, { label: string; color: string; bg: string; border: string; verdictPrefix: string }> = {
+              fixed:          { label: "FIXED",          color: "#A3E635", bg: "rgba(163,230,53,0.06)",  border: "rgba(163,230,53,0.28)",  verdictPrefix: "You addressed it." },
+              partial:        { label: "PARTIAL",        color: "#F59E0B", bg: "rgba(245,158,11,0.06)",  border: "rgba(245,158,11,0.28)",  verdictPrefix: "Some progress." },
+              regressed:      { label: "REGRESSED",      color: "#F87171", bg: "rgba(248,113,113,0.06)", border: "rgba(248,113,113,0.28)", verdictPrefix: "It got worse." },
+              not_addressed:  { label: "NOT ADDRESSED",  color: "#6F7C95", bg: "rgba(111,124,149,0.06)", border: "rgba(111,124,149,0.28)", verdictPrefix: "No signal this stream." },
+            };
+            const s = STATUS_STYLE[p.status];
+            const m = p.metric;
+            const metricImproved = m
+              ? (p.status === "fixed" ? true : p.status === "regressed" ? false : m.after >= m.before)
+              : true;
+            return (
+              <div style={{
+                margin: "0 0 36px",
+                padding: "22px 24px",
+                borderRadius: 12,
+                background: s.bg,
+                border: `1px solid ${s.border}`,
+                borderLeft: `3px solid ${s.color}`,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+                  <span style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.28em",
+                    color: s.color,
+                  }}>
+                    DID YOU FIX IT
+                  </span>
+                  <span style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.18em",
+                    color: s.color,
+                    padding: "3px 10px",
+                    border: `1px solid ${s.border}`,
+                    borderRadius: 6,
+                  }}>
+                    {s.label}
+                  </span>
+                  {m && (
+                    <span style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: 11, fontWeight: 700, color: metricImproved ? "#A3E635" : "#F87171",
+                      padding: "3px 10px",
+                      background: metricImproved ? "rgba(163,230,53,0.08)" : "rgba(248,113,113,0.08)",
+                      border: `1px solid ${metricImproved ? "rgba(163,230,53,0.28)" : "rgba(248,113,113,0.28)"}`,
+                      borderRadius: 6,
+                      letterSpacing: "0.06em",
+                    }}>
+                      {m.label}: {m.before}{m.unit ?? ""} → {m.after}{m.unit ?? ""}
+                    </span>
+                  )}
+                </div>
+                <p style={{
+                  fontFamily: '"Instrument Serif", Georgia, serif',
+                  fontSize: 20, lineHeight: 1.35,
+                  color: "#ECF1FA",
+                  margin: "0 0 8px",
+                  fontStyle: "italic",
+                  fontWeight: 400,
+                }}>
+                  {clean(p.prior_priority)}
+                </p>
+                <p style={{
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                  fontSize: "calc(var(--cs, 1) * 14px)",
+                  lineHeight: 1.6,
+                  color: "#D4DCF0",
+                  margin: 0,
+                }}>
+                  <span style={{ fontWeight: 700, color: s.color }}>{s.verdictPrefix}</span>{" "}
+                  {clean(p.evidence)}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* ── DELTA TEASE (free only, top-of-report Pro hook) ── */}
           {!isPro && (
@@ -1036,7 +1130,16 @@ export function CoachReportCard({
           {/* Pro-only. This card is the literal cross-stream proof we sell on
               the paywall; showing it for free hands the value away. Free users
               with a prior report get a locked teaser pointing at the upgrade. */}
-          {recapDelta && isPro && <LastStreamRecap delta={recapDelta} />}
+          {recapDelta && isPro && (
+            <LastStreamRecap
+              delta={recapDelta}
+              comparisonLabel={
+                comparisonIsSameType && currentStreamerType
+                  ? `Since Last ${TYPE_LABELS[currentStreamerType] ?? "Stream"}`
+                  : undefined
+              }
+            />
+          )}
           {recapDelta && !isPro && (
             <div style={{ margin: "0 0 28px" }}>
               <LockedSection

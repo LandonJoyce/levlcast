@@ -42,7 +42,19 @@ function deltaArrow(delta: number) {
   return "·";
 }
 
-export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
+export function LastStreamRecap({
+  delta,
+  comparisonLabel,
+}: {
+  delta: ReportDelta;
+  /**
+   * Optional override for the eyebrow text. Used when the prior stream
+   * was selected as same-streamer-type (so the comparison reads as
+   * "vs your last gaming stream" instead of just "since last stream").
+   * Falls back to "Since Last Stream" when omitted.
+   */
+  comparisonLabel?: string;
+}) {
   const { score, biggestWin, biggestRegression, subscores, deadAir, antiPatterns } = delta;
 
   // Recurring anti-patterns are the most credibility-building signal
@@ -84,7 +96,7 @@ export function LastStreamRecap({ delta }: { delta: ReportDelta }) {
         textTransform: "uppercase", letterSpacing: "0.32em", marginBottom: 14,
         ...gradText,
       }}>
-        Since Last Stream
+        {comparisonLabel ?? "Since Last Stream"}
       </div>
 
       {/* Headline + score delta */}

@@ -767,6 +767,25 @@ export interface CoachReport {
   commentary_density?: number;
   // Brutal one-liner shown at the top of the punch view — FOMO-inducing, specific to this stream
   punch_line?: string;
+  /**
+   * Did the streamer address the previous report's #1 priority THIS stream?
+   * Populated only when at least one prior coach report exists. This is the
+   * single most important retention element on the report: it gives the user
+   * concrete coaching proof tied to a specific action they were told to fix,
+   * decoupled from the noisy overall score.
+   *
+   * - prior_priority: verbatim text from the previous report's recommendation
+   * - status: how this stream looked vs that ask
+   * - evidence: 1-2 sentences referencing specific moments in this stream
+   * - metric (optional): concrete before/after numbers if quantifiable, e.g.
+   *   dead_air_pct, opening score, sub-score movement
+   */
+  progress_on_prior_fix?: {
+    prior_priority: string;
+    status: "fixed" | "partial" | "regressed" | "not_addressed";
+    evidence: string;
+    metric?: { label: string; before: number; after: number; unit?: string };
+  };
 }
 
 /** Summary of a prior stream used for longitudinal coaching context. */
@@ -1527,7 +1546,18 @@ EARNED-RECOGNITION RULE — when prior history exists you MUST do at least one o
 - Name a specific sub-score that improved versus the prior streams' average, even by 1-2 points, and credit the streamer for that movement.
 - If no sub-score improved, find ONE specific behavior in the transcript or peaks that is better than what the prior reports flagged — a moment they took a take, named a chatter, closed a bit, anything — and call it out in strengths.
 - Put this recognition in strengths or trend_vs_history, not in the recommendation.
-- This is non-negotiable. If every improvement is RECURRING and there is no "you did this better" callout anywhere in the report, the report fails — generate something honest before returning.`;
+- This is non-negotiable. If every improvement is RECURRING and there is no "you did this better" callout anywhere in the report, the report fails — generate something honest before returning.
+
+PROGRESS-ON-PRIOR-FIX (REQUIRED when history exists):
+The streamer was told to fix something specific in the most recent prior report:
+"${priorReports[0].recommendation}"
+
+You MUST evaluate, in this stream, whether they actually addressed it. Output as the progress_on_prior_fix field in the JSON. Rules:
+- status MUST be one of: "fixed" (clear improvement, the ask was met), "partial" (some progress but not all the way), "regressed" (got worse than before), "not_addressed" (no evidence they tried).
+- evidence is 1-2 sentences citing specific moments, timestamps, or sub-score movement from THIS stream. Reference what the stream actually showed, not platitudes.
+- If a quantifiable metric directly maps to the ask (dead_air_pct, opening score, energy sub-score, etc.), include it under metric with label/before/after/unit. before = the value from the most recent prior report. after = the value from this stream. Only include metric if you can ground both numbers in real data.
+- Do NOT fabricate. If the prior priority was vague or this stream gave no signal either way, status = "not_addressed" and say so plainly.
+- This field is the single most prominent element on the next report for the streamer. Write it as if their decision to keep using LevlCast depends on whether they trust this assessment.`;
       })()
     : "";
 
@@ -1841,8 +1871,16 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   "trend_vs_history": {
     "direction": "<improving | declining | consistent | first_stream>",
     "note": "<1-2 sentences referencing specific prior scores or problems if history exists, or 'First analyzed stream — no comparison available' if not>"
+  },
+  "progress_on_prior_fix": {
+    "prior_priority": "<the verbatim recommendation from the most recent prior report — copy it exactly>",
+    "status": "<fixed | partial | regressed | not_addressed>",
+    "evidence": "<1-2 sentences with specific moments or timestamps from THIS stream that justify the status. Address as 'you'. No fabricated quotes.>",
+    "metric": { "label": "<short metric name e.g. 'dead air' or 'opening score'>", "before": <number>, "after": <number>, "unit": "<optional unit like '%' or 'points' or 'sec'>" }
   }
-}`,
+}
+
+Omit the progress_on_prior_fix field entirely when no prior report history exists. When it IS included, prior_priority and status and evidence are required; metric is optional (include it only when you can ground both before and after in real data, never invent numbers).`,
       },
     ],
   }), 3, 1000);

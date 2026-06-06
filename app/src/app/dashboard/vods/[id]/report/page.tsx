@@ -72,18 +72,22 @@ export default async function VodReportPage({
 
   const streamDate = (vod.stream_date as string | null) ?? new Date(0).toISOString();
 
+  const currentStreamerType = (vod.coach_report as { streamer_type?: string } | null)?.streamer_type ?? null;
+
   const [
     { data: allClips },
     { data: connections },
-    { data: prevVod },
+    { data: priorVodCandidates },
     { data: recentVods },
     { data: priorVodsForStats },
     { data: profileForPlan },
   ] = await Promise.all([
     supabase.from("clips").select("*").eq("user_id", user!.id).eq("vod_id", id).order("created_at", { ascending: false }),
     supabase.from("social_connections").select("platform").eq("user_id", user!.id),
-    // Only streams that happened before this one chronologically
-    supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(1).maybeSingle(),
+    // Pull a small candidate set of prior streams; we'll pick the best one for
+    // comparison in code below — prefer same streamer_type (apples-to-apples)
+    // and fall back to most recent any-type if there's no same-type prior yet.
+    supabase.from("vods").select("coach_report").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(5),
     supabase.from("vods").select("status").eq("user_id", user!.id).order("stream_date", { ascending: false }).limit(20),
     // Prior stats also filtered to streams before this one
     supabase.from("vods").select("coach_report, stream_date, analyzed_at").eq("user_id", user!.id).eq("status", "ready").neq("id", id).lt("stream_date", streamDate).order("stream_date", { ascending: false, nullsFirst: false }).limit(50),
@@ -101,6 +105,17 @@ export default async function VodReportPage({
 
   const peaks = (vod.peak_data as any[]) || [];
   const coachReport = vod.coach_report as any;
+  // Pick the best prior stream to compare against — same streamer_type first
+  // (apples-to-apples), most-recent any-type as fallback. The label passed to
+  // the UI tells the streamer what's being compared so a delta swing tied to
+  // a content-type change reads as "vs your last just-chatting stream" not as
+  // "you got worse."
+  const candidates = (priorVodCandidates ?? []) as Array<{ coach_report: any }>;
+  const sameTypePrev = currentStreamerType
+    ? candidates.find((v) => v.coach_report?.streamer_type === currentStreamerType) ?? null
+    : null;
+  const prevVod = sameTypePrev ?? candidates[0] ?? null;
+  const comparisonIsSameType = !!sameTypePrev && sameTypePrev === prevVod;
   const previousScore = (prevVod?.coach_report as any)?.overall_score as number | undefined;
   const previousReport = (prevVod?.coach_report as any) ?? undefined;
   const chatPulse = (vod.chat_pulse as any[] | null) ?? null;
@@ -310,6 +325,8 @@ export default async function VodReportPage({
               : []
           }
           personalizedUpgradeReason={upgradePitch?.reason}
+          comparisonIsSameType={comparisonIsSameType}
+          currentStreamerType={currentStreamerType ?? undefined}
         />
       ) : (
         <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
