@@ -305,10 +305,7 @@ export default async function LandingPage() {
         <div className="ll-ss-showcase">
           {/* Coach report — main value prop */}
           <div className="ll-ss-main">
-            <div className="ll-ss-label-row">
-              <span className="ll-chip"><span className="ll-chip-dot"></span>Coaching Report</span>
-              <span className="ll-ss-desc">Score 0–100 · stream story · one specific fix</span>
-            </div>
+            <h3 className="ll-ss-title">Coaching Report</h3>
             <div className="ll-ss-frame">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/la/ss-coach-report.png" alt="LevlCast coaching report showing stream score, story, and #1 fix" />
@@ -318,20 +315,14 @@ export default async function LandingPage() {
           {/* Right col: recap + timeline stacked */}
           <div className="ll-ss-side">
             <div className="ll-ss-panel">
-              <div className="ll-ss-label-row">
-                <span className="ll-chip"><span className="ll-chip-dot"></span>Since Last Stream</span>
-                <span className="ll-ss-desc">stream-to-stream change tracking</span>
-              </div>
+              <h3 className="ll-ss-title">Since Last Stream</h3>
               <div className="ll-ss-frame">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/la/ss-stream-recap.png" alt="Since Last Stream: sub-score change grid" className="ll-ss-crop" />
               </div>
             </div>
             <div className="ll-ss-panel">
-              <div className="ll-ss-label-row">
-                <span className="ll-chip"><span className="ll-chip-dot"></span>Stream Timeline</span>
-                <span className="ll-ss-desc">silence map + best moments</span>
-              </div>
+              <h3 className="ll-ss-title">Stream Timeline</h3>
               <div className="ll-ss-frame">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/la/ss-timeline.png" alt="Stream timeline showing silence gaps and word-per-minute curve" className="ll-ss-crop" />

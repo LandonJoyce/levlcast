@@ -1624,6 +1624,15 @@
   color: rgba(255,255,255,0.5);
   letter-spacing: 0;
 }
+.ll-page .ll-ss-title {
+  font-family: var(--ll-display);
+  font-size: clamp(20px, 1.8vw, 26px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ll-fg);
+  margin: 0 0 18px;
+}
 
 .ll-page .ll-chip {
   display: inline-flex; align-items: center; gap: 8px;
