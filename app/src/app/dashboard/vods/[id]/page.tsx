@@ -7,6 +7,7 @@ import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { HighlightReelButton } from "@/components/dashboard/highlight-reel-button";
 import { ShareReportButton } from "@/components/dashboard/share-report-button";
+import RetryAnalyzeButton from "@/components/dashboard/retry-analyze-button";
 import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebration";
 import { scoreColorHex } from "@/lib/score-utils";
 
@@ -188,6 +189,22 @@ export default async function VodPunchPage({
   const existingReel = clipsList.find((c) => c.is_highlight_reel && c.status === "ready");
   const processingReel = clipsList.find((c) => c.is_highlight_reel && c.status === "processing");
 
+  // Categorize a failed VOD's reason so we can render a targeted help card
+  // instead of a generic "Analysis failed: <blob>" line. Each category gets
+  // its own UI shape with the specific next steps for that failure type.
+  type FailureKind = "playback_token" | "timeout" | "too_short" | "quota" | "generic";
+  function categorizeFailure(reason: string | null | undefined): FailureKind {
+    if (!reason) return "generic";
+    const r = reason.toLowerCase();
+    if (r.includes("playback token") || r.includes("blocked access") || r.includes("subscriber-only") || r.includes("dmca")) return "playback_token";
+    if (r.includes("timed out") || r.includes("timeout") || r.includes("stalled")) return "timeout";
+    if (r.includes("too short") || r.includes("at least 5 minutes")) return "too_short";
+    if (r.includes("limit reached") || r.includes("free analyses") || r.includes("monthly analysis limit")) return "quota";
+    return "generic";
+  }
+  const failureKind = vod.status === "failed" ? categorizeFailure(vod.failed_reason as string | null) : null;
+  const twitchVodUrl = vod.twitch_vod_id ? `https://www.twitch.tv/videos/${vod.twitch_vod_id}` : null;
+
   return (
     <>
       <VodStatusPoller hasProcessing={isVodProcessing || hasProcessingClip} />
@@ -228,15 +245,88 @@ export default async function VodPunchPage({
         <>
           {isVodProcessing ? (
             <VodProgress status={vod.status} durationSeconds={vod.duration_seconds} />
+          ) : vod.status === "pending" ? (
+            <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12, color: "var(--ink-3)" }}>
+                <Icons.Film />
+              </div>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", margin: 0 }}>
+                This VOD hasn&apos;t been analyzed yet. Go back and click Analyze.
+              </p>
+            </div>
+          ) : failureKind === "playback_token" ? (
+            <div className="card card-pad" style={{
+              padding: "28px 28px",
+              background: "color-mix(in oklab, var(--orange, #d97706) 6%, var(--surface))",
+              border: "1px solid color-mix(in oklab, var(--orange, #d97706) 28%, var(--line))",
+              borderLeft: "3px solid var(--orange, #d97706)",
+            }}>
+              <div className="mono-label" style={{ color: "var(--orange, #d97706)", marginBottom: 10, letterSpacing: "0.28em" }}>
+                Twitch Blocked Access
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", margin: "0 0 8px" }}>
+                We couldn&apos;t fetch this VOD&apos;s audio from Twitch.
+              </h3>
+              <p style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.6, margin: "0 0 18px" }}>
+                Twitch returned a null playback token, which means the VOD is restricted at the source. The analysis never reached our AI, so nothing was billed to your trial counter or hour budget. Check the VOD on Twitch, fix the issue, then click Try Again.
+              </p>
+
+              <div style={{ marginBottom: 18 }}>
+                <p className="mono-label" style={{ color: "var(--ink-3)", marginBottom: 8, letterSpacing: "0.24em" }}>
+                  Most Common Causes
+                </p>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
+                  <li><b style={{ color: "var(--ink)" }}>Subscriber-only VOD.</b> Check the &ldquo;Sub-only&rdquo; toggle in Video Producer.</li>
+                  <li><b style={{ color: "var(--ink)" }}>DMCA / copyrighted music muted.</b> If Twitch flagged the stream for music, the playback token gets restricted.</li>
+                  <li><b style={{ color: "var(--ink)" }}>VOD was deleted</b> or expired (Affiliates: 14 days, Partners: 60 days, all VOD storage tier setting).</li>
+                  <li><b style={{ color: "var(--ink)" }}>VOD is in a restricted region.</b> Rare, but possible.</li>
+                </ul>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <RetryAnalyzeButton vodId={vod.id} />
+                {twitchVodUrl && (
+                  <a
+                    href={twitchVodUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-ghost"
+                    style={{ fontSize: 13, padding: "8px 16px" }}
+                  >
+                    Open VOD on Twitch ↗
+                  </a>
+                )}
+                <a
+                  href="https://dashboard.twitch.tv/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost"
+                  style={{ fontSize: 13, padding: "8px 16px" }}
+                >
+                  Twitch Dashboard ↗
+                </a>
+              </div>
+            </div>
+          ) : failureKind === "timeout" ? (
+            <div className="card card-pad" style={{ padding: "28px 28px", borderLeft: "3px solid var(--orange, #d97706)" }}>
+              <div className="mono-label" style={{ color: "var(--orange, #d97706)", marginBottom: 10, letterSpacing: "0.28em" }}>
+                Analysis Timed Out
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", margin: "0 0 8px" }}>
+                The pipeline didn&apos;t finish in time.
+              </h3>
+              <p style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.6, margin: "0 0 18px" }}>
+                Usually a slow Twitch CDN or a temporarily-overloaded transcription queue. Nothing was billed against your trial. Hit Try Again. Most retries work on the second pass.
+              </p>
+              <RetryAnalyzeButton vodId={vod.id} />
+            </div>
           ) : (
             <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
               <div style={{ display: "flex", justifyContent: "center", marginBottom: 12, color: "var(--ink-3)" }}>
                 <Icons.Film />
               </div>
               <p style={{ fontSize: 14, color: "var(--ink-3)", margin: 0 }}>
-                {vod.status === "pending"
-                  ? "This VOD hasn't been analyzed yet. Go back and click Analyze."
-                  : `Analysis failed${vod.failed_reason ? `: ${vod.failed_reason}` : ""}. Go back and try again.`}
+                Analysis failed{vod.failed_reason ? `: ${vod.failed_reason}` : ""}. Go back and try again.
               </p>
             </div>
           )}

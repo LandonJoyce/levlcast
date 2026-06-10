@@ -127,9 +127,10 @@ export async function POST(request: Request) {
   }
 
   // Atomic status claim — prevents duplicate jobs
+  const claimedAt = Date.now();
   const { data: claimedVod, error: claimError } = await supabase
     .from("vods")
-    .update({ status: "transcribing" })
+    .update({ status: "transcribing", updated_at: new Date(claimedAt).toISOString() })
     .eq("id", vodId)
     .eq("user_id", user.id)
     .in("status", ["pending", "failed"])
@@ -151,11 +152,16 @@ export async function POST(request: Request) {
 
   // Fire Inngest event — analysis runs in background, no timeout risk.
   // Idempotency key dedupes double-click / retry storms within 24h so the
-  // same VOD can't get billed twice. Range analyses use a range-specific
-  // key so partial-segment re-analyses don't collide with the full one.
+  // same VOD can't get billed twice. The claim timestamp is included so a
+  // legitimate manual retry of a previously-failed VOD generates a fresh
+  // key (each claim flips status, so each claim is a distinct attempt) —
+  // without this, retrying within 24h of a playback-token failure silently
+  // no-ops because Inngest dedupes against the original send. Range
+  // analyses use a range-specific key so partial-segment re-analyses don't
+  // collide with the full one.
   const idempotencyId = hasRange
-    ? `vod-analyze-${vodId}-${startSeconds}-${endSeconds}`
-    : `vod-analyze-${vodId}`;
+    ? `vod-analyze-${vodId}-${startSeconds}-${endSeconds}-${claimedAt}`
+    : `vod-analyze-${vodId}-${claimedAt}`;
   await inngest.send({
     id: idempotencyId,
     name: "vod/analyze",
