@@ -115,7 +115,7 @@ export function SubscriptionSection({
             <p className="text-sm text-muted">
               {onTrial
                 ? `Your free trial includes ${analysesLimit} analyses and ${clipsLimit} clips. Subscribe for 15 analyses and 20 clips every month.`
-                : "Upgrade to Pro for 15 VOD analyses and 20 clips per month, plus priority processing."}
+                : "Upgrade to Pro for 15 VOD analyses and 20 clips per month, plus streams up to 8 hours each."}
             </p>
             <button
               onClick={() => { setUpgradeInitialTier("pro"); setUpgradeOpen(true); }}

@@ -30,9 +30,11 @@ import { cutClip, concatClipBuffers } from "@/lib/ffmpeg";
 import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
 
-// Vercel Pro w/ Fluid Compute. Reels do 3 segment downloads + 3 ffmpeg cuts
-// + 2 concat passes. Worst case ~5-7 min for slow Twitch CDN segments.
-export const maxDuration = 800;
+// Capped at 300s — Vercel Hobby's hard max. Reels do 3 segment downloads
+// + 3 ffmpeg cuts + 2 concat passes, normally completes in 2-3 minutes.
+// Slow Twitch CDN edge case can push it over 300s — those clips will fail
+// and the user can retry. Common case is well within budget.
+export const maxDuration = 300;
 
 // Reel target: 3 segments, ~9s each = ~27s total. Tighter cuts feel more
 // produced; long auto-trimmed windows include too much setup that nobody

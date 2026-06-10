@@ -24,9 +24,12 @@ import type { CaptionStyle } from "@/lib/captions";
 import { uploadToR2 } from "@/lib/r2";
 import { NextResponse } from "next/server";
 
-// Vercel Pro w/ Fluid Compute — clip cutting on long source segments + R2
-// upload can take 3-5 min, so we go above the 300s default.
-export const maxDuration = 800;
+// Capped at 300s — Vercel Hobby's hard max. The vast majority of clips
+// (download + FFmpeg cut + R2 upload) complete in 30-90s, so 300s is
+// comfortable for the common case. If a slow Twitch CDN ever pushes a
+// single clip past 5 min, the user sees a clear "Clip generation stalled"
+// status from the stuck-clip cleanup cron instead of a frozen UI.
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   const supabase = await createClientFromRequest(request);

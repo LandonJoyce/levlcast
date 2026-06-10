@@ -9,7 +9,6 @@ const FEATURES = [
   "Streams up to 10 hours each",
   "35 clips per month",
   "Post to YouTube Shorts",
-  "Priority processing",
   "Everything in Pro",
 ];
 

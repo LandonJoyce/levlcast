@@ -44,7 +44,6 @@ const FEATURES: Record<Tier, string[]> = {
     "50 hours of analysis / month",
     "Streams up to 10 hours each",
     "35 clips per month",
-    "Priority processing",
     "Everything in Pro",
   ],
 };
