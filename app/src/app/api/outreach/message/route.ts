@@ -69,24 +69,30 @@ PRICE: $14.99/mo or 2 free analyses to try with no card. Mention the free trial 
 
 If SKIP, return only: "SKIP: <reason>"
 
-If writing the DM, output EXACTLY this shape (no markdown, no extra commentary):
+If writing the DM, return ONLY a JSON object with this exact shape (no markdown, no commentary, no SUBJECT: prefix anywhere):
 
-SUBJECT: <4 to 7 words about what they posted>
+{
+  "subject": "<4 to 7 words MAX about what they posted, NO quotes, NO sentences, NO punctuation other than letters and spaces, just a short topic label like 'Re viewer retention question' or 'Saw the affiliate post'>",
+  "body": "<personalized DM as described below>"
+}
 
-<body sentence one referencing their exact topic and connecting to LevlCast>
-<body sentence two on what the report would do for their situation, hypothetical "would" not "does">
-<optional sentence three on clips, only if it adds value>
+Body rules (the JSON \"body\" value):
+- Sentence 1 must open with a SHORT direct quote (3 to 8 words) in straight quotes from their post or comment, followed by a connection to LevlCast. The quote goes HERE, never in the subject.
+- Sentence 2 says what the coach report would do for THEIR specific situation. Use hypothetical "would", not "does".
+- Optional sentence 3 only if clips add real value to their question.
+- End with this exact final sentence on its own: 2 free analyses, no card. try it at levlcast.com
+- 60 words MAX total (excluding the final CTA sentence).
+- No dashes of any kind. No em, no en, no double hyphen, no single hyphen as a separator. Use periods, commas, or colons.
+- No "I hope", "just wanted to", "might be worth", "would love to", "feel free to".
+- Casual, blunt, like a streamer texting another streamer.
 
-2 free analyses, no card. try it at levlcast.com
+Subject rules (the JSON \"subject\" value):
+- 4 to 7 words, hard cap.
+- Refers to the TOPIC. Does not contain a quote, a pitch, or a sentence.
+- Good: "Saw the affiliate post", "Question about viewer retention", "Re your stream growth post"
+- Bad: anything over 7 words, anything with quotes, anything with a verb pitching the product.
 
-Hard rules for the body:
-- 2 or 3 sentences total, 45 words MAX (excluding the CTA line)
-- No dashes of any kind: no em (—), no en (–), no double hyphen (--), no single hyphen as a separator. Use periods, commas, or colons.
-- No "I hope", "just wanted to", "might be worth", "would love to", "feel free to"
-- Casual, blunt, like a streamer texting another streamer
-- The SUBJECT line stays short. The body goes on its own lines BELOW the subject. Never put body content into the SUBJECT line.
-
-Return ONLY the formatted output above, OR a SKIP line.`,
+Return ONLY the JSON object, OR a SKIP line.`,
       },
     ],
   });
@@ -101,60 +107,44 @@ Return ONLY the formatted output above, OR a SKIP line.`,
       .replace(/\s+(?:—|–|--|- )\s+/g, ". ")
       .replace(/—|–|--/g, " ")
       .replace(/\s{2,}/g, " ");
-  const raw = stripDashes(msg.content[0].type === "text" ? msg.content[0].text.trim() : "");
+  const raw = (msg.content[0].type === "text" ? msg.content[0].text.trim() : "");
 
-  // Fit-check escape hatch. If the model decides LevlCast isn't a fit it
-  // returns "SKIP: <reason>" and we surface that to the admin so they can
-  // skip the lead instead of sending a forced reply.
+  // Fit-check escape hatch — model decides not a fit and returns "SKIP: <reason>".
   if (/^skip\s*:/i.test(raw)) {
     const reason = raw.replace(/^skip\s*:\s*/i, "").trim() || "Not a fit for LevlCast";
     return NextResponse.json({ skip: true, reason });
   }
 
-  // Parse subject and message body
-  const lines = raw.split("\n");
-  let subject = isComment ? "Saw your comment" : "Saw your post";
-  let message = raw;
-
-  const subjectLine = lines.find((l) => l.toLowerCase().startsWith("subject:"));
-  if (subjectLine) {
-    const rawSubject = stripDashes(subjectLine.replace(/^subject:\s*/i, "").trim());
-    let restAfterSubject = stripDashes(
-      lines
-        .slice(lines.indexOf(subjectLine) + 1)
-        .join("\n")
-        .trim()
-    );
-
-    // Defense: the model occasionally collapses body into the SUBJECT line
-    // ("SUBJECT: short hook full pitch sentence two CTA…"). Anything longer
-    // than ~12 words clearly isn't a real subject — take the first sentence
-    // as the subject and shove the rest into the message body so the user
-    // never sees a paragraph in the title field.
-    const subjectWordCount = rawSubject.split(/\s+/).filter(Boolean).length;
-    if (subjectWordCount > 12) {
-      const firstSentenceEnd = rawSubject.search(/[.!?](\s|$)/);
-      if (firstSentenceEnd > 0) {
-        subject = rawSubject.slice(0, firstSentenceEnd).trim();
-        const overflow = rawSubject.slice(firstSentenceEnd + 1).trim();
-        restAfterSubject = overflow
-          ? `${overflow}\n\n${restAfterSubject}`.trim()
-          : restAfterSubject;
-      } else {
-        // No sentence boundary — fall back to first ~7 words as subject.
-        const words = rawSubject.split(/\s+/);
-        subject = words.slice(0, 7).join(" ");
-        const overflow = words.slice(7).join(" ");
-        restAfterSubject = overflow
-          ? `${overflow}\n\n${restAfterSubject}`.trim()
-          : restAfterSubject;
-      }
-    } else {
-      subject = rawSubject;
+  // Parse the JSON the model returns. Sonnet occasionally wraps it in
+  // ```json fences or adds a stray prefix; the regex below tolerates that
+  // by grabbing the first balanced { ... } block in the response.
+  let parsed: { subject?: string; body?: string } | null = null;
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      parsed = null;
     }
-
-    message = restAfterSubject;
   }
 
-  return NextResponse.json({ message, subject });
+  // Hard fallback if JSON parsing fails — use a sane subject + the raw text
+  // as the body so the admin can still send something rather than seeing a
+  // blank panel. They can always click "Write message" again.
+  let subject = stripDashes((parsed?.subject ?? (isComment ? "Saw your comment" : "Saw your post")).trim());
+  let body = stripDashes((parsed?.body ?? raw).trim());
+
+  // Server-side guard rails. The prompt asks for these limits, but Sonnet
+  // ignores them often enough that we enforce hard caps here. This is what
+  // prevents the "paragraph in the title field" failure mode the admin kept
+  // hitting — even if the model puts 30 words in subject, we trim to 7.
+  const SUBJECT_MAX_WORDS = 7;
+  const subjectWords = subject.split(/\s+/).filter(Boolean);
+  if (subjectWords.length > SUBJECT_MAX_WORDS) {
+    subject = subjectWords.slice(0, SUBJECT_MAX_WORDS).join(" ");
+  }
+  // Strip any quotes the model wrapped the subject in.
+  subject = subject.replace(/^["'`]+|["'`]+$/g, "").trim();
+
+  return NextResponse.json({ message: body, subject });
 }
