@@ -115,10 +115,15 @@ export const analyzeVod = inngest.createFunction(
         };
       });
 
-      // Split into 15-minute chunks so each Inngest step completes well within
-      // Vercel's 10-minute function invocation limit. A single-chunk VOD (<15 min)
-      // behaves identically to the old single-step approach.
-      const CHUNK_SECONDS = 1200;
+      // Transcription chunk size. Tuned for Vercel Hobby's 300s per-invocation
+      // cap — each chunk does (segment download + Deepgram processing) and must
+      // finish well under 300s including worst-case slow Twitch CDN. At 12 min
+      // per chunk: Deepgram typically returns in 30-60s, segments download in
+      // 20-60s, so the step lands around 60-120s with comfortable headroom.
+      // Was 1200s (20 min) on Vercel Pro, dropped to 720s (12 min) on 2026-06-19
+      // after a 2h 55m Storm VOD failed with "Could not find step" — Inngest's
+      // hint that a step ran too long and its state got lost.
+      const CHUNK_SECONDS = 720;
       const chunks: Array<{ urls: string[]; timeOffset: number }> = [];
       {
         let chunkUrls: string[] = [];
