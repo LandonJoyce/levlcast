@@ -78,7 +78,7 @@ If writing the DM, return ONLY a JSON object with this exact shape (no markdown,
 
 Body rules (the JSON \"body\" value):
 - Sentence 1 must open with a SHORT direct quote (3 to 8 words) in straight quotes from their post or comment, followed by a connection to LevlCast. The quote goes HERE, never in the subject.
-- Sentence 2 says what the coach report would do for THEIR specific situation. Use hypothetical "would", not "does".
+- Sentence 2 says what the coach report would do for THEIR specific situation. Use hypothetical "would", not "does". Frame it as TWITCH VOD coaching explicitly — "coach report on your Twitch VODs", "your Twitch stream", or similar. Streamers should know this is for Twitch from one read.
 - Optional sentence 3 only if clips add real value to their question.
 - End with this exact final sentence on its own: 2 free analyses, no card. try it at levlcast.com
 - 60 words MAX total (excluding the final CTA sentence).
@@ -145,6 +145,16 @@ Return ONLY the JSON object, OR a SKIP line.`,
   }
   // Strip any quotes the model wrapped the subject in.
   subject = subject.replace(/^["'`]+|["'`]+$/g, "").trim();
+
+  // Hard-append the CTA + link if the model dropped it. Sonnet sometimes
+  // generates the personalized body fine but skips the final CTA sentence,
+  // which leaves outreach DMs with no link to levlcast.com — the entire
+  // point of the message. Detect by case-insensitive substring match so
+  // any variant ("LevlCast.com", "LevLcast.com") still counts as present.
+  const CTA_LINE = "2 free analyses, no card. try it at levlcast.com";
+  if (!/levlcast\.com/i.test(body)) {
+    body = `${body.trim().replace(/\.?\s*$/, ".")}\n\n${CTA_LINE}`;
+  }
 
   return NextResponse.json({ message: body, subject });
 }
