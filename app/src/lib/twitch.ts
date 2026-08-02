@@ -242,7 +242,7 @@ export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: stri
     console.error(`[twitch] getTwitchVodAudioUrl GQL errors:`, JSON.stringify(gqlData.errors).slice(0, 400));
   }
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or Twitch API may be temporarily down. Try again in a few minutes.");
+  if (!token) throw new Error("Twitch is blocking access to this VOD, so it cannot be analyzed. This happens when a stream is set to subscriber-only, gets muted or flagged for background music (DMCA), or has expired from Twitch storage. To fix it, open your Twitch Creator Dashboard, go to Content then Video Producer, and set this VOD to Public. Then hit Analyze again. If it already expired, it cannot be recovered.");
 
   const usherParams = new URLSearchParams({
     allow_source: "true",
@@ -325,7 +325,7 @@ export async function downloadTwitchVodAudio(
   }
   const gqlData = await gqlRes.json();
   const token = gqlData.data?.videoPlaybackAccessToken;
-  if (!token) throw new Error("Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or Twitch API may be temporarily down. Try again in a few minutes.");
+  if (!token) throw new Error("Twitch is blocking access to this VOD, so it cannot be analyzed. This happens when a stream is set to subscriber-only, gets muted or flagged for background music (DMCA), or has expired from Twitch storage. To fix it, open your Twitch Creator Dashboard, go to Content then Video Producer, and set this VOD to Public. Then hit Analyze again. If it already expired, it cannot be recovered.");
 
   // Step 2: Get M3U8 master playlist
   const usherParams = new URLSearchParams({
@@ -516,10 +516,10 @@ export async function downloadTwitchVodVideo(
   }
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) {
-    console.error(`[twitch] null playback token for VOD ${vodId} — subscriber-only, deleted, or DMCA-restricted`);
+    console.error(`[twitch] null playback token for VOD ${vodId}: subscriber-only, deleted, or DMCA-restricted`);
     throw new Error(
-      "Twitch blocked access to this VOD. It may be set to subscriber-only, have been deleted, or be restricted due to copyrighted content (common with game music). " +
-      "In Twitch Creator Dashboard → Content → Video Producer, check if this VOD is restricted."
+      "Twitch is blocking access to this VOD, so it can't be analyzed. This happens when a stream is set to subscriber-only, gets muted or flagged for background music (DMCA), or has expired from Twitch's storage. " +
+      "To fix it, open your Twitch Creator Dashboard, go to Content then Video Producer, and set this VOD to Public. Then hit Analyze again. If it already expired, it can't be recovered."
     );
   }
 
@@ -751,7 +751,7 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
       console.error(`[twitch] streamTwitchVodAudio GQL errors for VOD ${vodId}:`, JSON.stringify(gqlData.errors).slice(0, 400));
     }
     const token = gqlData.data?.videoPlaybackAccessToken;
-    if (!token) throw new Error("Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or Twitch API may be temporarily down. Try again in a few minutes.");
+    if (!token) throw new Error("Twitch is blocking access to this VOD, so it cannot be analyzed. This happens when a stream is set to subscriber-only, gets muted or flagged for background music (DMCA), or has expired from Twitch storage. To fix it, open your Twitch Creator Dashboard, go to Content then Video Producer, and set this VOD to Public. Then hit Analyze again. If it already expired, it cannot be recovered.");
 
     const usherParams = new URLSearchParams({
       allow_source: "true",
@@ -894,8 +894,8 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
   const token = gqlData.data?.videoPlaybackAccessToken;
   if (!token) {
     throw new Error(
-      "Twitch did not return a playback token. The VOD may be deleted, subscriber-only, or DMCA restricted. " +
-      "Check Twitch Video Producer to confirm the VOD is publicly accessible."
+      "Twitch is blocking access to this VOD, so it can't be analyzed. This happens when a stream is set to subscriber-only, gets muted or flagged for background music (DMCA), or has expired from Twitch's storage. " +
+      "To fix it, open your Twitch Creator Dashboard, go to Content then Video Producer, and set this VOD to Public. Then hit Analyze again. If it already expired, it can't be recovered."
     );
   }
 

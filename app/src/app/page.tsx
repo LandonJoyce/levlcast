@@ -71,56 +71,6 @@ export default async function LandingPage() {
         </div>
       </header>
 
-      {/* ── Founding price banner ── */}
-      <Link
-        href="/auth/login"
-        aria-label="LevlCast Pro is $14.99 a month"
-        style={{
-          display: "block",
-          textDecoration: "none",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-          background:
-            "linear-gradient(90deg, rgba(255,88,0,0.10) 0%, rgba(242,97,121,0.08) 50%, rgba(255,88,0,0.10) 100%)",
-        }}
-      >
-        <div className="ll-con">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 14,
-              flexWrap: "wrap",
-              padding: "10px 0",
-              fontSize: 13,
-              lineHeight: 1.4,
-              color: "rgba(255,255,255,0.85)",
-            }}
-          >
-            <span style={{ color: "rgba(255,255,255,0.85)" }}>
-              Pro is{" "}
-              <b style={{ color: "#fff", fontWeight: 600 }}>$14.99/mo</b>. Try every feature free for{" "}
-              <b style={{ color: "#fff", fontWeight: 600 }}>2 analyses</b>. Cancel anytime.
-            </span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                color: "#fff",
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Start free
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </span>
-          </div>
-        </div>
-      </Link>
-
       {/* ── Hero ── */}
       <section className="ll-hero">
         <div className="ll-con">
