@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { redditGet, isRedditConfigured, OUTREACH_SUBS } from "@/lib/reddit";
 
 export const runtime = "edge";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
-const SKIP = new Set(["automoderator", "[deleted]", "reddit"]);
+const SKIP = new Set(["automoderator", "[deleted]", "reddit", "bmwdouche"]);
 
-// Same phrases as posts — filter comment bodies for help-seeking language
+// Same help-seeking language as posts — filter comment bodies.
 const HELP_PHRASES = [
   "my stream", "my channel", "i stream", "i've been streaming",
   "started streaming", "just started streaming", "new streamer", "new to streaming",
@@ -31,60 +32,62 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const subreddit = req.nextUrl.searchParams.get("subreddit") ?? "TwitchStreamers";
-
-  // Arctic Shift comments endpoint — only supports subreddit + limit, no keyword search
-  const res = await fetch(
-    `https://arctic-shift.photon-reddit.com/api/comments/search?subreddit=${encodeURIComponent(subreddit)}&limit=100`,
-    { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
-  );
-
-  if (!res.ok) {
-    return NextResponse.json({ error: `Arctic Shift ${res.status}`, comments: [] });
+  if (!isRedditConfigured()) {
+    return NextResponse.json({
+      error: "Reddit API not connected. Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Vercel (see lib/reddit.ts).",
+      comments: [],
+    }, { status: 503 });
   }
 
-  const data = await res.json();
-  if (data.error) return NextResponse.json({ error: data.error, comments: [] });
+  const subParam = req.nextUrl.searchParams.get("subreddit");
+  const useAll = !subParam || subParam.toLowerCase() === "all";
+  const subPath = useAll ? OUTREACH_SUBS.join("+") : subParam!;
 
-  const children: any[] = data.data ?? [];
+  let children: any[] = [];
+  try {
+    // /comments gives the newest comments across the sub(s).
+    const json = await redditGet(`/r/${encodeURIComponent(subPath)}/comments?limit=100`);
+    children = json?.data?.children ?? [];
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message ?? "Reddit fetch failed", comments: [] }, { status: 502 });
+  }
+
   const seenAuthors = new Set<string>();
+  const cutoffSec = (Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000;
 
   const comments = children
     .map((c: any) => {
-      const postId = typeof c.link_id === "string"
-        ? c.link_id.replace(/^t3_/, "")
-        : String(c.link_id ?? "");
-      const sub = (c.subreddit as string) ?? subreddit;
+      const d = c.data ?? c;
+      const postId = typeof d.link_id === "string" ? d.link_id.replace(/^t3_/, "") : String(d.link_id ?? "");
+      const sub = (d.subreddit as string) ?? subPath;
       return {
-        id: c.id as string,
+        id: d.id as string,
         title: null as string | null,
-        body: ((c.body ?? "") as string).slice(0, 600),
-        author: c.author as string,
+        body: ((d.body ?? "") as string).slice(0, 600),
+        author: d.author as string,
         subreddit: sub,
-        url: `https://www.reddit.com/r/${sub}/comments/${postId}/_/${c.id}/`,
-        created: typeof c.created_utc === "string"
-          ? parseInt(c.created_utc, 10)
-          : (c.created_utc as number) ?? (c.created as number) ?? 0,
+        url: d.permalink
+          ? `https://www.reddit.com${d.permalink}`
+          : `https://www.reddit.com/r/${sub}/comments/${postId}/_/${d.id}/`,
+        created: (d.created_utc as number) ?? 0,
         flair: null as string | null,
         isComment: true,
       };
     })
     .filter((c) => {
       if (!c.author || SKIP.has(c.author.toLowerCase())) return false;
-      if (!c.body || c.body.trim() === "[deleted]") return false;
-      // Skip comments that are just a URL or too short to have real context
+      if (!c.body || c.body.trim() === "[deleted]" || c.body.trim() === "[removed]") return false;
       const stripped = c.body.trim().replace(/https?:\/\/\S+/g, "").trim();
       if (stripped.length < 30) return false;
       if (seenAuthors.has(c.author)) return false;
-      // Match the 30-day window used on posts. Arctic Shift's mirror runs
-      // ~2 weeks behind so a tighter window comes back empty.
-      const cutoffSec = (Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000;
       if (!c.created || c.created < cutoffSec) return false;
       const text = c.body.toLowerCase();
       if (!HELP_PHRASES.some((ph) => text.includes(ph))) return false;
       seenAuthors.add(c.author);
       return true;
-    });
+    })
+    .sort((a, b) => b.created - a.created)
+    .slice(0, 80);
 
   return NextResponse.json({ comments });
 }
