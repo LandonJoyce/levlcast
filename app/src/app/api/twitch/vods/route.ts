@@ -1,0 +1,214 @@
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
+import { fetchTwitchVods, getAppAccessToken, invalidateAppTokenCache, mapVodToRow, refreshTwitchToken } from "@/lib/twitch";
+import { rateLimit } from "@/lib/rate-limit";
+import { NextResponse } from "next/server";
+import { sendPush } from "@/lib/push";
+
+/**
+ * POST /api/twitch/vods
+ * Syncs the authenticated user's Twitch VODs into Supabase.
+ * Uses a Twitch App Access Token (client credentials) since VODs are public.
+ * Skips VODs that already exist (by twitch_vod_id).
+ */
+export async function POST(request: Request) {
+  const supabase = await createClientFromRequest(request);
+
+  // 1. Get authenticated user
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 10 sync requests per hour per user
+  if (!rateLimit(`sync:${user.id}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+
+  // 2. Get profile + the user's stored Twitch tokens
+  const admin = createAdminClient();
+
+  let { data: profile } = await supabase
+    .from("profiles")
+    .select("twitch_id, twitch_access_token, twitch_refresh_token")
+    .eq("id", user.id)
+    .single();
+
+  // Mobile signups bypass the web /auth/callback route, so their profile
+  // never gets Twitch fields backfilled. If twitch_id is missing, pull it
+  // from the session user_metadata (set by Supabase on OAuth) and patch
+  // the profile row so future calls work.
+  if (!profile?.twitch_id) {
+    const meta = user.user_metadata as Record<string, string | undefined>;
+    const twitchId = meta?.provider_id || meta?.sub;
+    if (twitchId) {
+      await admin.from("profiles").upsert(
+        {
+          id: user.id,
+          twitch_id: twitchId,
+          twitch_login: meta?.name || meta?.preferred_username || "",
+          twitch_display_name: meta?.nickname || meta?.full_name || "",
+          twitch_avatar_url: meta?.avatar_url || meta?.picture || "",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+      profile = { twitch_id: twitchId, twitch_access_token: "", twitch_refresh_token: "" };
+    }
+  }
+
+  if (!profile?.twitch_id) {
+    return NextResponse.json(
+      { error: "Twitch is still connecting. Give it a minute after signup, then try again." },
+      { status: 400 }
+    );
+  }
+
+  // Try the user's OAuth token first, fall back to app token. User tokens
+  // have the streamer's identity attached, which lets Twitch return mature-
+  // flagged content that anonymous app tokens get age-gated out of —
+  // Storm's recent VODs were missing because his channel is marked 18+
+  // and Helix returns an empty list for app tokens against those channels.
+  // Falls back to app token if user token is missing/expired and refresh
+  // also fails.
+
+  let twitchVods: Awaited<ReturnType<typeof fetchTwitchVods>> = [];
+  let lastError: string | null = null;
+  let usedToken: "user" | "user-refreshed" | "app" | "none" = "none";
+
+  // Attempt 1: stored user token.
+  if (profile.twitch_access_token) {
+    try {
+      twitchVods = await fetchTwitchVods(profile.twitch_id, profile.twitch_access_token, 40);
+      usedToken = "user";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.warn(`[twitch/vods] user token failed for user=${user.id}, will try refresh:`, lastError);
+    }
+  }
+
+  // Attempt 2: refresh and retry user token (only if refresh token available).
+  if (twitchVods.length === 0 && usedToken !== "user" && profile.twitch_refresh_token) {
+    try {
+      const refreshed = await refreshTwitchToken(profile.twitch_refresh_token);
+      await admin.from("profiles").update({
+        twitch_access_token: refreshed.accessToken,
+        twitch_refresh_token: refreshed.refreshToken,
+      }).eq("id", user.id);
+      twitchVods = await fetchTwitchVods(profile.twitch_id, refreshed.accessToken, 40);
+      usedToken = "user-refreshed";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      console.warn(`[twitch/vods] user-refreshed token also failed for user=${user.id}:`, lastError);
+    }
+  }
+
+  // Attempt 3: app token. Last resort — won't see age-gated channels.
+  // If first try 401s, bust the cached app token and retry ONCE: Twitch
+  // invalidates app tokens when the client secret is rotated, and our
+  // in-memory cache can keep returning a dead token until the function
+  // instance dies. Force-refresh fixes it.
+  if (twitchVods.length === 0 && usedToken === "none") {
+    try {
+      const appToken = await getAppAccessToken();
+      twitchVods = await fetchTwitchVods(profile.twitch_id, appToken, 40);
+      usedToken = "app";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes(" 401")) {
+        console.warn(`[twitch/vods] app token returned 401 for user=${user.id}, busting cache and retrying`);
+        invalidateAppTokenCache();
+        try {
+          const freshAppToken = await getAppAccessToken(true);
+          twitchVods = await fetchTwitchVods(profile.twitch_id, freshAppToken, 40);
+          usedToken = "app";
+        } catch (err2) {
+          lastError = err2 instanceof Error ? err2.message : String(err2);
+          console.error(`[twitch/vods] app token retry failed for user=${user.id}:`, lastError);
+          return NextResponse.json(
+            { error: "Failed to fetch VODs from Twitch", detail: lastError },
+            { status: 502 }
+          );
+        }
+      } else {
+        lastError = msg;
+        console.error(`[twitch/vods] all token paths failed for user=${user.id}:`, lastError);
+        return NextResponse.json(
+          { error: "Failed to fetch VODs from Twitch", detail: lastError },
+          { status: 502 }
+        );
+      }
+    }
+  }
+
+  console.log(`[twitch/vods] user=${user.id} fetched ${twitchVods.length} via ${usedToken}`);
+
+  if (twitchVods.length === 0) {
+    return NextResponse.json({
+      synced: 0,
+      total: 0,
+      message: "No past broadcasts found on Twitch. Make sure VODs are enabled in your Twitch settings, then stream once and try again.",
+    });
+  }
+
+  // 5. Check which VODs we already have
+  const twitchIds = twitchVods.map((v) => v.id);
+  const { data: existing } = await supabase
+    .from("vods")
+    .select("twitch_vod_id")
+    .eq("user_id", user.id)
+    .in("twitch_vod_id", twitchIds);
+
+  const existingIds = new Set(existing?.map((e) => e.twitch_vod_id) || []);
+
+  // 6. Insert only new VODs (skip any with implausible Twitch metadata)
+  const newVods = twitchVods
+    .filter((v) => !existingIds.has(v.id))
+    .map((v) => mapVodToRow(v, user.id))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  if (newVods.length === 0) {
+    return NextResponse.json({
+      synced: 0,
+      total: twitchVods.length,
+      message: "All VODs already synced",
+    });
+  }
+
+  const { error: insertError } = await supabase.from("vods").insert(newVods);
+
+  if (insertError) {
+    console.error("VOD insert error:", insertError.message);
+    return NextResponse.json(
+      { error: "Failed to save VODs", detail: insertError.message },
+      { status: 500 }
+    );
+  }
+
+  // Push notification — let the streamer know new streams are ready to analyze
+  try {
+    const adminSupabase = await createAdminClient();
+    const { data: profile } = await adminSupabase
+      .from("profiles")
+      .select("expo_push_token")
+      .eq("id", user.id)
+      .single();
+
+    const count = newVods.length;
+    await sendPush(profile?.expo_push_token, {
+      title: count === 1 ? "New stream detected" : `${count} new streams detected`,
+      body: "Analyze it on LevlCast to get your coach report.",
+      data: { screen: "vods" },
+    });
+  } catch {
+    // Non-fatal
+  }
+
+  return NextResponse.json({
+    synced: newVods.length,
+    total: twitchVods.length,
+  });
+}

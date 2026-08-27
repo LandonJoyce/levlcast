@@ -1,0 +1,1993 @@
+/**
+ * lib/analyze.ts — AI peak detection and coaching report generation.
+ *
+ * This is the core of LevlCast. It uses Claude to:
+ *   1. detectPeaks()      — find the best viral clip moments in a VOD transcript
+ *   2. generateCoachReport() — produce a scored coaching report for the streamer
+ *
+ * HOW PEAK DETECTION WORKS:
+ *   - Short VODs (<= 25 min): single Claude call on the full transcript
+ *   - Long VODs: split into 20-minute chunks, run each independently,
+ *     then do a final re-ranking pass to pick the best 5 overall
+ *
+ * MODELS USED:
+ *   - Peak detection: claude-sonnet-4-6 (high quality — this is the MVP feature)
+ *   - Coaching report: claude-sonnet-4-6 (flagship feature)
+ *
+ * See src/types/index.ts for the Peak and CoachReport type definitions.
+ */
+
+import Anthropic from "@anthropic-ai/sdk";
+import { TranscriptSegment } from "./deepgram";
+import { withRetry } from "./retry";
+import { detectSustainedSilence, formatSustainedSilence, type ChatBucket } from "./chat-pulse";
+
+export interface Peak {
+  title: string;
+  start: number;
+  end: number;
+  score: number;
+  category: string;
+  reason: string;
+  caption: string;
+  hook: string;
+}
+
+/**
+ * Filter transcript segments to keep only the streamer's voice.
+ *
+ * Deepgram diarization assigns a speaker ID per utterance. In a typical
+ * stream the streamer is the single most-talking voice and everyone else
+ * (NPCs, music, occasional chatters) has far less speaking time.
+ *
+ * BUT — Deepgram's diarization is not stable across long streams. The
+ * same person's voice can get split into multiple speaker IDs when
+ * acoustic conditions change over hours (game audio louder/quieter, mic
+ * positioning, voice timbre shift, excitement level). Storm reported the
+ * dead-air detector flagged 9 silent minutes around 1h1m when he was
+ * actively talking with a chatter — almost certainly his secondary ID
+ * got dropped here. Real fake-silence bug eating user trust.
+ *
+ * Fix: keep the top speaker AND any other speakers whose total speaking
+ * time is at least 20% of the top speaker's. That threshold:
+ *   - Captures split-into-multiple-IDs streamers (secondary IDs always
+ *     have a healthy share of total time, since they're the same person)
+ *   - Still strips genuine background voices (a chatter who spoke 100s
+ *     out of a 3-hour stream is well under 20% of the dominant speaker)
+ *   - Strips music vocals, game NPCs, voice clips played during BRB
+ *
+ * Falls back to the full segment list if no speaker data is present.
+ */
+function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment[] {
+  const hasSpeakerData = segments.some((s) => s.speaker !== undefined);
+  if (!hasSpeakerData) return segments;
+
+  // Sum speaking duration per speaker ID
+  const speakerTime: Record<number, number> = {};
+  for (const seg of segments) {
+    if (seg.speaker === undefined) continue;
+    speakerTime[seg.speaker] = (speakerTime[seg.speaker] ?? 0) + (seg.end - seg.start);
+  }
+
+  const entries = Object.entries(speakerTime).sort(([, a], [, b]) => b - a);
+  if (entries.length === 0) return segments;
+
+  // Always keep the top speaker. Then add any speaker whose total time is
+  // at least 20% of the top speaker's — almost certainly the same person
+  // whose ID got split by diarization mid-stream.
+  const SECONDARY_KEEP_THRESHOLD = 0.20;
+  const topSeconds = Number(entries[0][1]);
+  const keepIds = new Set<number>();
+  for (const [idStr, secs] of entries) {
+    if (Number(secs) / topSeconds >= SECONDARY_KEEP_THRESHOLD) {
+      keepIds.add(Number(idStr));
+    }
+  }
+
+  const filtered = segments.filter((s) => s.speaker === undefined || keepIds.has(s.speaker));
+
+  const removed = segments.length - filtered.length;
+  if (removed > 0 || keepIds.size > 1) {
+    const keptDetail = Array.from(keepIds)
+      .map((id) => `${id}=${Math.round(speakerTime[id])}s`)
+      .join(", ");
+    console.log(`[analyze] Diarization: kept ${keepIds.size} speaker(s) (${keptDetail}), removed ${removed} segments from other speakers`);
+  }
+
+  return filtered;
+}
+
+/**
+ * Detect when the actual live stream starts inside the VOD.
+ *
+ * Twitch VODs include the entire broadcast, including any "Starting Soon" /
+ * BRB pre-stream period. Many streamers run a clip playlist or hype reel
+ * during BRB — those clips contain the streamer's own voice from past
+ * streams, so diarization can't strip them. Without this detector, the
+ * coach AI sees that audio as the stream's intro and scores the streamer
+ * for content that wasn't actually their live stream.
+ *
+ * Heuristic: scan forward through the first 25 minutes and find the first
+ * 3-minute window where the streamer is "live-stream busy" — sustained
+ * speech (>=45% of the window) with no internal gap longer than 45
+ * seconds. Pre-stream playlists have characteristic structure (short clip
+ * bursts followed by transition gaps); a continuous 3-minute block of
+ * dense speech is what live streaming actually looks like.
+ *
+ * Returns the offset (in seconds, rounded down to nearest 5s) where the
+ * live stream begins. Returns 0 when:
+ *   - the detected start is within the first 2 minutes (no real BRB)
+ *   - no clear sustained block is found (be conservative — never trim)
+ *   - the transcript is too short to analyze
+ */
+function detectStreamStartOffset(segments: TranscriptSegment[]): number {
+  if (segments.length < 30) return 0;
+
+  const SCAN_MAX_SEC = 25 * 60;
+  const PROBE_SEC = 180;          // 3-minute probe window
+  const MIN_SPEECH_FRAC = 0.45;   // >=45% of window must be speech
+  const MAX_INTERNAL_GAP = 45;    // no internal silence > 45s
+  const MIN_PROBE_SEGS = 8;       // need at least 8 utterances in the window
+  const MIN_OFFSET_TO_TRIM = 120; // only trim if at least 2 min into the VOD
+
+  for (const seed of segments) {
+    if (seed.start > SCAN_MAX_SEC) break;
+
+    const winEnd = seed.start + PROBE_SEC;
+    const winSegs = segments.filter((s) => s.start >= seed.start && s.end <= winEnd);
+    if (winSegs.length < MIN_PROBE_SEGS) continue;
+
+    const speechTime = winSegs.reduce((sum, s) => sum + (s.end - s.start), 0);
+    if (speechTime / PROBE_SEC < MIN_SPEECH_FRAC) continue;
+
+    let maxGap = 0;
+    for (let j = 1; j < winSegs.length; j++) {
+      const gap = winSegs[j].start - winSegs[j - 1].end;
+      if (gap > maxGap) maxGap = gap;
+    }
+    if (maxGap > MAX_INTERNAL_GAP) continue;
+
+    if (seed.start < MIN_OFFSET_TO_TRIM) return 0;
+
+    return Math.floor(seed.start / 5) * 5;
+  }
+
+  return 0;
+}
+
+/**
+ * Build a transcript string from segments, with explicit pause markers.
+ * Pauses of 8+ seconds are marked so Claude understands the stream's rhythm.
+ */
+function buildTranscript(segments: TranscriptSegment[]): string {
+  const lines: string[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    lines.push(`[${toSeconds(seg.start)}-${toSeconds(seg.end)}] ${seg.text}`);
+    if (i < segments.length - 1) {
+      const gap = segments[i + 1].start - seg.end;
+      if (gap >= 8) {
+        lines.push(`--- ${Math.round(gap)}s pause ---`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Snap a peak's boundaries to the nearest utterance boundaries.
+ * Prevents clips from starting/ending mid-sentence.
+ * If the timestamp falls in a gap between utterances, finds the closest one.
+ * Caps expansion at MAX_SNAP_DRIFT seconds to prevent clips ballooning over speech gaps.
+ */
+function snapToUtteranceBoundaries(peak: Peak, segments: TranscriptSegment[]): Peak {
+  if (segments.length === 0) return peak;
+
+  const MAX_SNAP_DRIFT = 10; // never push a boundary more than 10s from Claude's pick
+
+  // Find the nearest utterance start at or before peak.start (within drift limit)
+  let snappedStart = peak.start;
+  let bestStartDist = Infinity;
+  for (const seg of segments) {
+    if (seg.start <= peak.start) {
+      const dist = peak.start - seg.start;
+      if (dist < bestStartDist && dist <= MAX_SNAP_DRIFT) {
+        bestStartDist = dist;
+        snappedStart = seg.start;
+      }
+    }
+  }
+  // If nothing was before peak.start within drift, find the closest utterance after (within drift)
+  if (bestStartDist === Infinity) {
+    for (const seg of segments) {
+      const dist = Math.abs(seg.start - peak.start);
+      if (dist < bestStartDist && dist <= MAX_SNAP_DRIFT) {
+        bestStartDist = dist;
+        snappedStart = seg.start;
+      }
+    }
+  }
+
+  // Find the nearest utterance end at or after peak.end (within drift limit)
+  let snappedEnd = peak.end;
+  let bestEndDist = Infinity;
+  for (const seg of segments) {
+    if (seg.end >= peak.end) {
+      const dist = seg.end - peak.end;
+      if (dist < bestEndDist && dist <= MAX_SNAP_DRIFT) {
+        bestEndDist = dist;
+        snappedEnd = seg.end;
+      }
+    }
+  }
+  // If nothing was after peak.end within drift, find the closest utterance before (within drift)
+  if (bestEndDist === Infinity) {
+    for (const seg of segments) {
+      const dist = Math.abs(seg.end - peak.end);
+      if (dist < bestEndDist && dist <= MAX_SNAP_DRIFT) {
+        bestEndDist = dist;
+        snappedEnd = seg.end;
+      }
+    }
+  }
+
+  // Enforce max clip duration (90s) — trim end if snap expanded too much
+  const MAX_CLIP_DURATION = 90;
+  if (snappedEnd - snappedStart > MAX_CLIP_DURATION) {
+    snappedEnd = snappedStart + MAX_CLIP_DURATION;
+  }
+
+  if (snappedEnd - snappedStart >= 15) {
+    return { ...peak, start: snappedStart, end: snappedEnd };
+  }
+  return peak;
+}
+
+/**
+ * Deduplicate peaks that overlap — when two peaks start within `thresholdSeconds`
+ * of each other, keep the higher-scored one. This handles overlapping chunks
+ * detecting the same moment independently.
+ */
+function deduplicatePeaks(peaks: Peak[], thresholdSeconds: number): Peak[] {
+  const sorted = [...peaks].sort((a, b) => b.score - a.score);
+  const kept: Peak[] = [];
+  for (const peak of sorted) {
+    const isDuplicate = kept.some(
+      (k) => Math.abs(k.start - peak.start) < thresholdSeconds
+    );
+    if (!isDuplicate) kept.push(peak);
+  }
+  return kept;
+}
+
+/**
+ * Calculate words per minute for a set of segments.
+ */
+function calcWPM(segs: TranscriptSegment[]): number {
+  if (segs.length < 2) return 0;
+  const totalWords = segs.reduce((sum, s) => sum + s.text.split(" ").length, 0);
+  const durationMin = (segs[segs.length - 1].end - segs[0].start) / 60;
+  return durationMin > 0 ? Math.round(totalWords / durationMin) : 0;
+}
+
+/**
+ * Extract transcript lines around each detected peak.
+ * Gives the coach context about what was actually happening at the best moments.
+ */
+function buildPeakContextWindows(peaks: Peak[], segments: TranscriptSegment[]): string {
+  if (peaks.length === 0) return "";
+
+  const lines: string[] = [];
+  // Show context around the top 4 peaks max to keep prompt size reasonable
+  for (const peak of peaks.slice(0, 4)) {
+    const windowStart = Math.max(0, peak.start - 50);
+    const windowEnd = peak.end + 35;
+    const window = segments.filter((s) => s.start >= windowStart && s.start <= windowEnd);
+    if (window.length === 0) continue;
+    lines.push(`--- Peak context: "${peak.title}" at ${formatTime(peak.start)} (score: ${peak.score.toFixed(2)}) ---`);
+    window.forEach((s) => lines.push(`[${formatTime(s.start)}] ${s.text}`));
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Analyze a transcript with Claude to find peak/viral moments.
+ * Returns scored peaks with clip boundaries, captions, and scroll-stopping hooks.
+ */
+function buildPeakDetectionPrompt(vodTitle: string, transcript: string, chatPulse?: string): string {
+  return `You are selecting clips from a Twitch VOD transcript for TikTok and YouTube Shorts. Your job is to find moments that will stop someone mid-scroll — someone who has never seen this streamer before and has no loyalty to them.
+
+Stream title: "${vodTitle}"
+
+Timestamped transcript (--- Xs pause --- marks significant silences):
+${transcript}
+
+${chatPulse ? chatPulse + "\n" : ""}
+
+━━━ WHAT MAKES A CLIP GO VIRAL ━━━
+
+Every clip that performs has THREE things:
+1. A HOOK in the first 2-3 seconds that creates an open loop or instant reaction ("wait, what is happening?")
+2. A BUILD — rising tension, escalating energy, or a setup that makes you lean in
+3. A PAYOFF — the reaction, the punchline, the win, the loss, the moment that releases the tension
+
+If a moment has all three, it is a clip. If it is missing any one of them, it is not.
+
+━━━ THE 8 CLIP ARCHETYPES — match every moment to one ━━━
+
+1. HYPE — The "LET'S GO" moment. Energy spike, celebration, win, clutch play. Fast speech, exclamations, repeating words ("yes yes yes", "let's go let's go"). Viewer reaction: "that was insane."
+   Viral trigger: people share things that made them feel excited.
+
+2. COMEDY — Unexpected twist, absurd observation, self-aware joke, timing that lands perfectly. The streamer is either the punchline or delivers one. Viewer reaction: "I'm dead."
+   Viral trigger: people share things that made them laugh out loud.
+
+3. RAGE/TILT — Genuine frustration, salt, disbelief at the game or a situation. NOT performed anger — real emotional response. The best rage clips follow a 3-stage arc: (1) TRIGGER — something specific happens that starts the frustration; (2) ESCALATION — mounting frustration, shorter sentences, word repetition, the streamer narrating their own tilt ("I'm actually tilting right now", "this is genuinely griefing", "I'm going insane", "I'm cooked"); (3) PEAK + AFTERMATH — the explosion, then either self-aware laughter at themselves or continued escalation. The AFTERMATH is critical — the moment the streamer laughs at themselves or decides to keep going anyway is the most human part and what gets shared. A clip that catches all three stages beats a clip that catches only the peak. Viewer reaction: "this is literally me."
+   Viral trigger: extreme relatability — everyone has felt this exact feeling, and the aftermath makes it safe to laugh about.
+
+4. CLUTCH — High-stakes moment that looked LOST then flipped. CRITICAL: the clip MUST start at the worst point — the moment it looks most hopeless, most wrong, most over. If you start the clip after the clutch is already in progress, you lose the entire hook. The viewer needs to see the nadir first. Setup (it looks lost) → Build (it gets worse OR the streamer rallies) → Payoff (it works against all odds). Viewer reaction: "how did they do that."
+   Viral trigger: people share survival and skill moments they want their friends to witness.
+
+5. HOT TAKE — Bold opinion stated with conviction. Controversial read, unpopular opinion, calling something out. The streamer takes a real position, not a soft one. Viewer reaction: "I agree / I strongly disagree."
+   Viral trigger: opinion content drives comments and shares.
+
+6. STORY — Has a clear beginning, middle, and end inside the clip window. Setup establishes stakes, something happens, streamer reacts with resolution. Viewer reaction: "wait what happened next."
+   Viral trigger: narrative tension keeps people watching to the end.
+
+7. EMOTIONAL — Genuine vulnerability, heartfelt moment, real connection with chat. NOT performed emotion — something the streamer actually feels. Viewer reaction: "this hit different."
+   Viral trigger: authentic human moments are rare online and get shared.
+
+8. KNOWLEDGE DROP — Explains something in a way that makes the viewer say "I never thought of it that way." A fast, confident insight or strategy breakdown. Viewer reaction: "I learned something."
+   Viral trigger: people share content that makes them look smart when they share it.
+
+━━━ VERBAL SIGNALS — scan for these patterns ━━━
+
+HIGH-CONFIDENCE clip signals (almost always a clip):
+- Exclamations that open an utterance: "WAIT—", "NO—", "BRO—", "OH MY GOD—", "WHAT—", "NO WAY—", "YO—", "HOLD ON—"
+- Word repetition with rising energy: "no no no no", "yes yes yes", "go go go", "wait wait wait"
+- Laughter markers: "I'm dead", "I can't", "bro stop", "I'm crying", "I'm done"
+- Conviction language: "real talk", "genuinely", "I actually think", "unpopular opinion", "nobody talks about this"
+- Disbelief: "there is no way", "how is that even legal", "that is actually insane", "I'm not making this up"
+- Story payoff signals: "and then—", "so what happened was—", "I kid you not"
+- Self-roast or self-awareness: streamer laughing at their own mistake or calling themselves out
+- TENSION-SNAP: a pause of 3-8 seconds (marked "--- Xs pause ---" in the transcript) immediately before a high-energy utterance. The silence is the setup — it signals something happened that left the streamer momentarily speechless before they exploded. This is especially powerful as the clip's opening hook. Do NOT discard this pattern as "dead air" — it is the calm before the storm and viewers feel it.
+
+MEDIUM-CONFIDENCE signals (needs context check):
+- Rhetorical questions with stakes: "why would you ever—", "who decided that—"
+- Escalating commentary during gameplay: pace quickens, sentences get shorter
+- Direct address to chat with emotion: "chat did you see that", "chat I'm not okay"
+
+NOT a clip (skip immediately):
+- Flat narration: "ok so", "alright", "let me", "now I'm going to"
+- Reading donations or subs without a reaction that stands alone
+- Explaining game mechanics with no emotional hook
+- Any moment where speech is slow, low-energy, or monotone
+- Extended silence (5+ seconds) in the MIDDLE of the clip with no setup function — dead air that kills momentum mid-arc. Exception: a silence at the START of the clip that serves as a tension-snap hook (see HIGH-CONFIDENCE above) is not dead air — it IS the hook.
+- Moments that need 10+ minutes of context to understand why they matter
+
+━━━ SCORING ━━━
+
+Be harsh. Most streams have 1-3 real clips. Padding with weak moments makes the product look bad.
+
+- 0.85-1.0: Mid-scroll stopper. Hook is immediate. No context needed. Universal emotion. Could perform on any account.
+- 0.70-0.84: Strong clip. Clear arc, clear payoff. Works standalone with minor context.
+- 0.65-0.69: Decent clip. Has a genuine moment but hook is softer or needs mild context.
+- Below 0.65: Do not include.
+
+Ask yourself for every candidate: "Would I stop scrolling for this if I had never heard of this streamer?" If the honest answer is no, the score is below 0.65.
+
+COMEDY CLIP TEST — apply before flagging anything as the "funny" category:
+Comedy clips work because of CONTENT, not because of delivery. You cannot hear this streamer's voice — you only see the transcript. A moment is genuinely clippable comedy only if:
+- The setup and punchline are clear from the words alone (an absurd observation, a self-own that escalates, an unexpected reversal)
+- A deaf viewer reading captions would still find it funny or weird
+If the only evidence of comedy is "haha" or "that was funny" or similar laughter reactions with no clear verbal punchline, the moment is NOT a comedy clip — it was a delivery moment that doesn't translate to text-based detection. Score it honestly.
+
+NO-CHAT RULE: Assume zero chat data unless a CHAT PULSE section is explicitly provided. All clip scores must be defensible based on the streamer's own delivery and content alone. A moment that only matters because "chat went crazy" is invisible without that data — score it as if chat was empty.
+
+CHAT PULSE SCORING: If a chat pulse section is present in the input above, match its timestamps to your clip candidates. Any clip whose window overlaps a notable chat activity spike earns +0.05 to +0.10 to its score. Chat spikes are the most reliable external signal that a moment actually landed with a live audience — even a verbally understated moment that lit up chat is worth more than a high-energy moment that got no response. A chat spike with no obvious verbal signal is a high-priority candidate: something happened that the streamer may have undersold.
+
+━━━ CLIP BOUNDARIES — CRITICAL ━━━
+
+Your timestamps MUST match utterances in the transcript exactly. Do not estimate.
+
+Step by step:
+1. Find the PAYOFF utterance — the exact line where the peak moment lands
+2. Find the BUILD — go back 2-4 utterances to where the setup begins
+3. Set START = timestamp of the first utterance of the build
+4. Set END = the utterance where the energy returns to baseline — see END CHECK below
+5. Check: does the clip arc have setup, build, and payoff within your start/end window? If not, adjust.
+
+Duration: 30-90 seconds. Sweet spot is 40-60 seconds.
+Never cut mid-utterance. Land on complete sentences.
+Timestamps are plain seconds (e.g. 234 = 234 seconds into the stream).
+Output start and end as plain integers. Minimum clip: 20 seconds.
+No emojis. Clean text only.
+
+START CHECK — before finalizing: "Can I trim 5-10 seconds from the front without losing the hook?" Start at the FIRST moment a stranger would feel something. Trim aggressively from the front.
+
+END CHECK — this is equally critical. The clip ends the moment the payoff is fully delivered and the immediate reaction has landed. It does NOT continue past that point. Signs the clip should have already ended:
+- The streamer moves to the next game action or topic ("ok let's go next round", "alright", "now I'm going to...")
+- Energy drops back to calm narration after the reaction peak
+- The streamer says anything that would feel like an anti-climax to a first-time viewer
+- More than 3-4 seconds of silence after the payoff with no escalation following it
+
+The end of a great clip is the last beat of the payoff or the one-line reaction to it. NOT the wind-down. NOT the transition to what's next. Cut there and stop.
+
+Ask yourself: "If I ended the clip 5-10 seconds earlier, would anything be lost?" If the answer is no, move the end timestamp back. Trim from the end just as aggressively as from the front.
+
+━━━ NO QUOTES — GLOBAL RULE (CRITICAL) ━━━
+
+You are working from a machine transcript that may mishear words, merge utterances, or miss speech entirely. Putting the wrong words in the streamer's mouth on a public TikTok title or caption is catastrophic — it makes the whole product look dishonest. Therefore:
+
+- NEVER put the streamer's words in quotation marks in ANY field (title, caption, hook, reason). No single quotes, no double quotes, no backticks around dialogue. Zero exceptions.
+- NEVER use em dashes (—) in any field. Use a period or rewrite the sentence.
+- NEVER paraphrase what the streamer said as if it were a direct statement (e.g. "streamer says he hates the new patch"). Describe the moment, not the words.
+- If you are tempted to quote, describe the ACTION and EMOTION instead: "a rage outburst after the team wipe", "a blunt hot take on the new meta", "a clutch reaction when the round flipped".
+- When in doubt — and you should be in doubt often — DO NOT QUOTE. Omit the dialogue entirely and lean on the arc/emotion. A vague-but-true description beats a confident-but-wrong quote every time.
+- Titles must read like TikTok titles but NEVER be a fabricated quote. "The clutch that should not have worked" is good. "\"I can't believe that worked\" — clutch finish" is banned.
+- Captions describe the moment and tease the payoff. They do NOT narrate what the streamer said.
+- Hook field: describe what HAPPENS (a reaction, a tone shift, a visible spike in energy) — never what is SAID word-for-word.
+
+If this rule conflicts with anything else above, this rule wins.
+
+━━━ OUTPUT FORMAT ━━━
+
+Respond with ONLY a JSON array. No markdown, no code fences, no explanation.
+
+[
+  {
+    "title": "<TikTok title under 60 chars. The title creates an information gap — someone who hasn't seen the clip must feel curious enough to tap. Use one of these 5 proven patterns:
+(1) CONSEQUENCE: 'This one mistake ended the whole run' / 'I didn't see this coming and it cost me'
+(2) EMOTION STATE: 'The most tilted I've been all week' / 'I genuinely thought it was over'
+(3) CONTRAST: 'From dead in 3 seconds to that' / 'Worst position possible then this happened'
+(4) SPECIFICITY: 'The shot that had no right to connect' / 'When your aim just switches on for 20 seconds'
+(5) AFTERMATH: 'I sat in silence for 5 seconds after this' / 'My brain stopped working'
+BANNED: 'Clutch play', 'Crazy moment', 'Insane gaming', any title that fits any clip from any stream. A title you could paste onto a random clip is a failed title. NEVER a quote.>",
+    "start": <integer seconds — exact utterance timestamp from transcript>,
+    "end": <integer seconds — exact utterance timestamp from transcript>,
+    "score": <0.0-1.0>,
+    "category": "<hype | funny | rage | clutch | hot_take | story | emotional | educational>",
+    "reason": "<2-3 sentences: what is the arc, what emotional beats anchor it, why a stranger would care. No quoted dialogue.>",
+    "hook": "<describe what a stranger SEES/HEARS happening in the first 2-3 seconds — a laugh, a sudden shout, an energy spike, a shocked pause. Never word-for-word dialogue. No em dashes.>",
+    "caption": "<TikTok/Shorts caption under 150 chars. The caption must describe THIS specific clip's situation — not a generic template. If you could paste the same caption onto a different clip and it would still fit, it's too generic. Rewrite it around what specifically happens here.
+Pick ONE of these as a base format, then make it specific:
+(1) Specific setup: 'POV: [the exact bad situation this streamer was in] and then...'
+(2) Specific escalation tease: 'It started as [the specific thing] and ended as [the unexpected result]'
+(3) Specific reaction: '[The specific outcome] and I need a minute'
+Hashtags at the end only — 3-4 max. Never quote the streamer. HASHTAG RULE: only use the specific game name as a hashtag if it appears verbatim in the stream title. Use #gaming #Twitch #clutch #FPS etc. if game is uncertain.>"
+  }
+]
+
+Return 0-3 clips sorted by score descending.
+
+REALITY CHECK — apply this before returning:
+- A 4-hour stream typically has 1 real clip. Occasionally 2. Almost never 3.
+- 0 clips is a valid and honest result. If nothing clears the bar, return an empty array. Do not invent clips.
+- Returning 3 mediocre clips to fill a quota is worse than returning 1 great one.
+- If you have 1 strong clip and 2 weak ones, return 1.
+- The streamer would rather have 1 clip they're proud to post than 3 they skip past.
+
+━━━ STRICT OUTPUT RULE ━━━
+
+Your entire response must be a JSON array and nothing else. No preamble, no reflection ("Looking at this transcript..."), no commentary, no markdown code fences. The first character of your response must be \`[\` and the last character must be \`]\`. If you have zero clips, the response is exactly \`[]\`.`;
+}
+
+async function runPeakDetection(
+  anthropic: Anthropic,
+  vodTitle: string,
+  segments: TranscriptSegment[],
+  chatPulse?: string
+): Promise<Peak[]> {
+  const transcript = buildTranscript(segments);
+
+  const response = await withRetry(() => anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 3000,
+    system: `You are a senior clip editor who has spent years cutting Twitch VODs into viral TikToks and YouTube Shorts. You know the difference between a moment that excites the streamer's existing fans and a moment that will stop a complete stranger mid-scroll. You think in terms of clip arcs — setup, build, payoff — and you are ruthless about quality. Most streams have exactly one real clip. You would rather return zero clips than one mediocre one. You understand that the first 2-3 seconds of a clip determine everything, and you select boundaries with surgical precision so every clip starts on a hook and ends on a resolution.`,
+    messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript, chatPulse) }],
+  }), 3, 1000);
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const peaks = parsePeaksFromClaudeText(text);
+  if (peaks === null) {
+    console.error("Failed to parse Claude peak response (no JSON array found):", text.slice(0, 400));
+    return [];
+  }
+  return peaks
+    .filter((p) => p.start >= 0 && p.end > p.start && p.score >= MIN_PEAK_SCORE)
+    .map((p) => snapToUtteranceBoundaries(p, segments));
+}
+
+/**
+ * Best-effort parser for Claude's peak-detection response.
+ *
+ * Returns the parsed Peak[] or null if no recoverable JSON array exists.
+ *
+ * Layered strategy because Claude occasionally prefaces JSON output with
+ * stream-of-consciousness reasoning ("Looking at this transcript, I need
+ * to be honest with myself...") despite the strict-output instruction:
+ *   1. Strip code fences + trim, try direct JSON.parse on the whole string.
+ *   2. If that fails, find the first balanced [...] block (bracket-counted,
+ *      string-aware) anywhere in the text and parse that.
+ *   3. If THAT fails, return null and let the caller log + degrade to no
+ *      peaks (the coach report still ships).
+ */
+function parsePeaksFromClaudeText(text: string): Peak[] | null {
+  const stripped = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+
+  // Strategy 1: whole-string parse
+  try {
+    const parsed = JSON.parse(stripped);
+    if (Array.isArray(parsed)) return stripEmDashes(parsed) as Peak[];
+  } catch {
+    // fall through
+  }
+
+  // Strategy 2: extract first balanced JSON array. Bracket count while
+  // skipping over string literals so a `[` inside a quoted caption doesn't
+  // confuse the counter.
+  const start = stripped.indexOf("[");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < stripped.length; i++) {
+    const ch = stripped[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) {
+        const candidate = stripped.slice(start, i + 1);
+        try {
+          const parsed = JSON.parse(candidate);
+          if (Array.isArray(parsed)) {
+            console.warn("[analyze] Peak parse recovered from preamble. Stripped " + start + " leading chars.");
+            return stripEmDashes(parsed) as Peak[];
+          }
+        } catch {
+          // Malformed even after extraction. Give up.
+        }
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+// How long each transcript chunk is when splitting long VODs.
+const CHUNK_SECONDS = 20 * 60;
+
+// Overlap between adjacent chunks so moments on boundaries aren't split.
+const CHUNK_OVERLAP = 2 * 60;
+
+// Hard cap on Claude peak-detection chunks per VOD. Without this, a 12-hour
+// stream produces ~37 chunks at the base 20-min size and racks up $4-6 in
+// Claude spend in one analyze run. Capping at 12 caps per-VOD spend at
+// ~$1.50 regardless of stream length. Chunk size is scaled up adaptively
+// for long VODs so we still cover the whole stream — see computeChunkSeconds.
+const MAX_PEAK_CHUNKS = 12;
+
+/**
+ * Decide chunk length for peak detection. Short VODs use the base 20-min
+ * size; long VODs scale chunk size up to keep total chunks <= MAX_PEAK_CHUNKS.
+ * Output is in seconds, always >= CHUNK_SECONDS.
+ *
+ * Math: at base size the effective stride is CHUNK_SECONDS - CHUNK_OVERLAP.
+ * For long VODs we solve chunkSize so vodDurationSec / (chunkSize - overlap)
+ * lands at MAX_PEAK_CHUNKS exactly, then ceil for safety.
+ */
+function computeChunkSeconds(vodDurationSec: number): number {
+  const baseStride = CHUNK_SECONDS - CHUNK_OVERLAP;
+  const chunksAtBase = Math.ceil(vodDurationSec / baseStride);
+  if (chunksAtBase <= MAX_PEAK_CHUNKS) return CHUNK_SECONDS;
+  return Math.ceil(vodDurationSec / MAX_PEAK_CHUNKS) + CHUNK_OVERLAP;
+}
+
+// Maximum peaks returned per VOD. Most streams have 1-2 strong clips and
+// a few good-but-not-great ones. Surfacing 5 lets the streamer pick which
+// moments to spend their clip quota on — feedback consistently asked for
+// "recommended cuts I can choose from" rather than a single auto-pick.
+// The downstream rerank still orders by score so the top 1-2 are real.
+const MAX_PEAKS = 5;
+
+// Top candidates to consider during the re-ranking pass on long VODs.
+const RERANK_CANDIDATE_LIMIT = 18;
+
+// Minimum virality score. 0.65 = clip with clear emotional arc and real payoff.
+const MIN_PEAK_SCORE = 0.65;
+
+export async function detectPeaks(
+  segments: TranscriptSegment[],
+  vodTitle: string,
+  chatPulse?: string
+): Promise<Peak[]> {
+  const anthropic = new Anthropic();
+
+  // Strip non-streamer voices (game NPCs, co-streamers, background audio)
+  // before sending to Claude — only analyze what the streamer actually said
+  segments = filterDominantSpeaker(segments);
+
+  // Trim pre-stream BRB / "Starting Soon" playlist content. Clips made from
+  // a pre-stream highlight reel would be re-clipping old content; the live
+  // stream is what we actually want to mine for moments.
+  const streamStartOffset = detectStreamStartOffset(segments);
+  if (streamStartOffset > 0) {
+    const before = segments.length;
+    segments = segments.filter((s) => s.start >= streamStartOffset);
+    console.log(`[analyze] Pre-stream trim: dropped ${before - segments.length} segments before ${streamStartOffset}s (BRB / starting-soon)`);
+  }
+
+  const vodDuration = segments.length > 0 ? segments[segments.length - 1].end : 0;
+
+  if (vodDuration <= CHUNK_SECONDS + 5 * 60) {
+    const peaks = await runPeakDetection(anthropic, vodTitle, segments, chatPulse);
+    return peaks.sort((a, b) => b.score - a.score).slice(0, MAX_PEAKS);
+  }
+
+  // Build overlapping chunks so moments on boundaries aren't lost.
+  // Each chunk overlaps the next by CHUNK_OVERLAP seconds.
+  // Chunk size scales with VOD length to keep total chunk count <= MAX_PEAK_CHUNKS,
+  // so an 11h stream uses ~57-min chunks (12 calls) instead of 20-min chunks
+  // (37 calls) — same coverage, ~3x cheaper.
+  const chunkSeconds = computeChunkSeconds(vodDuration);
+  console.log(`[analyze] Peak chunking: vod=${Math.round(vodDuration / 60)}min, chunkSize=${Math.round(chunkSeconds / 60)}min, projectedChunks=${Math.ceil(vodDuration / (chunkSeconds - CHUNK_OVERLAP))}`);
+  const chunks: TranscriptSegment[][] = [];
+  let chunkStart = 0;
+  while (chunkStart < vodDuration) {
+    const chunkEnd = chunkStart + chunkSeconds;
+    chunks.push(segments.filter((s) => s.start >= chunkStart && s.start < chunkEnd));
+    chunkStart += chunkSeconds - CHUNK_OVERLAP;
+  }
+
+  const allPeaks: Peak[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length === 0) continue;
+    const peaks = await runPeakDetection(anthropic, vodTitle, chunk, chatPulse);
+    allPeaks.push(...peaks);
+  }
+
+  // Deduplicate peaks from overlapping regions — if two peaks start within 30s
+  // of each other, keep the one with the higher score
+  const deduped = deduplicatePeaks(allPeaks, 30);
+
+  const topCandidates = deduped
+    .sort((a, b) => b.score - a.score)
+    .slice(0, RERANK_CANDIDATE_LIMIT);
+
+  if (topCandidates.length <= MAX_PEAKS) {
+    return topCandidates;
+  }
+
+  const candidateSummary = topCandidates
+    .map((p, i) => `${i + 1}. [${formatTime(p.start)}-${formatTime(p.end)}] "${p.title}" (score: ${p.score.toFixed(2)}) — ${p.reason}`)
+    .join("\n");
+
+  const rerankResponse = await withRetry(() => anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 512,
+    system: `You are a viral content editor. Your job is to give the streamer a short, curated shortlist of moments that are genuinely worth clipping from this stream. Quality over quantity. A short list of strong picks beats a long list with padding.`,
+    messages: [{
+      role: "user",
+      content: `These ${topCandidates.length} candidates came from the same stream. Pick the ones genuinely worth clipping. Most streams have 1-2 standout moments and a few decent ones — surface up to ${MAX_PEAKS}, but only if each one earns its slot.
+
+KNOCKOUT RULES:
+1. For each candidate ask: "Would a stranger who has never heard of this streamer stop scrolling for this?" If the honest answer is no, it is eliminated.
+2. If two candidates are from the same emotional category (both hype, both rage, both funny), keep the stronger one. Don't return near-duplicates.
+3. A clip that needs 30 seconds of setup to land is eliminated. The hook must hit in the first 3 seconds.
+4. Order matters — the strongest pick goes first, then in descending quality. Never put a weaker pick above a stronger one to balance the list.
+5. Padding is worse than a short list. If only 1 clip earns it, return only 1. If 0 earn it, return 0.
+6. Hard ceiling: ${MAX_PEAKS} picks. The streamer would rather have 3 great ones than 5 with two duds.
+
+Return ONLY a JSON array of 1-based numbers in ranked order, e.g. [3] or [2, 7, 1]. No explanation.
+
+Candidates:
+${candidateSummary}`,
+    }],
+  }), 3, 1000);
+
+  try {
+    const rerankText = rerankResponse.content[0].type === "text" ? rerankResponse.content[0].text : "";
+    const cleaned = rerankText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const indices: number[] = JSON.parse(cleaned);
+    return indices
+      .filter((i) => i >= 1 && i <= topCandidates.length)
+      .map((i) => topCandidates[i - 1])
+      .slice(0, MAX_PEAKS);
+  } catch {
+    return topCandidates.slice(0, MAX_PEAKS);
+  }
+}
+
+
+export interface CoachReport {
+  overall_score: number;
+  streamer_type: "gaming" | "just_chatting" | "irl" | "variety" | "educational";
+  energy_trend: "building" | "declining" | "consistent" | "volatile";
+  strengths: string[];
+  improvements: string[];
+  best_moment: { time: string; description: string };
+  recommendation: string;
+  next_stream_goals?: string[];
+  rewatch_moments?: Array<{ time: string; kind: "best" | "worst"; note: string }>;
+  missed_clip?: { time: string; note: string };
+  viewer_retention_risk: "low" | "medium" | "high";
+  cold_open: { score: "strong" | "weak" | "average"; note: string };
+  // Closing score — mirrors cold_open for how the stream ended. Optional
+  // because historical reports predate this field.
+  closing?: { score: "strong" | "weak" | "average"; note: string };
+  // Detected growth-killing behaviors in the transcript — each MUST include
+  // a real quote from the transcript as proof. Empty array is preferred over
+  // false positives.
+  anti_patterns?: Array<{
+    time: string;
+    type:
+      | "viewer_count_apology"
+      | "follow_begging"
+      | "lurker_shaming"
+      | "pre_stream_drain"
+      | "self_defeat";
+    quote: string;
+    note: string;
+  }>;
+  // One screenshot-worthy stat or observation from this stream. Something the
+  // streamer would feel good sharing on Twitter/Discord.
+  shareable_win?: { stat: string; context: string };
+  dead_zones?: Array<{ time: string; duration: number }>;
+  /** Total dead-air time across the whole stream, in seconds. */
+  dead_air_seconds?: number;
+  /** Dead air as a percentage of total stream duration (0-100). */
+  dead_air_pct?: number;
+  // 2-4 sentence narrative summary of what this stream was about — shown before scores
+  stream_story?: string;
+  // 1-2 sentences on the viewer community this content attracts and whether this stream served them
+  community_note?: string;
+  // Component breakdown — 4 sub-scores that feed into overall_score
+  score_breakdown?: {
+    energy: number;      // 0-100: speaking energy, pacing, WPM consistency
+    engagement: number;  // 0-100: chat interaction, personality, reactions
+    consistency: number; // 0-100: sustained quality vs. crashes and dead zones
+    content: number;     // 0-100: content quality, originality, opinion strength
+  };
+  // Longitudinal coaching — populated when prior stream history is available
+  trend_vs_history?: {
+    direction: "improving" | "declining" | "consistent" | "first_stream";
+    note: string; // 1-2 sentences referencing specific prior streams
+  };
+  // The single worst energy crash in the stream — what happened and when
+  momentum_crash?: {
+    time: string;
+    duration_min: number;
+    note: string;
+  };
+  // Computed metric: average wpm during active speech windows only (excludes gaps)
+  commentary_density?: number;
+  // Brutal one-liner shown at the top of the punch view — FOMO-inducing, specific to this stream
+  punch_line?: string;
+  /**
+   * Did the streamer address the previous report's #1 priority THIS stream?
+   * Populated only when at least one prior coach report exists. This is the
+   * single most important retention element on the report: it gives the user
+   * concrete coaching proof tied to a specific action they were told to fix,
+   * decoupled from the noisy overall score.
+   *
+   * - prior_priority: verbatim text from the previous report's recommendation
+   * - status: how this stream looked vs that ask
+   * - evidence: 1-2 sentences referencing specific moments in this stream
+   * - metric (optional): concrete before/after numbers if quantifiable, e.g.
+   *   dead_air_pct, opening score, sub-score movement
+   */
+  progress_on_prior_fix?: {
+    prior_priority: string;
+    status: "fixed" | "partial" | "regressed" | "not_addressed";
+    evidence: string;
+    metric?: { label: string; before: number; after: number; unit?: string };
+  };
+}
+
+/** Summary of a prior stream used for longitudinal coaching context. */
+export interface PriorCoachSummary {
+  date: string;          // ISO date string
+  score: number;
+  recommendation: string;
+  top_improvement: string;
+  /** Sub-scores (0-100) so the AI can call out which dimension is trending. */
+  subscores?: { energy?: number; engagement?: number; consistency?: number; content?: number };
+  /** How the stream ended — "strong | average | weak". Trend matters across streams. */
+  closing_score?: "strong" | "average" | "weak";
+  /** How the stream opened — same idea. */
+  cold_open_score?: "strong" | "average" | "weak";
+  /** Number of detected peak/clip moments — low count multiple streams = pattern. */
+  peak_count?: number;
+  /** Anti-patterns flagged in this prior stream (types only, no quotes needed). */
+  anti_pattern_types?: string[];
+}
+
+const CATEGORY_COACHING_GUIDE: Record<string, string> = {
+  gaming: `GAMING STREAMER COACHING STANDARDS:
+
+WHO WATCHES GAMING STREAMS AND WHAT THEY WANT:
+Gaming viewers chose this stream over thousands of others playing the same game. That means they're there for the PERSONALITY attached to the gameplay, not just the gameplay. They clip and share hype, rage, and funny moments — they're your natural marketing department if you give them material. They follow streamers who have strong opinions on the game (patches, meta, other players, design choices) because it gives them something to agree or argue with. Competitive game viewers respect skill and call out bad play bluntly. Story/RPG game viewers want genuine discovery — they want to feel the story through you. Cozy game viewers want warmth and parasocial comfort. Know which of these you're curating and lean into it — the chat will reflect back exactly what you give them. A passionate opinionated gaming chat is built by a passionate opinionated streamer.
+
+WHAT TO GIVE YOUR COMMUNITY: Strong takes on the game. Genuine vocal reactions that let them feel the stakes. Running commentary that adds personality on top of what's on screen — not narrating the obvious, but adding your lens to it. Make your regulars feel rewarded with callbacks and inside jokes. Make new viewers feel welcomed with brief context. The community you build will clip moments that match your energy — give them the energy worth clipping.
+
+THE CHAT LOOP IN GAMING: Gaming chat becomes addictive when the streamer and chat are in a feedback loop — streamer makes a big play, chat explodes, streamer feeds off that energy and escalates, chat gets louder. When this loop is firing, viewers feel like they're part of the hype, not watching it. They come back because they want to be IN that room again. A gaming streamer who ignores chat during big moments breaks this loop and makes chat feel like an audience, not a stadium.
+
+COMMENTARY: The commentary IS the content — not just narrating what's on screen, but adding personality, prediction, and emotion on top of it. Silence during intense gameplay is fine. Silence during downtime is dead content.
+
+OPINIONS ON THE GAME: Big gaming streamers share strong opinions constantly — on patches, meta, other streamers' decisions, bad design, what the game gets right. Opinion-driven commentary creates clips and debate. A streamer who just plays without a point of view is invisible.
+
+HYPE ARCHITECTURE: Top streamers manufacture peaks — they verbally escalate tension before a big play, they announce stakes before a clutch moment, they set up the story before something pays off. Average streamers just react after the fact.
+
+TRANSITIONS & DOWNTIME: Loading screens, queue waits, and game deaths are when great gaming streamers build community — personal stories, asking chat for hot takes, giving opinions on the meta. These moments separate 1k streamers from 100-viewer streamers.
+
+FAILURE FRAMING: The best gaming streamers are entertaining whether winning or losing because they frame both as stories. Self-deprecating humor in failure, genuine rage that becomes a bit, analysis of what went wrong — all of these keep viewers invested when the game isn't going well.
+
+CHAT AS STADIUM: Treat chat like a crowd watching a live event. Big moments are announced with energy. Low moments are narrated with drama. The streamer creates the emotional arc, not just the game.
+
+WHAT TO LOOK FOR: Is commentary adding personality or narrating the obvious? Are dead moments being used for community building? Are they sharing opinions that create debate? Did they build to moments or just react? Are they making failure entertaining? Is the advice calibrated to the specific type of gaming community (competitive, story, cozy) this title suggests?`,
+
+  just_chatting: `JUST CHATTING STREAMER COACHING STANDARDS:
+
+WHO WATCHES JUST CHATTING STREAMS AND WHAT THEY WANT:
+Just chatting viewers have explicitly chosen a personality over any content. They're not here for information or gameplay — they're here for THIS person. That's both the highest ceiling and the hardest room to keep. These viewers are parasocial by nature — they feel like they know the streamer personally, they defend them in other communities, they come back daily. They clip and share hot takes, debate moments, and vulnerable personal stories. They have zero tolerance for filler — if there's no personality driving the conversation, they leave within minutes. They are the most loyal community type if you earn it, and the most fickle if you don't. They WANT to feel like they're hanging out with a friend who has a point of view on everything. Their chat WILL reflect the streamer's energy exactly — a flat detached streamer gets a flat detached chat. An opinionated passionate streamer gets a chat that argues, defends, and clips everything.
+
+WHAT TO GIVE YOUR COMMUNITY: Unfiltered personality. Real stories with stakes. Opinions they can agree with or push back on. Remember their regulars by name — these viewers become your loudest advocates when they feel seen. The just chatting community grows through word-of-mouth, clips, and genuinely entertaining moments — not discoverability. Give them content worth talking about.
+
+THE CHAT LOOP IN JUST CHATTING: This community type lives and dies by the parasocial bidirectional relationship. It works like this: streamer shares something real → chat responds personally → streamer acknowledges a specific person → that person feels seen → they become a loyal regular → they bring others. The inverse kills it: streamer talks at chat → chat sends generic responses → streamer reads them generically → nobody feels part of anything → they lurk and eventually leave. Just chatting streamers who make specific chatters feel genuinely known create the most addictive communities on Twitch — people come back because they feel like they exist there.
+
+RADICAL AUTHENTICITY: Performed emotions or polished delivery kills just chatting. The most growth comes from unfiltered genuine personality — uncertainty, contradictions, oversharing. Viewers follow because it feels real.
+
+OPINION DENSITY: Hot takes create organic clip spread. A strong opinion — even controversial — generates debate, sharing, and return visits. Streamers who avoid controversy avoid organic growth. The question to ask: did they say anything that someone would screenshot and argue about?
+
+STORYTELLING STRUCTURE: Top just chatting streamers don't just talk — they build stories with a premise, escalation, and payoff. "So this actually happened to me…" → setup → build → reaction. Rambling without structure loses viewers even if the content is interesting.
+
+CHAT AS CO-STAR: The best just chatting streamers turn chat messages into comedic material or debate partners. They argue with chatters, bring up a comment to make the room react, remember what a regular said last week. Chat shapes the stream.
+
+PARASOCIAL DEPTH: Remembering regulars by name, referencing past streams, treating chat like a room of friends converts lurkers into loyals. Streamers who never build this relationship stay small.
+
+CALLBACKS: Did they reference something from earlier in the stream or a past stream? Callbacks reward loyal viewers and create the sense that this streamer has a continuous world, not just isolated sessions.
+
+WHAT TO LOOK FOR: Is genuine personality showing or is it a performance? Are they making strong takes that could generate debate? Are they building actual relationships with chat or just responding and moving on? Did any storytelling land or fall flat? Did they callback to anything?`,
+
+  irl: `IRL STREAMER COACHING STANDARDS:
+
+WHO WATCHES IRL STREAMS AND WHAT THEY WANT:
+IRL viewers are vicarious adventurers — they're watching to experience places and situations they can't or won't themselves. They want to feel like they're on the adventure with the streamer. They clip unexpected moments, authentic stranger interactions, and genuine reactions to the environment. They're forgiving of technical hiccups but completely unforgiving of boredom — if the environment isn't being made interesting, they leave. IRL communities are some of the most reactive and engaged when it's working: they vote on decisions, they react to the environment in real time, they feel like co-pilots. When it stops working, they feel like they're watching someone walk around staring at their phone. The community the streamer builds is usually adventurous and opinionated — they'll push the streamer to do more, go further, engage more. Give them moments worth pushing for.
+
+WHAT TO GIVE YOUR COMMUNITY: Make them feel like they're there. Narrate your thoughts out loud. Let them influence decisions. React genuinely to unexpected things — don't manage or dampen reactions. The IRL community wants to feel like the stream could go anywhere at any moment.
+
+THE CHAT LOOP IN IRL: IRL chat is at its most addictive when it becomes a co-pilot — "chat voted and I went in, here's what happened." Viewers who influenced a decision feel ownership over what happens next. They come back to see the outcome of their suggestion, to see what happens when the streamer follows their advice. When IRL streamers ignore chat's input entirely, they break this ownership loop and viewers go from participants to passive watchers.
+
+ENVIRONMENTAL NARRATION: The location is a co-character. Top IRL streamers narrate their environment and give the viewer a perspective, not just carry a camera. "What you're looking at is…" / "This place is wild because…" — they translate their environment into content.
+
+INTERNAL MONOLOGUE: Narrating internal thoughts in real time creates intimacy and makes the viewer feel inside the streamer's head. "I'm actually nervous about this" / "I don't know if I should go in" — this is the IRL version of hype architecture.
+
+STRANGER INTERACTIONS: Natural conversations that go somewhere unexpected beat scripted interactions every time. Did they engage anyone? Did it go somewhere real or did they bail early?
+
+UNSCRIPTED REACTIONS: Genuine unscripted reactions are the content. Managing or dampening these kills them. The best IRL moments are when something unexpected happens and they let themselves react fully.
+
+CHAT AS COMPANION: Did they loop chat in? "Chat should I go in?" / "Chat what do you think of this?" — making chat feel like they're on the adventure with the streamer.
+
+WHAT TO LOOK FOR: Is the viewer getting a genuine perspective on the environment? Are internal thoughts being narrated? Did any stranger interaction go somewhere real? Is chat being treated as a companion or ignored?`,
+
+  variety: `VARIETY STREAMER COACHING STANDARDS:
+
+WHO WATCHES VARIETY STREAMS AND WHAT THEY WANT:
+Variety viewers have self-selected for the person, not the content. They usually found this streamer through a specific game or moment and decided to follow the person regardless of what they play. That means they're generally loyal, but they also need to be constantly reminded WHY they followed — the consistent personality and values that make this streamer recognizable no matter what's on screen. New viewers landing on a variety stream have no game anchor, so they need to feel the personality immediately or they leave. Variety communities are often long-term fans who feel invested — they discuss the streamer's opinions on games, they debate game choices, they react to transitions. They clip moments that show the streamer's personality more than gameplay peaks. The risk: without a consistent identity, the community becomes a scattered group who each like different game eras of the streamer and don't cohesively grow together.
+
+WHAT TO GIVE YOUR COMMUNITY: A consistent voice they can recognize in any game. Bring them along explicitly through transitions. Have opinions that carry across contexts — the streamer's perspective on games, life, and ideas is what binds the community, not any single game.
+
+THE CHAT LOOP IN VARIETY: Variety communities bond over the streamer's reactions and opinions, not the game itself. The loop: streamer has a strong take on a new game → chat debates it → streamer engages the debate → viewers feel like their opinion matters in this community → they come back for the next game because they want to be part of that conversation again. Variety streamers who ignore chat's game opinions miss the one thing that makes their community coherent across different titles.
+
+CONSISTENT PERSONALITY: The personality, not the game, is what viewers follow. Top variety streamers have a recognizable identity — a tone, a set of opinions, a reaction style — that's consistent whether they're playing an FPS or a cozy game. Did this stream show a clear personality, or did they just mold to whatever the current game demanded?
+
+TRANSITION CRAFTSMANSHIP: Smooth transitions need narrative connective tissue. Top variety streamers bring chat along explicitly — "Alright we're done with that, I want to try something completely different" — not just switching without comment. Abrupt transitions reset momentum and lose new viewers.
+
+OPINIONS ACROSS CONTEXTS: The best variety streamers have takes on everything — they'll share an opinion on the game they just switched away from, compare the two, or bring in outside context. This creates the sense that they're a personality, not just a game-switching machine.
+
+ENERGY MANAGEMENT: Switching games can re-energize but can also reset momentum. Top variety streamers time switches to capitalize on energy highs or to escape energy lows strategically — they're intentional about it.
+
+WHAT TO LOOK FOR: Is there a consistent personality recognizable across any game? Are transitions smooth with connective tissue? Would a new viewer understand who this person is regardless of what they're playing? Are they sharing opinions that carry over between games?`,
+
+  educational: `EDUCATIONAL STREAMER COACHING STANDARDS:
+
+WHO WATCHES EDUCATIONAL STREAMS AND WHAT THEY WANT:
+Educational stream viewers are the most intentional audience on Twitch — they showed up to learn something specific, and they're impatient if they feel their time is being wasted. They're also the most likely to share content outside Twitch: clips go to YouTube, Reddit, Twitter, Discord servers. They deeply reward genuine expertise and punish overconfidence they can see through. Their engagement pattern is different from other communities: they ask questions, they push back on errors, they remember what was said in previous streams. They build real knowledge relationships with streamers they trust. The educational community grows through reputation — if the streamer is consistently right, helpful, and honest about uncertainty, word spreads. If they overclaim or waste time, that also spreads. These viewers are more forgiving of production quality but less forgiving of wasted time or wrong information.
+
+WHAT TO GIVE YOUR COMMUNITY: Respect their time — have a clear direction for each stream and deliver on it. Be honest about uncertainty — "I'm not 100% sure, let me work through this" is content. Let chat push back and engage with corrections respectfully. These viewers want to learn WITH you, not just FROM you.
+
+THE CHAT LOOP IN EDUCATIONAL: Educational chat becomes addictive when viewers feel like their questions and pushback shaped what was taught. The loop: viewer asks a question → streamer takes it seriously and builds on it → that viewer now owns part of the stream's direction → they come back because they feel like a contributor, not a student. When educational streamers dismiss or skip chat questions to stay on script, they break the one thing that separates them from a YouTube video: live interaction that shapes the content in real time.
+
+TEACHING AS ENTERTAINMENT: Socratic method, real-time problem solving, genuine curiosity make learning feel like discovery. Dry lecture delivery drives viewers away. Did this stream feel like watching someone figure something out, or like a lecture?
+
+ACCESSIBLE COMPLEXITY: Analogies and metaphors that make difficult topics click instantly. If a viewer needs background knowledge to follow along, most leave. Did they explain things in a way that a smart beginner could follow, or did they assume knowledge?
+
+AUTHENTIC UNCERTAINTY: Acknowledging mistakes and confusion builds trust. Working through uncertainty live is more valuable than projecting false confidence. "I'm actually not sure about this, let me think through it…" is content. Bluffing through gaps loses the audience when they catch it.
+
+STRUCTURED PAYOFFS: Top educational streamers give the viewer a destination upfront — "By the end of this I'm going to show you…" — and then deliver on it. Structure keeps retention high.
+
+CHAT-DRIVEN PIVOTS: Letting chat questions steer the content creates investment and ownership. Did they respond to questions in a way that deepened the topic, or did they dismiss them to stay on script?
+
+WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex topics made genuinely accessible? Is uncertainty handled authentically or faked? Did chat shape the direction at any point?`,
+};
+
+/**
+ * Per-game coaching modules. Each entry holds (a) keywords used to detect
+ * the game from the VOD title or transcript, and (b) a coaching module that
+ * gets layered on top of the streamer-category guide when a match is found.
+ *
+ * This is the entry point for LevlCast's per-game knowledge. Add a new game
+ * by writing the module — no schema or pipeline changes required.
+ */
+const GAME_COACHING_MODULES: Array<{ name: string; keywords: string[]; module: string }> = [
+  {
+    name: "VALORANT",
+    keywords: ["valorant", "valo", "val ranked", "val comp", "val unrated"],
+    module: `VALORANT — game-specific coaching:
+
+5v5 tactical shooter, 13-round halves, side switch at 12. Maps in active rotation: Bind, Haven, Ascent, Split, Lotus, Sunset, Pearl. Roles: Duelist (entry), Sentinel (anchor/info), Controller/Smokes (macro), Initiator (intel). Ranks: Iron through Radiant. Viewers come for clutches, agent expertise, and the climb.
+
+- **The ranked grind is the narrative**: Frame the goal at stream start ("breaking Plat 3 today, lost 2 in a row last night"), reference it across matches. Without an arc, every loss is forgettable.
+- **Buy phases are 12+ chat windows per match**: The 15-30 seconds between rounds is when you talk and chat reads. Naming the buy ("we're force buying Vandals"), predicting the enemy buy ("they full saved, expect a default"), reading util commits is the depth viewers want. Silent buys are the single biggest waste of engagement on a Valorant stream.
+- **Util tracking separates streamers**: Calling enemy ults ("their Killjoy has ult, can't push site"), counting flashes used, reading util commits ("Sova used both darts, push wide") is the layer 90% of streamers skip. This is what makes a stream watchable instead of an aim-diff highlight reel.
+- **Map control narration is the macro signal**: "We have B Long, they're stacking A Heaven, I'm flexing mid for info" is what makes a stream feel pro-tier. Each map has its own callouts and anchor spots. Map-aware streamers stand out instantly.
+- **Pistol rounds carry oversized impact**: Round 1 and round 13 swing the half. A clean pistol win deserves a reaction, not a "got 'em" and instant requeue.
+- **Clutch tension narration is the product**: 1vX clutches are the most-clipped moments. Build tension out loud ("3 HP, spike planted, stall 7 seconds, they don't know I'm in CT"), react when it lands. Silent clutches don't clip.
+- **Agent specialization shapes coaching**: Duelist mains (Jett, Reyna, Raze, Phoenix, Iso, Yoru) are entry-frag streams. Sentinel mains (Cypher, Killjoy, Chamber, Sage, Deadlock) are info/anchor streams. Smokes (Omen, Brimstone, Astra, Harbor, Clove) are macro streams. Initiators (Sova, Skye, KAY/O, Breach, Fade, Gekko) are intel streams. Coach to the role.
+- **5-stack vs solo queue is a different show**: 5-stack means friend banter becomes content; solo queue means navigating rage teammates is the storyline.
+
+Common streamer mistakes specific to Valorant:
+- Silent buy phases ("I'll talk during fights")
+- Never calling enemy ults or counting util used
+- Same energy in round 12 as round 4
+- Tilt-typing in match chat instead of vocalizing
+- Instant-requeue at post-match instead of using the 60+ second chat window
+
+Clip moment patterns specific to this game:
+- Aces in pistol or eco rounds (max impact)
+- 1vX clutches with full tension build-up
+- Operator one-shots, Jett knife kills, Reyna empress sprees, Raze ult hits
+- Killjoy ult lockdowns, Cypher cam plays, Sova triple-kill darts, Brim mollies forcing retakes
+- Trash talk after a winning force-buy
+- Reading enemy strategy correctly mid-round and calling it before it happens`,
+  },
+  {
+    name: "League of Legends",
+    keywords: ["league of legends", "league ranked", " lol ", "lol ranked", "summoners rift", "tft"],
+    module: `LEAGUE OF LEGENDS — game-specific coaching:
+
+5v5 MOBA, ~20-40 min matches. Phases: draft, lane (0-15m), mid game / objectives (15-25m), late game team fights (25m+). Roles: top, jungle, mid, ADC (bot), support. Ranks: Iron through Challenger. Key timers: drake (5m), Rift Herald (8m), Baron (20m), Soul (after 4 dragons).
+
+- **Draft is 90 seconds of free strategy content**: Naming counter-picks, predicting enemy comp synergy, calling priority bans = expertise on display. "If they pick Yasuo, I'm flexing Malphite top" teaches viewers macro thinking. Silent drafts waste the highest-IQ window of the entire match.
+- **Lane phase is constant narration opportunity**: 0-15 min is farming and trading. CS counts ("up 2 CS"), wave management ("freezing this wave to deny their roam"), trades ("that trade was a win, I have priority"), gank reads ("their jungler started bot, I should be careful 3:30 to 4"). Lane phase silence reads as mechanics-only play with no IQ.
+- **Objective rotations are the macro hype window**: Drake spawns at 5m, Herald at 8m, Baron at 20m, Soul at the 4th drake. Map reads, predicting fights, calling vision plays during these timers is the depth viewers came to watch.
+- **Role-specific coaching matters**: Top lane is island gameplay (low priority, late team fight impact). Jungle is map control and gank windows. Mid is roaming/objective priority. ADC is positioning and right-clicking. Support is vision and engage timing. The same advice does not work across roles.
+- **Champion identity shapes coaching**: One-trick OTPs (Yasuo, Riven, Lee Sin, Akali, Singed) get coached differently than flex players. For OTPs, evaluate whether the matchup depth and macro IQ on THAT champ comes through, not just mechanics.
+- **Macro callouts are the chatbot moat**: Naming when to push, when to recall, when to roam, when to ward, when to TP, when to give a wave for prio. This is what separates a coach-tier stream from "someone playing League." 90% of streamers only narrate fights and waste the other 35 minutes.
+- **Tilt visibility is a real feature**: League rage is part of the genre. Vocalized tilt ("I am inting on purpose now, I am done") makes for clip moments. Silent tilt or typing /muteall in chat reads flat on stream and is invisible to the audience.
+- **Post-game lobby is a 30-60s chat window**: Quick review of what went right/wrong, what you would do differently. Streamers who instantly requeue waste the easiest chat moment of every match.
+
+Common streamer mistakes specific to League:
+- Silent draft phase
+- No CS or wave-management commentary in lane
+- No map reads during objective windows (drake/herald/baron)
+- Treating every match the same energy regardless of game state
+- Typing in /all or /team chat instead of vocalizing the take
+- Instant requeue with no post-game recap
+
+Clip moment patterns specific to this game:
+- Pentakills and aced team fights
+- Solo kills in lane against the counter-pick
+- Outplays: flash plays, dodge ults at the last frame, exhaust on a key target
+- Macro reads called pre-fight (Baron predicted, recall denied, vision-bait kill)
+- Insane comebacks (winning from a 10k gold deficit)
+- Tilt rant moments after a teammate griefs the game`,
+  },
+  {
+    name: "Counter-Strike 2",
+    keywords: ["counter-strike", "cs2", "cs:go", "csgo", "premier", "faceit"],
+    module: `COUNTER-STRIKE 2 — game-specific coaching:
+
+5v5 tactical, side switch at 12, first to 13 wins regular MM (premier and faceit have variants). Maps in active duty: Mirage, Inferno, Ancient, Anubis, Nuke, Dust 2, Train. Round economy is the meta layer: pistol → anti-eco → full buy → force → eco / save. Viewers want clutches, demo-tier IQ, and the climb.
+
+- **Round economy is the layer that separates streamers**: Calling buys ("force AKs, save kits for next round if we win"), reading the enemy economy ("they're on full buy, expect a default"), and naming the right play for the round state is the depth that wins. Silent buy phases are the single biggest waste of stream time in CS.
+- **1vX clutches are the entire product**: This is the most-clipped game in the genre. Build tension out loud ("they have to defuse, kit in, last alive, 12 seconds"), then react. The clutch REACTION is what gets the clip, not the kills. Silent clutches kill themselves.
+- **Map-specific narration is non-negotiable**: Naming map control ("we have B apartments, they're stacking A long, I'm rotating mid"), spots ("I'm playing connector"), and util by callout ("CT smoke up, jungle flash incoming") separates a top-tier stream from someone playing the game alone. Each map (Mirage / Inferno / Ancient / Nuke / Anubis / Dust 2 / Train) has its own callouts and stack tendencies. Use them.
+- **Pistol rounds carry the half**: Round 1 and round 13 swing the half disproportionately. A pistol win plus the anti-eco round basically locks 3 free rounds. Streamers who treat pistol like any other round miss the meta.
+- **Demo / mistake review builds trust**: Post-round "I shouldn't have peeked Catwalk" or "I should've held angle from Heaven" doubles as teaching content and self-deprecating humor. Acting like every loss is teammate diff reads as cope and kills credibility fast.
+- **Util discipline is the chatbot moat**: Naming smoke + flash combos by spot, knowing default lineups (especially A-site execs on Mirage / Inferno), tracking enemy util used ("both flashbangs gone, push through smoke"), and calling economy reads ("they full saved, expect wide A rotate next round") is the depth raw Claude cannot replicate.
+- **Faceit / premier / casual need different framing**: Premier has the rank story arc (climbing the ladder). Faceit has the matchmaking complaints + pro-adjacent ceiling. Casual MM is chill grind. Match the pacing of feedback to the lobby seriousness.
+- **Voice chat moments with enemies are clip gold**: Toxicity is a feature here. Trash talk after winning a round, sarcasm after a teammate griefs, accidental friendships in all-chat are all clip-worthy.
+
+Common streamer mistakes specific to CS2:
+- Silent buy phases
+- Never tracking enemy util counts
+- No map callout narration ("I'm at the spot" instead of "I'm at Connector")
+- Cope blaming after losses without admitting positioning mistakes
+- Skipping post-half-time recap
+- Pure aim-diff streaming with zero macro callouts (low ceiling)
+
+Clip moment patterns specific to this game:
+- 1vX clutches (especially low HP, eco, or against multiple kits)
+- Aces in pistol or eco rounds (highest narrative impact)
+- AWP no-scopes, deagle one-taps, jumping AK flicks
+- Insane spray transfers and one-deag clutches
+- Held-angle wins where the streamer predicted the peek
+- Save rounds with creative escapes (jumping into vents, hiding in unlikely spots)
+- Trash talk in all-chat after a winning round`,
+  },
+  {
+    name: "Minecraft",
+    keywords: ["minecraft"],
+    module: `MINECRAFT — game-specific coaching:
+
+Sandbox game. Modes vary radically: Survival (single-player or SMP), Hardcore (one death and the world ends), Creative (pure building), Modded (RLCraft, Better MC, ATM10), Server (Hermitcraft-style, Lifesteal, Anarchy). Viewers do not come for hype, they come for parasocial vibes and the streamer's ongoing creative project. Bar for engagement is totally different from competitive games.
+
+- **The world IS the story**: Viewers want to know WHAT you're building, WHY, the lore of this world, what's next. Streamers who treat the world as a persistent project ("two days into the iron farm, then the nether portal redesign") build long-term retention. Disconnected one-off play loses it.
+- **Mining, walking, sorting chests are narration tests**: Long repetitive stretches are when viewers commit or bounce. Silent mining for 10+ minutes is the #1 Minecraft streamer mistake. Plan out loud, narrate the goal, react to mobs, complain about phantoms, anything but silence.
+- **Chat windows are constant in this game**: Unlike competitive shooters, there's always a moment to acknowledge chat by name ("@user yeah I think the Warden is overrated"). This builds small communities faster than any other genre.
+- **Build reveals are the peak clip moments**: Finishing a megabuild, reaching a new biome, the first time the redstone contraption works. Build up to it, do not rush past it. The reveal is the payoff that clips.
+- **Mode dictates the energy**: Hardcore streamers carry constant tension (one death ends the world, frame every cave as life-or-death). SMP streamers are chasing drama and lore beats with other players. Creative is pure showcase. Modded is teaching the new mechanics. Match the coaching to the mode.
+- **Co-op / SMP shifts the dynamic**: When streaming with friends, the audience-facing voice carries the show. The streamer who acknowledges chat and summarizes for new viewers wins. Disappearing into private friend convos kills the audience.
+- **Specific takes are personality**: "Hates phantoms, loves the warden, refuses to use elytra, only plays peaceful" is a personality. "Minecraft good" is not. The streamer's opinions on game features are the differentiator.
+- **Mob encounters are free reaction content**: Creeper jumpscares, sudden Warden encounters, accidental Wither summons, lava drops, falling into ravines. React out loud, do not stoic-grind through them.
+
+Common streamer mistakes specific to Minecraft:
+- 10+ minutes of silent mining or strip-mining
+- Treating each session as disconnected play with no goal
+- No chat acknowledgment despite constant windows for it
+- Letting friends carry the conversation while zoning out
+- Rushing past build completions instead of milking the reveal
+- Stoicism through deaths in hardcore (lost retention opportunity)
+
+Clip moment patterns specific to this game:
+- Hardcore deaths after long runs (the louder the reaction, the bigger the clip)
+- Creeper or Warden jumpscares that genuinely surprise the streamer
+- Build reveals with proper before/after framing
+- First-encounter moments (first Ender Dragon, first Warden, first Elytra)
+- Chat-driven decisions that pay off ("chat what should I name this dog" later becomes a moment)
+- Vulnerability moments about why a specific world matters`,
+  },
+  {
+    name: "Fortnite",
+    keywords: ["fortnite"],
+    module: `FORTNITE — game-specific coaching:
+
+Battle royale, ~20-minute matches. Modes that change everything: Zero Build (tactical, like Apex/Warzone), Regular (Build, mechanics-driven), Reload (smaller fast-respawn), OG (rotational chapter throwbacks), Solos / Duos / Trios / Squads, Ranked. Match structure: drop, loot, rotate, late game, final circle. Predictable downtime windows make engagement timing especially coachable.
+
+- **Drop zone is the opening hook (every match)**: First 90 seconds. Naming the drop ("we're hot-dropping Tilted, I want bots"), calling who else dropped, calling the play. Silent drops waste the most reliable engagement window in BR.
+- **Looting is the chat window (every match)**: 30-60 seconds after drop is when chat is reading you. Naming pickups, judging loot ("scuffed pump"), planning the rotation. Silent looting is dead air on the most fertile downtime in the game.
+- **Rotations are the meta-narrative window**: Walking through the storm is when you call your read. "Lobby is collapsing east, we want height before the next circle." Streamers who rotate silently leave 90% of the audience without context for the next fight.
+- **Eliminations are the energy peaks**: Calm "got him" does not clip. Genuine reactions do. Build battle wins (regular) and tactical 1vX wins (Zero Build) are the mechanical and tactical clip moments respectively.
+- **Mode shifts coaching completely**: Zero Build streams are tactical / positioning / cover-based; coach like Apex or Warzone. Regular streams are mechanics / building / editing showcases; coach like a comp shooter. Reload is fast respawn pacing. OG is nostalgia-driven (lean into it).
+- **Late game (final 10) is the storyline window**: Once it's down to the final 10, the match arc is real. Narrate every read, every height advantage, every mat count. This is where viewers commit to the match.
+- **Match transitions are 30-45 seconds of chat gold**: Lobby between matches. Hype the win, complain about the storm screw, read chat messages. Instant requeue is the biggest waste.
+- **Storyline framing beats one-off matches**: "First to 5 wins no leaving" or "trying to hit Champion League today" turns disconnected matches into a series. No framing means no reason to stay through losses.
+
+Common streamer mistakes specific to Fortnite:
+- Silent drops and silent looting (the two highest-leverage chat windows)
+- No storm read narration (rotating in silence)
+- Calm reactions to elims that should be hype moments
+- Treating Zero Build like Build mode (different coaching)
+- Instant-requeue with no recap
+- No match-to-match storyline arc
+
+Clip moment patterns specific to this game:
+- 1vX clutches in final circle (especially low-mat or low-HP)
+- Sick edit + build battle wins (regular)
+- Tactical outplays in Zero Build (using cover and angles)
+- Snipe shots and unexpected long-range elims
+- Storm-wall kills or losses
+- Chat-driven decisions ("chat where do we drop") that pay off into wins`,
+  },
+  {
+    name: "Phasmophobia & Dead by Daylight",
+    keywords: ["phasmophobia", "phasmo", "dead by daylight", "dbd"],
+    module: `PHASMOPHOBIA / DEAD BY DAYLIGHT — co-op horror coaching:
+
+Reaction-driven genre. The product IS the streamer's authentic fear, surprise, and friend group chaos. Stoic / "too cool" streaming kills the entire reason viewers tuned in. Phasmo: 4-player co-op investigation with 24+ ghost types and 7 evidence categories. DBD: 1v4 asymmetric horror with killer-side and survivor-side play, perks, and offerings.
+
+- **Authentic reactions ARE the product**: Genuine screams, full-body flinches, panic loops, frustrated rage. The most-clipped horror moments are the loudest reactions. Streamers who suppress reactions to look "real" are misreading the audience completely.
+- **Investigation / stealth phases are constant chat windows**: Phasmo evidence-gathering and DBD totem-hunting / generator-runs are low-tension stretches. Talk through evidence reads, ask chat what they think the ghost is, debate the killer's perks, talk strategy. Silent investigation is dead air on the easiest engagement window in horror.
+- **Friend group dynamic is the show (Phasmo especially)**: The streamer who is the audience-facing voice carries it. Acknowledging chat, summarizing for new viewers, narrating what's happening to the team. Streamers who zone out and let friends carry the convo lose their audience to whichever friend is loudest.
+- **Build-up and payoff rhythm is the entire genre**: Tension → release → tension → release. Narrating the build-up ("temperature just dropped, I think it's about to do the thing") amplifies the payoff 10x. Silent tension wastes the payoff.
+- **Contract setup and match transitions are 30-60 second chat windows**: Phasmo contract reading, DBD lobby. Hype the upcoming run, complain about the last one, name the strategy.
+- **Phasmo specifics**: 24+ ghost types, each with a unique sign (Banshee throws at one target, Goryo only shows on camera, Onryo blows out flames, Mimic mimics other types, Twins have two manifestations). Evidence types: EMF 5, fingerprints, freezing, ghost orbs, ghost writing, spirit box, DOTS. Streamers who narrate the deduction ("freezing + ghost orbs + no spirit box, narrows to 4 types") layer educational content on top of horror. Map sizes (Tanglewood, Bleasdale, Maple Lodge for small / medium / large) shape pacing.
+- **DBD specifics — killer**: Each killer (Trapper, Wraith, Nurse, Spirit, Blight, Pinhead, Singularity, etc.) has a unique kit. Survivor prioritization is the macro layer (who's hooked, who's on gens, who to tunnel vs spread pressure). Naming perks and why is the depth ("running BBQ for info and Pop for regression").
+- **DBD specifics — survivor**: Stealth choices (lockers, totems, sabotage runs), generator priorities, chase reads (looping at safe pallets, mind-game windows). Naming perks ("Decisive Strike if I'm tunneled, Borrowed Time for unhooks") shows kit knowledge.
+- **Comedy vs scared streams are different products**: Some streamers play horror straight (genuine fear), some play it for laughs (chaos). Coach to which one this streamer is doing. Don't recommend "be funnier" to a streamer building scary atmosphere.
+
+Common streamer mistakes specific to these games:
+- Suppressing reactions to look "tough"
+- Silent investigation phases
+- Letting friends carry chat while zoning out
+- Skipping contract / lobby downtime to instant-queue
+- Phasmo: not narrating evidence deductions
+- DBD: not naming perks or explaining killer/survivor priority
+
+Clip moment patterns specific to these games:
+- Genuine screams and full-body flinches at jump scares
+- Friend group panic chaos (everyone screaming, running into each other)
+- The "I'm alone now" abandonment moment when teammates die
+- Streamer trying to be brave and immediately failing
+- DBD: clutch escapes through the gate, killer 4Ks at last gen, mind-game outplays at pallets
+- Phasmo: successful identification with chat hyped, identifying a Mimic correctly, surviving a hunt with no hiding spot`,
+  },
+  {
+    name: "Marvel Rivals",
+    keywords: ["marvel rivals", "rivals ranked", "rivals comp", "marvelrivals"],
+    module: `MARVEL RIVALS — game-specific coaching:
+
+6v6 hero shooter with 3 roles: Vanguard (tank), Duelist (DPS), Strategist (support). Team-Up abilities unlock combos when specific hero pairs are picked together. Match modes: Convoy, Domination, Convergence. Matches 8-12 min. Ranks: Bronze through One Above All. Viewers want hero expertise, ult timing reads, and ranked grind.
+
+- **Respawn windows are 10-second chat moments**: Every death triggers ~10 seconds of staring at a respawn timer. This is the only built-in downtime the game gives you. Silent respawn = dead air on the most predictable engagement window in the genre. Read chat, complain about the team fight, predict the next push.
+- **Ult economy is the meta narrative**: "I have ult, their Magneto used his on a single target, push next fight" is the running commentary that makes Rivals readable to viewers. Tracking ult counts (yours and the enemy's) is the macro layer most streamers skip.
+- **Team-Up callouts are free engagement**: When you and a teammate pick a synergy pair (Hulk + Iron Man unlocks gamma → unibeam, Cloak + Dagger swap heal/damage, Punisher + Black Widow weapon mode, Hela + Loki + Thor team-up trio), the unlock is a moment to react to. Streamers who never call out team-ups miss free content.
+- **Role dictates coaching completely**: Vanguard (Hulk, Doctor Strange, Magneto, Venom, Captain America) is shot-calling, space-making, ult-chaining. Duelist (Spider-Man, Iron Fist, Star-Lord, Punisher, Hela, Iron Man) is target prioritization, dive timing, finishing. Strategist (Mantis, Luna Snow, Rocket, Cloak & Dagger, Loki, Adam Warlock) is heal priority, peeling, ult-saving for clutch. The same advice does not apply to all three.
+- **Hero pool depth shapes coaching**: One-trick mains (Spider-Man, Iron Fist, Jeff the Land Shark) need depth on THAT hero (matchups, dive timing, escape routes). Flex players need shot-calling and counterpick reads ("they have flying tank, I'm switching to Hela").
+- **Match transitions are 30-45 second chat windows**: Lobby between matches. Read chat, complain about the loss, hype the win, talk meta. Instant-requeue is the biggest waste.
+- **Tilt visibility is a feature, not a bug**: Vocalized rage is clip gold. Silent tilt reads as low energy and is invisible to the audience. Marvel Rivals is rage-fertile because of solo-queue support hell.
+- **Map type changes the pace**: Convoy maps (push the cart) have constant fight cadence. Domination (control the point) has spike fights at flag captures. Convergence has phase shifts. Coach to the mode.
+
+Common streamer mistakes specific to Marvel Rivals:
+- Silent respawn windows
+- Never calling enemy ults or team-up unlocks
+- Same advice for Vanguard, Duelist, and Strategist (they need different feedback)
+- Tilting silently when solo-queue support is bad
+- Instant-requeue after the match without using the lobby chat window
+- Treating Convoy and Domination matches the same energy
+
+Clip moment patterns specific to this game:
+- Multi-kills in team fights, especially Duelist clean-up plays (Hela rune kills, Spider-Man uppercut chains, Star-Lord ult sprees)
+- Clutch survives as last hero (Strategist 1v1 outplays are gold)
+- Ult-chain combos triggered by Team-Up (Hulk gamma → Iron Man unibeam → Storm tornado)
+- Reactions to enemy ults that flip a fight (a perfectly placed Doctor Strange portal block, a clutch Mantis sleep)
+- Trash talk after a winning push or a stolen point capture
+- Reading enemy comp swaps correctly and calling the counterpick before the fight`,
+  },
+];
+
+/**
+ * Public list of games with dedicated coaching modules. Exported for the
+ * landing page so adding a new game module instantly shows up in marketing
+ * with no double-bookkeeping.
+ */
+export const SUPPORTED_GAMES: string[] = GAME_COACHING_MODULES.map((g) => g.name);
+
+/**
+ * Pick the first game module whose keywords match the VOD title.
+ * Returns empty string if no match — the report falls back to category-level
+ * coaching, behaving exactly like before.
+ */
+function pickGameModule(vodTitle: string): string {
+  const lower = vodTitle.toLowerCase();
+  for (const entry of GAME_COACHING_MODULES) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) {
+      return entry.module;
+    }
+  }
+  return "";
+}
+
+/** Compute per-minute WPM across the full stream. */
+function buildEnergyMap(segments: TranscriptSegment[], vodDuration: number): { minute: number; wpm: number }[] {
+  const totalMinutes = Math.ceil(vodDuration / 60);
+  const result: { minute: number; wpm: number }[] = [];
+  for (let m = 0; m < totalMinutes; m++) {
+    const segs = segments.filter((s) => s.start >= m * 60 && s.start < (m + 1) * 60);
+    result.push({ minute: m, wpm: calcWPM(segs) });
+  }
+  return result;
+}
+
+/**
+ * Find the single worst energy crash: the longest contiguous run of low-wpm minutes.
+ * Returns start/end minute, plus a short transcript excerpt from that window.
+ */
+function findMomentumCrash(
+  energyMap: { minute: number; wpm: number }[],
+  segments: TranscriptSegment[],
+  lowThreshold = 60
+): { startMin: number; endMin: number; excerpt: string } | null {
+  if (energyMap.length < 3) return null;
+
+  let bestStart = -1, bestLen = 0, curStart = -1, curLen = 0;
+  for (const { minute, wpm } of energyMap) {
+    if (wpm < lowThreshold) {
+      if (curStart === -1) curStart = minute;
+      curLen++;
+      if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+    } else {
+      curStart = -1; curLen = 0;
+    }
+  }
+
+  if (bestStart === -1 || bestLen < 2) return null;
+
+  const winStart = bestStart * 60;
+  const winEnd = (bestStart + bestLen) * 60;
+  const winSegs = segments.filter((s) => s.start >= winStart && s.start < winEnd).slice(0, 8);
+  const excerpt = winSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n");
+
+  return { startMin: bestStart, endMin: bestStart + bestLen, excerpt };
+}
+
+/** Render energy map as a compact ASCII sparkline for the prompt. */
+function renderEnergySparkline(energyMap: { minute: number; wpm: number }[]): string {
+  const blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+  const maxWpm = Math.max(...energyMap.map((e) => e.wpm), 1);
+  const line = energyMap.map(({ wpm }) => {
+    const idx = Math.min(7, Math.floor((wpm / maxWpm) * 8));
+    return blocks[idx];
+  }).join("");
+  return line;
+}
+
+/** Average WPM during active speech windows (excludes silent gaps). */
+function calcCommentaryDensity(segments: TranscriptSegment[]): number {
+  if (segments.length === 0) return 0;
+  const totalWords = segments.reduce((sum, s) => sum + s.text.split(" ").length, 0);
+  // Only count time the streamer was actually talking (sum of utterance durations)
+  const speechSeconds = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
+  const speechMin = speechSeconds / 60;
+  return speechMin > 0 ? Math.round(totalWords / speechMin) : 0;
+}
+
+/**
+ * Build problem-weighted transcript samples for the coach prompt.
+ *
+ * Strategy for long streams (>= 15 min):
+ *   1. Opening — first 100 segments (always; cold-open quality + early vibe)
+ *   2. Closing — last 80 segments (always; how the stream ended)
+ *   3. Three worst-energy middle zones — 80 lines each, pulled from the
+ *      5-minute blocks with the lowest average WPM between opening and closing.
+ *      These are the dead spots the coach needs to see to give grounded advice.
+ *
+ * Total: ~340 lines (fewer tokens than the old even-5-sample approach, but
+ * concentrated where the problems actually live instead of evenly spread).
+ *
+ * For short streams (< 15 min of energy data), falls back to 3 even sections
+ * so short VODs still get full coverage without redundancy.
+ */
+function buildWeightedTranscriptSamples(
+  segments: TranscriptSegment[],
+  energyMap: { minute: number; wpm: number }[],
+): string {
+  const OPENING_LINES = 100;
+  const BLOCK_LINES = 80;
+
+  // Short-stream fallback: 3 even sections (opening/middle/closing)
+  if (energyMap.length < 15) {
+    const labels = ["Opening", "Middle", "Closing"];
+    return Array.from({ length: 3 }, (_, i) => {
+      const centerFraction = i / 2;
+      const centerIdx = Math.floor(centerFraction * (segments.length - 1));
+      const start = Math.max(0, centerIdx - Math.floor(OPENING_LINES / 2));
+      const end = Math.min(segments.length, start + OPENING_LINES);
+      const segsSlice = segments.slice(start, end);
+      const wpm = calcWPM(segsSlice);
+      const lines = segsSlice.map((s) => `[${formatTime(s.start)}] ${s.text}`);
+      return `--- ${labels[i]} (${wpm} wpm) ---\n${lines.join("\n")}`;
+    }).join("\n\n");
+  }
+
+  const sections: { label: string; text: string }[] = [];
+
+  // 1. Opening
+  const openingSegs = segments.slice(0, OPENING_LINES);
+  sections.push({
+    label: `Opening (${calcWPM(openingSegs)} wpm)`,
+    text: openingSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+  });
+
+  // 2. Closing
+  const closingSegs = segments.slice(-BLOCK_LINES);
+  sections.push({
+    label: `Closing (${calcWPM(closingSegs)} wpm)`,
+    text: closingSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+  });
+
+  // 3. Worst-energy middle blocks
+  const openingEndSec = openingSegs[openingSegs.length - 1]?.end ?? 0;
+  const closingStartSec = closingSegs[0]?.start ?? (segments[segments.length - 1]?.end ?? 0);
+  const BLOCK_SEC = 5 * 60;
+
+  const middleBlocks: { startSec: number; avgWpm: number }[] = [];
+  for (let t = openingEndSec; t + BLOCK_SEC < closingStartSec; t += BLOCK_SEC) {
+    const blockSegs = segments.filter((s) => s.start >= t && s.start < t + BLOCK_SEC);
+    if (blockSegs.length < 5) continue;
+    middleBlocks.push({ startSec: t, avgWpm: calcWPM(blockSegs) });
+  }
+
+  // Take the 3 lowest-WPM blocks (worst dead zones)
+  const worstBlocks = [...middleBlocks]
+    .sort((a, b) => a.avgWpm - b.avgWpm)
+    .slice(0, 3);
+
+  for (const block of worstBlocks) {
+    const blockSegs = segments
+      .filter((s) => s.start >= block.startSec && s.start < block.startSec + BLOCK_SEC)
+      .slice(0, BLOCK_LINES);
+    if (blockSegs.length === 0) continue;
+    const wpm = calcWPM(blockSegs);
+    const tag = wpm < 80 ? "DEAD ZONE" : wpm < 110 ? "LOW ENERGY" : "quiet zone";
+    sections.push({
+      label: `${tag} at ${formatTime(block.startSec)} (${wpm} wpm)`,
+      text: blockSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+    });
+  }
+
+  // Also include the 1 best-energy middle block so Claude can write
+  // credible, specific strengths — not just problem-zone observations.
+  const worstBlockStarts = new Set(worstBlocks.map((b) => b.startSec));
+  const bestBlock = [...middleBlocks]
+    .filter((b) => !worstBlockStarts.has(b.startSec))
+    .sort((a, b) => b.avgWpm - a.avgWpm)[0];
+
+  if (bestBlock) {
+    const blockSegs = segments
+      .filter((s) => s.start >= bestBlock.startSec && s.start < bestBlock.startSec + BLOCK_SEC)
+      .slice(0, BLOCK_LINES);
+    if (blockSegs.length > 0) {
+      const wpm = calcWPM(blockSegs);
+      sections.push({
+        label: `PEAK ENERGY at ${formatTime(bestBlock.startSec)} (${wpm} wpm) — the stream's best stretch`,
+        text: blockSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+      });
+    }
+  }
+
+  // If no middle blocks found (very short gap between opening and closing), add even middle
+  if (worstBlocks.length === 0) {
+    const midStart = Math.floor(segments.length * 0.4);
+    const midSegs = segments.slice(midStart, midStart + BLOCK_LINES);
+    if (midSegs.length > 0) {
+      sections.push({
+        label: `Middle (${calcWPM(midSegs)} wpm)`,
+        text: midSegs.map((s) => `[${formatTime(s.start)}] ${s.text}`).join("\n"),
+      });
+    }
+  }
+
+  return sections.map((s) => `--- ${s.label} ---\n${s.text}`).join("\n\n");
+}
+
+/**
+ * Generate an AI stream coaching report from a transcript and detected peaks.
+ * Uses Sonnet for higher quality coaching feedback — this is the flagship feature.
+ */
+export async function generateCoachReport(
+  segments: TranscriptSegment[],
+  vodTitle: string,
+  peaks: Peak[],
+  priorReports?: PriorCoachSummary[],
+  chatPulse?: string,
+  chatBuckets?: ChatBucket[]
+): Promise<CoachReport | null> {
+  const anthropic = new Anthropic();
+
+  if (segments.length === 0) return null;
+
+  // Strip non-streamer voices before analysis — same filter as peak detection
+  segments = filterDominantSpeaker(segments);
+
+  if (segments.length === 0) return null;
+
+  // Trim pre-stream BRB / "Starting Soon" content. See detectStreamStartOffset
+  // for the heuristic. This is the same trim applied in detectPeaks so the
+  // coach report and clip detection share the same notion of "the stream".
+  const streamStartOffset = detectStreamStartOffset(segments);
+  if (streamStartOffset > 0) {
+    const before = segments.length;
+    segments = segments.filter((s) => s.start >= streamStartOffset);
+    console.log(`[coach] Pre-stream trim: dropped ${before - segments.length} segments before ${streamStartOffset}s (BRB / starting-soon)`);
+    if (segments.length === 0) return null;
+  }
+
+  const vodDuration = segments[segments.length - 1].end;
+  const totalMinutes = Math.round(vodDuration / 60);
+
+  // ── Full energy map (minute-by-minute WPM) — built first so sampling can use it ──
+  const energyMap = buildEnergyMap(segments, vodDuration);
+  const sparkline = renderEnergySparkline(energyMap);
+  const sparklineLabel = energyMap
+    .filter((e) => e.minute % 5 === 0)
+    .map((e) => `${e.minute}m`)
+    .join("   ");
+
+  // ── Problem-weighted transcript samples (opening + closing + worst energy zones) ──
+  const transcriptSamples = buildWeightedTranscriptSamples(segments, energyMap);
+
+  // ── Peak context windows — transcript around each detected peak ──
+  const peakContextBlock = buildPeakContextWindows(peaks, segments);
+
+  // ── Dead air analysis ──
+  // Threshold = 15s (not 10s): natural pauses while reading chat / lining up a
+  // shot / lore-reading in an RPG are common at 10-14s and shouldn't be flagged
+  // as a coaching problem. Real dead air a viewer would actually notice starts
+  // around 15s+.
+  //
+  // Chat-aware filter: if chat was active during a candidate gap (>= 3 messages
+  // in any overlapping bucket), the streamer was almost certainly engaging
+  // even if Deepgram missed quiet/mumbled speech. Skip those — they're false
+  // positives caused by transcription gaps, not actual dead air.
+  const CHAT_ACTIVE_MIN_MSGS = 3;
+  function gapHasActiveChat(gapStart: number, gapEnd: number): boolean {
+    if (!chatBuckets || chatBuckets.length === 0) return false;
+    for (const b of chatBuckets) {
+      if (b.end <= gapStart) continue;
+      if (b.start >= gapEnd) break;
+      if (b.count >= CHAT_ACTIVE_MIN_MSGS) return true;
+    }
+    return false;
+  }
+  interface DeadAirGap { start: number; end: number; duration: number }
+  const deadAirGaps: DeadAirGap[] = [];
+  let totalDeadAirSeconds = 0;
+  let chatSuppressedGaps = 0;
+  for (let i = 1; i < segments.length; i++) {
+    const gap = segments[i].start - segments[i - 1].end;
+    if (gap < 15) continue;
+    const gapStart = segments[i - 1].end;
+    const gapEnd = segments[i].start;
+    if (gapHasActiveChat(gapStart, gapEnd)) {
+      chatSuppressedGaps++;
+      continue;
+    }
+    deadAirGaps.push({ start: gapStart, end: gapEnd, duration: Math.round(gap) });
+    totalDeadAirSeconds += gap;
+  }
+  if (chatSuppressedGaps > 0) {
+    console.log(`[coach] Dead-air filter: suppressed ${chatSuppressedGaps} gaps where chat was active (likely quiet/mumbled speech, not silence)`);
+  }
+  const deadAirPct = vodDuration > 0 ? Math.round((totalDeadAirSeconds / vodDuration) * 100) : 0;
+  const worstGaps = [...deadAirGaps].sort((a, b) => b.duration - a.duration).slice(0, 5);
+
+  const deadAirSummary = deadAirGaps.length > 0
+    ? `${deadAirGaps.length} silence gaps totaling ${Math.round(totalDeadAirSeconds / 60)}min (${deadAirPct}% of stream). Worst gaps: ${worstGaps.map((g) => `${formatTime(g.start)} (${g.duration}s)`).join(", ")}`
+    : "No significant dead air detected.";
+
+  // ── Overall speech stats ──
+  const overallWPM = calcWPM(segments);
+  const commentaryDensity = calcCommentaryDensity(segments);
+
+  // ── Sustained community silence — extended chat-dead window ──
+  // Gated by isPulseViable() inside detectSustainedSilence(). Tiny streams
+  // / late-night runs that never had healthy baseline chat are filtered
+  // out — we don't penalize a streamer for chat that was never there.
+  const sustainedSilence = chatBuckets ? detectSustainedSilence(chatBuckets) : null;
+  const sustainedSilenceBlock = formatSustainedSilence(sustainedSilence);
+
+  // ── Momentum crash — worst energy valley ──
+  const crash = findMomentumCrash(energyMap, segments);
+  const crashBlock = crash
+    ? `MOMENTUM CRASH — worst dead zone (${crash.startMin}:00–${crash.endMin}:00, ${crash.endMin - crash.startMin} min at near-zero energy):
+${crash.excerpt}`
+    : "";
+
+  // ── Prior stream history for longitudinal coaching ──
+  // Compute aggregate trends so the AI can make quantitative callouts that
+  // raw Claude.ai cannot replicate — these averages live only in our DB.
+  const historyBlock = (priorReports && priorReports.length > 0)
+    ? (() => {
+        const scores = priorReports.map((r) => r.score);
+        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        const peakCounts = priorReports.map((r) => r.peak_count ?? 0).filter((n) => n > 0);
+        const avgPeaks = peakCounts.length > 0
+          ? Math.round((peakCounts.reduce((a, b) => a + b, 0) / peakCounts.length) * 10) / 10
+          : null;
+        const closings = priorReports.map((r) => r.closing_score).filter((x): x is "strong" | "average" | "weak" => !!x);
+        const closingPattern = closings.length > 0 ? closings.join(" → ") : null;
+        const colds = priorReports.map((r) => r.cold_open_score).filter((x): x is "strong" | "average" | "weak" => !!x);
+        const coldPattern = colds.length > 0 ? colds.join(" → ") : null;
+        const apCounts: Record<string, number> = {};
+        priorReports.forEach((r) => (r.anti_pattern_types ?? []).forEach((t) => { apCounts[t] = (apCounts[t] ?? 0) + 1; }));
+        const recurringAp = Object.entries(apCounts).filter(([, c]) => c >= 2).map(([t]) => t);
+
+        const subscoreLines = ["energy", "engagement", "consistency", "content"]
+          .map((dim) => {
+            const vals = priorReports
+              .map((r) => r.subscores?.[dim as "energy" | "engagement" | "consistency" | "content"])
+              .filter((v): v is number => typeof v === "number");
+            if (vals.length === 0) return null;
+            const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+            return `  ${dim}: avg ${avg}/100 (${vals.join(", ")})`;
+          })
+          .filter(Boolean)
+          .join("\n");
+
+        const benchmark = `BENCHMARK — averages from this streamer's last ${priorReports.length} stream${priorReports.length > 1 ? "s" : ""}:
+- Average overall score: ${avgScore}/100
+${subscoreLines ? `- Average sub-scores:\n${subscoreLines}` : ""}
+${avgPeaks !== null ? `- Average clip moments per stream: ${avgPeaks}` : ""}
+${coldPattern ? `- Cold-open pattern (oldest → newest): ${coldPattern}` : ""}
+${closingPattern ? `- Closing pattern (oldest → newest): ${closingPattern}` : ""}
+${recurringAp.length > 0 ? `- Anti-patterns flagged in 2+ prior streams: ${recurringAp.join(", ")}` : ""}`.replace(/\n+/g, "\n").trim();
+
+        const detail = priorReports.map((r, i) => `Stream ${i + 1} ago (${r.date}, score ${r.score}):
+  Priority: ${r.recommendation}
+  Top fix: ${r.top_improvement}`).join("\n");
+
+        return `PREVIOUS STREAM HISTORY (this streamer has been coached before — use this to spot patterns):
+${detail}
+
+${benchmark}
+
+QUANTITATIVE TREND CALLOUTS — use the benchmark above to make statements only possible with this streamer's actual history:
+- If THIS stream's overall score is significantly above or below the average, name the delta directly in the recommendation or trend_vs_history. Don't say "you improved" — say "you went from a 62 average to a 78 today" or "you dropped 18 points from your average."
+- If a sub-score (energy, engagement, consistency, content) is trending DOWN across the prior streams, call it out by name with the actual numbers. Generic Claude cannot do this — only you can.
+- If clip moments per stream are trending below average, treat that as a content density problem and say so.
+- If cold open or closing has been weak 2+ streams in a row, that is now a SHAPE pattern, not a one-off — name it as such.
+- These quantitative callouts are LevlCast's edge over a chatbot. Use them when the data supports it. Never fabricate a number that is not in the benchmark.
+
+ANTI-REPETITION RULE — this is critical:
+- Before writing each improvement, check if the same problem appeared in 2+ prior reports above.
+- If yes: prefix the LABEL with "RECURRING: " and give the pattern a NAME unique to THIS streamer based on the specific shape of their habit. Examples:
+    * If they crash energy at minute 47 every stream → "Your 47-Minute Fade"
+    * If they always go silent after losing a match → "Post-Loss Silence"
+    * If they ignore chat during ranked → "Ranked Tunnel"
+    * If their cold open is always 8+ minutes of setup → "The Long Warm-Up"
+  Invent the name based on what's specific about THIS streamer's pattern. Do NOT use generic labels like "RECURRING: Dead Air" or "RECURRING: Chat Ignored" — those feel boilerplate. The name should make the streamer think "yeah that's me."
+- If no: this is a new finding from this stream — write it fresh, no prior-report language.
+- Do NOT recycle prior reports' exact wording. If the same label would appear twice, drop the repeat.
+- New problems visible only in this stream take priority over repeating history.
+
+ESCALATION DISCIPLINE — when a pattern has now recurred 3+ times:
+- The streamer has heard the same advice before and it hasn't worked. Do not just repeat the previous fix in louder language. The fix as written is the failed fix.
+- The improvement line must propose a DIFFERENT angle on the same root problem. If you previously told them "narrate one decision per minute" and they're still going silent, switch tactics: try "set a timer to call out the next play before each fight starts" or "pre-write three takes about the game and rotate one per stream." A new mechanic, not louder repetition.
+- The recommendation field MUST NOT use language that brands the streamer as the problem ("it's your identity now," "this is who you are," "you can't shake this"). These framings make people churn. Frame the pattern as a habit that hasn't broken yet, never as the streamer's character.
+- Banned phrases when a pattern recurs 3+ times: "it's your identity", "this is who you are right now", "you've been told this before", "we've covered this", "again", "still", "as usual". Use these only when you're acknowledging a WIN that is also recurring.
+
+EARNED-RECOGNITION RULE — when prior history exists you MUST do at least one of the following, even if the overall score went down:
+- Name a specific sub-score that improved versus the prior streams' average, even by 1-2 points, and credit the streamer for that movement.
+- If no sub-score improved, find ONE specific behavior in the transcript or peaks that is better than what the prior reports flagged — a moment they took a take, named a chatter, closed a bit, anything — and call it out in strengths.
+- Put this recognition in strengths or trend_vs_history, not in the recommendation.
+- This is non-negotiable. If every improvement is RECURRING and there is no "you did this better" callout anywhere in the report, the report fails — generate something honest before returning.
+
+PROGRESS-ON-PRIOR-FIX (REQUIRED when history exists):
+The streamer was told to fix something specific in the most recent prior report:
+"${priorReports[0].recommendation}"
+
+You MUST evaluate, in this stream, whether they actually addressed it. Output as the progress_on_prior_fix field in the JSON. Rules:
+- status MUST be one of: "fixed" (clear improvement, the ask was met), "partial" (some progress but not all the way), "regressed" (got worse than before), "not_addressed" (no evidence they tried).
+- evidence is 1-2 sentences citing specific moments, timestamps, or sub-score movement from THIS stream. Reference what the stream actually showed, not platitudes.
+- If a quantifiable metric directly maps to the ask (dead_air_pct, opening score, energy sub-score, etc.), include it under metric with label/before/after/unit. before = the value from the most recent prior report. after = the value from this stream. Only include metric if you can ground both numbers in real data.
+- Do NOT fabricate. If the prior priority was vague or this stream gave no signal either way, status = "not_addressed" and say so plainly.
+- This field is the single most prominent element on the next report for the streamer. Write it as if their decision to keep using LevlCast depends on whether they trust this assessment.`;
+      })()
+    : "";
+
+  // ── Peaks summary for coaching context ──
+  const peaksSummary = peaks.length > 0
+    ? peaks.map((p) => `- "${p.title}" at ${formatTime(p.start)}–${formatTime(p.end)} [${p.category}, score: ${p.score.toFixed(2)}]\n  Why it works: ${p.reason}`).join("\n")
+    : "No standout moments detected — the stream lacked clear viral peaks.";
+
+  const categoryGuideBlock = Object.values(CATEGORY_COACHING_GUIDE).join("\n\n");
+  const gameModule = pickGameModule(vodTitle);
+  const gameModuleBlock = gameModule
+    ? `\n\nGAME-SPECIFIC MODULE (the VOD title indicates this game — layer this knowledge on top of the streamer-category guide above when writing strengths, improvements, recommendation, and best_moment):\n\n${gameModule}`
+    : "";
+
+  const coachSystemPrompt = `You are a Twitch growth coach who is also a seasoned streamer yourself. You speak the language — you know what dead air feels like, what it means to go live cold, when chat is sleeping, when someone's in the zone vs grinding silent. Your feedback sounds like a knowledgeable streaming friend giving real talk, not a corporate consultant.
+
+You are direct and honest. Your job is not to make the streamer feel good — it is to make them better. You use natural streaming culture language: dead air, chat sleeping, no hype, clipping moments, energy diff, grinding silent, lurker mode, going off, stream pacing.
+
+THE 20K STREAMER TEST — run every stream through this lens before writing anything:
+Imagine a streamer with 20,000 viewers clicks on this VOD. They are busy. They have seen thousands of streams. They will tab out in 30 seconds if nothing hooks them. Ask yourself honestly: at what minute would they close the tab? At what moment would they lean in and think "this person has something"? At what point would they clip it and send it to a friend? Did anything in this stream make them stop scrolling? That is the real standard. Not "is this decent for someone at 50 viewers" — but "does this have the DNA of something bigger?" Your feedback must be grounded in this honest assessment. If a moment would make a 20k streamer stop and watch, say so. If a stretch would make them bounce, say so.
+
+TONE (non-negotiable). The report decides whether this streamer opens another one next week:
+- Your job is not to dunk on the stream. Your job is to help the streamer see what's working AND what to fix, in a way that makes them want to go live again.
+- Every report must lead with a real strength before any improvement. Even on a 28/100 stream, there is one thing they did that you can name and tell them to repeat. Find it.
+- Frame improvements as opportunities, not failures. "Try X next stream" beats "you failed at Y." "Hold the silence two seconds longer" beats "you killed the moment." Same observation, forward-looking shape.
+- Honest, not brutal. Streamers can smell flattery, so don't praise weak moments. But "this stream had no peaks" is not the same as "you played it safe and safe doesn't get clipped." Specificity is care. Cruelty is laziness.
+- Banned framings: "you played it safe," "your stream is cooked," "safe doesn't get clipped," "you didn't show up," any sentence that brands the streamer as fundamentally lacking.
+- Banned moves: blaming the streamer's character, calling a habit their identity, piling multiple sub-areas onto one same failure mode.
+- If the score is low, the read is "here's the path out," not "here's why you're stuck."
+- NEVER use em dashes (—) in any output you produce. Use periods, commas, or rewrite the sentence. This is absolute and enforced by post-processing, but writing them and getting them stripped leaves awkward double-spaces, so just don't.
+
+VOICE RULES — non-negotiable:
+- Write directly to the streamer as "you" and "your" everywhere except stream_story and community_note.
+- Use contractions: it's, you're, didn't, wasn't, they're, that's, you've, don't.
+- Short sentences. Hard cap: 15 words per sentence. If a sentence is longer, split it.
+- No em-dashes to chain long thoughts. Use a period instead.
+- Sound like a text message from a smart friend, not a film review.
+- Never write "the streamer" in fields addressed to them — say "you".
+- Never pad with filler. If you've made the point, stop. No "and that's the key" or "this is important" endings.
+
+VOICE MATCH — read before writing:
+Read the transcript and pick up the streamer's actual register. The report should sound like a friend who streams the same way they do. Then write feedback in a tone that matches:
+- If they cuss freely and run hot, you can be blunt and casual. "That whole stretch was cooked." "Chat was lurking and you knew it." Don't sanitize the read.
+- If they're calm and measured (educational, IRL), you're calm and direct. No forced edge. No "bro" or "gang" if they don't talk that way.
+- If they're a chill variety streamer, match the chill. Don't import urgency they don't have.
+- Pick up vocabulary they actually use (specific game terms, slang, recurring phrases) and reflect it back without quoting them. This proves you watched.
+- Never write in a default coaching voice that sounds the same across all streamers. The voice is part of the proof you watched this specific stream.
+
+CORE PRINCIPLE: You watched this specific stream. You know what happened. Every piece of feedback references a real moment — a timestamp, a specific topic they talked about, a specific thing they did or didn't do. Generic advice that could apply to any streamer is useless and you never give it.
+
+If you write a strength, you name the exact moment that showed it and tell them how to recreate it. If you write an improvement, you name when and where the problem showed up and give a fix that only makes sense for this specific stream.
+
+CATEGORY COACHING STANDARDS — apply the section matching the streamer type you identify:
+${categoryGuideBlock}${gameModuleBlock}`;
+
+  const response = await withRetry(() => anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 3500,
+    system: [
+      {
+        type: "text" as const,
+        text: coachSystemPrompt,
+        cache_control: { type: "ephemeral" as const },
+      },
+    ],
+    messages: [
+      {
+        role: "user",
+        content: `Review this Twitch stream and produce a coaching report the streamer can act on immediately.
+
+IMPORTANT: This transcript has been pre-filtered using speaker diarization to include ONLY the streamer's voice. Game audio, NPC dialogue, music, and other speakers have already been removed. Every line you read is something the streamer actually said.
+
+SILENCE CONTEXT — read this before judging dead air:
+Dead air gaps in the transcript CAN mean the streamer was silent, BUT they can also mean:
+- The streamer was watching content (a video, movie, short film, YouTube video) — silence during watch-alongs is NORMAL and expected. No one wants the streamer talking over every second of a video.
+- The streamer was in an intense gameplay moment where focus silence is natural (clutch plays, boss fights, tense situations).
+- The game itself has cinematic cutscenes the streamer is watching.
+
+Only flag silence as a real problem when the streamer SHOULD have been talking but wasn't — during downtime, between matches, during loading screens, or when chat is active and being ignored. Intentional silence during content consumption or intense gameplay is not dead air.
+${streamStartOffset > 0 ? `
+PRE-STREAM CONTENT WAS DETECTED AND TRIMMED:
+The first ${Math.round(streamStartOffset / 60)} minute${streamStartOffset >= 120 ? "s" : ""} of the VOD (${formatTime(0)}–${formatTime(streamStartOffset)}) were a "Starting Soon" / BRB screen — likely a clip playlist, hype reel, or pre-stream loop where the streamer was not yet live. That section has been REMOVED from the transcript you see below. The transcript starts at ${formatTime(streamStartOffset)}, which is the actual stream start.
+
+DO NOT score the streamer on cold-open quality, dead air, hype, or any other dimension based on what happened before ${formatTime(streamStartOffset)}. That content was not their live stream. The "opening" you evaluate is the first few minutes AFTER the stream started — i.e. from ${formatTime(streamStartOffset)} onward.
+
+If you mention setup time or BRB anywhere, frame it neutrally — the streamer ran a pre-stream segment, that is fine, do not penalize it.
+` : `
+SETUP-TIME NOTE: The first 3-5 minutes of a stream can be setup time — reading chat, adjusting audio, warming up before going into the bit. Do not score normal setup behavior as a cold-open problem. Judge the opening from the moment the streamer is actively engaging.
+`}
+STREAM INFO:
+- Title: "${vodTitle}"
+- Duration: ${totalMinutes} minutes${streamStartOffset > 0 ? ` (live content only — pre-stream BRB trimmed)` : ""}
+- Commentary density: ${commentaryDensity} wpm (when actively speaking)
+
+WPM TARGETS BY STREAMER TYPE — apply the range matching what you identify in Step 1:
+- gaming:       120–160 wpm is normal; below 100 wpm = flat delivery
+- just_chatting: 145–185 wpm is normal; below 120 wpm = flat delivery
+- irl:           100–145 wpm is normal; below 80 wpm = flat delivery
+- variety:       120–160 wpm is normal; below 100 wpm = flat delivery
+- educational:   95–135 wpm is normal; below 80 wpm = flat delivery
+(Commentary WPM measures active speech only — silence during gameplay or watchalongs does not count against this.)
+- Overall stream pace (incl. gaps): ~${overallWPM} wpm
+- Dead air: ${deadAirSummary}
+
+ENERGY CURVE (minute-by-minute — each bar = 1 min, height = speaking energy):
+${sparkline}
+${sparklineLabel}
+
+${crashBlock ? crashBlock + "\n" : ""}${historyBlock ? historyBlock + "\n" : ""}AI-DETECTED PEAK MOMENTS (the best clips the AI found):
+${peaksSummary}
+
+${peakContextBlock ? `TRANSCRIPT AT PEAK MOMENTS (read this carefully — this is the raw evidence for what made the best moments work or why moments are missing):
+${peakContextBlock}` : ""}
+
+${chatPulse ? chatPulse + "\n" : ""}${sustainedSilenceBlock ? sustainedSilenceBlock + "\n\n" : ""}STREAM TRANSCRIPT SAMPLES (problem-weighted — opening, closing, and worst-energy zones with wpm labels):
+${transcriptSamples}
+
+STEP 0 — FIND THE STREAM'S STORY (do this first, before anything else):
+Read through the transcript and answer these questions internally — do not output the answers, but let them shape everything you write:
+- What was this stream actually about? What was the main thing happening?
+- What were the 2-3 pivotal moments — a big reaction, a turning point, a topic that lit up, a moment that fell flat?
+- What would someone who missed the stream need to know to understand the feedback?
+- What is the story arc — did it build somewhere, did something collapse, did something unexpected happen?
+Every piece of feedback you write must connect back to this story.
+
+STEP 1 — IDENTIFY STREAMER TYPE:
+CRITICAL: The transcript above is voice-only — game audio, music, and NPC dialogue were stripped by speaker diarization before you saw it. A gaming stream WILL read like a monologue in the transcript because game sound is gone. Do NOT use transcript-only signals to decide if a game is being played.
+
+Use the STREAM TITLE as the authoritative signal for gameplay:
+- If the title names a specific video game (e.g. "Elder Scrolls Online", "FFXIV", "Genshin", "Minecraft", "WoW", "Fortnite", "Final Fantasy", "Dead by Daylight", etc.), the streamer_type is "gaming" — even if the transcript sounds conversational. Streamers talk over gameplay constantly; that's normal.
+- If the title mentions multiple games or phrases like "variety", "game swap", "playing [X] then [Y]", use "variety".
+- Only use "just_chatting" when the title itself indicates chat content (e.g. "Chill Chat", "Q&A", "Reacts", "Podcast", "Yapping") AND no specific game is named.
+- "irl": title indicates outdoor/real-life content (e.g. "IRL walk", "Going out").
+- "educational": title indicates tutorial/how-to content (e.g. "How to", "Guide", "Tutorial").
+
+Classification rules:
+- Title names a game → gaming (or variety if multiple) — this overrides any "sounds chatty" transcript vibe.
+- Title is ambiguous/generic → fall back on transcript content.
+- When in doubt between gaming and just_chatting, prefer gaming — variety streamers almost never stream pure chat.
+
+CRITICAL — DO NOT HALLUCINATE GAME NAMES: If the stream title is ambiguous (e.g. "3v3s", "ranked grind", "late night stream", "session") and does not explicitly name a game, do NOT infer or name a specific game anywhere in your output — not in stream_story, not in feedback, not anywhere. Refer to "the game" or the game mode only. Naming the wrong game destroys report credibility instantly.
+
+EVALUATION — work through ALL of these before writing a single word of feedback. Dead air gets AT MOST one improvement slot — the other two must come from the dimensions below:
+
+1. ENERGY CURVE: Use the sparkline DATA only — this is a passive readout of WPM across the stream. Where did the graph drop to flat? Find the 1-2 worst drops and the 1 best high, and match those timestamps to the transcript to understand what was happening. This dimension is about READING what the data shows, not judging behavior.
+
+2. DEAD AIR: Was silence intentional (gameplay, watchalong) or momentum loss? Only flag it if it genuinely hurt. One slot max — do not let this dominate.
+
+3. OPINIONS & TAKES: Did the streamer share strong opinions? Hot takes on the game, meta, culture, or life? Or did they just narrate and react without a point of view? Big streamers are opinionated — they make people agree or disagree, and both are growth. If this stream was mostly neutral play-by-play with no strong take, that's worth flagging.
+
+4. STORYTELLING & CALLBACKS: Did they tell any personal stories? Did they callback to earlier in the stream or a previous session? Callbacks ("remember when I said…", "like that time last week…") create continuity and make regulars feel rewarded. No callbacks = each stream feels disposable.
+
+5. HYPE ARCHITECTURE: This is about INTENTIONAL BEHAVIOR — did they build to moments, or just react after the fact? Top streamers verbally escalate tension before a big play, set up bits with a premise, announce stakes before something happens. This is distinct from Energy Curve (which is raw WPM data) — a stream can have high WPM energy but zero intentional build-up, or low WPM but still manufacture moments well. Only flag this if you can see clear missed opportunities where they reacted instead of building.
+
+6. TRANSITION HANDLING: What happened during loading screens, queue waits, game deaths, or menu time? These are when average streamers go quiet or ramble. Top streamers have a transition move — a story, a question for chat, a hot take. Did they use these moments or waste them?
+
+7. CHAT SYMBIOSIS — THE BIDIRECTIONAL DANCE: This is one of the most important growth levers for small streamers and it's almost always missed. Chat and the streamer shape each other — the streamer's energy creates the chat's energy, and the chat's energy feeds back into the streamer. When this loop is working, it becomes addictive: viewers feel like they're PART of something, not watching something. They come back because they feel ownership of the stream.
+
+What the loop looks like when it's working: streamer says something strong → chat reacts → streamer builds on that reaction → a specific chatter gets a moment → they feel seen → they tell people → they come back tomorrow.
+
+What it looks like when it's broken: streamer reads a message → says "yeah lol" → moves on → chat feels like wallpaper → lurkers stay lurkers.
+
+Look for:
+- Did the streamer ever make a specific chatter feel genuinely seen (called by name, built a bit from their message, argued back, gave them a callback later)?
+- Did the streamer's energy visibly lift when chat was active, and did chat's activity visibly lift when the streamer was on?
+- Were there moments where the chat shaped the direction of the stream?
+- Were there missed opportunities where chat was reacting and the streamer ignored or deflected?
+- Does this stream feel like the chat would WANT to come back and participate, or like it doesn't matter whether they're there?
+
+The goal isn't just reading chat — it's making individual chatters feel like they contributed to something. That's what builds the addiction. That's what makes the community.
+
+8. AUDIENCE ONBOARDING: Did they ever acknowledge or welcome new viewers? Did they explain context ("so what I'm doing is…") or just play for their regulars? Streamers who never onboard new viewers have a ceiling on how big they can get.
+
+9. VOCAL VARIETY: Based on the transcript, was their delivery flat and monotone (short statements, no escalation, no variation in sentence structure) or did it have range (long escalating sentences, sudden short punchy reactions, rhetorical questions to chat, building speculation)? Flat delivery kills retention even when the content is good.
+
+10. PERSONALITY AUTHENTICITY: Were there moments where their real self came out — an unexpected reaction, an off-script thought, genuine frustration or joy? Or did the stream feel performed and safe? Vulnerability and imperfection are what get clipped and shared.
+
+11. CLOSING ENERGY: How did the stream end? Did they build toward a finish (raid announcement, goal recap, memorable sign-off) or did it just fizzle? The last 10 minutes shapes whether a viewer comes back.
+
+12. COMMUNITY CURATION: Based on the streamer type and what you can infer from the transcript — is the content actually serving the community this stream type attracts? What do viewers of THIS specific category want, and did this stream give it to them? Chats reflect the streamer — an engaged, opinionated, loyal community is built by a streamer who consistently gives them something to react to. If the stream is generic or safe, the community will stay small and passive. If there are specific moments where the streamer either nailed or missed what their community wants, name them.
+
+13. HISTORY: If prior reports exist — specifically which problems are recurring vs. improved? Name the pattern directly.
+
+14. THE EXPERIENCED STREAMER TEST: Apply the lens from your system prompt. Run through the stream honestly: Would an experienced viewer tab out early? Where? Was there a moment with real pull — something that would make a busy, seen-it-all viewer stop and lean in? Did this stream have a personality that could carry a bigger audience, or is it still finding its voice? This dimension is internal — use it to sharpen your feedback, but never mention viewer counts or numbers in any output field.
+
+DEAD AIR RULE: If dead air already appears as a strength (rare) or improvement, do NOT mention it again elsewhere. Repeating the same dimension in multiple fields is lazy coaching.
+
+SCORING — calibrate honestly but reward visible effort. Streamers come back because they see the number move when they fix something. They churn when the number keeps dropping no matter what they try.
+
+Score bands (for absolute merit, used on first streams):
+- 90-100: Rare. Elite execution across all dimensions — energy, personality, opinionated delivery, chat chemistry, multiple clip-worthy moments. Reserve for streams that genuinely could fit on a top-tier streamer's channel.
+- 75-89: Strong. Clear strengths, real personality, a few high-leverage fixes available. Most streams that feel "good" land here.
+- 55-74: Doing well. Average-to-solid range. Real strengths to build on with specific habits to add next stream. The number moves into this band when the streamer has voice but the structure has gaps.
+- 40-54: Foundations in place. Personality is showing through, structure needs sharpening. A streamer here is on the right track but the stream has clear shape issues (cold opens dragging, mid-stream energy crashes, weak transitions).
+- Below 40: Early days. Plenty of room to grow on every dimension. Treat this score as a starting line, not a grade — coach toward the next 10 points, not toward "fix everything."
+
+Calibration note: a baseline-quality first stream from an engaged streamer with a real voice should usually land 55-70. Don't park a normal stream in the 30s unless there are genuine structural problems (huge dead air stretches, no opinions, no chat acknowledgment, weak open AND weak close). And don't give 90s for streams that are just "fine."
+
+PRIOR-STREAM CALIBRATION — when this streamer has history:
+- Anchor the overall_score around the streamer's recent average. Most streams should land within ±10 points of their average. Bigger swings require specific evidence.
+- LENIENT ON GAINS: if a previously-flagged problem is visibly better this stream — even a partial fix, even by a couple of minutes' worth of behavior — bias the overall score UPWARD by 3-6 points. A streamer who actually tried should see the number move. That's the whole feedback loop. A flat 38 → 38 after they put in effort is what makes them quit.
+- TEMPERED ON REGRESSION: don't drop more than 8 points from the prior average unless multiple NEW problems showed up beyond the existing recurring ones. Same-old recurring problem = same-old score range, not a freefall.
+- NO MYSTERY JUMPS: do not move a streamer 20+ points in either direction without naming the specific cause in the recommendation or trend_vs_history. If their average is 42 and you score 78, defend it with what changed. Glow-ups and crashes both need evidence.
+- Sub-scores move the same way: if energy went 32 → 38, that's a real 6-point gain, not "still in the failing band." Reflect it in score_breakdown.
+
+WHEN A STREAMER FIXES SOMETHING, SAY SO:
+- If they did better on a thing you've flagged before — even partially — call it out plain. Talk to them like a streamer friend, not a coach reading stats. Examples:
+  * "You actually called out three chatters by name in the first hour. That's exactly what was missing last time. Keep that going."
+  * "Way less dead air in the boss pulls tonight. The narration during the first wipe is the version of you that needs to show up every stream."
+  * "First stream where the cold open didn't drag. You came in with a hook this time."
+- No "engagement +6" type stat lines. No data-talk. Just say what they did and why it landed.
+- Small wins count. Even partial fixes deserve recognition if they show effort on a previously-flagged problem.
+
+OUTPUT RULES:
+
+NO QUOTES ANYWHERE — GLOBAL RULE: Do not reconstruct or quote what the streamer said word-for-word in any field. Not in cold_open, not in strengths, not in improvements, not in stream_story, not anywhere. You only see transcript samples — you will get words wrong and wrong words destroy the report's credibility. Describe what happened using timestamps and actions only. "At 3:12 the streamer had a rage outburst" — not "the streamer said 'holy shit I can't believe that'." This rule overrides everything else.
+
+SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries is the one place exact transcript text is required. Pull the phrase verbatim from the transcript you were shown. If it does not appear in the transcript samples provided to you, do not flag the anti-pattern. Do not reconstruct from memory or paraphrase — the quote must be exactly as it appeared in the transcript. This exception applies ONLY to anti_patterns.quote and nowhere else.
+
+- stream_story: 2 sentences max. What this stream was about and the one defining moment. No scores, no advice, no quoted words. If the title doesn't explicitly name a game, do not name one.
+- community_note: 1 sentence. What this community wants and whether they got it. No quoted words.
+- NEVER give generic advice. Every sentence must reference a specific timestamp or observable thing from this stream.
+- Each improvement must come from a DIFFERENT evaluation dimension — never two improvements about the same issue. Dead air gets one slot max.
+- Strengths: **2-3 word label** — name the exact moment at MM:SS, what the streamer did, and the specific behavior to repeat next stream. Limit: 30 words. Be precise — vague praise like "good energy" is useless. No quotes ever.
+- Improvements: **2-3 word label** — what the problem was at MM:SS and the one-line fix. HARD LIMIT: 20 words. No quotes ever. If recurring, prefix with "RECURRING: ".
+- Labels must sound like a fellow streamer, describing the pattern not branding the streamer. Dead air/energy: "Dead Air", "Silent Grind", "Energy Diff", "No Hype". Opinions: "No Take", "Stuck Neutral", "Take-Free Zone". Storytelling: "No Callback", "No Setup". Transitions: "Dead Transition", "Open Window" (downtime that could be filled). Chat: "Chat Ignored", "Chat On Mute". Audience: "Cold Welcome", "New Viewer Blind". Vocal: "Monotone Zone", "Voice Flat". Hype: "Built That Up", "Let It Happen". Closing: "Quiet Finish", "No Finish". NEVER: "Playing It Safe" (brands the streamer), "Audience Disconnect", "Content Vacuum", "Viewer Arc", "Chat Wallpaper" (insulting), "Flat Delivery" (sounds like the person is flat), "Audience Cold" (their fault framing), "Wasted Downtime" (judgmental).
+- Best moment: write this like a coach reviewing game tape — (1) what was building before this moment that set it up, (2) the exact thing the streamer did at that second and why it landed, (3) how to engineer this intentionally on the next stream. 3 sentences. Actions and energy only — no reconstructed words.
+- Recommendation: Imagine a successful experienced streamer just watched this VOD. What is the one thing they would pull you aside and say? Lead with that insight directly. 2-3 sentences max. Make it feel like a real person said it, not a report. Never mention viewer counts or numbers in this field. No timestamps. No quoted words.
+- Rewatch moments: pick TWO specific minutes the streamer should rewatch on their own VOD — one "best" (60 seconds of model behavior they should study and repeat) and one "worst" (60 seconds of a teachable mistake they need to see for themselves). These are LEARNING tools, not highlights. Different from best_moment: best_moment celebrates the peak; rewatch_moments are about behavior to study. The "worst" rewatch should NOT be the most embarrassing moment — it should be the most INSTRUCTIVE one (a dead patch they didn't notice, an energy dip during a key beat, a chat moment they ignored). One sentence each describing exactly what to watch for. No quoted words. No em dashes.
+- Missed clip: identify the SINGLE moment in this stream that should have been THE clip but wasn't fully realized. Different from best_moment (which celebrates the peak that DID happen) — missed_clip names the moment with viral DNA that the streamer let pass. Look for: chat reacted hard but you kept moving, a setup that landed but you didn't milk it, a vulnerability moment you pulled back from, a reaction you cut short, a build-up that fizzled because you changed topics. The note must say (1) what was happening at that timestamp, (2) why it had viral DNA, (3) what to do differently next time so the moment lands instead of slipping. 2-3 short sentences. No quoted words. If no clear missed clip exists in the stream (rare — most streams have one), omit this field entirely rather than fabricating.
+- Cold open: evaluate from when the streamer STARTS actively engaging, not from the stream's timestamp 0. Settling in (reading chat, audio check, BRB screen, intro music, sipping coffee) is NOT a cold open problem — it's normal stream behavior. Score "strong" if they came in with clear energy and a hook once they started; "average" if they warmed up naturally into the stream; "weak" ONLY if they took more than 8 minutes to actually engage, opened with visibly negative/flat energy once engaged, or ignored active chat during the opening. Silence before they started engaging is never "weak". Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
+- Closing: score the last 5 minutes. Normal sign-off behavior (saying bye, thanking viewers, shouting out subs, hyping next stream) is NOT a closing problem. Score "strong" if they ended with energy, gratitude, and a clear next-stream hook; "average" if they wrapped up naturally; "weak" ONLY if they ended mid-content without warning, ended on visibly negative energy, complained about the stream as they ended, or trailed off silently. Note: 1 sentence describing what HAPPENED — no reconstructed quotes.
+- Anti-patterns: scan the transcript for these 5 specific growth-killing behaviors and flag ONLY if you can produce an exact verbatim quote. Empty array is the correct output when none apply. DO NOT flag ambient negativity or interpretation — the quote must literally match the pattern's meaning.
+  * viewer_count_apology: streamer apologizes for low viewers. Example quotes: "sorry it's just us today", "small crew today as usual", "I know it's just a few of you"
+  * follow_begging: asks for follows/subs outside of a hype moment, or repeatedly. Example: "drop a follow if you're watching" said during low-energy section
+  * lurker_shaming: complains about chat being quiet. Example: "chat is so dead today", "y'all are lurking hard", "why aren't you talking"
+  * pre_stream_drain: low-energy negativity about streaming itself near the opening. Example: "I don't really want to be here", "I'm too tired for this", "why am I even streaming today"
+  * self_defeat: self-deprecating statements about the streamer's own ability/growth. Example: "I'm not a good streamer", "I'll never grow", "nobody watches me anyway"
+  Rules: every anti_patterns entry MUST include the exact verbatim quote from the transcript (not paraphrased, not reconstructed). If you cannot produce a real quote, do not flag. The quote field is the evidence — if it's wrong, the whole report loses trust.
+  Note format: ONE sentence that gives the streamer the SWAP (what to do instead) for next stream. Do NOT lecture about why the phrase hurts; the streamer already feels it. Examples:
+    * For viewer_count_apology: "Skip the apology, jump straight into the energy: 'we're cooking, let's go' works the same as a hello."
+    * For lurker_shaming: "Reframe the silence: ask chat one specific question (favorite weapon? hottest take?) instead of calling them quiet."
+    * For self_defeat: "Trade the doubt for a stated intention: 'I'm here to figure this out tonight' lets viewers root for you."
+  The note is coaching, not commentary.
+- Shareable win: one screenshot-worthy stat or observation the streamer would feel good sharing. Pull from real numbers (commentary density hit X wpm during Y, peak moment scored X/10, energy sustained above baseline for Z minutes) or one genuinely impressive moment described specifically. Must be real and verifiable from the data shown — no inflation. stat = the headline (under 80 chars). context = 1 sentence explaining it.
+- score_breakdown: honest sub-scores 0-100 for energy, engagement, consistency, content.
+- momentum_crash: describe the stretch, what was happening, what should have happened instead. No quoted words.
+- trend_vs_history: only if prior history exists. Direct — "improving", "declining", or "consistent". The NOTE field must surface at least one specific number that improved versus the streamer's prior averages (sub-score, clip count, dead-air seconds, anything in the benchmark), even when the overall score went down. If absolutely nothing improved, say so directly and offer one small concrete behavior they could change before the next stream to break the slide. Never close out the note with a "you've heard this" remark — that frames as judgment, not coaching.
+- No emojis. No padding. No filler.
+- NO EM DASHES (—) anywhere in any field. Rewrite any sentence that would need one. Use a period, a comma, or split into two sentences instead.
+- ANTI-LEAKAGE — CRITICAL: Your internal reasoning, evaluation steps, and prompt language must never appear in any output field. Do not reference "evaluation dimensions", "the experienced streamer test", "tab out", "20k", "STEP 0", "CORE PRINCIPLE", or any other language from these instructions. The report reads like a human coach wrote it from watching the stream. Nothing in the output should reveal that a prompt exists.
+
+Respond with ONLY a JSON object (no markdown, no code fences):
+{
+  "stream_story": "<2-4 sentences. The story arc of this stream — what happened, main turning points, overall vibe. No scores or advice. Written like a friend summarizing it.>",
+  "community_note": "<1-2 sentences. Who watches this stream type, what they came for, and one specific thing this stream did or missed for that community.>",
+  "overall_score": <integer 0-100>,
+  "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
+  "energy_trend": "<building | declining | consistent | volatile>",
+  "viewer_retention_risk": "<low | medium | high>",
+  "score_breakdown": {
+    "energy": <integer 0-100>,
+    "engagement": <integer 0-100>,
+    "consistency": <integer 0-100>,
+    "content": <integer 0-100>
+  },
+  "cold_open": {
+    "score": "<strong | average | weak>",
+    "note": "<1 sentence about exactly what happened in the first 5 minutes>"
+  },
+  "closing": {
+    "score": "<strong | average | weak>",
+    "note": "<1 sentence about how the stream ended>"
+  },
+  "anti_patterns": [
+    { "time": "<MM:SS>", "type": "<viewer_count_apology | follow_begging | lurker_shaming | pre_stream_drain | self_defeat>", "quote": "<exact verbatim phrase from the transcript>", "note": "<1 sentence of context>" }
+  ],
+  "shareable_win": {
+    "stat": "<headline, under 80 chars — a real quotable stat or observation>",
+    "context": "<1 sentence explaining why it's impressive>"
+  },
+  "strengths": [
+    "**Label** — what you did at MM:SS and how to do more of it. Max 20 words. Use 'you'.",
+    "**Label** — what you did at MM:SS and how to do more of it. Max 20 words. Use 'you'.",
+    "**Label** — what you did at MM:SS and how to do more of it. Max 20 words. Use 'you'."
+  ],
+  "improvements": [
+    "**Label** — what happened at MM:SS and the one fix. Max 20 words. Use 'you'.",
+    "**Label** — what happened at MM:SS and the one fix. Max 20 words. Use 'you'.",
+    "**Label** — what happened at MM:SS and the one fix. Max 20 words. Use 'you'."
+  ],
+  "best_moment": {
+    "time": "<MM:SS>",
+    "description": "<EXACTLY 3 sentences, max 20 words each. No em-dashes. Use 'you'. Sentence 1: what was building before (e.g. 'You'd been quiet for three minutes and chat was sitting still.'). Sentence 2: what you did at this moment and why it landed (e.g. 'Then you went on a run that built from setup into a payoff nobody saw coming.'). Sentence 3: how to engineer it next time (e.g. 'Frame the rivalry before the match starts so the trash talk has context when it hits.'). Actions only, no reconstructed words.>"
+  },
+  "punch_line": "<ONE sentence. The single highest-leverage takeaway from this stream, written forward-looking. NOT a sting, NOT a verdict, a 'here's the lock-in move' line that points at the next stream, not blame for this one. It should make the streamer think 'okay I see it, I can do that', not 'I suck'. Lean on what was almost there: an instinct they showed and can lean into, a moment they nearly built, a habit one tweak away from clicking. Example tone (notice: NO em dashes, no exceptions): 'Your instinct to call out specific chatters is already there. Let one of those moments breathe next stream and watch what happens.' or 'You almost had a viral run at the boss kill. Hold the silence two more seconds before the reaction.' or 'The opening had real energy. Carrying that into the first loading screen instead of going quiet is the unlock.' No em dashes. Under 22 words. No quoted words. No timestamps.>",
+  "recommendation": "<1-2 short sentences addressed to 'you'. Reference this specific stream. Most impactful change. No buildup. Use contractions.>",
+  "rewatch_moments": [
+    { "time": "<MM:SS>", "kind": "best", "note": "<1 sentence telling 'you' what to watch for in the next 60 seconds. Specific behavior to study and repeat. No quoted words.>" },
+    { "time": "<MM:SS>", "kind": "worst", "note": "<1 sentence telling 'you' what to watch for in the next 60 seconds. Specific behavior to fix. Not embarrassment, instruction. No quoted words.>" }
+  ],
+  "missed_clip": {
+    "time": "<MM:SS>",
+    "note": "<2-3 short sentences. The moment that SHOULD have been a clip but wasn't. What was happening, why it had viral DNA, what to do next time. Address as 'you'. No quoted words. Omit this whole field if no clear missed-clip moment exists.>"
+  },
+  "momentum_crash": {
+    "time": "<MM:SS of where the crash started>",
+    "duration_min": <integer minutes the dead zone lasted>,
+    "note": "<1-2 sentences: what was happening, why it died, what should have happened instead>"
+  },
+  "trend_vs_history": {
+    "direction": "<improving | declining | consistent | first_stream>",
+    "note": "<1-2 sentences referencing specific prior scores or problems if history exists, or 'First analyzed stream — no comparison available' if not>"
+  },
+  "progress_on_prior_fix": {
+    "prior_priority": "<the verbatim recommendation from the most recent prior report — copy it exactly>",
+    "status": "<fixed | partial | regressed | not_addressed>",
+    "evidence": "<1-2 sentences with specific moments or timestamps from THIS stream that justify the status. Address as 'you'. No fabricated quotes.>",
+    "metric": { "label": "<short metric name e.g. 'dead air' or 'opening score'>", "before": <number>, "after": <number>, "unit": "<optional unit like '%' or 'points' or 'sec'>" }
+  }
+}
+
+Omit the progress_on_prior_fix field entirely when no prior report history exists. When it IS included, prior_priority and status and evidence are required; metric is optional (include it only when you can ground both before and after in real data, never invent numbers).`,
+      },
+    ],
+  }), 3, 1000);
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+
+  try {
+    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const report = stripEmDashes(JSON.parse(cleaned)) as CoachReport;
+    // Attach computed metrics directly — no need to re-derive from AI text
+    report.commentary_density = commentaryDensity;
+    if (worstGaps.length > 0) {
+      report.dead_zones = worstGaps.map((g) => ({ time: formatTime(g.start), duration: g.duration }));
+    }
+    // Total dead-air signal — used by the public feed so the displayed value
+    // reflects the magnitude of dead air, not just the worst-5-gaps cap.
+    report.dead_air_seconds = Math.round(totalDeadAirSeconds);
+    report.dead_air_pct = deadAirPct;
+    // Enforce the anti_patterns.quote verbatim rule. The prompt instructs
+    // the model to pull exact phrases from the transcript, but Sonnet can
+    // still drift toward paraphrase. We re-verify every quote against the
+    // normalized transcript and drop entries that don't match — that way
+    // a fabricated quote can't reach the user no matter what the model did.
+    if (report.anti_patterns && report.anti_patterns.length > 0) {
+      report.anti_patterns = verifyAntiPatternQuotes(report.anti_patterns, segments);
+    }
+    return report;
+  } catch {
+    console.error("Failed to parse coach report:", text);
+    return null;
+  }
+}
+
+/**
+ * Strip an anti_patterns array down to entries whose `quote` appears
+ * verbatim (modulo punctuation, casing, and whitespace) in the transcript.
+ *
+ * Why post-process instead of trusting the prompt: model output is the
+ * canary, not the guarantee. The anti_patterns.quote field is the one
+ * place the report makes a strong factual claim ("you said X"), and a
+ * wrong claim there destroys credibility for the whole report. A cheap
+ * post-process check is the right place to enforce the invariant.
+ */
+function verifyAntiPatternQuotes(
+  antiPatterns: NonNullable<CoachReport["anti_patterns"]>,
+  segments: TranscriptSegment[]
+): NonNullable<CoachReport["anti_patterns"]> {
+  const normalize = (s: string) => s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ") // drop punctuation
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const haystack = normalize(segments.map((s) => s.text).join(" "));
+
+  const verified: typeof antiPatterns = [];
+  const MIN_WORDS = 3;
+  for (const ap of antiPatterns) {
+    const needle = normalize(ap.quote ?? "");
+    const wordCount = needle.split(" ").filter(Boolean).length;
+    if (wordCount < MIN_WORDS) {
+      // A 1-2 word "quote" is barely evidence. Drop it.
+      console.warn(`[coach] dropping anti_pattern with too-short quote: "${ap.quote}"`);
+      continue;
+    }
+    if (!haystack.includes(needle)) {
+      console.warn(`[coach] dropping anti_pattern with unverifiable quote: "${ap.quote}"`);
+      continue;
+    }
+    verified.push(ap);
+  }
+  return verified;
+}
+
+/**
+ * Recursively strip em dashes from all string values in a parsed AI object.
+ * The prompt instructs the model not to use em dashes but it occasionally ignores
+ * the rule. This post-processing pass makes it impossible for one to reach the UI.
+ * Replaces " — " with ". " and bare "—" with " " to preserve sentence structure.
+ */
+function stripEmDashes<T>(obj: T): T {
+  if (typeof obj === "string") {
+    return obj.replace(/ — /g, ". ").replace(/—/g, " ") as unknown as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(stripEmDashes) as unknown as T;
+  }
+  if (obj !== null && typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      result[k] = stripEmDashes(v);
+    }
+    return result as T;
+  }
+  return obj;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// Used in transcript lines fed to Claude for peak detection.
+// Plain integer seconds (e.g. "813s") avoids the M:SS colon being
+// misread as a decimal point, which caused Claude to output start=13.33
+// instead of start=813 — producing 0.1-second "clips" that fail validation.
+function toSeconds(seconds: number): string {
+  return `${Math.round(seconds)}s`;
+}

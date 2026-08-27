@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "LevlCast",
+    "slug": "levlcast",
+    "version": "1.0.3",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080c14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.levlcast.app",
+      "buildNumber": "25",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#080c14"
+      },
+      "package": "com.levlcast.app"
+    },
+    "scheme": "levlcast",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#9B6AFF",
+          "sounds": []
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "61fc2d39-8a0d-403c-b95a-6aa149e0270b"
+      }
+    },
+    "owner": "orbitxd14"
+  }
+}

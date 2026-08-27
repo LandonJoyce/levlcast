@@ -1,0 +1,24 @@
+"use client";
+import { motion } from "framer-motion";
+
+export default function PhoneMockup({ src }: { src: string }) {
+  return (
+    <motion.div
+      className="ll-pm-outer"
+      animate={{ y: [0, -14, 0] }}
+      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <motion.div
+        className="ll-pm-glow"
+        animate={{ opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <div className="ll-pm-device">
+        <div className="ll-pm-screen">
+          <div className="ll-pm-notch" />
+          <video autoPlay muted loop playsInline src={src} className="ll-pm-vid" />
+        </div>
+      </div>
+    </motion.div>
+  );
+}

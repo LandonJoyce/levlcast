@@ -16,7 +16,7 @@ const config: Config = {
         border: "rgba(255, 255, 255, 0.07)",
       },
       fontFamily: {
-        sans: ["DM Sans", "system-ui", "sans-serif"],
+        sans: ["var(--font-plus-jakarta)", "system-ui", "sans-serif"],
       },
       borderRadius: {
         xl: "14px",

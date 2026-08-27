@@ -1,0 +1,49 @@
+# Dependabot keeps dependencies up to date by opening PRs when a new version
+# is released or a known vulnerability is found. Runs weekly to avoid PR spam.
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Web app (Next.js)
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "web"
+    groups:
+      # Batch minor/patch updates into a single PR per ecosystem — less noise,
+      # security advisories still open individually.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Mobile app (Expo / React Native)
+  - package-ecosystem: "npm"
+    directory: "/mobile"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "mobile"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions themselves — keeps workflow files patched
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"

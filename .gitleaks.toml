@@ -1,0 +1,39 @@
+# Gitleaks config for LevlCast.
+# Extends the default ruleset and allowlists values that look like secrets
+# but are actually public-by-design (Supabase anon key, RevenueCat SDK key,
+# Expo public config, etc).
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public-by-design values that aren't real secrets"
+
+# Public values committed to /.env for the Expo mobile app. These all ship
+# inside the built iOS/Android bundle anyway — they're not secrets.
+#   - EXPO_PUBLIC_SUPABASE_URL           — project URL, public
+#   - EXPO_PUBLIC_SUPABASE_ANON_KEY      — anon key, gated by Row Level Security
+#   - EXPO_PUBLIC_REVENUECAT_APPLE_KEY   — RevenueCat iOS SDK key, public
+regexTarget = "line"
+regexes = [
+  '''EXPO_PUBLIC_SUPABASE_URL''',
+  '''EXPO_PUBLIC_SUPABASE_ANON_KEY''',
+  '''EXPO_PUBLIC_APP_URL''',
+  '''EXPO_PUBLIC_REVENUECAT_APPLE_KEY''',
+  # Placeholder values in .env.example files
+  '''your-[a-z-]+-(?:key|secret|id|token)''',
+  '''sk-ant-\.\.\.''',
+]
+
+paths = [
+  # .env.example files contain placeholders only
+  '''(^|/)\.env\.example$''',
+  # lockfiles and node_modules never contain meaningful findings
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)yarn\.lock$''',
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)dist/''',
+  '''(^|/)build/''',
+]

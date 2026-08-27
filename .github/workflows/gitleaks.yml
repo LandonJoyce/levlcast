@@ -1,0 +1,26 @@
+# Gitleaks scans every push and PR for hardcoded secrets (API keys, tokens,
+# private keys, etc). Fails the job if anything is found so secrets can't be
+# merged into main. https://github.com/gitleaks/gitleaks
+name: gitleaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    name: Scan for secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so gitleaks can scan all commits, not just the tip
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

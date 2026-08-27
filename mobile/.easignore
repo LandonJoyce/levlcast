@@ -1,0 +1,9 @@
+# EAS Build ignore — exclude symlinks and non-app files from the monorepo root
+../.agents
+../.claude
+../.github
+../app
+../supabase
+../upload
+../.expo
+../node_modules
