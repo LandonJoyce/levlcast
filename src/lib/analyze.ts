@@ -52,7 +52,7 @@ Respond with ONLY a JSON array (no markdown, no code fences) of objects with the
 - title: short clip title (catchy, under 60 chars, no emojis)
 - start: start time in seconds (number)
 - end: end time in seconds (number)
-- score: virality score 0.0-1.0 (number)
+- score: virality score 0.0-1.0 (number). Calibrate against these anchors: a decent, clip-worthy moment is around 0.5-0.6, a solid moment that would do well is around 0.7, and an exceptional, highly shareable moment is 0.85+. Use the full range - don't cluster everything in the middle.
 - category: one of "hype", "funny", "emotional", "educational"
 - reason: why this moment is clip-worthy (1 sentence, no emojis)
 - caption: social media caption with hashtags (under 200 chars, no emojis)
@@ -131,7 +131,7 @@ IMPORTANT: No emojis anywhere in your response.
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
-  "overall_score": <0-100 integer based on stream quality, engagement, and content variety>,
+  "overall_score": <0-100 integer based on stream quality, engagement, and content variety. Calibrate against these anchors: an average, competent stream is around 55-65, a solid stream that's clearly good is around 70, and an exceptional stream is 85+. Reserve scores below 40 for streams with real, significant problems, not just an average stream. Use the full range instead of defaulting to the middle.>,
   "stream_summary": "<2-3 sentence honest summary of the stream>",
   "energy_trend": "<one of: building, declining, consistent, volatile>",
   "strengths": ["<specific strength 1>", "<specific strength 2>"],
