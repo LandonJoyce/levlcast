@@ -19,6 +19,20 @@ import { withRetry } from "./retry";
 
 const DEEPGRAM_API = "https://api.deepgram.com/v1/listen";
 
+/**
+ * 4xx errors from Deepgram (bad auth, malformed request, out of credits)
+ * will fail identically on every retry — the request itself is the problem,
+ * not a transient network blip. Retrying just delays the failure and wastes
+ * attempts. Only network errors and 5xx responses are worth retrying.
+ */
+function isRetryableDeepgramError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  const match = message.match(/^Deepgram (\d{3}):/);
+  if (!match) return true; // network error / no HTTP status — worth retrying
+  const status = Number(match[1]);
+  return status >= 500;
+}
+
 const BASE_PARAMS: Record<string, string> = {
   model: "nova-3",
   smart_format: "true",
@@ -96,6 +110,23 @@ type DeepgramJson = {
   };
 };
 
+/**
+ * Turns Deepgram's raw error body into a message that's actually useful in
+ * a failure log or feedback email, instead of a wall of JSON. The 402 case
+ * specifically has bitten us before — Deepgram ran out of credits with no
+ * overage agreement, and every VOD on the platform failed with a cryptic
+ * error until someone happened to notice.
+ */
+function formatDeepgramError(status: number, body: string): string {
+  if (status === 402) {
+    return `Deepgram 402: out of credits or no overage agreement. This blocks ALL transcription, not just this VOD — check billing at console.deepgram.com. Raw: ${body}`;
+  }
+  if (status === 401 || status === 403) {
+    return `Deepgram ${status}: API key invalid or unauthorized. Check DEEPGRAM_API_KEY. Raw: ${body}`;
+  }
+  return `Deepgram ${status}: ${body}`;
+}
+
 function parseDeepgramResponse(json: DeepgramJson): TranscribeResult {
   const utterances = json.results?.utterances ?? [];
   const segments: TranscriptSegment[] = utterances.map((u) => ({
@@ -130,11 +161,11 @@ export async function transcribeFromUrl(url: string, keywords: string[] = []): P
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ url }),
-    }), 3, 2000);
+    }), 3, 2000, isRetryableDeepgramError);
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Deepgram ${res.status}: ${body}`);
+    throw new Error(formatDeepgramError(res.status, body));
   }
 
   return parseDeepgramResponse(await res.json());
@@ -179,7 +210,7 @@ export async function transcribePassThrough(
         "if it keeps failing, the source VOD has a codec switch we can't process."
       );
     }
-    throw new Error(`Deepgram ${res.status}: ${body}`);
+    throw new Error(formatDeepgramError(res.status, body));
   }
 
   return parseDeepgramResponse(await res.json());
@@ -203,11 +234,11 @@ export async function transcribeFile(filePath: string, keywords: string[] = []):
       // @ts-ignore
       duplex: "half",
     });
-  }, 3, 1000);
+  }, 3, 1000, isRetryableDeepgramError);
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Deepgram ${res.status}: ${body}`);
+    throw new Error(formatDeepgramError(res.status, body));
   }
 
   return parseDeepgramResponse(await res.json());
