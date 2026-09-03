@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "LevlCast — Back soon",
+  title: "LevlCast - Back soon",
 };
 
 export default function MaintenancePage() {
@@ -37,7 +37,7 @@ export default function MaintenancePage() {
             lineHeight: 1.3,
           }}
         >
-          Quick maintenance — back shortly
+          Quick maintenance, back soon
         </h1>
         <p
           style={{
@@ -47,12 +47,12 @@ export default function MaintenancePage() {
             marginBottom: 12,
           }}
         >
-          We&apos;re fixing an issue with VOD analysis. Nothing on your
-          account is affected — your VODs, clips, and reports are all safe.
+          I&apos;m fixing an issue with VOD analysis right now. Nothing on
+          your account is affected, your VODs, clips, and reports are all
+          safe.
         </p>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: "#a1a1aa" }}>
-          Everyone gets a free day of Pro to make up for the downtime.
-          Thanks for bearing with us.
+          Should be back up shortly. Thanks for your patience.
         </p>
       </div>
     </div>
