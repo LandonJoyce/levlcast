@@ -1175,9 +1175,16 @@
   --ll-blue:        rgb(95,165,195);
   --ll-grad:        linear-gradient(180deg, rgb(255,88,0) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
   --ll-grad-h:      linear-gradient(90deg,  rgb(255,88,0) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
-  --ll-display:     "Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif;
-  --ll-body:        "Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif;
-  --ll-mono:        "Menlo", "JetBrains Mono", monospace;
+  /* These were hardcoded to Helvetica/Arial while layout.tsx was loading
+     Plus Jakarta Sans, Geist and Geist Mono via next/font — three families
+     downloaded on every page load and never actually rendered. Display and
+     body were also the same string, so headings and paragraphs had zero
+     typographic separation. Wired to the real faces now: Plus Jakarta for
+     display (geometric, has actual character at large sizes), Geist for
+     body/UI (clean, made for screens), Geist Mono for data readouts. */
+  --ll-display:     var(--font-plus-jakarta), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ll-body:        var(--font-geist), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ll-mono:        var(--font-geist-mono), "Menlo", monospace;
   --ll-maxw:        1296px;
   --ll-gutter:      72px;
   background: var(--ll-bg);
@@ -1291,23 +1298,30 @@
   background: rgb(4,4,8);
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
+/* Equal 1fr side columns so the centre column is genuinely centred in the
+   viewport, regardless of how wide the brand or the actions block gets.
+   This replaces `auto 1fr auto` + a hardcoded translateX(60px) nudge on
+   .ll-nav-links, which only lined up at one exact combination of brand
+   width and CTA text length and drifted the moment either changed. */
 .ll-page .ll-nav {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 48px;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 32px;
   height: 80px;
   padding: 0 16px;
 }
 .ll-page .ll-nav-actions {
-  display: flex; align-items: center; gap: 18px;
+  display: flex; align-items: center; gap: 14px;
+  justify-self: end;
 }
 .ll-page .ll-brand {
-  font-family: var(--ll-display); font-weight: 500; font-size: 28px; line-height: 1;
+  font-family: var(--ll-display); font-weight: 600; font-size: 26px; line-height: 1;
+  letter-spacing: -0.02em;
   color: var(--ll-fg); text-decoration: none;
+  justify-self: start;
 }
 .ll-page .ll-nav-links {
   display: flex; gap: 28px; list-style: none; margin: 0; padding: 0;
   font-size: 15px; color: var(--ll-fg-mute);
   justify-self: center;
-  transform: translateX(60px);
 }
 .ll-page .ll-nav-links a { color: inherit; text-decoration: none; }
 .ll-page .ll-nav-links a:hover { color: var(--ll-fg); }
@@ -1319,6 +1333,27 @@
 }
 .ll-page .ll-nav-cta { display: inline-flex; align-items: center; gap: 8px; }
 .ll-page .ll-nav-cta-mobile { display: none; }
+
+/* iOS app link — deliberately quieter than the trial CTA next to it.
+   Ghost treatment rather than a filled button so it reads as "also
+   available on" instead of a second competing call to action. */
+.ll-page .ll-nav-ios {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 40px; padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.72);
+  font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em;
+  text-decoration: none; white-space: nowrap;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.ll-page .ll-nav-ios:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.08);
+}
+.ll-page .ll-nav-ios svg { flex-shrink: 0; opacity: 0.9; }
 .ll-page .ll-nav-discord {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1998,12 +2033,18 @@
   grid-template-columns: minmax(60px, 0.55fr) minmax(100px, 1fr) minmax(60px, 0.55fr) minmax(100px, 0.9fr);
   gap: 14px;
   align-items: center;
-  padding: 10px 2px;
+  padding: 10px 2px 10px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-left: 2px solid color-mix(in srgb, var(--row-score, transparent) 55%, transparent);
   font-family: var(--ll-mono);
   font-size: 13px;
+  transition: background 150ms ease, border-left-color 150ms ease;
 }
 .ll-page .ll-feed-row:last-child { border-bottom: none; }
+.ll-page .ll-feed-row:hover {
+  background: color-mix(in srgb, var(--row-score, transparent) 6%, transparent);
+  border-left-color: var(--row-score, transparent);
+}
 
 /* Staggered entrance — each row slides up + fades in. The per-row delay
    is applied inline as animation-delay so each row pops in sequence,
@@ -2025,6 +2066,11 @@
 .ll-page .ll-feed-score {
   font-weight: 700; font-size: 15px;
   letter-spacing: -0.02em;
+  display: inline-flex; align-items: baseline;
+  padding: 3px 9px; border-radius: 6px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  width: fit-content;
 }
 .ll-page .ll-feed-score-out {
   font-size: 11px; color: rgba(255,255,255,0.42);
@@ -2204,6 +2250,13 @@
   .ll-page { --ll-gutter: 20px; }
   .ll-page .ll-nav-links, .ll-page .ll-nav-cta, .ll-page .ll-nav-discord { display: none; }
   .ll-page .ll-nav-cta-mobile { display: inline-flex !important; }
+  /* Nav collapses to brand + actions — drop the centre column so the two
+     remaining items sit hard left and right instead of leaving a gap. */
+  .ll-page .ll-nav { grid-template-columns: 1fr auto; gap: 12px; }
+  /* Keep the iOS link visible on tablet, but shed its label so it stays a
+     compact icon and never crowds the trial CTA. */
+  .ll-page .ll-nav-ios { padding: 0 11px; }
+  .ll-page .ll-nav-ios-label { display: none; }
   .ll-page .ll-strip { grid-template-columns: 1fr 1fr; }
   .ll-page .ll-hero-grid { grid-template-columns: 1fr; }
   .ll-page .ll-hero-vid { display: none; }
@@ -2231,6 +2284,10 @@
 /* ── Mobile (phones) ── */
 @media (max-width: 640px) {
   .ll-page { --ll-gutter: 16px; }
+  /* On phones the visitor is already on a device that can install the app,
+     so the App Store link earns its place more here than on desktop. Keep
+     it as an icon; the trial CTA stays the primary action. */
+  .ll-page .ll-nav-ios { height: 36px; padding: 0 10px; }
   .ll-page .ll-sec { padding-block: 56px; }
   .ll-page .ll-game-strip { padding: 40px 0 32px; }
   .ll-page .ll-game-strip-list { gap: 8px; }

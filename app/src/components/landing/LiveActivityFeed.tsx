@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 
 /**
@@ -194,8 +195,12 @@ export default async function LiveActivityFeed() {
           const highlight = pickHighlight(r, i);
           const type = r.coach_report?.streamer_type ?? "gaming";
           const typeLabel = TYPE_LABEL[type] ?? type.toUpperCase();
+          const rowStyle: CSSProperties & { "--row-score"?: string } = {
+            animationDelay: `${i * 90}ms`,
+          };
+          if (score !== null) rowStyle["--row-score"] = scoreColor(score);
           return (
-            <div key={i} className="ll-feed-row ll-feed-row-anim" style={{ animationDelay: `${i * 90}ms` }}>
+            <div key={i} className="ll-feed-row ll-feed-row-anim" style={rowStyle}>
               <span className="ll-feed-dur">{fmtDuration(r.duration_seconds)}</span>
               <span className="ll-feed-cat">{typeLabel}</span>
               {score !== null ? (

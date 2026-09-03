@@ -59,6 +59,18 @@ export default async function LandingPage() {
               <li><a href="#pricing">Pricing</a></li>
             </ul>
             <div className="ll-nav-actions">
+              <a
+                href="https://apps.apple.com/us/app/levlcast/id6761281566"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ll-nav-ios"
+                aria-label="Download LevlCast on the App Store"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                <span className="ll-nav-ios-label">iOS App</span>
+              </a>
               <Link href="/auth/login" className="ll-btn ll-btn-white ll-nav-cta">
                 Start Free Trial
                 <span className="ll-nav-arrow-icon">↗</span>
@@ -91,22 +103,6 @@ export default async function LandingPage() {
                 <span style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1 }}>See a sample report</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </Link>
-              <a
-                href="https://apps.apple.com/us/app/levlcast/id6761281566"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ll-appstore-cta"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                <span>
-                  <span className="ll-appstore-cta-pre">Get it on the </span>App Store
-                </span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </a>
             </div>
           </div>
 
@@ -120,7 +116,7 @@ export default async function LandingPage() {
         <span className="ll-live-num">
           <CountUp target={counterTarget} duration={1800} suffix="+" />
         </span>
-        <span className="ll-live-label">streams <span className="ll-grad-text">analyzed</span> and counting</span>
+        <span className="ll-live-label">streams analyzed and counting</span>
       </div>
 
       {/* ── Clip Editor showcase ── */}
@@ -128,7 +124,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div style={{ textAlign: "center", maxWidth: 760, margin: "0 auto 32px" }}>
             <h2 className="ll-h2" style={{ marginBottom: 14 }}>
-              Make every clip <span className="ll-grad-text">yours</span> before you post.
+              Make every clip yours before you post.
             </h2>
             <p style={{ fontSize: 17, lineHeight: 1.55, color: "rgba(255,255,255,0.7)", margin: 0 }}>
               Trim it tighter, fix any caption typos, pick the style, set the cover frame. Choose 16:9 or 9:16, then download or post to YouTube in one click.
@@ -155,7 +151,7 @@ export default async function LandingPage() {
       {/* ── VOD Video showcase ── */}
       <div className="ll-vod-showcase">
         <div className="ll-con">
-          <p className="ll-vod-showcase-label">See it in <span className="ll-grad-text">action</span></p>
+          <p className="ll-vod-showcase-label">See it in action</p>
           <LaptopMockup src="/demo/LEVLCASTHEROAGAIN.mp4" />
         </div>
       </div>
@@ -164,7 +160,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="problem">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2">Three streams from now, you&apos;ll have the <span className="ll-grad-text">same problems</span> you have today.</h2>
+            <h2 className="ll-h2">Three streams from now, you&apos;ll have the same problems you have today.</h2>
           </div>
           <div className="ll-compare">
             <article className="ll-card-ba">
@@ -193,7 +189,7 @@ export default async function LandingPage() {
       <section className="ll-sec" style={{ paddingTop: 0 }}>
         <div className="ll-con">
           <div className="ll-shead" style={{ marginBottom: 48 }}>
-            <h2 className="ll-h2">Real words from <span className="ll-grad-text">real streamers</span></h2>
+            <h2 className="ll-h2">Real words from real streamers</h2>
           </div>
           <div className="ll-trust">
             <div className="ll-trust-card ll-trust-card-featured">
@@ -231,7 +227,7 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-game-strip-head">
             <h2 className="ll-game-strip-title">
-              Your game <span className="ll-grad-text">woven</span> into every report.
+              Your game woven into every report.
             </h2>
           </div>
           <ul className="ll-game-strip-list">
@@ -247,7 +243,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="features">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2">Three things, built around the VOD <span className="ll-grad-text">workflow</span></h2>
+            <h2 className="ll-h2">Three things, built around the VOD workflow</h2>
           </div>
         </div>
 
@@ -287,7 +283,7 @@ export default async function LandingPage() {
       <section className="ll-sec" id="pricing">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2">Pick the plan <span className="ll-grad-text">that fits</span></h2>
+            <h2 className="ll-h2">Pick the plan that fits</h2>
           </div>
           <div className="ll-pricing ll-pricing-3">
             {/* Free trial */}
@@ -401,6 +397,22 @@ export default async function LandingPage() {
             <div className="ll-foot-col">
               <Link href="/" className="ll-foot-brand">LevlCast</Link>
               <p className="ll-foot-pitch">Your personal stream coach. Real feedback on your actual stream.</p>
+              <a
+                href="https://apps.apple.com/us/app/levlcast/id6761281566"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ll-appstore-cta"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                <span>
+                  <span className="ll-appstore-cta-pre">Get it on the </span>App Store
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </a>
             </div>
             <div className="ll-foot-col">
               <h4>Product</h4>
