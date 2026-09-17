@@ -28,6 +28,7 @@ import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyE
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_TRIAL_LIMITS, FOUNDING_LIMITS, PRO_LIMITS } from "@/lib/limits";
+import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -1886,5 +1887,124 @@ export const autoSyncTwitchVods = inngest.createFunction(
 
       return { synced: totalSynced, emailed: totalEmailed, users: profiles.length };
     });
+  }
+);
+
+/**
+ * Public VOD preview — the no-account funnel entry point (/analyze).
+ *
+ * Runs the same transcription, peak detection and coach report as
+ * `analyzeVod`, but over only the opening PREVIEW_SECONDS of a VOD and
+ * against `public_previews` rather than `vods`. A preview has no owner,
+ * so it never touches plan limits, never appears in a dashboard, and
+ * never counts as one of anyone's analyses.
+ *
+ * Split into two steps on purpose: if Deepgram flakes, the retry re-runs
+ * transcription without re-invoking (and re-billing) Claude.
+ *
+ * Global concurrency is capped so a burst of strangers pasting links can
+ * never starve paying users' analyses of Inngest capacity.
+ */
+export const analyzePublicPreview = inngest.createFunction(
+  {
+    id: "analyze-public-preview",
+    retries: 1,
+    timeouts: { finish: "30m" },
+    concurrency: {
+      // Global, not per-user — previews are anonymous. Two at a time keeps
+      // paid analyses first in line while still feeling instant at our
+      // current traffic.
+      limit: 2,
+    },
+  },
+  { event: "public/preview" },
+  async ({ event, step }) => {
+    const { previewId, twitchVodId, title } = event.data as {
+      previewId: string;
+      twitchVodId: string;
+      title: string;
+    };
+    const supabase = createAdminClient();
+
+    // Dedupe guard. Mirrors analyzeVod: if this row already finished, a
+    // duplicate event must not re-bill Deepgram and Claude.
+    const { data: existing } = await supabase
+      .from("public_previews")
+      .select("status")
+      .eq("id", previewId)
+      .single();
+
+    if (!existing) {
+      throw new NonRetriableError(`Preview ${previewId} not found`);
+    }
+    if (existing.status === "ready") {
+      console.log(`[preview] skip — ${previewId} already ready`);
+      return { skipped: true };
+    }
+
+    try {
+      const transcribed = await step.run("preview-transcribe", async () => {
+        await supabase
+          .from("public_previews")
+          .update({ status: "transcribing" })
+          .eq("id", previewId);
+
+        const result = await transcribePreviewWindow(twitchVodId, title);
+        console.log(
+          `[preview] ${previewId}: ${result.segments.length} segments over ${result.analyzedSeconds}s`
+        );
+        return result;
+      });
+
+      const report = await step.run("preview-report", async () => {
+        await supabase
+          .from("public_previews")
+          .update({ status: "analyzing", game_category: transcribed.gameCategory })
+          .eq("id", previewId);
+
+        return await buildPreviewReport(transcribed.segments, title);
+      });
+
+      await step.run("preview-save", async () => {
+        // A null coach report means the transcript had nothing usable in
+        // it. Treat that as a failure the visitor can act on rather than
+        // rendering an empty report page.
+        if (!report.coachReport) {
+          await supabase
+            .from("public_previews")
+            .update({
+              status: "failed",
+              failed_reason:
+                "We couldn't hear enough talking in the first few minutes to coach this one. Try a VOD where you're on mic from the start.",
+            })
+            .eq("id", previewId);
+          return;
+        }
+
+        await supabase
+          .from("public_previews")
+          .update({
+            status: "ready",
+            coach_report: report.coachReport,
+            peak_data: report.peaks,
+            analyzed_seconds: transcribed.analyzedSeconds,
+            game_category: transcribed.gameCategory,
+            analyzed_at: new Date().toISOString(),
+          })
+          .eq("id", previewId);
+      });
+
+      return { previewId, ok: true };
+    } catch (err) {
+      // Always leave the row in a terminal state. A preview stuck on
+      // "transcribing" forever is a visitor staring at a spinner, which
+      // is worse than a clear error with a retry button.
+      const message = err instanceof Error ? err.message : "Analysis failed.";
+      await supabase
+        .from("public_previews")
+        .update({ status: "failed", failed_reason: message })
+        .eq("id", previewId);
+      throw err;
+    }
   }
 );

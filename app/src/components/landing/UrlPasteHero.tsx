@@ -40,7 +40,13 @@ export default function UrlPasteHero() {
       // Private mode / storage disabled — the URL is lost but OAuth still
       // works, they just won't get the specific VOD queued. Non-fatal.
     }
-    router.push("/auth/login?from=url_paste");
+    // Straight to the free analyzer, NOT to OAuth. A first-time visitor
+    // who has just typed a link is at peak intent, and sending them to a
+    // Twitch permission screen at that exact moment is where we were
+    // losing them. They see a real report first; the signup ask comes
+    // after it has proved itself. The pending URL is still stashed above
+    // so that if they do sign up, their own VOD is queued immediately.
+    router.push(`/analyze?url=${encodeURIComponent(url.trim())}`);
   }
 
   return (

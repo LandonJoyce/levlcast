@@ -74,7 +74,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold text-white mb-3">5. Twitch Data</h2>
             <p>
-              We access your Twitch data under the scopes you authorize during OAuth login (<code className="text-accent-light bg-surface px-1 py-0.5 rounded text-xs">user:read:email</code>, <code className="text-accent-light bg-surface px-1 py-0.5 rounded text-xs">user:read:follows</code>). We comply with Twitch&apos;s Developer Services Agreement regarding the use and storage of Twitch data.
+              We access your Twitch data under the scopes you authorize during OAuth login (<code className="text-accent-light bg-surface px-1 py-0.5 rounded text-xs">user:read:email</code>). We comply with Twitch&apos;s Developer Services Agreement regarding the use and storage of Twitch data.
             </p>
           </section>
 

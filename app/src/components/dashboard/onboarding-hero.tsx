@@ -200,8 +200,8 @@ function NoStreamsState({ name }: { name: string }) {
         </p>
 
         <div style={{ display: "inline-flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-          <Link href="/demo" className="btn btn-blue" style={{ textDecoration: "none" }}>
-            See a sample report <Icons.Arrow />
+          <Link href="/analyze" className="btn btn-blue" style={{ textDecoration: "none" }}>
+            Analyze any stream free <Icons.Arrow />
           </Link>
           <Link
             href="/dashboard/vods"

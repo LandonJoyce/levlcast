@@ -94,13 +94,13 @@ export default async function LandingPage() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
               <UrlPasteHero />
-              <Link href="/demo" style={{
+              <Link href="/analyze" style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 textDecoration: "none", fontSize: 14,
               }}>
                 <span style={{ fontFamily: "var(--ll-mono)", fontSize: 12, fontWeight: 700, color: "#A3E635" }}>74/100</span>
                 <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>·</span>
-                <span style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1 }}>See a sample report</span>
+                <span style={{ color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1 }}>Try it on any stream, free</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </Link>
             </div>

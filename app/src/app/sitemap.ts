@@ -10,6 +10,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
+      // The no-signup analyzer. Highest-intent page on the site after the
+      // homepage, and the only one a stranger can get value from without
+      // an account, so it ranks alongside the landing page.
+      url: "https://www.levlcast.com/analyze",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 1,
+    },
+    {
       url: "https://www.levlcast.com/twitch-vod-analyzer",
       lastModified: now,
       changeFrequency: "monthly",

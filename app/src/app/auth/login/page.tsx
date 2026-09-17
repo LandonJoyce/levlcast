@@ -69,7 +69,11 @@ function LoginForm() {
       provider: "twitch",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: "user:read:email user:read:follows",
+        // Only request what we actually read. `user:read:follows` was requested
+        // historically but nothing in the codebase ever used it, and every extra
+        // scope makes Twitch's consent screen longer and scarier at the exact
+        // moment a first-time visitor decides whether to trust us.
+        scopes: "user:read:email",
       },
     });
     if (error) {
