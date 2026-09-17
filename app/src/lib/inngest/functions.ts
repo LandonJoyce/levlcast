@@ -1930,7 +1930,7 @@ export const analyzePublicPreview = inngest.createFunction(
     // duplicate event must not re-bill Deepgram and Claude.
     const { data: existing } = await supabase
       .from("public_previews")
-      .select("status")
+      .select("status, duration_seconds")
       .eq("id", previewId)
       .single();
 
@@ -1962,7 +1962,10 @@ export const analyzePublicPreview = inngest.createFunction(
           .update({ status: "analyzing", game_category: transcribed.gameCategory })
           .eq("id", previewId);
 
-        return await buildPreviewReport(transcribed.segments, title);
+        return await buildPreviewReport(transcribed.segments, title, {
+          analyzedSeconds: transcribed.analyzedSeconds,
+          totalSeconds: (existing.duration_seconds as number | null) ?? transcribed.analyzedSeconds,
+        });
       });
 
       await step.run("preview-save", async () => {

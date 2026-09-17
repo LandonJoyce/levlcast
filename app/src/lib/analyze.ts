@@ -1360,13 +1360,27 @@ function buildWeightedTranscriptSamples(
  * Generate an AI stream coaching report from a transcript and detected peaks.
  * Uses Sonnet for higher quality coaching feedback — this is the flagship feature.
  */
+/**
+ * Set when the transcript is only an opening slice of a much longer VOD —
+ * i.e. the free /analyze preview. Without this the model reads a 12-minute
+ * excerpt of a 5-hour stream, believes that IS the stream, and writes
+ * whole-stream verdicts ("the stream never found a second gear") plus a
+ * score that judges five hours by its first twelve minutes. Both are
+ * wrong and both are unfair to the streamer.
+ */
+export interface ExcerptContext {
+  analyzedSeconds: number;
+  totalSeconds: number;
+}
+
 export async function generateCoachReport(
   segments: TranscriptSegment[],
   vodTitle: string,
   peaks: Peak[],
   priorReports?: PriorCoachSummary[],
   chatPulse?: string,
-  chatBuckets?: ChatBucket[]
+  chatBuckets?: ChatBucket[],
+  excerpt?: ExcerptContext
 ): Promise<CoachReport | null> {
   const anthropic = new Anthropic();
 
@@ -1627,7 +1641,17 @@ ${categoryGuideBlock}${gameModuleBlock}`;
       {
         role: "user",
         content: `Review this Twitch stream and produce a coaching report the streamer can act on immediately.
+${excerpt && excerpt.totalSeconds > excerpt.analyzedSeconds + 60 ? `
+YOU ARE READING AN OPENING EXCERPT, NOT A WHOLE STREAM — THIS CHANGES HOW YOU WRITE AND SCORE:
+This transcript covers only the FIRST ${Math.round(excerpt.analyzedSeconds / 60)} minutes of a stream that ran ${Math.floor(excerpt.totalSeconds / 3600)}h ${Math.round((excerpt.totalSeconds % 3600) / 60)}m in total. You cannot see the other ${Math.round((excerpt.totalSeconds - excerpt.analyzedSeconds) / 60)} minutes and you must not pretend otherwise.
 
+RULES FOR THIS MODE:
+- NEVER describe this as the whole stream, the whole session, or "a ${Math.round(excerpt.analyzedSeconds / 60)}-minute stream". It is the opening of a long stream.
+- NEVER claim something did not happen "the whole stream" or that the stream "never" did something. It may well have happened in the part you cannot see. Say "in this opening stretch" instead.
+- SCORE THE OPENING ONLY. overall_score must rate how well these first minutes hook a viewer who just landed, NOT the quality of the whole broadcast. A strong stream can open slowly; do not punish the whole stream for that.
+- Judging the opening is legitimate and useful: it is where a new viewer decides to stay or leave. Be specific about what would have made someone stay.
+- stream_story must describe what happened in this opening stretch and say so plainly.
+` : ""}
 IMPORTANT: This transcript has been pre-filtered using speaker diarization to include ONLY the streamer's voice. Game audio, NPC dialogue, music, and other speakers have already been removed. Every line you read is something the streamer actually said.
 
 SILENCE CONTEXT — read this before judging dead air:

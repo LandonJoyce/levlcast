@@ -238,9 +238,12 @@ export async function transcribePreviewWindow(
  */
 export async function buildPreviewReport(
   segments: TranscriptSegment[],
-  title: string
+  title: string,
+  excerpt?: { analyzedSeconds: number; totalSeconds: number }
 ): Promise<{ coachReport: CoachReport | null; peaks: Peak[] }> {
   const peaks = await detectPeaks(segments, title);
-  const coachReport = await generateCoachReport(segments, title, peaks);
+  // `excerpt` is what stops the model from judging a five-hour stream by
+  // its first twelve minutes and calling the result a stream score.
+  const coachReport = await generateCoachReport(segments, title, peaks, undefined, undefined, undefined, excerpt);
   return { coachReport, peaks };
 }

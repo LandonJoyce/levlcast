@@ -121,8 +121,9 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
               {preview.title ?? "Untitled stream"}
             </h2>
             <p style={{ fontSize: 13, color: MUTED, margin: 0 }}>
-              Coached the first {fmtDuration(analyzed)}
-              {total > analyzed ? ` of a ${fmtDuration(total)} stream` : ""}.
+              {total > analyzed
+                ? `Scored on the opening ${fmtDuration(analyzed)} of a ${fmtDuration(total)} stream. The rest isn't graded here.`
+                : `Coached the first ${fmtDuration(analyzed)}.`}
             </p>
           </div>
           {score !== null ? (
@@ -130,7 +131,13 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
               <div style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, color: scoreColor(score) }}>
                 {score}
               </div>
-              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>out of 100</div>
+              {/* Labelled as an OPENING score, not a stream score. The model
+                  only reads the first minutes, so presenting this as a verdict
+                  on a multi-hour stream would be wrong and would insult the
+                  streamer we are trying to convert. */}
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.35 }}>
+                {total > analyzed ? "opening score" : "out of 100"}
+              </div>
             </div>
           ) : null}
         </div>
@@ -243,7 +250,11 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
           borderColor: "rgba(255,88,0,0.25)",
         }}
       >
-        <p style={label}>This was the first {fmtDuration(analyzed)}</p>
+        <p style={label}>
+          {total > analyzed
+            ? `That was the opening ${fmtDuration(analyzed)} of ${fmtDuration(total)}`
+            : `This was the first ${fmtDuration(analyzed)}`}
+        </p>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: INK, margin: "0 0 10px", lineHeight: 1.35 }}>
           A full report reads the whole stream, and every stream after it.
         </h3>
