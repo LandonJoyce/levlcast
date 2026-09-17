@@ -373,13 +373,38 @@
   letter-spacing: -0.01em;
   line-height: 1.15;
 }
-.lv2 .lv2-ios-shot { line-height: 0; }
+/* newphone.png has TWO phones baked into the one file, a front one and a
+   second sitting behind and to the right. Without a mask the back phone is
+   sliced off mid-body at the edge of the image and reads as a broken crop.
+   The mask hides everything past the front phone.
+
+   The shadow lives on the wrapper, not the image: filter and mask on the
+   same element clip the shadow to the mask edge, which draws a hard line
+   down the cut. */
+.lv2 .lv2-ios-shot {
+  line-height: 0;
+  /* Clips the scaled image back to the column so the page can never gain a
+     horizontal scrollbar from it. */
+  overflow: hidden;
+}
 .lv2 .lv2-ios-shot img {
-  width: 100%;
+  /* The file is 558x611 and the front phone ends around 63% across, so at
+     100% width the phone would only fill two thirds of the column and look
+     stranded. Scaled up so the front phone fills the space, with the
+     overflow clipped by the wrapper. */
+  width: 150%;
+  max-width: none;
   height: auto;
   display: block;
-  /* No glow and no fake reflection. The shot carries itself. */
-  filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55));
+  /* Fade rather than a hard cut, so the back phone disappears instead of
+     ending in a straight vertical slice through its body. Percentages are
+     of the image, which at this scale puts the fade right at the column
+     edge. Shadow sits on the image, not the wrapper: the PNG is already
+     cut out, so drop-shadow follows the phone silhouette rather than
+     drawing a rectangle behind it. */
+  -webkit-mask-image: linear-gradient(to right, black 0%, black 62%, transparent 68%);
+  mask-image: linear-gradient(to right, black 0%, black 62%, transparent 68%);
+  filter: drop-shadow(0 26px 52px rgba(0, 0, 0, 0.55));
 }
 
 @media (max-width: 860px) {
