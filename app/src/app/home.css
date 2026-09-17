@@ -298,3 +298,91 @@
   .lv2 .lv2-def { grid-template-columns: 1fr; gap: 6px; }
   .lv2 .lv2-tl { height: 66px; }
 }
+
+/* ── Product shot ───────────────────────────────────────────────────────
+   Given room instead of framed in a card. A single hairline and a dark
+   ground are enough; a card around a screenshot adds a second frame to
+   something that already has one. */
+.lv2 .lv2-shot-cap {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ll-fg-mute);
+  margin: -8px 0 24px;
+  max-width: 52ch;
+}
+.lv2 .lv2-shot {
+  margin: 0;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--ll-bg-ink);
+  line-height: 0;
+}
+.lv2 .lv2-shot img { width: 100%; height: auto; display: block; }
+
+/* ── iOS closer ─────────────────────────────────────────────────────── */
+.lv2 .lv2-ios-sec {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 380px);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: center;
+  padding-block: clamp(56px, 8vw, 96px);
+  border-top: 1px solid var(--ll-line-soft);
+  margin-top: clamp(32px, 5vw, 56px);
+}
+.lv2 .lv2-ios-h {
+  font-family: var(--ll-display);
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--ll-fg);
+  margin: 0 0 16px;
+}
+.lv2 .lv2-ios-b {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ll-fg-mute);
+  margin: 0 0 26px;
+  max-width: 40ch;
+}
+.lv2 .lv2-ios-btns { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.lv2 .lv2-store {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  padding: 9px 18px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--ll-line-med);
+  color: var(--ll-fg);
+}
+.lv2 .lv2-store:hover { border-color: var(--ll-fg-dim); }
+.lv2 .lv2-store-top {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.lv2 .lv2-store-main {
+  display: block;
+  font-family: var(--ll-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.lv2 .lv2-ios-shot { line-height: 0; }
+.lv2 .lv2-ios-shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+  /* No glow and no fake reflection. The shot carries itself. */
+  filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55));
+}
+
+@media (max-width: 860px) {
+  .lv2 .lv2-ios-sec { grid-template-columns: 1fr; }
+  .lv2 .lv2-ios-shot { max-width: 320px; }
+}
