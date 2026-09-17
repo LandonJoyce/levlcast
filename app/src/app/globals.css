@@ -2644,3 +2644,14 @@
     border-top: 1px solid var(--line);
   }
 }
+
+/* Clips already posted to YouTube.
+   The grid renders fifteen tiles and, before this, a clip you shipped last
+   week looked identical to one still waiting. That gives you no way to spot
+   your remaining work without re-reading every card, every visit. Finished
+   work gets quieter rather than hidden: still findable, no longer competing
+   for attention with the queue. */
+.dash .clip-card-done { opacity: 0.62; }
+.dash .clip-card-done:hover { opacity: 1; }
+.dash .clip-card-done .clip-thumb { filter: saturate(0.55); }
+.dash .clip-card-done:hover .clip-thumb { filter: none; }

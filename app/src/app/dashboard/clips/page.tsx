@@ -255,7 +255,12 @@ export default async function ClipsPage({
                 const ytUrl = ytPostMap.get(c.id);
                 const score = Math.round(((c.score as number | null) ?? 0) * 100);
                 return (
-                  <div key={c.id} className="clip-card">
+                  /* Posted clips recede. A wall of thumbnails where the ones
+                     you have already shipped look exactly like the ones still
+                     waiting gives you no way to find your remaining work, so
+                     the page makes you re-read every card every visit. Done
+                     work should get quieter, not disappear. */
+                  <div key={c.id} className={ytUrl ? "clip-card clip-card-done" : "clip-card"}>
                     <div className="clip-thumb">
                       {c.video_url && (
                         <video

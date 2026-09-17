@@ -21,6 +21,51 @@ function formatDate(iso: string | null): string {
   });
 }
 
+/**
+ * One specific line about THIS stream, for the card.
+ *
+ * Every analysed card used to fall back to "Open for your full coaching
+ * breakdown." whenever a report had no punch_line, which is most of them.
+ * Eight tiles repeating one sentence is not a list, it is wallpaper: the
+ * eye learns within two cards that the text carries nothing and stops
+ * reading it, which wastes the only part of the card that could have told
+ * you which stream to open.
+ *
+ * Everything below is already sitting in the report. We just never showed
+ * it. Ordered by how specific it is, so the card says the most concrete
+ * true thing available rather than the most generic one.
+ */
+function cardLine(report: Record<string, unknown> | null): string | null {
+  if (!report) return null;
+
+  const punch = typeof report.punch_line === "string" ? report.punch_line.trim() : "";
+  if (punch) return punch;
+
+  // The single action the coach asked for. Trimmed to its first sentence so
+  // a card stays a card.
+  const rec = typeof report.recommendation === "string" ? report.recommendation.trim() : "";
+  if (rec) {
+    const firstSentence = rec.split(/(?<=[.!?])\s+/)[0] ?? rec;
+    return firstSentence.length > 120 ? `${firstSentence.slice(0, 117).trimEnd()}...` : firstSentence;
+  }
+
+  // Dead air is the most quotable number the report produces.
+  const deadPct = typeof report.dead_air_pct === "number" ? report.dead_air_pct : null;
+  const deadSecs = typeof report.dead_air_seconds === "number" ? report.dead_air_seconds : null;
+  if (deadPct !== null && deadPct >= 10 && deadSecs) {
+    return `${Math.round(deadSecs / 60)} minutes of dead air, ${Math.round(deadPct)}% of the stream.`;
+  }
+
+  const improvements = Array.isArray(report.improvements) ? report.improvements : [];
+  const firstImprovement = improvements.find((s): s is string => typeof s === "string" && s.length > 0);
+  if (firstImprovement) {
+    const stripped = firstImprovement.replace(/\*\*/g, "").trim();
+    return stripped.length > 120 ? `${stripped.slice(0, 117).trimEnd()}...` : stripped;
+  }
+
+  return null;
+}
+
 function formatDuration(seconds: number | null): string {
   if (!seconds) return "...";
   const h = Math.floor(seconds / 3600);
@@ -204,7 +249,7 @@ export default async function VodsPage({
               {filtered.map((v) => {
                 const report = v.coach_report as any;
                 const score = report?.overall_score as number | null ?? null;
-                const punchLine = report?.punch_line as string | null ?? null;
+                const line = cardLine(report ?? null);
                 const clip = bestClipByVod[v.id] ?? null;
                 const scoreColor = score !== null ? scoreColorHex(score) : "#A6B3C9";
                 const isReady = v.status === "ready";
@@ -304,20 +349,16 @@ export default async function VodsPage({
 
                       {/* Punch line for analyzed; status note for unanalyzed */}
                       {isReady ? (
-                        punchLine ? (
+                        line ? (
                           <p style={{
                             fontSize: 14, lineHeight: 1.5, color: "var(--ink)",
                             margin: 0, fontWeight: 500,
                             borderLeft: `3px solid ${scoreColor}`,
                             paddingLeft: 12,
                           }}>
-                            {punchLine}
+                            {line}
                           </p>
-                        ) : (
-                          <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
-                            Open for your full coaching breakdown.
-                          </p>
-                        )
+                        ) : null
                       ) : isProcessing ? (
                         <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
                           Working on your coach report — usually about five minutes.
