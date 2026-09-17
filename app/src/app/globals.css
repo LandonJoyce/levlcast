@@ -2437,3 +2437,61 @@
 .ll-page .ll-rc-game {
   font-family: var(--ll-mono); font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 0.04em;
 }
+
+/* ── How it works: three steps ──────────────────────────────────────────
+   Replaces the Without/With comparison cards, which were two large blocks
+   of unevidenced assertion. These are joined by a single hairline rather
+   than floated as separate cards, so the row reads as one sequence and
+   the numbers carry the order. The number itself is the only place colour
+   is spent here; everything else stays quiet so the hero keeps the page's
+   one loud moment. */
+.ll-page .ll-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--ll-line-soft);
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.ll-page .ll-step {
+  background: var(--ll-bg);
+  padding: 36px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ll-page .ll-step-n {
+  font-family: var(--ll-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: var(--ll-grad-h);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.ll-page .ll-step-h {
+  font-family: var(--ll-display);
+  font-size: clamp(19px, 2vw, 23px);
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ll-fg);
+}
+.ll-page .ll-step-b {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ll-fg-mute);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .ll-page .ll-steps { grid-template-columns: 1fr; }
+  .ll-page .ll-step { padding: 28px 24px 30px; }
+}

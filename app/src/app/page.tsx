@@ -3,11 +3,9 @@ import FaqAccordion from "@/components/FaqAccordion";
 import LiveActivityFeed from "@/components/landing/LiveActivityFeed";
 import LandingProPlan from "@/components/landing/LandingProPlan";
 import LandingProPlusPlan from "@/components/landing/LandingProPlusPlan";
-import LaptopMockup from "@/components/landing/LaptopMockup";
 import CountUp from "@/components/landing/CountUp";
 import UrlPasteHero from "@/components/landing/UrlPasteHero";
 import ReferralBadge from "@/components/landing/ReferralBadge";
-import { SUPPORTED_GAMES } from "@/lib/analyze";
 
 // Re-fetch the streams-analyzed counter and the recent-reports feed once
 // per minute. Without this, Next.js caches the server-rendered HTML and
@@ -147,40 +145,40 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── VOD Video showcase ── */}
-      <div className="ll-vod-showcase">
-        <div className="ll-con">
-          <p className="ll-vod-showcase-label">See it in action</p>
-          <LaptopMockup src="/demo/LEVLCASTHEROAGAIN.mp4" />
-        </div>
-      </div>
-
-      {/* ── Before / After ── */}
+      {/* ── How it works ──
+          Replaces a Without/With comparison table. That pattern is pure
+          assertion: it asked the reader to take both columns on faith and
+          showed nothing. These three steps are checkable, and step one is
+          something they can do on this page without an account. The
+          numbering is real sequence, not decoration. */}
       <section className="ll-sec" id="problem">
         <div className="ll-con">
           <div className="ll-shead">
-            <h2 className="ll-h2">Three streams from now, you&apos;ll have the same problems you have today.</h2>
+            <h2 className="ll-h2">Three steps, and the first one is free.</h2>
           </div>
-          <div className="ll-compare">
-            <article className="ll-card-ba">
-              <span className="ll-ba-tag ll-ba-tag-bad">Without LevlCast</span>
-              <h3 className="ll-ba-h">End every stream with nothing</h3>
-              <ul className="ll-ba-list">
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>You lost half your viewers somewhere in hour two. No idea where.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>Your best clip of the month expired with the VOD.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-bad">×</span>You go live again tomorrow doing the exact same thing.</li>
-              </ul>
-            </article>
-            <article className="ll-card-ba">
-              <span className="ll-ba-tag ll-ba-tag-good">With LevlCast</span>
-              <h3 className="ll-ba-h">End every stream knowing exactly what to fix</h3>
-              <ul className="ll-ba-list">
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>See the exact timestamp where viewers dropped off.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>Your best moments clipped and ready to post before you sleep.</li>
-                <li className="ll-ba-item"><span className="ll-bullet ll-bullet-good">✓</span>One specific thing to do differently next stream. Not a list. One thing.</li>
-              </ul>
-            </article>
-          </div>
+          <ol className="ll-steps">
+            <li className="ll-step">
+              <span className="ll-step-n">01</span>
+              <h3 className="ll-step-h">Paste a VOD link</h3>
+              <p className="ll-step-b">
+                Any public Twitch stream, yours or anyone&apos;s. No account, no card. A report on the opening lands in about a minute.
+              </p>
+            </li>
+            <li className="ll-step">
+              <span className="ll-step-n">02</span>
+              <h3 className="ll-step-h">Read what actually happened</h3>
+              <p className="ll-step-b">
+                Where the energy died, the line that cost you viewers, the moments worth clipping. Timestamps you can scrub straight to.
+              </p>
+            </li>
+            <li className="ll-step">
+              <span className="ll-step-n">03</span>
+              <h3 className="ll-step-h">Connect Twitch for the rest</h3>
+              <p className="ll-step-b">
+                Full streams instead of openings, clips cut and captioned for you, and tracking that says whether you fixed last week&apos;s problem.
+              </p>
+            </li>
+          </ol>
         </div>
       </section>
 
@@ -188,7 +186,11 @@ export default async function LandingPage() {
       <section className="ll-sec" style={{ paddingTop: 0 }}>
         <div className="ll-con">
           <div className="ll-shead" style={{ marginBottom: 48 }}>
-            <h2 className="ll-h2">Real words from real streamers</h2>
+            {/* One real quote and a note from the founder. Titling that
+                "real words from real streamers" oversells a section with a
+                single streamer in it, and overselling is what makes a page
+                feel fake. */}
+            <h2 className="ll-h2">Who this is for, and who built it</h2>
           </div>
           <div className="ll-trust">
             <div className="ll-trust-card ll-trust-card-featured">
@@ -218,23 +220,6 @@ export default async function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── Game Coverage ── */}
-      <section className="ll-game-strip">
-        <div className="ll-con">
-          <div className="ll-game-strip-head">
-            <h2 className="ll-game-strip-title">
-              Your game woven into every report.
-            </h2>
-          </div>
-          <ul className="ll-game-strip-list">
-            {SUPPORTED_GAMES.map((g) => (
-              <li key={g} className="ll-game-strip-pill">{g}</li>
-            ))}
-            <li className="ll-game-strip-pill ll-game-strip-pill-more">More games every week</li>
-          </ul>
         </div>
       </section>
 
