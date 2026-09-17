@@ -172,7 +172,7 @@ export default async function ClipsPage({
       {/* Header */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
-          <span className="page-eyebrow">§ 03 · Highlights</span>
+          <span className="page-eyebrow">Highlights</span>
           <h1 className="page-title">Clips</h1>
           <p className="page-sub">Auto-detected moments, ready to clip and post.</p>
         </div>
@@ -283,9 +283,13 @@ export default async function ClipsPage({
                           save-and-ship flow. Older reels without segment
                           metadata still need a regenerate first — handled
                           on the editor page itself. */}
+                      {/* Quiet, not gradient. This grid renders fifteen of
+                          these at once, and fifteen gradient bars on one
+                          screen means the accent stops marking anything as
+                          important. The card's own thumbnail is the draw. */}
                       <Link
                         href={`/dashboard/clips/${c.id}/edit`}
-                        className="btn btn-blue"
+                        className="btn btn-quiet"
                         style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "9px 0" }}
                       >
                         {c.is_highlight_reel ? "Open reel" : "Open clip"}

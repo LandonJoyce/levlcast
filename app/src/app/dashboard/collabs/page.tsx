@@ -49,7 +49,7 @@ export default async function CollabsPage() {
     return (
       <>
         <div className="page-head">
-          <span className="page-eyebrow">§ 05 · Collabs</span>
+          <span className="page-eyebrow">Collabs</span>
           <h1 className="page-title">Collab Finder</h1>
           <p className="page-sub">
             A private pool of streamers open to collabing. Both sides have to accept before any contact info is shared. No cold DMs.
@@ -96,7 +96,7 @@ export default async function CollabsPage() {
   return (
     <>
       <div className="page-head">
-        <span className="page-eyebrow">§ 05 · Collabs</span>
+        <span className="page-eyebrow">Collabs</span>
         <h1 className="page-title">Collab Finder</h1>
         <p className="page-sub">
           Other opted-in streamers, sorted by what makes a good collab. Send an interest. If they accept, you both get each other&apos;s Discord.

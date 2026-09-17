@@ -145,7 +145,7 @@ export default function OutreachPage() {
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <span className="page-eyebrow">§ 06 · Growth</span>
+        <span className="page-eyebrow">Growth</span>
         <h1 className="page-title">Reddit Outreach</h1>
         <p className="page-sub">Find streamers asking for help. AI writes a personal message. One click opens Reddit with it pre-filled.</p>
       </div>

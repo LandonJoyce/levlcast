@@ -214,7 +214,7 @@ export default async function DashboardPage() {
         <VodStatusPoller hasProcessing={hasInProgressAnalysis} />
 
         <div className="page-head">
-          <span className="page-eyebrow">§ 01 · Today&apos;s focus</span>
+          <span className="page-eyebrow">Today&apos;s focus</span>
           <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
           <p className="page-sub">
             {hasInProgressAnalysis
@@ -257,7 +257,7 @@ export default async function DashboardPage() {
       {/* Header strip */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
-          <span className="page-eyebrow">§ 01 · Today&apos;s focus</span>
+          <span className="page-eyebrow">Today&apos;s focus</span>
           <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
           <p className="page-sub">One thing to fix before you go live again.</p>
         </div>

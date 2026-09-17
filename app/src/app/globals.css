@@ -2573,3 +2573,19 @@
   bottom: 0;
   background: rgba(255, 238, 230, 0.22);
 }
+
+/* Quiet button — for actions that repeat many times on one screen.
+   The gradient button is the loudest thing in the dashboard, so it has to
+   stay rare: one per screen, on the action the page actually exists for.
+   A grid of fifteen clips using it meant the accent marked nothing. */
+.dash .btn-quiet {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  box-shadow: none;
+}
+.dash .btn-quiet:hover {
+  background: var(--surface-2);
+  border-color: var(--ink-3);
+  filter: none;
+}

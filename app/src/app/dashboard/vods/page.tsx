@@ -117,7 +117,7 @@ export default async function VodsPage({
       {/* Header */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <div className="page-head">
-          <span className="page-eyebrow">§ 02 · Library</span>
+          <span className="page-eyebrow">Library</span>
           <h1 className="page-title">Your Streams</h1>
           <p className="page-sub">Best clip and key takeaway from each stream.</p>
         </div>

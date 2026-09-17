@@ -48,7 +48,7 @@ export default async function SettingsPage({
     <>
       {/* Header */}
       <div className="page-head">
-        <span className="page-eyebrow">§ 04 · Account</span>
+        <span className="page-eyebrow">Account</span>
         <h1 className="page-title">Account</h1>
         <p className="page-sub">Profile, plan, and connected services.</p>
       </div>
