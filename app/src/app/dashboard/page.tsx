@@ -18,20 +18,14 @@ import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
 
 // ─── helpers ─────────────────────────────────────────────
 
-function GradientWords({ text }: { text: string }) {
-  const parts = text.split(/(\s+)/);
-  return (
-    <>
-      {parts.map((part, i) => {
-        const letters = part.replace(/[^a-zA-Z]/g, "");
-        if (letters.length >= 8) {
-          return <span key={i} className="grad-text">{part}</span>;
-        }
-        return part;
-      })}
-    </>
-  );
-}
+/* Removed: GradientWords, which painted every word of eight letters or
+   more in the brand gradient. It emphasised by word LENGTH, so
+   "consecutive", "documented", "capability" and "something" all lit up
+   while the actual instruction sat in plain text. Highlighting that
+   correlates with nothing is the clearest signal a page was assembled
+   rather than written, and it actively worked against the sentence: the
+   reader's eye jumped between long words instead of reading the advice.
+   The recommendation renders as plain text now and says what it says. */
 
 function formatDate(iso: string | null): string {
   if (!iso) return "...";
@@ -274,12 +268,15 @@ export default async function DashboardPage() {
       {/* Hero focus card */}
       <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 32, padding: 28, alignItems: "center", position: "relative" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(500px 220px at 0% 0%, color-mix(in oklab, var(--blue) 14%, transparent), transparent 70%)", pointerEvents: "none" }} />
+          {/* The radial glow that used to sit here is gone. It is the same
+              effect we pulled off the landing hero for the same reason: a
+              coloured haze behind a card adds atmosphere and no information,
+              and it is the first thing that reads as generated. */}
           <DashScoreRing value={latestScore ?? 0} size={160} />
           <div className="col gap-sm" style={{ position: "relative" }}>
             <span className="mono-label">Next session goal</span>
             <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
-              <GradientWords text={latestRecommendation || "Open your latest report to see what to fix."} />
+              {latestRecommendation || "Open your latest report to see what to fix."}
             </h2>
             <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
               From your latest stream: <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
