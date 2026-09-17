@@ -31,10 +31,11 @@ async function getStreamCount(): Promise<number> {
 }
 
 const faqItems = [
-  { q: "How does the analysis work?", a: "You connect your Twitch account, sync your VODs, and hit Analyze. We pull the audio from your stream, transcribe it, and read the full transcript to find your best moments and weakest points. The whole thing takes about 5 minutes for a 2-hour stream." },
+  { q: "Do I need an account?", a: "Not to try it. Paste any public Twitch VOD link on this page and you'll get a real coaching report on the opening of that stream, no signup and no card. You only connect Twitch when you want the whole stream read instead of the opening, and every stream after it." },
+  { q: "How does the analysis work?", a: "We pull the audio from the VOD, transcribe it, and read the full transcript to find your best moments and your weakest ones. About 5 minutes for a 2-hour stream. The free version on this page reads the opening 12 minutes and takes about a minute." },
   { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
-  { q: "Is it actually free?", a: "Yeah. The free trial gives you 2 full VOD analyses and 5 clips with no credit card. Enough to see what the report tells you, generate a few clips from real moments, and decide if Pro is worth it." },
-  { q: "Does it work for my channel?", a: "Any public Twitch channel works: partner, affiliate, or 3 viewers. Sign in with Twitch, hit Sync after a stream, and that's the whole setup." },
+  { q: "Is it actually free?", a: "The report on this page is free with no account at all. If you connect Twitch, the free trial adds 2 full VOD analyses and 5 clips, still with no credit card. Enough to see what the report tells you and decide if Pro is worth it." },
+  { q: "Does it work for my channel?", a: "Any public Twitch channel works: partner, affiliate, or 3 viewers. Paste a link to try it, or sign in with Twitch and hit Sync after a stream." },
   { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast. The title and description come from the report. Edit them if you want, or just tap post." },
 ];
 
@@ -51,9 +52,12 @@ export default async function LandingPage() {
         <div className="ll-con">
           <nav className="ll-nav">
             <Link href="/" className="ll-brand">LevlCast</Link>
+            {/* Four destinations, four links. This previously carried a
+                "Home" link while already on home, and pointed both "How it
+                works" and "Features" at the same anchor — the kind of detail
+                that makes a page read as unfinished. */}
             <ul className="ll-nav-links">
-              <li><a href="/" className="ll-nav-active">Home</a></li>
-              <li><a href="#features">How it works</a></li>
+              <li><a href="#problem">Why</a></li>
               <li><a href="#features">Features</a></li>
               <li><a href="#report">The Report</a></li>
               <li><a href="#pricing">Pricing</a></li>
@@ -88,9 +92,13 @@ export default async function LandingPage() {
         <div className="ll-con">
           <div className="ll-hero-center" style={{ padding: 0, maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <ReferralBadge />
-            <h1 className="ll-h1">See the stream your <span className="ll-grad-text">viewers saw</span></h1>
+            {/* The headline states the offer rather than a mood. Since the
+                free analyzer shipped, "no account" is the genuinely
+                unusual thing about this product and it belongs above the
+                fold, not buried in a pricing table. */}
+            <h1 className="ll-h1">Paste a stream. <span className="ll-grad-text">Get coached.</span></h1>
             <p className="ll-lede" style={{ marginBottom: 22 }}>
-              Paste your last VOD. LevlCast watches the whole thing and shows you what landed, what didn&apos;t, and the clips your fans want.
+              Drop a Twitch VOD link below and read a real coaching report on it. Dead air, weak openings, the moments worth clipping. No account, no card, nothing to install.
             </p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
               <UrlPasteHero />
@@ -335,7 +343,7 @@ export default async function LandingPage() {
                 <span className="ll-cta-grad">Levl up.</span>
               </h2>
               <p className="ll-cta-sub">
-                Connect Twitch, hit Sync, and read your first report in under 10 minutes. Free. No credit card.
+                Try it on any stream right now without an account. Connect Twitch when you want your whole library read, not just the opening. Free either way, no credit card.
               </p>
               <div className="ll-badges">
                 <a className="ll-badge" href="https://apps.apple.com/us/app/levlcast/id6761281566" target="_blank" rel="noopener noreferrer">
