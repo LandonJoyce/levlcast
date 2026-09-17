@@ -328,46 +328,42 @@ export default async function DashboardPage() {
       {/* Stats + upgrade row */}
       <div style={{ display: "grid", gridTemplateColumns: isPro ? "1fr" : "1fr 1fr", gap: 20 }}>
         {/* Stats */}
-        <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 14, justifyContent: "center" }}>
-          <div className="col gap-sm">
+        {/* Metric strip.
+            These three numbers used to be stacked vertically inside one
+            card, so each took a full-width band and the page grew a tall
+            sparse column of almost nothing. Three numbers read faster side
+            by side than they ever do stacked, and reclaiming two bands
+            pulls the recent-streams table up where it can be seen. */}
+        <div className="card card-pad dash-metrics">
+          <div className="dash-metric">
             <span className="mono-label">Streams analyzed</span>
-            <div className="row" style={{ alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em" }}>{totalAnalyzed}</span>
-              <span style={{ color: "var(--ink-3)", fontSize: 13 }}>total</span>
-            </div>
+            <span className="dash-metric-n">{totalAnalyzed}</span>
+            <span className="dash-metric-sub">all time</span>
           </div>
-          <div className="col gap-sm">
-            <span className="mono-label">Clips this month</span>
-            <div className="row" style={{ alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--green)" }}>{clipsThisMonth ?? 0}</span>
-              <span style={{ color: "var(--ink-3)", fontSize: 13 }}>this month</span>
-            </div>
+          <div className="dash-metric">
+            <span className="mono-label">Clips</span>
+            <span className="dash-metric-n" style={{ color: "var(--green)" }}>{clipsThisMonth ?? 0}</span>
+            <span className="dash-metric-sub">this month</span>
           </div>
-          {totalTrackedViews > 0 && (
-            <div className="col gap-sm" style={{ paddingTop: 6, borderTop: "1px solid var(--line)" }}>
-              <span className="mono-label">Best clip category</span>
-              {topPerfCategory && (
-                <div className="row" style={{ alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--ink)", textTransform: "uppercase" }}>
-                    {topPerfCategory[0] === "funny" ? "Comedy" : topPerfCategory[0]}
-                  </span>
-                  <span style={{ color: "var(--ink-3)", fontSize: 12 }}>
-                    {topPerfCategory[1].views.toLocaleString()} views
-                    {topPerfCategory[1].follows > 0 && ` · +${topPerfCategory[1].follows} follows`}
-                  </span>
-                </div>
-              )}
-              <span style={{ fontSize: 11, color: "var(--ink-3)", fontFamily: "var(--font-geist-mono), monospace" }}>
-                from {Object.values(perfByCategory).reduce((s, e) => s + e.count, 0)} tracked clips
-              </span>
-            </div>
-          )}
-          {totalTrackedViews === 0 && (
-            <div className="col gap-sm" style={{ paddingTop: 6, borderTop: "1px solid var(--line)" }}>
-              <span className="mono-label">Clip performance</span>
-              <span style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>Post clips to YouTube to start tracking which category performs best.</span>
-            </div>
-          )}
+          <div className="dash-metric">
+            <span className="mono-label">Best category</span>
+            {totalTrackedViews > 0 && topPerfCategory ? (
+              <>
+                <span className="dash-metric-n dash-metric-word">
+                  {topPerfCategory[0] === "funny" ? "Comedy" : topPerfCategory[0]}
+                </span>
+                <span className="dash-metric-sub">
+                  {topPerfCategory[1].views.toLocaleString()} views
+                  {topPerfCategory[1].follows > 0 && ` · +${topPerfCategory[1].follows} follows`}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="dash-metric-n dash-metric-word dash-metric-empty">&mdash;</span>
+                <span className="dash-metric-sub">post a clip to start tracking</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Upgrade card (only if Free) */}

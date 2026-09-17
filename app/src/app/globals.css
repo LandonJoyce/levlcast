@@ -241,18 +241,32 @@
   --line: oklch(0.25 0.006 45);
   --line-2: oklch(0.31 0.006 45);
 
-  /* accents — lava orange primary to match landing gradient */
-  --blue: oklch(0.66 0.22 35);
-  --blue-2: oklch(0.56 0.20 30);
-  --blue-soft: oklch(0.24 0.12 35);
-  --green: oklch(0.74 0.15 155);
-  --green-2: oklch(0.62 0.15 155);
-  --green-soft: oklch(0.22 0.08 155);
-  --warn: oklch(0.80 0.13 80);
-  --warn-soft: oklch(0.28 0.10 80);
-  --danger: oklch(0.65 0.20 25);
-  --danger-soft: oklch(0.26 0.12 25);
-  --magenta: oklch(0.66 0.20 12);
+  /* ACCENTS
+     The problem this fixes: the primary accent (--blue, which despite the
+     name holds lava orange at hue 35) is used 43 times across this
+     stylesheet, and --danger sat at hue 25 with --magenta at hue 12. Three
+     "different" colours inside 23 degrees of each other. Primary, warning
+     and error were therefore the same colour to the eye, which is why a
+     screen full of orange had nothing standing out on it: when the alarm
+     colour is also the button colour, neither reads as anything.
+
+     Primary keeps the brand hue but loses chroma, so it can appear often
+     without shouting. The semantic colours move far enough away in hue to
+     be distinguishable at a glance, which is the entire job of a semantic
+     colour. */
+  --blue: oklch(0.68 0.16 38);
+  --blue-2: oklch(0.58 0.15 34);
+  --blue-soft: oklch(0.24 0.08 38);
+  --green: oklch(0.78 0.17 145);
+  --green-2: oklch(0.66 0.16 145);
+  --green-soft: oklch(0.23 0.08 145);
+  /* Amber, pulled well clear of the orange primary. */
+  --warn: oklch(0.84 0.15 92);
+  --warn-soft: oklch(0.28 0.10 92);
+  /* True red, not the orange-red that used to blend into every button. */
+  --danger: oklch(0.63 0.24 18);
+  --danger-soft: oklch(0.26 0.13 18);
+  --magenta: oklch(0.66 0.20 4);
   --grad: linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
 
   --r-sm: 8px;
@@ -2588,4 +2602,45 @@
   background: var(--surface-2);
   border-color: var(--ink-3);
   filter: none;
+}
+
+/* Metric strip — three numbers across, not stacked.
+   Stacked full-width numbers are how a dashboard ends up eight screens
+   tall with nothing on it. Side by side they compare, which is the only
+   reason to show them together at all. */
+.dash .dash-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  align-items: stretch;
+}
+.dash .dash-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 22px;
+}
+.dash .dash-metric + .dash-metric {
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
+}
+.dash .dash-metric-n {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dash .dash-metric-word { font-size: 22px; text-transform: uppercase; letter-spacing: -0.01em; }
+.dash .dash-metric-empty { color: var(--ink-4); }
+.dash .dash-metric-sub { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+
+@media (max-width: 700px) {
+  .dash .dash-metrics { grid-template-columns: 1fr; gap: 16px; }
+  .dash .dash-metric + .dash-metric {
+    padding-left: 0;
+    border-left: none;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
 }
