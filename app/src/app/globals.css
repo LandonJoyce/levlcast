@@ -1158,21 +1158,38 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .ll-page {
-  --ll-bg:          rgb(19, 17, 16);
-  --ll-bg-ink:      rgb(1, 15, 4);
-  --ll-bg-card:     rgba(16, 25, 22, 0.6);
-  --ll-bg-solid:    rgb(14, 22, 19);
-  --ll-line-soft:   rgba(255,255,255,0.10);
-  --ll-line-med:    rgba(255,255,255,0.20);
-  --ll-line-strong: rgb(78, 80, 91);
-  --ll-fg:          rgb(255,255,255);
-  --ll-fg-mute:     rgb(227,227,227);
-  --ll-fg-dim:      rgb(145,161,153);
-  --ll-fg-faint:    rgb(126,128,138);
-  --ll-red:         rgb(239,67,67);
-  --ll-green:       rgb(30,235,139);
-  --ll-cyan:        rgb(37,244,244);
-  --ll-blue:        rgb(95,165,195);
+  /* NEUTRALS
+     These used to pull in three directions at once: a warm near-black
+     page, dark GREEN ink and card surfaces, green-grey dimmed text and
+     blue-grey faint text. Four hue biases fighting under an orange-to-pink
+     gradient is why the accent read as pasted on rather than chosen.
+
+     Every neutral below now carries the same slight warm bias, pulled
+     toward the gradient's own hue. Greys with a hint of the accent in
+     them read as deliberate; a pure or contradictory grey reads as a
+     default nobody picked. The gradient itself is untouched. */
+  --ll-bg:          rgb(16, 13, 14);
+  --ll-bg-ink:      rgb(10, 8, 9);
+  --ll-bg-card:     rgba(29, 23, 25, 0.62);
+  --ll-bg-solid:    rgb(22, 18, 19);
+  /* Hairlines are warm white rather than pure white, so edges sit in the
+     same light as everything else instead of reading slightly blue. */
+  --ll-line-soft:   rgba(255, 238, 230, 0.10);
+  --ll-line-med:    rgba(255, 238, 230, 0.20);
+  --ll-line-strong: rgb(88, 76, 79);
+  /* Warm white, not #fff. On a warm ground pure white looks like a hole. */
+  --ll-fg:          rgb(255, 250, 247);
+  --ll-fg-mute:     rgb(228, 218, 215);
+  --ll-fg-dim:      rgb(166, 152, 151);
+  --ll-fg-faint:    rgb(126, 114, 116);
+  /* SEMANTIC COLOUR — kept separate from the accent so "bad" and "good"
+     never get confused with brand. Matched to the score colours the
+     report itself already renders, so the marketing page and the product
+     agree on what a red number means. */
+  --ll-red:         rgb(248, 113, 113);
+  --ll-green:       rgb(163, 230, 53);
+  --ll-cyan:        rgb(125, 211, 218);
+  --ll-blue:        rgb(138, 160, 186);
   --ll-grad:        linear-gradient(180deg, rgb(255,88,0) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
   --ll-grad-h:      linear-gradient(90deg,  rgb(255,88,0) 0%, rgb(242,97,121) 50%, rgb(252,208,147) 100%);
   /* These were hardcoded to Helvetica/Arial while layout.tsx was loading

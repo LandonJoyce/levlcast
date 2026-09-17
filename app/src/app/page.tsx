@@ -123,7 +123,7 @@ export default async function LandingPage() {
             <h2 className="ll-h2" style={{ marginBottom: 14 }}>
               Make every clip yours before you post.
             </h2>
-            <p style={{ fontSize: 17, lineHeight: 1.55, color: "rgba(255,255,255,0.7)", margin: 0 }}>
+            <p style={{ fontSize: 17, lineHeight: 1.55, color: "var(--ll-fg-mute)", margin: 0 }}>
               Trim it tighter, fix any caption typos, pick the style, set the cover frame. Choose 16:9 or 9:16, then download or post to YouTube in one click.
             </p>
           </div>
@@ -131,9 +131,9 @@ export default async function LandingPage() {
             position: "relative",
             borderRadius: 18,
             overflow: "hidden",
-            border: "1px solid rgba(255,255,255,0.08)",
+            border: "1px solid var(--ll-line-soft)",
             boxShadow: "0 32px 80px rgba(0,0,0,0.55)",
-            background: "rgba(8,8,13,0.6)",
+            background: "var(--ll-bg-ink)",
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
