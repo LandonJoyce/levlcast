@@ -181,6 +181,9 @@ export default async function LiveActivityFeed() {
 
   if (rows.length === 0) return null;
 
+  // Longest stream on screen sets the scale for every duration bar.
+  const longest = rows.reduce((max, r) => Math.max(max, r.duration_seconds ?? 0), 0);
+
   return (
     <div className="ll-feed">
       <div className="ll-feed-head">
@@ -195,6 +198,17 @@ export default async function LiveActivityFeed() {
           const highlight = pickHighlight(r, i);
           const type = r.coach_report?.streamer_type ?? "gaming";
           const typeLabel = TYPE_LABEL[type] ?? type.toUpperCase();
+          // Stream length drawn to scale along the bottom of the row. A 16
+          // minute stream sitting next to a 3h51m one is the most
+          // interesting thing in this feed, and as plain text that contrast
+          // is invisible. Scaled against the longest stream on screen so
+          // the row is always readable regardless of the absolute numbers.
+          const durPct = longest > 0
+            ? Math.max(3, Math.round(((r.duration_seconds ?? 0) / longest) * 100))
+            : 0;
+          // Dead air shown as the portion of that length where nothing
+          // happened. Only drawn when the report actually measured it.
+          const deadPct = r.coach_report?.dead_air_pct ?? null;
           const rowStyle: CSSProperties & { "--row-score"?: string } = {
             animationDelay: `${i * 90}ms`,
           };
@@ -221,6 +235,14 @@ export default async function LiveActivityFeed() {
               ) : (
                 <span />
               )}
+              <span className="ll-feed-bar" style={{ width: `${durPct}%` }} aria-hidden="true">
+                {deadPct !== null && deadPct > 0 ? (
+                  <span
+                    className="ll-feed-bar-dead"
+                    style={{ width: `${Math.min(100, Math.round(deadPct))}%` }}
+                  />
+                ) : null}
+              </span>
             </div>
           );
         })}

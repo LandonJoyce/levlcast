@@ -2045,6 +2045,7 @@
   100% { left: 100%; }
 }
 .ll-page .ll-feed-list { display: flex; flex-direction: column; }
+.ll-page .ll-feed-row { position: relative; }
 .ll-page .ll-feed-row {
   display: grid;
   grid-template-columns: minmax(60px, 0.55fr) minmax(100px, 1fr) minmax(60px, 0.55fr) minmax(100px, 0.9fr);
@@ -2081,12 +2082,12 @@
   color: rgba(255,255,255,0.58);
 }
 .ll-page .ll-feed-score {
-  font-weight: 700; font-size: 15px;
-  letter-spacing: -0.02em;
+  /* Was a bordered pill, which is the default treatment for a number
+     and gave every row the same weight. Bare now: colour and size carry
+     the reading, and the row's left rule already states severity. */
+  font-weight: 700; font-size: 17px;
+  letter-spacing: -0.03em;
   display: inline-flex; align-items: baseline;
-  padding: 3px 9px; border-radius: 6px;
-  background: color-mix(in srgb, currentColor 14%, transparent);
-  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
   width: fit-content;
 }
 .ll-page .ll-feed-score-out {
@@ -2535,4 +2536,40 @@
   .ll-page .ll-thread { padding-left: 28px; gap: 30px; }
   .ll-page .ll-thread-line::before { left: -28px; width: 7px; height: 7px; }
   .ll-page .ll-thread::before { left: 3px; }
+}
+
+/* ── Feed: stream length drawn to scale ─────────────────────────────────
+   The durations in this feed range from 16 minutes to nearly four hours,
+   and as plain text that spread is invisible — every row reads the same
+   weight. This bar runs along the bottom edge of each row at a width
+   proportional to the longest stream on screen, so the shape of the feed
+   tells you something before you read a single number.
+
+   It is not decoration: the darker inner segment is the share of that
+   stream measured as dead air, which is the product's whole argument
+   rendered as a picture. Rows whose report never measured dead air
+   simply have no inner segment rather than a fabricated one. */
+.ll-page .ll-feed-bar {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  background: color-mix(in srgb, var(--row-score, rgb(242,97,121)) 42%, transparent);
+  border-radius: 1px;
+  overflow: hidden;
+  transition: background 150ms ease;
+  pointer-events: none;
+}
+.ll-page .ll-feed-row:hover .ll-feed-bar {
+  background: color-mix(in srgb, var(--row-score, rgb(242,97,121)) 85%, transparent);
+}
+/* Dead air sits at the end of the bar, where the stream was still running
+   and nothing was happening. Deliberately desaturated so it reads as
+   absence rather than as another accent. */
+.ll-page .ll-feed-bar-dead {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 238, 230, 0.22);
 }
