@@ -32,10 +32,10 @@ export const metadata: Metadata = {
 
 /** Marks on the hero timeline. Percentages are positions across the stream. */
 const MARKS = [
-  { at: 4, label: "Cold open", note: "8 minutes before the first hook", tone: "warn" },
-  { at: 31, label: "Peak", note: "The clip you never cut", tone: "good" },
-  { at: 58, label: "Dead air", note: "17 minutes of nothing", tone: "bad" },
-  { at: 86, label: "Fade", note: "Energy gone by hour three", tone: "warn" },
+  { at: 4, label: "Slow start", note: "8 minutes before anything happened", tone: "warn" },
+  { at: 31, label: "Best bit", note: "You never clipped this one", tone: "good" },
+  { at: 58, label: "Quiet", note: "17 minutes where nobody said much", tone: "bad" },
+  { at: 86, label: "Ending", note: "You ran out of steam by hour three", tone: "warn" },
 ] as const;
 
 export default function V2Page() {
@@ -69,7 +69,7 @@ export default function V2Page() {
           <span className="lv2-h1-soft">Nobody told you what happened.</span>
         </h1>
         <p className="lv2-sub">
-          Paste a link. We listen to the whole thing and tell you where it went wrong.
+          Paste a link. We listen to the whole stream and tell you what went wrong and when.
         </p>
         <div className="lv2-paste">
           <UrlPasteHero />
@@ -84,7 +84,7 @@ export default function V2Page() {
       <section className="lv2-tl-wrap" aria-label="What a report marks on a stream">
         <div className="lv2-tl-head">
           <span className="lv2-tl-t">00:00</span>
-          <span className="lv2-tl-cap">one stream, read end to end</span>
+          <span className="lv2-tl-cap">one stream, start to finish</span>
           <span className="lv2-tl-t">04:11</span>
         </div>
 
@@ -113,30 +113,30 @@ export default function V2Page() {
       <section className="lv2-sec">
         <ol className="lv2-lines">
           <li>Paste a link. <em>Yours, or someone you watch.</em></li>
-          <li>Find out where you lost them. <em>With the timestamp.</em></li>
-          <li>Connect Twitch when you want all of it. <em>Not before.</em></li>
+          <li>See where people stopped watching. <em>Down to the minute.</em></li>
+          <li>Sign in when you want more. <em>Not before.</em></li>
         </ol>
       </section>
 
       {/* ── What comes back ── */}
       <section className="lv2-sec" id="report">
-        <h2 className="lv2-h2">What comes back</h2>
+        <h2 className="lv2-h2">What you get</h2>
         <dl className="lv2-defs">
           <div className="lv2-def">
             <dt>Score</dt>
-            <dd>One number, and the reason for it. Not a dashboard.</dd>
+            <dd>A score out of 100, and why you got it.</dd>
           </div>
           <div className="lv2-def">
             <dt>Quotes</dt>
-            <dd>The exact lines that cost you viewers, pulled off your own mic.</dd>
+            <dd>The things you said that made people leave.</dd>
           </div>
           <div className="lv2-def">
             <dt>Clips</dt>
-            <dd>Your best moments, cut and captioned, ready to post.</dd>
+            <dd>Your best bits, cut and ready to post.</dd>
           </div>
           <div className="lv2-def">
-            <dt>Last week</dt>
-            <dd>Whether you actually fixed the thing we told you to fix.</dd>
+            <dt>Progress</dt>
+            <dd>Did you fix what we told you last time?</dd>
           </div>
         </dl>
       </section>
@@ -148,12 +148,12 @@ export default function V2Page() {
           <div className="lv2-plan">
             <p className="lv2-plan-n">Free</p>
             <p className="lv2-plan-p">$0</p>
-            <p className="lv2-plan-b">Any stream, no account. Connect Twitch and you get two full reports and five clips.</p>
+            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and five clips.</p>
           </div>
           <div className="lv2-plan lv2-plan-lead">
             <p className="lv2-plan-n">Pro</p>
             <p className="lv2-plan-p">$14.99<span>/mo</span></p>
-            <p className="lv2-plan-b">Fifteen full streams a month, twenty clips, and the history that shows whether you are getting better.</p>
+            <p className="lv2-plan-b">Fifteen full streams a month, twenty clips, and a history that shows if you are getting better.</p>
             <Link href="/auth/login?plan=monthly" className="lv2-cta">Start free</Link>
           </div>
         </div>
@@ -164,10 +164,10 @@ export default function V2Page() {
         <h2 className="lv2-h2">Questions</h2>
         <FaqAccordion
           items={[
-            { q: "Do I need an account?", a: "Not to try it. Paste any public Twitch VOD and you get a real report on the opening of that stream. You connect Twitch when you want whole streams instead of openings." },
-            { q: "Do you keep my VODs?", a: "No. We pull the audio while we're analysing it, then throw it away. We keep the report and any clips you make." },
-            { q: "How long does it take?", a: "About a minute for the free version. About five minutes for a full two-hour stream." },
-            { q: "Does it work on small channels?", a: "Any public channel. Partner, affiliate, or three viewers." },
+            { q: "Do I need an account?", a: "Not to try it. Paste any Twitch stream link and you get a real report on the start of it. You only sign in when you want the whole stream read instead of the start." },
+            { q: "Do you keep my streams?", a: "No. We listen to the audio while we work, then throw it away. We keep the report and any clips you make." },
+            { q: "How long does it take?", a: "About a minute for the free one. About five minutes for a full two hour stream." },
+            { q: "Does it work on small channels?", a: "Any channel. It does not matter if you have three viewers." },
           ]}
         />
       </section>
