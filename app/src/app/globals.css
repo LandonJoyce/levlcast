@@ -2455,60 +2455,84 @@
   font-family: var(--ll-mono); font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 0.04em;
 }
 
-/* ── How it works: three steps ──────────────────────────────────────────
-   Replaces the Without/With comparison cards, which were two large blocks
-   of unevidenced assertion. These are joined by a single hairline rather
-   than floated as separate cards, so the row reads as one sequence and
-   the numbers carry the order. The number itself is the only place colour
-   is spent here; everything else stays quiet so the hero keeps the page's
-   one loud moment. */
-.ll-page .ll-steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  background: var(--ll-line-soft);
-  border: 1px solid var(--ll-line-soft);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.ll-page .ll-step {
-  background: var(--ll-bg);
-  padding: 36px 32px 40px;
+
+/* ── How it works: the thread ───────────────────────────────────────────
+   This replaced a three-card grid with 01/02/03 markers, which is the most
+   recognisably machine-made layout on the web right now. There are no
+   cards and no numbers here. A single hairline runs down the left with a
+   node against each line, so the sequence is drawn rather than labelled,
+   and the whole section is three sentences instead of three paragraphs.
+
+   The thread is built from borders and pseudo-elements rather than an
+   image or a glow, so it stays crisp at any zoom and adds no weight. */
+.ll-page .ll-sec-thread { padding-block: 96px; }
+
+.ll-page .ll-thread {
+  position: relative;
+  max-width: 780px;
+  margin: 0 auto;
+  padding-left: 40px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 40px;
 }
-.ll-page .ll-step-n {
-  font-family: var(--ll-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  background: var(--ll-grad-h);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+/* The line itself. Fades out at both ends so it reads as a passage rather
+   than a fence, and stops short of the last node so the sequence feels
+   finished instead of cut off. */
+.ll-page .ll-thread::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(255, 88, 0) 12%,
+    rgb(242, 97, 121) 55%,
+    rgba(252, 208, 147, 0.25) 88%,
+    transparent 100%
+  );
 }
-.ll-page .ll-step-h {
+.ll-page .ll-thread-line {
+  position: relative;
+  margin: 0;
   font-family: var(--ll-display);
-  font-size: clamp(19px, 2vw, 23px);
-  font-weight: 700;
-  line-height: 1.22;
-  letter-spacing: -0.01em;
-  margin: 0;
+  font-size: clamp(21px, 2.6vw, 30px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
   color: var(--ll-fg);
+  text-wrap: balance;
 }
-.ll-page .ll-step-b {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--ll-fg-mute);
-  margin: 0;
+/* Node. Sits on the line, picks up the gradient's warm end so the thread
+   and the marks are obviously the same object. */
+.ll-page .ll-thread-line::before {
+  content: "";
+  position: absolute;
+  left: -40px;
+  top: 0.55em;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ll-bg);
+  border: 1px solid rgb(242, 97, 121);
+}
+.ll-page .ll-thread-line:first-child::before {
+  background: rgb(255, 88, 0);
+  border-color: rgb(255, 88, 0);
+}
+/* The second half of each line drops back so the eye takes the point
+   first and the aside second, without needing a smaller paragraph. */
+.ll-page .ll-thread-soft {
+  color: var(--ll-fg-dim);
+  font-weight: 400;
 }
 
-@media (max-width: 900px) {
-  .ll-page .ll-steps { grid-template-columns: 1fr; }
-  .ll-page .ll-step { padding: 28px 24px 30px; }
+@media (max-width: 720px) {
+  .ll-page .ll-sec-thread { padding-block: 64px; }
+  .ll-page .ll-thread { padding-left: 28px; gap: 30px; }
+  .ll-page .ll-thread-line::before { left: -28px; width: 7px; height: 7px; }
+  .ll-page .ll-thread::before { left: 3px; }
 }

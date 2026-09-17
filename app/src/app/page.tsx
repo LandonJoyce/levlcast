@@ -151,34 +151,24 @@ export default async function LandingPage() {
           showed nothing. These three steps are checkable, and step one is
           something they can do on this page without an account. The
           numbering is real sequence, not decoration. */}
-      <section className="ll-sec" id="problem">
+      <section className="ll-sec ll-sec-thread" id="problem">
         <div className="ll-con">
-          <div className="ll-shead">
-            <h2 className="ll-h2">Three steps, and the first one is free.</h2>
+          {/* No boxes, no 01/02/03. A numbered three-card grid is the most
+              recognisable AI-generated layout there is, and the numbers were
+              decoration anyway since the copy already reads in order. The
+              thread on the left carries the sequence instead, and each line
+              is short enough to read without deciding to. */}
+          <div className="ll-thread">
+            <p className="ll-thread-line">
+              Paste a link. <span className="ll-thread-soft">Yours, or someone you watch.</span>
+            </p>
+            <p className="ll-thread-line">
+              Find out where you lost them. <span className="ll-thread-soft">With the timestamp.</span>
+            </p>
+            <p className="ll-thread-line">
+              Connect Twitch when you want all of it. <span className="ll-thread-soft">Not before.</span>
+            </p>
           </div>
-          <ol className="ll-steps">
-            <li className="ll-step">
-              <span className="ll-step-n">01</span>
-              <h3 className="ll-step-h">Paste a VOD link</h3>
-              <p className="ll-step-b">
-                Any public Twitch stream, yours or anyone&apos;s. No account, no card. A report on the opening lands in about a minute.
-              </p>
-            </li>
-            <li className="ll-step">
-              <span className="ll-step-n">02</span>
-              <h3 className="ll-step-h">Read what actually happened</h3>
-              <p className="ll-step-b">
-                Where the energy died, the line that cost you viewers, the moments worth clipping. Timestamps you can scrub straight to.
-              </p>
-            </li>
-            <li className="ll-step">
-              <span className="ll-step-n">03</span>
-              <h3 className="ll-step-h">Connect Twitch for the rest</h3>
-              <p className="ll-step-b">
-                Full streams instead of openings, clips cut and captioned for you, and tracking that says whether you fixed last week&apos;s problem.
-              </p>
-            </li>
-          </ol>
         </div>
       </section>
 
