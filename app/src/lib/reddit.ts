@@ -102,6 +102,55 @@ export async function redditGet(path: string): Promise<any> {
  * The streamer subreddits we actively work. Reddit supports combined
  * multireddit paths (/r/a+b+c/new), so we pull all of them in one request.
  */
+/**
+ * Send a Reddit private message.
+ *
+ * Needs a user-context token, so REDDIT_USERNAME and REDDIT_PASSWORD must
+ * be set: an app-only client_credentials token cannot send. Throws with
+ * Reddit's own error text so a caller can record exactly why a send failed
+ * instead of retrying blindly into a rate limit.
+ */
+export async function redditSendMessage(
+  to: string,
+  subject: string,
+  text: string
+): Promise<void> {
+  if (!process.env.REDDIT_USERNAME || !process.env.REDDIT_PASSWORD) {
+    throw new Error(
+      "Reddit sending needs REDDIT_USERNAME and REDDIT_PASSWORD (app-only tokens cannot send messages)."
+    );
+  }
+
+  const token = await getRedditToken();
+  const res = await fetch("https://oauth.reddit.com/api/compose", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": REDDIT_UA,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      api_type: "json",
+      to,
+      subject: subject.slice(0, 100),
+      text,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Reddit compose ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  // Reddit answers 200 with errors nested in the body, so the status code
+  // alone does not tell you the message actually went out.
+  const json = await res.json().catch(() => null);
+  const errors = json?.json?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    throw new Error(`Reddit compose rejected: ${JSON.stringify(errors).slice(0, 200)}`);
+  }
+}
+
 export const OUTREACH_SUBS = [
   "TwitchStreamers",
   "twitchstreaming",

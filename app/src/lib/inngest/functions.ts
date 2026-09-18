@@ -29,6 +29,8 @@ import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_TRIAL_LIMITS, FOUNDING_LIMITS, PRO_LIMITS } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
+import { fillOutreachQueue } from "@/lib/outreach";
+import { redditSendMessage } from "@/lib/reddit";
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -2009,5 +2011,131 @@ export const analyzePublicPreview = inngest.createFunction(
         .eq("id", previewId);
       throw err;
     }
+  }
+);
+
+/**
+ * Outreach harvest — fills the queue, sends nothing.
+ *
+ * Runs a few times a day rather than constantly: Reddit's /new in ten
+ * streamer subs does not turn over fast enough for more to find anything,
+ * and every extra pass is Claude spend on posts already judged.
+ */
+export const outreachHarvest = inngest.createFunction(
+  { id: "outreach-harvest", retries: 1 },
+  { cron: "0 */6 * * *" },
+  async ({ step }) => {
+    return await step.run("harvest", async () => {
+      if (process.env.OUTREACH_ENABLED !== "true") {
+        console.log("[outreach] harvest skipped — OUTREACH_ENABLED is not 'true'");
+        return { skipped: true };
+      }
+      const result = await fillOutreachQueue(6);
+      console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped}`);
+      return result;
+    });
+  }
+);
+
+/**
+ * Outreach dispatch — sends ONE queued message per run, every two hours.
+ *
+ * The pacing is the point. A burst of messages from one account is what
+ * gets flagged, and a domain ban would cost the whole channel permanently,
+ * not just this tool. One message every two hours with a hard daily
+ * ceiling looks like a person working through their inbox, because at that
+ * rate it effectively is one.
+ *
+ * Two independent brakes, because the expensive failure here is sending
+ * too much rather than too little:
+ *  - OUTREACH_AUTOSEND must be exactly "true". Unset it and everything
+ *    stops immediately with no deploy required.
+ *  - DAILY_CAP is counted from rows actually marked sent, so a restart,
+ *    a retry or a double-fired cron cannot lift the ceiling.
+ */
+export const outreachDispatch = inngest.createFunction(
+  {
+    id: "outreach-dispatch",
+    retries: 0, // a retry would risk a duplicate message to a real person
+    concurrency: { limit: 1 },
+  },
+  { cron: "0 */2 * * *" },
+  async ({ step }) => {
+    return await step.run("send-one", async () => {
+      if (process.env.OUTREACH_AUTOSEND !== "true") {
+        console.log("[outreach] dispatch skipped — OUTREACH_AUTOSEND is not 'true'");
+        return { skipped: true };
+      }
+
+      const supabase = createAdminClient();
+      const DAILY_CAP = 8;
+
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: sentToday, error: countErr } = await supabase
+        .from("outreach_contacts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .gte("sent_at", dayAgo);
+
+      if (countErr) {
+        // Cannot prove we are under the cap, so do not send. Failing closed
+        // costs one message; failing open costs the account.
+        console.warn("[outreach] cap check failed, standing down:", countErr.message);
+        return { skipped: true, reason: "cap check failed" };
+      }
+      if ((sentToday ?? 0) >= DAILY_CAP) {
+        console.log(`[outreach] daily cap reached (${sentToday}/${DAILY_CAP})`);
+        return { skipped: true, reason: "daily cap" };
+      }
+
+      const { data: next } = await supabase
+        .from("outreach_contacts")
+        .select("id, reddit_username, message_subject, message_body")
+        .eq("status", "queued")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (!next || !next.message_subject || !next.message_body) {
+        return { skipped: true, reason: "queue empty" };
+      }
+
+      // Claim the row BEFORE sending. If the send throws, the row is left
+      // as 'sending' and never retried, which is the safe direction: a
+      // message that may have gone out must not go out twice.
+      const { data: claimed } = await supabase
+        .from("outreach_contacts")
+        .update({ status: "sending" })
+        .eq("id", next.id)
+        .eq("status", "queued")
+        .select("id")
+        .maybeSingle();
+
+      if (!claimed) return { skipped: true, reason: "lost the claim" };
+
+      try {
+        await redditSendMessage(
+          String(next.reddit_username),
+          String(next.message_subject),
+          String(next.message_body)
+        );
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : "send failed";
+        await supabase
+          .from("outreach_contacts")
+          .update({ status: "failed", fail_reason: reason })
+          .eq("id", next.id);
+        console.warn(`[outreach] send failed for ${next.reddit_username}: ${reason}`);
+        return { sent: 0, failed: 1 };
+      }
+
+      await supabase
+        .from("outreach_contacts")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", next.id);
+
+      console.log(`[outreach] sent to ${next.reddit_username} (${(sentToday ?? 0) + 1}/${DAILY_CAP} today)`);
+      return { sent: 1, failed: 0 };
+    });
   }
 );
