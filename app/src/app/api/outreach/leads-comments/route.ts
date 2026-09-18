@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { redditGet, isRedditConfigured, OUTREACH_SUBS } from "@/lib/reddit";
+import { redditGet, OUTREACH_SUBS } from "@/lib/reddit";
 
 export const runtime = "edge";
 
@@ -32,12 +32,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isRedditConfigured()) {
-    return NextResponse.json({
-      error: "Reddit API not connected. Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Vercel (see lib/reddit.ts).",
-      comments: [],
-    }, { status: 503 });
-  }
+  // No credential gate: redditGet reads Reddit's public JSON endpoints
+  // when no OAuth app is configured. Only sending needs credentials.
 
   const subParam = req.nextUrl.searchParams.get("subreddit");
   const useAll = !subParam || subParam.toLowerCase() === "all";

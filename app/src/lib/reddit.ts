@@ -84,6 +84,22 @@ export async function getRedditToken(): Promise<string> {
  * oauth.reddit.com with the app token. Returns the parsed JSON body.
  */
 export async function redditGet(path: string): Promise<any> {
+  // No OAuth app configured? Read anyway.
+  //
+  // Reddit serves every public listing as JSON with no credentials at all
+  // — /r/name/new.json is open to anyone sending a real User-Agent. OAuth
+  // is only genuinely required for WRITING (sending messages). Falling
+  // back here means lead discovery, filtering and drafting all keep
+  // working on an account that cannot create an API app, which is a real
+  // situation and used to take the whole feature down with it.
+  //
+  // The tradeoff is a lower rate limit and no access to anything private,
+  // neither of which matters for pulling ten public subreddits every few
+  // hours.
+  if (!isRedditConfigured()) {
+    return redditGetPublic(path);
+  }
+
   const token = await getRedditToken();
   const res = await fetch(`https://oauth.reddit.com${path}`, {
     headers: {
@@ -94,6 +110,35 @@ export async function redditGet(path: string): Promise<any> {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Reddit API ${res.status}: ${text.slice(0, 140)}`);
+  }
+  return res.json();
+}
+
+/**
+ * Credential-free read of a public Reddit listing.
+ *
+ * Takes the same path shape as redditGet ("/r/a+b/new?limit=100") and
+ * rewrites it for the public host, which needs ".json" on the path segment
+ * rather than the OAuth host's bare path.
+ *
+ * The User-Agent is not optional. Reddit blocks default agents outright,
+ * which is the usual reason this approach is reported as "not working".
+ */
+export async function redditGetPublic(path: string): Promise<any> {
+  const [rawPath, query] = path.split("?");
+  const jsonPath = rawPath.endsWith(".json") ? rawPath : `${rawPath}.json`;
+  const url = `https://www.reddit.com${jsonPath}${query ? `?${query}` : ""}`;
+
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": REDDIT_UA,
+      Accept: "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Reddit public API ${res.status}: ${text.slice(0, 140)}`);
   }
   return res.json();
 }

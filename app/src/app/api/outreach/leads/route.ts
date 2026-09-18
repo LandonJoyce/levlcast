@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { redditGet, isRedditConfigured, OUTREACH_SUBS } from "@/lib/reddit";
+import { redditGet, OUTREACH_SUBS } from "@/lib/reddit";
 
 export const runtime = "edge";
 
@@ -39,12 +39,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isRedditConfigured()) {
-    return NextResponse.json({
-      error: "Reddit API not connected. Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Vercel (see lib/reddit.ts for the 2-minute setup).",
-      posts: [],
-    }, { status: 503 });
-  }
+  // No credential gate any more. redditGet falls back to Reddit's public
+  // JSON endpoints when no OAuth app is configured, and reading public
+  // subreddits has never actually required one. The gate was turning a
+  // missing API app into a dead page when only sending needs credentials.
 
   // subreddit=all (or missing) pulls every sub we work in one combined request.
   // subreddit=name pulls just that one. No more Reddit-wide keyword search.
