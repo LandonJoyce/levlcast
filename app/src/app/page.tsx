@@ -67,9 +67,15 @@ export default function HomePage() {
       {/* ── Hero ── */}
       <section className="lv2-hero">
         <p className="lv2-kicker">Twitch VOD coaching</p>
+        {/* The dim half is the setup, not the punch. "You streamed four
+            hours" is a fact the reader already knows, so it steps back and
+            the question it sets up gets the weight. Asking something also
+            beats asserting something: a claim invites disagreement, a
+            question invites the reader to answer it, and the honest answer
+            is the reason to paste a link. */}
         <h1 className="lv2-h1">
-          You streamed four hours.<br />
-          <span className="lv2-h1-soft">Nobody told you what happened.</span>
+          <span className="lv2-h1-soft">You streamed four hours.</span><br />
+          But did you perform?
         </h1>
         <p className="lv2-sub">
           Paste a link. We listen to the whole stream and tell you what went wrong and when.
