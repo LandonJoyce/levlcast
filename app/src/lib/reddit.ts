@@ -127,20 +127,48 @@ export async function redditGet(path: string): Promise<any> {
 export async function redditGetPublic(path: string): Promise<any> {
   const [rawPath, query] = path.split("?");
   const jsonPath = rawPath.endsWith(".json") ? rawPath : `${rawPath}.json`;
-  const url = `https://www.reddit.com${jsonPath}${query ? `?${query}` : ""}`;
+  const suffix = `${jsonPath}${query ? `?${query}` : ""}`;
 
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": REDDIT_UA,
-      Accept: "application/json",
-    },
-  });
+  // Reddit refuses credential-free reads from datacenter IP ranges, which
+  // is every request made from Vercel. The block is not uniform across
+  // their hosts: old.reddit.com is served by older infrastructure and is
+  // routinely reachable when www returns a 403 HTML page. Try the hosts
+  // most-permissive first and keep the last error if they all refuse.
+  const hosts = [
+    "https://old.reddit.com",
+    "https://www.reddit.com",
+  ];
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Reddit public API ${res.status}: ${text.slice(0, 140)}`);
+  let lastError = "";
+  for (const host of hosts) {
+    try {
+      const res = await fetch(`${host}${suffix}`, {
+        headers: {
+          "User-Agent": REDDIT_UA,
+          Accept: "application/json",
+        },
+      });
+
+      if (res.ok) {
+        // A 200 carrying HTML is Reddit's block page, not data. Parsing it
+        // as JSON throws an unhelpful syntax error, so check first.
+        const body = await res.text();
+        if (body.trimStart().startsWith("<")) {
+          lastError = `${host} returned an HTML block page`;
+          continue;
+        }
+        return JSON.parse(body);
+      }
+
+      lastError = `${host} ${res.status}`;
+    } catch (err) {
+      lastError = `${host} ${err instanceof Error ? err.message : "failed"}`;
+    }
   }
-  return res.json();
+
+  throw new Error(
+    `Reddit refused credential-free access (${lastError}). Reddit blocks datacenter IPs without an OAuth app, so this needs REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET to work from the server.`
+  );
 }
 
 /**
