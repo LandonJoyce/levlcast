@@ -2655,3 +2655,16 @@
 .dash .clip-card-done:hover { opacity: 1; }
 .dash .clip-card-done .clip-thumb { filter: saturate(0.55); }
 .dash .clip-card-done:hover .clip-thumb { filter: none; }
+
+/* Reference row — the glance-at blocks share a line.
+   The dashboard was nine full-width cards stacked at equal weight, which
+   reads as a column of equally important things, which means nothing looks
+   important. Follower trend and the summary numbers are reference, not
+   action, so they sit side by side and give the page its first change of
+   rhythm. Falls back to stacking when there is only one of them, or on a
+   narrow screen. */
+.dash .dash-ref-row { display: grid; gap: 20px; }
+.dash .dash-ref-row[data-two="yes"] { grid-template-columns: 1fr 1fr; align-items: start; }
+@media (max-width: 900px) {
+  .dash .dash-ref-row[data-two="yes"] { grid-template-columns: 1fr; }
+}

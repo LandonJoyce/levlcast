@@ -314,15 +314,22 @@ export default async function DashboardPage() {
         <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
       )}
 
-      {/* Follower growth brief */}
-      {(followerSnapshots?.length ?? 0) > 0 && (
-        <FollowerBriefCard
-          snapshots={followerSnapshots ?? []}
-          streamDates={streamDates}
-        />
-      )}
+      {/* Reference row.
+          Follower trend and the three summary numbers used to be two more
+          full-width bands in a stack of nine, so the page read as a column
+          of equally important things, which means nothing looked important.
+          These are the two blocks you glance at rather than act on, so they
+          share one row and the page gets its first change of rhythm. On a
+          free account the upgrade card still needs the width, so the split
+          only applies to Pro. */}
+      <div className="dash-ref-row" data-two={isPro && (followerSnapshots?.length ?? 0) > 0 ? "yes" : "no"}>
+        {(followerSnapshots?.length ?? 0) > 0 && (
+          <FollowerBriefCard
+            snapshots={followerSnapshots ?? []}
+            streamDates={streamDates}
+          />
+        )}
 
-      {/* Stats + upgrade row */}
       <div style={{ display: "grid", gridTemplateColumns: isPro ? "1fr" : "1fr 1fr", gap: 20 }}>
         {/* Stats */}
         {/* Metric strip.
@@ -374,6 +381,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
         )}
+      </div>
       </div>
 
       {/* Recent streams table */}
