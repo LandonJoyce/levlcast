@@ -31,6 +31,92 @@ type Lead = {
   isComment?: boolean;
 };
 
+/**
+ * Browser-side Reddit fetch.
+ *
+ * Reddit refuses credential-free reads from datacenter IPs, which is every
+ * request the Vercel server makes, but it answers a home connection without
+ * complaint. This page only ever loads on Landon's own machine, so when the
+ * server route is blocked we just ask Reddit directly from here instead.
+ *
+ * Reddit's public listings send permissive CORS headers, which is what
+ * makes this legal from a browser at all. Filtering is duplicated from the
+ * server route on purpose: the two paths must agree on what counts as a
+ * lead, and the list is short enough that sharing it across a server/client
+ * boundary would cost more than it saves.
+ */
+const HELP_PHRASES = [
+  "my stream", "my channel", "i stream", "i've been streaming",
+  "started streaming", "just started streaming", "new streamer", "new to streaming",
+  "how do i grow", "how to grow", "can't grow", "struggling to grow",
+  "no viewers", "low viewers", "0 viewers", "zero viewers",
+  "how do i get", "how to get viewers", "how to get followers",
+  "feedback on my", "feedback for my", "roast my", "rate my",
+  "any advice", "any tips", "any help", "need advice", "need help",
+  "what am i doing wrong", "what should i",
+  "trying to reach affiliate", "trying to get affiliate", "path to affiliate",
+  "twitch.tv/",
+];
+const PROMO_SUBS = new Set(["twitchfollowers", "newtwitchstreamers", "twitch_startup", "twitchstreaming"]);
+const SKIP_AUTHORS = new Set(["automoderator", "[deleted]", "reddit", "bmwdouche"]);
+const SKIP_FLAIRS = new Set(["self promotion", "self-promotion", "promo", "advertisement"]);
+
+async function fetchLeadsFromBrowser(
+  subreddit: string,
+  mode: "posts" | "comments"
+): Promise<Lead[]> {
+  const useAll = !subreddit || subreddit.toLowerCase() === "all";
+  const subPath = useAll
+    ? SUBREDDITS.filter((s) => s.value !== "all").map((s) => s.value).join("+")
+    : subreddit;
+
+  const listing = mode === "posts" ? "new" : "comments";
+  const url = `https://old.reddit.com/r/${encodeURIComponent(subPath)}/${listing}.json?limit=100`;
+
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`Reddit ${res.status}`);
+  const json = await res.json();
+  const children: Array<{ data?: Record<string, unknown> }> = json?.data?.children ?? [];
+
+  const cutoff = Date.now() / 1000 - 14 * 24 * 60 * 60;
+  const seenAuthors = new Set<string>();
+
+  return children
+    .map((c) => {
+      const d = (c.data ?? {}) as Record<string, unknown>;
+      const sub = String(d.subreddit ?? subPath);
+      const isComment = mode === "comments";
+      return {
+        id: String(d.id ?? ""),
+        title: isComment ? null : String(d.title ?? ""),
+        body: String((isComment ? d.body : d.selftext) ?? "").slice(0, 500),
+        author: String(d.author ?? ""),
+        subreddit: sub,
+        url: d.permalink
+          ? `https://www.reddit.com${String(d.permalink)}`
+          : `https://reddit.com/r/${sub}/`,
+        created: Number(d.created_utc ?? 0),
+        flair: (d.link_flair_text as string | null) ?? null,
+        isComment,
+      } as Lead;
+    })
+    .filter((p) => {
+      if (!p.author || SKIP_AUTHORS.has(p.author.toLowerCase())) return false;
+      if (p.title === "[deleted]" || p.title === "[removed]") return false;
+      if (p.body === "[deleted]" || p.body === "[removed]") return false;
+      if (seenAuthors.has(p.author)) return false;
+      if (p.flair && SKIP_FLAIRS.has(p.flair.toLowerCase())) return false;
+      if (!p.created || p.created < cutoff) return false;
+      const text = `${p.title ?? ""} ${p.body}`.toLowerCase();
+      const promoSub = PROMO_SUBS.has((p.subreddit || "").toLowerCase());
+      if (!promoSub && !HELP_PHRASES.some((ph) => text.includes(ph))) return false;
+      seenAuthors.add(p.author);
+      return true;
+    })
+    .sort((a, b) => b.created - a.created)
+    .slice(0, 80);
+}
+
 function timeAgo(utc: number) {
   const diff = Date.now() / 1000 - utc;
   if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
@@ -70,7 +156,18 @@ export default function OutreachPage() {
       if (data.error) throw new Error(data.error);
       setLeads(mode === "posts" ? (data.posts ?? []) : (data.comments ?? []));
     } catch (e: any) {
-      setFetchError(e.message ?? "Failed to load");
+      // Server-side read refused. Reddit blocks credential-free requests
+      // from datacenter IPs, which is every request Vercel makes, but it
+      // answers a residential one perfectly well — and this page only ever
+      // runs on Landon's own machine. So fall back to fetching Reddit
+      // straight from the browser. Same data, same filters, different IP.
+      try {
+        const direct = await fetchLeadsFromBrowser(subreddit, mode);
+        setLeads(direct);
+        setFetchError(null);
+      } catch {
+        setFetchError(e.message ?? "Failed to load");
+      }
     } finally {
       setLoading(false);
     }
