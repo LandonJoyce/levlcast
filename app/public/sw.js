@@ -66,6 +66,18 @@ self.addEventListener("fetch", (event) => {
   if (request.url.includes("/api/")) return;
   if (request.url.includes("/auth/")) return;
 
+  // Skip anything not served by us.
+  //
+  // This handler used to intercept cross-origin GETs too, and the catch
+  // branch below ends in `caches.match(request)`, which resolves to
+  // undefined for a URL that was never cached. Passing undefined to
+  // respondWith() is a hard failure, so ANY third-party request that hit
+  // an error was converted into a broken one by this service worker
+  // rather than being allowed to fail on its own terms. Letting these fall
+  // through to the network is both correct and what the browser does
+  // without us.
+  if (new URL(request.url).origin !== self.location.origin) return;
+
   event.respondWith(
     fetch(request)
       .then((response) => {

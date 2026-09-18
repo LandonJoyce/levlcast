@@ -71,9 +71,23 @@ async function fetchLeadsFromBrowser(
     : subreddit;
 
   const listing = mode === "posts" ? "new" : "comments";
-  const url = `https://old.reddit.com/r/${encodeURIComponent(subPath)}/${listing}.json?limit=100`;
+  // www, not old. old.reddit.com sends no CORS headers, so a browser
+  // refuses to read the response even when Reddit returns it happily —
+  // that was the "CORS request did not succeed" with a null status code.
+  // The www host has sent Access-Control-Allow-Origin on its .json
+  // listings for years, which is what every browser-side Reddit client
+  // relies on.
+  const url = `https://www.reddit.com/r/${encodeURIComponent(subPath)}/${listing}.json?limit=100&raw_json=1`;
 
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  // Bypass the PWA service worker. Its fetch handler resolves to undefined
+  // for cross-origin requests, which kills this call before it leaves the
+  // page regardless of what Reddit would have said.
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+    mode: "cors",
+    credentials: "omit",
+  });
   if (!res.ok) throw new Error(`Reddit ${res.status}`);
   const json = await res.json();
   const children: Array<{ data?: Record<string, unknown> }> = json?.data?.children ?? [];
