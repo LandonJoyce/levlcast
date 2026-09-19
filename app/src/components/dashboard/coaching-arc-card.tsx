@@ -1,4 +1,11 @@
+import { rankFromPoints } from "@/lib/rank";
 import type { CoachingArcData } from "@/lib/coaching-arc";
+
+const TIER_HEX: Record<string, string> = {
+  Iron: "#9AA0A6", Bronze: "#C1804B", Silver: "#B8C2CC", Gold: "#E3B341",
+  Platinum: "#4FD1B9", Diamond: "#7CC5F5", Master: "#C084FC",
+  Grandmaster: "#A855F7", Challenger: "#E879F9",
+};
 
 function scoreColors(s: number) {
   if (s >= 75) return { bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.55)", text: "#22c55e" };
@@ -10,10 +17,38 @@ function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function CoachingArcCard({ arc }: { arc: CoachingArcData }) {
+/**
+ * Rank points per stream, oldest first, aligned to score_history.
+ *
+ * Passed in rather than read from the arc because the arc is generated
+ * text and the ladder is live data. When present, the card shows the climb
+ * instead of the scores: five red failing numbers in a row was the exact
+ * thing the ranking system exists to stop showing people.
+ */
+export interface ArcRankPoint {
+  vod_id: string;
+  points: number;
+}
+
+export function CoachingArcCard({
+  arc,
+  rankHistory,
+}: {
+  arc: CoachingArcData;
+  rankHistory?: ArcRankPoint[];
+}) {
   const history = arc.score_history;
-  const first = history[0]?.score ?? 0;
-  const last = history[history.length - 1]?.score ?? 0;
+
+  const rankByVod = new Map((rankHistory ?? []).map((r) => [r.vod_id, r.points]));
+  // Only use the ladder view when every stream on the arc has a rating.
+  // A mixed row of ranks and raw scores would be unreadable.
+  const useRank = history.length > 0 && history.every((h) => rankByVod.has(h.vod_id));
+
+  const value = (i: number): number =>
+    useRank ? rankByVod.get(history[i].vod_id)! : history[i].score;
+
+  const first = history.length ? value(0) : 0;
+  const last = history.length ? value(history.length - 1) : 0;
   const netDelta = last - first;
   const hasImproved = arc.improving_areas.length > 0;
   const hasRecurring = arc.recurring_improvements.length > 0;
@@ -44,10 +79,21 @@ export function CoachingArcCard({ arc }: { arc: CoachingArcData }) {
       {/* Score circles */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 0, marginBottom: 24, overflowX: "auto" }}>
         {history.map((point, i) => {
-          const colors = scoreColors(point.score);
+          const current = value(i);
+          const rank = useRank ? rankFromPoints(current) : null;
+          // On the ladder the circle takes the tier's colour, so the row
+          // reads as a climb through tiers rather than a run of red.
+          const colors = rank
+            ? {
+                bg: `${TIER_HEX[rank.tier] ?? "#9AA0A6"}1F`,
+                border: TIER_HEX[rank.tier] ?? "#9AA0A6",
+                text: TIER_HEX[rank.tier] ?? "#9AA0A6",
+              }
+            : scoreColors(point.score);
           const next = history[i + 1];
-          const up = next && next.score > point.score;
-          const down = next && next.score < point.score;
+          const nextValue = next ? value(i + 1) : null;
+          const up = nextValue !== null && nextValue > current;
+          const down = nextValue !== null && nextValue < current;
           const arrowColor = up ? "var(--green)" : down ? "var(--danger)" : "var(--ink-3)";
           const arrowIcon = up ? "↗" : down ? "↘" : "→";
 
@@ -62,10 +108,25 @@ export function CoachingArcCard({ arc }: { arc: CoachingArcData }) {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   flexShrink: 0,
                 }}>
-                  <span style={{ fontSize: 19, fontWeight: 900, color: colors.text, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                    {point.score}
-                  </span>
+                  {rank ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/ranks/${rank.tier.toLowerCase()}.png`}
+                      alt=""
+                      aria-hidden="true"
+                      style={{ width: 40, height: 40, objectFit: "contain", display: "block" }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 19, fontWeight: 900, color: colors.text, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                      {point.score}
+                    </span>
+                  )}
                 </div>
+                {rank && (
+                  <span style={{ fontSize: 10, fontWeight: 700, color: colors.text, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                    {rank.label}
+                  </span>
+                )}
                 <span style={{ fontSize: 10, color: "var(--ink-3)", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
                   {shortDate(point.date)}
                 </span>

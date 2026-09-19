@@ -100,7 +100,7 @@ export default async function DashboardPage() {
   // Latest analyzed VODs — most recent first, up to 12 for trend
   const { data: recentVods } = await supabase
     .from("vods")
-    .select("id, title, duration_seconds, analyzed_at, stream_date, coach_report, created_at, peak_data, rank_delta")
+    .select("id, title, duration_seconds, analyzed_at, stream_date, coach_report, created_at, peak_data, rank_delta, rank_points_after")
     .eq("user_id", user.id)
     .eq("status", "ready")
     .order("stream_date", { ascending: false, nullsFirst: false })
@@ -323,7 +323,14 @@ export default async function DashboardPage() {
           longitudinal coaching, which is the value we're selling on the paywall.
           Free users see locked teasers inside their report instead. */}
       {isPro && profile?.coaching_arc && (
-        <CoachingArcCard arc={profile.coaching_arc as CoachingArcData} />
+        <CoachingArcCard
+          arc={profile.coaching_arc as CoachingArcData}
+          // Live ladder data, keyed by VOD, so the arc can show the climb
+          // through tiers instead of a row of raw scores.
+          rankHistory={(recentVods ?? [])
+            .filter((v) => typeof v.rank_points_after === "number")
+            .map((v) => ({ vod_id: v.id as string, points: v.rank_points_after as number }))}
+        />
       )}
 
       {/* Reference row.
