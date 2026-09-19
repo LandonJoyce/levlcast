@@ -145,15 +145,38 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<vo
     return;
   }
 
-  // 10 min minimum (skip tiny test streams), 4 hour max (free-tier rule)
+  // Pick the VOD to analyze on signup.
+  //
+  // This used to require 10 minutes to 4 hours and give up entirely if
+  // nothing fit. Real signups died on that. One user arrived with three
+  // VODs, two of them over four hours, so the rule refused all of them and
+  // their first impression of the product was an empty dashboard. A
+  // streamer whose sessions run long is the LAST person we should be
+  // silently skipping — they have the most to be coached on.
+  //
+  // The 4-hour ceiling was never a technical limit either. Transcription
+  // chunks at 12 minutes, so length costs time, not correctness.
+  //
+  // Now: prefer a VOD in the comfortable range, but if none exists, fall
+  // back to the longest one over the minimum rather than doing nothing.
+  // Showing a report on a 5-hour stream beats showing nothing at all.
   const MIN_DURATION = 10 * 60;
-  const MAX_DURATION = 4 * 60 * 60;
-  const eligible = vods.find((v) => {
-    const dur = parseTwitchDuration(v.duration);
-    return dur >= MIN_DURATION && dur <= MAX_DURATION;
-  });
+  const PREFERRED_MAX = 4 * 60 * 60;
 
-  if (!eligible) return;
+  const withDuration = vods
+    .map((v) => ({ vod: v, dur: parseTwitchDuration(v.duration) }))
+    .filter((x) => x.dur >= MIN_DURATION);
+
+  const preferred = withDuration.find((x) => x.dur <= PREFERRED_MAX);
+  const fallback = withDuration.sort((a, b) => a.dur - b.dur)[0];
+  const eligible = (preferred ?? fallback)?.vod;
+
+  if (!eligible) {
+    console.log(
+      `[auth/callback/auto-analyze] user ${userId} has ${vods.length} VODs but none over ${MIN_DURATION}s — nothing queued`
+    );
+    return;
+  }
 
   // Atomic claim: only flip status to transcribing if it's still pending
   const { data: claimed } = await admin

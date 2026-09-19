@@ -193,10 +193,32 @@ function NoStreamsState({ name }: { name: string }) {
         <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: "0 0 10px", color: "var(--ink)" }}>
           Welcome, {name}. Stream once and we&apos;re off.
         </h2>
-        <p style={{ margin: "0 auto 24px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "54ch" }}>
-          Twitch doesn&apos;t have any recent broadcasts on file for your account.
-          As soon as your next stream ends, come back and hit Sync — your first
-          coach report is 5 minutes away.
+        {/* The real reason this screen appears, said out loud.
+            Three of ten September signups landed here and left. Telling
+            someone "stream once and come back" gives them nothing to do
+            today, and worse, it hides the actual cause: Twitch does not
+            save VODs unless the streamer has turned it on, and most small
+            streamers never have. Someone can stream every night and still
+            see this screen forever. Naming the setting turns a dead end
+            into a two-minute fix. */}
+        <p style={{ margin: "0 auto 16px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "56ch" }}>
+          Twitch has no saved broadcasts for your account. Usually that means VOD
+          saving is switched off, which is the Twitch default and catches almost
+          everybody.
+        </p>
+        <p style={{ margin: "0 auto 24px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "56ch" }}>
+          Turn on{" "}
+          <a
+            href="https://dashboard.twitch.tv/settings/stream"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--blue)", fontWeight: 600 }}
+          >
+            Store past broadcasts
+          </a>{" "}
+          in your Twitch settings and your next stream saves automatically. In
+          the meantime you can read a report on any stream right now, including
+          someone else&apos;s.
         </p>
 
         <div style={{ display: "inline-flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>

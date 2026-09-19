@@ -29,6 +29,7 @@ import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_TRIAL_LIMITS, FOUNDING_LIMITS, PRO_LIMITS } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
+import { computeDelta } from "@/lib/rank";
 import { fillOutreachQueue } from "@/lib/outreach";
 import { redditSendMessage } from "@/lib/reddit";
 
@@ -413,12 +414,29 @@ export const analyzeVod = inngest.createFunction(
             return;
           }
 
+          // Move the ladder. This is what the user actually sees, so it
+          // happens in the same write as the report rather than in a job
+          // that could lag behind it or fail separately.
+          const rank = await applyRankForAnalysis(
+            supabase,
+            userId,
+            vodId,
+            (coachReport as { overall_score?: number } | null)?.overall_score ?? null
+          );
+
           await Promise.all([
             supabase.from("vods").update({
               status: "ready",
               peak_data: peaks,
               coach_report: coachReport,
               analyzed_at: now.toISOString(),
+              ...(rank
+                ? {
+                    rank_delta: rank.delta,
+                    rank_points_after: rank.points,
+                    rank_tier_change: rank.tierChange,
+                  }
+                : {}),
             }).eq("id", vodId),
             supabase.from("usage_logs").upsert(
               { user_id: userId, month, analyses_count: alreadyUsed + 1 },
@@ -2011,6 +2029,168 @@ export const analyzePublicPreview = inngest.createFunction(
         .eq("id", previewId);
       throw err;
     }
+  }
+);
+
+/**
+ * Move a user's rank after an analysis completes.
+ *
+ * Reads their last five scores, computes the delta, writes the new rating
+ * back to the profile, and hands the caller what changed so the VOD row
+ * can record it. Returns null when there is no score to grade, which
+ * leaves the ladder untouched rather than guessing.
+ *
+ * Deliberately best-effort: a rank write must never fail an analysis. The
+ * report is the thing the user paid for; the rank is the thing that makes
+ * them come back. Losing the second is bad, losing the first is worse.
+ */
+async function applyRankForAnalysis(
+  supabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  vodId: string,
+  score: number | null
+): Promise<{ delta: number; points: number; tierChange: "up" | "down" | null } | null> {
+  if (score === null || !Number.isFinite(score)) return null;
+
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("rank_points, rank_last_was_loss")
+      .eq("id", userId)
+      .single();
+
+    // Prior scores only — this VOD has not been marked ready yet, so it
+    // cannot contaminate its own comparison.
+    const { data: history } = await supabase
+      .from("vods")
+      .select("coach_report")
+      .eq("user_id", userId)
+      .eq("status", "ready")
+      .neq("id", vodId)
+      .order("analyzed_at", { ascending: false })
+      .limit(5);
+
+    const rows = (history ?? []) as Array<{ coach_report: { overall_score?: number } | null }>;
+    const recentScores = rows
+      .map((row) => row.coach_report?.overall_score)
+      .filter((s): s is number => typeof s === "number" && Number.isFinite(s));
+
+    const result = computeDelta({
+      score,
+      recentScores,
+      points: (profile?.rank_points as number | null) ?? 0,
+      lastWasLoss: Boolean(profile?.rank_last_was_loss),
+    });
+
+    await supabase
+      .from("profiles")
+      .update({
+        rank_points: result.points,
+        rank_last_was_loss: result.delta < 0,
+      })
+      .eq("id", userId);
+
+    console.log(
+      `[rank] ${userId}: ${result.from.label} -> ${result.to.label} (${result.delta >= 0 ? "+" : ""}${result.delta})`
+    );
+
+    return { delta: result.delta, points: result.points, tierChange: result.tierChange };
+  } catch (err) {
+    console.warn("[rank] skipped:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
+ * Rescue signups who never got a first report.
+ *
+ * Seven of the ten accounts created in September never saw a single
+ * analysis. Some had no eligible VOD under the old rule, some had a job
+ * that died mid-flight, and one had a perfectly analyzable 63-minute VOD
+ * sitting untouched because the signup hook simply did not fire.
+ *
+ * Nothing in the product noticed. A user who never gets a report cannot
+ * be converted, cannot be emailed anything useful, and has no reason to
+ * come back — so this is worth more than any amount of new traffic.
+ *
+ * Runs hourly over accounts younger than seven days, and queues ONE
+ * analysis for anyone sitting on synced VODs with nothing to show. The
+ * free trial's two-analysis allowance is still enforced downstream, so
+ * this can never spend more than the user was already entitled to.
+ */
+export const rescueUnactivatedSignups = inngest.createFunction(
+  { id: "rescue-unactivated-signups", retries: 1 },
+  { cron: "20 * * * *" },
+  async ({ step }) => {
+    return await step.run("rescue", async () => {
+      const supabase = createAdminClient();
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: recent } = await supabase
+        .from("profiles")
+        .select("id, twitch_login")
+        .gte("created_at", weekAgo);
+
+      if (!recent || recent.length === 0) return { checked: 0, queued: 0 };
+
+      let queued = 0;
+
+      for (const profile of recent) {
+        const userId = profile.id as string;
+
+        // Already has a report? Nothing to rescue.
+        const { count: readyCount } = await supabase
+          .from("vods")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("status", "ready");
+        if ((readyCount ?? 0) > 0) continue;
+
+        // Anything already moving? Don't stack a second job on top.
+        const { count: busyCount } = await supabase
+          .from("vods")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .in("status", ["transcribing", "analyzing"]);
+        if ((busyCount ?? 0) > 0) continue;
+
+        // Pick the shortest pending VOD over the minimum: cheapest to run
+        // and fastest to put something in front of them.
+        const { data: candidates } = await supabase
+          .from("vods")
+          .select("id, duration_seconds")
+          .eq("user_id", userId)
+          .eq("status", "pending")
+          .gte("duration_seconds", 10 * 60)
+          .order("duration_seconds", { ascending: true })
+          .limit(1);
+
+        const candidate = candidates?.[0];
+        if (!candidate) continue;
+
+        const { data: claimed } = await supabase
+          .from("vods")
+          .update({ status: "transcribing" })
+          .eq("id", candidate.id)
+          .eq("status", "pending")
+          .select("id")
+          .maybeSingle();
+        if (!claimed) continue;
+
+        await inngest.send({
+          id: `vod-analyze-${candidate.id}`,
+          name: "vod/analyze",
+          data: { vodId: candidate.id, userId },
+        });
+
+        queued++;
+        console.log(
+          `[rescue] queued first analysis for ${profile.twitch_login} (vod ${candidate.id})`
+        );
+      }
+
+      return { checked: recent.length, queued };
+    });
   }
 );
 

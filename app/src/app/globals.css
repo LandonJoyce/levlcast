@@ -2668,3 +2668,65 @@
 @media (max-width: 900px) {
   .dash .dash-ref-row[data-two="yes"] { grid-template-columns: 1fr; }
 }
+
+/* ── Rank badge ─────────────────────────────────────────────────────────
+   The number that replaces the raw score as a user's headline. Colours
+   come from the tier via a CSS variable set inline, so one rule set
+   serves every tier and nothing needs a per-tier class. */
+.dash .rank-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+.dash .rank-badge-row { display: flex; align-items: baseline; gap: 10px; }
+.dash .rank-badge-tier {
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--rank-fg, var(--ink));
+}
+.dash .rank-badge[data-size="sm"] .rank-badge-tier { font-size: 17px; }
+.dash .rank-badge[data-size="lg"] .rank-badge-tier { font-size: 38px; }
+.dash .rank-badge-delta {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.dash .rank-badge-delta.up { color: var(--green); }
+.dash .rank-badge-delta.down { color: var(--ink-3); }
+.dash .rank-badge-track {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--rank-bg, var(--surface-2));
+  overflow: hidden;
+}
+.dash .rank-badge-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--rank-fg, var(--ink-3));
+  transition: width 600ms cubic-bezier(0.2, 0.85, 0.35, 1);
+}
+.dash .rank-badge-sub {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.dash .rank-badge-unranked .rank-badge-tier { color: var(--ink-3); }
+
+/* Rank emblem. Sized off the tier text so one size prop scales both. */
+.dash .rank-badge-emblem {
+  width: 40px;
+  height: 40px;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.dash .rank-badge[data-size="sm"] .rank-badge-emblem { width: 26px; height: 26px; }
+.dash .rank-badge[data-size="lg"] .rank-badge-emblem { width: 62px; height: 62px; }
+.dash .rank-badge-row { align-items: center; }

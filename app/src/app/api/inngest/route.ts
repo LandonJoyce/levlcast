@@ -1,6 +1,6 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
-import { analyzeVod, analyzePublicPreview, outreachHarvest, outreachDispatch, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods } from "@/lib/inngest/functions";
+import { analyzeVod, analyzePublicPreview, rescueUnactivatedSignups, outreachHarvest, outreachDispatch, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods } from "@/lib/inngest/functions";
 
 // Capped at 300s — Vercel Hobby's hard max. Each Inngest step runs as a
 // separate webhook invocation, and every step in our pipeline (get-vod-
@@ -13,5 +13,5 @@ export const maxDuration = 300;
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [analyzeVod, analyzePublicPreview, outreachHarvest, outreachDispatch, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods],
+  functions: [analyzeVod, analyzePublicPreview, rescueUnactivatedSignups, outreachHarvest, outreachDispatch, generateClip, cleanupStuckClips, cleanupStuckVods, cleanupOrphanedR2Objects, computeBurnoutScores, computeContentReports, compileWeeklyDigest, sendActivationNudge, sendStreakNudge, autoSyncTwitchVods],
 });
