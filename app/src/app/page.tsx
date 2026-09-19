@@ -184,7 +184,7 @@ export default function HomePage() {
           <div className="lv2-def">
             <dt>Everyone sees it</dt>
             <dd>
-              The <Link href="/leaderboard">top 50</Link> are public. Nobody below that is listed.
+              The <Link href="/leaderboard">top 50</Link> are public.
             </dd>
           </div>
         </dl>
