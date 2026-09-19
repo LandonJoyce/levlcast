@@ -411,3 +411,38 @@
   .lv2 .lv2-ios-sec { grid-template-columns: 1fr; }
   .lv2 .lv2-ios-shot { max-width: 320px; }
 }
+
+/* ── Rank section ───────────────────────────────────────────────────────
+   The emblems are the argument here, so they get a full-width row of their
+   own and the copy stays out of the way. Ascending left to right means the
+   row itself reads as a climb without a single word of explanation. */
+.lv2 .lv2-rank-lede {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ll-fg-mute);
+  margin: -8px 0 28px;
+  max-width: 52ch;
+}
+.lv2 .lv2-rank-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(4px, 1.5vw, 14px);
+  margin-bottom: 34px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.lv2 .lv2-rank-strip img {
+  width: clamp(44px, 8.5vw, 84px);
+  height: auto;
+  flex-shrink: 0;
+  display: block;
+}
+/* Lower tiers sit back so the row has a visible gradient of importance
+   rather than nine equally loud badges. */
+.lv2 .lv2-rank-strip img:nth-child(1) { opacity: 0.55; }
+.lv2 .lv2-rank-strip img:nth-child(2) { opacity: 0.62; }
+.lv2 .lv2-rank-strip img:nth-child(3) { opacity: 0.7; }
+.lv2 .lv2-rank-strip img:nth-child(4) { opacity: 0.78; }
+.lv2 .lv2-rank-strip img:nth-child(5) { opacity: 0.86; }
+.lv2 .lv2-rank-strip img:nth-child(6) { opacity: 0.92; }
+.lv2 .lv2-defs a { color: var(--ll-fg); text-decoration: underline; text-underline-offset: 3px; }

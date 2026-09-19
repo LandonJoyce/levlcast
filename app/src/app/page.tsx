@@ -150,6 +150,46 @@ export default function HomePage() {
         </dl>
       </section>
 
+      {/* ── Rank ──
+          Written the way the rest of the page is: short sentences, no
+          marketing voice, nothing a streamer has to decode. The emblems do
+          the selling, so the copy just explains the rule and gets out. */}
+      <section className="lv2-sec" id="rank">
+        <h2 className="lv2-h2">You get ranked</h2>
+        <p className="lv2-rank-lede">
+          Every stream you analyze moves you up or down, like a ranked ladder in
+          any game you play. Iron at the bottom, Challenger at the top.
+        </p>
+
+        <div className="lv2-rank-strip" aria-hidden="true">
+          {["iron", "bronze", "silver", "gold", "platinum", "diamond", "master", "grandmaster", "challenger"].map((tier) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={tier} src={`/ranks/${tier}.png`} alt="" loading="lazy" />
+          ))}
+        </div>
+
+        <dl className="lv2-defs">
+          <div className="lv2-def">
+            <dt>You climb</dt>
+            <dd>By beating your own last few streams. Not by being big.</dd>
+          </div>
+          <div className="lv2-def">
+            <dt>Bad night</dt>
+            <dd>Costs you less than a good one earns. One stream never drops your rank.</dd>
+          </div>
+          <div className="lv2-def">
+            <dt>Going up</dt>
+            <dd>Gets harder the higher you are. Iron is quick. Challenger is not.</dd>
+          </div>
+          <div className="lv2-def">
+            <dt>Everyone sees it</dt>
+            <dd>
+              The <Link href="/leaderboard">top 50</Link> are public. Nobody below that is listed.
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       {/* ── Clip editor ──
           Landon's screenshot. Given room rather than framed in a card, with
           the caption set as a single line above it, because the shot is
