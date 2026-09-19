@@ -121,18 +121,27 @@ function romanise(n: number): string {
  * Where a brand new streamer starts.
  *
  * Placed off the absolute score, because there is no history to compare
- * against yet, but floored at Bronze IV. A first experience of "you are
- * the lowest rank that exists" is exactly the moment people close the tab,
- * and we have the data showing they do.
+ * against yet, but floored at Iron II. A first experience of "you are the
+ * lowest rank that exists" is exactly the moment people close the tab, and
+ * we have the data showing they do.
  */
 export function placementPoints(score: number): number {
   const clamped = Math.max(0, Math.min(100, score));
-  // 0-100 maps across Bronze IV to Platinum IV. Scoring well on a first
-  // stream should visibly place you higher; scoring badly still lands
-  // somewhere with room below the ceiling and dignity intact.
-  const BRONZE_IV = 400;
-  const PLATINUM_IV = 1600;
-  return Math.round(BRONZE_IV + (clamped / 100) * (PLATINUM_IV - BRONZE_IV));
+  // Iron II up to Gold IV.
+  //
+  // The first version of this ran Bronze IV to Platinum IV, and a backfill
+  // over 53 real users showed why that was wrong: coach scores cluster
+  // hard in the 40s and 50s, so almost every single user placed into
+  // Silver. A ladder where everyone is the same rank is not a ladder, and
+  // someone with twelve analysed streams sat in the same tier as someone
+  // with one.
+  //
+  // Placing lower leaves somewhere to climb, which is the entire product.
+  // The floor is Iron II rather than Iron IV so a bad first stream still
+  // is not rock bottom.
+  const IRON_II = 200;
+  const GOLD_IV = 1200;
+  return Math.round(IRON_II + (clamped / 100) * (GOLD_IV - IRON_II));
 }
 
 export interface DeltaInput {
@@ -166,7 +175,7 @@ const MAX_LOSS = 25;
 /** Losses count for less than wins. See the header for why. */
 const LOSS_WEIGHT = 0.45;
 /** Awarded for streaming and analysing at all, before performance. */
-const PARTICIPATION = 8;
+const PARTICIPATION = 14;
 /** How many points a single point of score improvement is worth. */
 const SCORE_TO_POINTS = 3;
 
