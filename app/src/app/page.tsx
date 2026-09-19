@@ -131,9 +131,12 @@ export default function HomePage() {
       <section className="lv2-sec" id="report">
         <h2 className="lv2-h2">What you get</h2>
         <dl className="lv2-defs">
+          {/* Was "a score out of 100". The product does not lead with that
+              number any more, so promising it here set up the wrong
+              expectation before anyone even signed in. */}
           <div className="lv2-def">
-            <dt>Score</dt>
-            <dd>A score out of 100, and why you got it.</dd>
+            <dt>Points</dt>
+            <dd>Every stream earns or loses points toward your next rank.</dd>
           </div>
           <div className="lv2-def">
             <dt>Quotes</dt>
@@ -157,8 +160,9 @@ export default function HomePage() {
       <section className="lv2-sec" id="rank">
         <h2 className="lv2-h2">You get ranked</h2>
         <p className="lv2-rank-lede">
-          Every stream you analyze moves you up or down, like a ranked ladder in
-          any game you play. Iron at the bottom, Challenger at the top.
+          Every stream you analyze earns or loses points toward your next rank,
+          like any ladder you already grind. Iron at the bottom, Challenger at
+          the top.
         </p>
 
         <div className="lv2-rank-strip" aria-hidden="true">
