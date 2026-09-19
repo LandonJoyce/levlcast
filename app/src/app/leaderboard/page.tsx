@@ -1,7 +1,7 @@
 /**
  * Public leaderboard.
  *
- * Top 25 only, deliberately. A full listing would publish every user's
+ * Top 50 only, deliberately. A full listing would publish every user's
  * rank including everyone sitting at the bottom, and none of them signed
  * up to be ranked in public. A cut-off turns the page into something you
  * earn your way onto rather than something done to you.
@@ -52,7 +52,7 @@ async function topStreamers(): Promise<Row[]> {
       .select("twitch_login, twitch_display_name, twitch_avatar_url, rank_points")
       .not("rank_points", "is", null)
       .order("rank_points", { ascending: false })
-      .limit(25);
+      .limit(50);
     return (data as Row[] | null) ?? [];
   } catch {
     return [];
