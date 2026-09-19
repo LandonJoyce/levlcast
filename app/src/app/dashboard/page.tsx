@@ -1,7 +1,6 @@
 ﻿import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import DashScoreRing from "@/components/dashboard/DashScoreRing";
 import { scoreColorVar, rankFor } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import PendingVodHandler from "@/components/dashboard/pending-vod-handler";
@@ -273,17 +272,19 @@ export default async function DashboardPage() {
               effect we pulled off the landing hero for the same reason: a
               coloured haze behind a card adds atmosphere and no information,
               and it is the first thing that reads as generated. */}
-          {/* Rank above the score ring. The ring says how this one stream
-              went; the rank says where they are and what is next, which is
-              the thing worth opening the dashboard for. */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-            <RankBadge
-              points={(profile?.rank_points as number | null) ?? null}
-              delta={(latest?.rank_delta as number | null) ?? null}
-              size="lg"
-            />
-            <DashScoreRing value={latestScore ?? 0} size={132} />
-          </div>
+          {/* The score ring used to sit here under the rank. It's gone.
+              A big red 14 directly beneath a rank is the exact verdict the
+              ladder exists to replace, and showing both meant the first
+              thing a streamer saw was their standing and the second was a
+              failing grade. The rank answers "how am I doing" and the
+              report answers "what do I fix", which left the ring saying
+              something neither of them needed. The score still drives
+              everything underneath; it just isn't the greeting. */}
+          <RankBadge
+            points={(profile?.rank_points as number | null) ?? null}
+            delta={(latest?.rank_delta as number | null) ?? null}
+            size="lg"
+          />
           <div className="col gap-sm" style={{ position: "relative" }}>
             <span className="mono-label">Next session goal</span>
             <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
