@@ -15,6 +15,7 @@ import { OnboardingHero } from "@/components/dashboard/onboarding-hero";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { PreStreamFocus } from "@/components/dashboard/pre-stream-focus";
 import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
+import { RankBadge } from "@/components/dashboard/rank-badge";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, plan, subscription_expires_at, coaching_arc")
+    .select("twitch_display_name, plan, subscription_expires_at, coaching_arc, rank_points")
     .eq("id", user.id)
     .single();
 
@@ -100,7 +101,7 @@ export default async function DashboardPage() {
   // Latest analyzed VODs — most recent first, up to 12 for trend
   const { data: recentVods } = await supabase
     .from("vods")
-    .select("id, title, duration_seconds, analyzed_at, stream_date, coach_report, created_at, peak_data")
+    .select("id, title, duration_seconds, analyzed_at, stream_date, coach_report, created_at, peak_data, rank_delta")
     .eq("user_id", user.id)
     .eq("status", "ready")
     .order("stream_date", { ascending: false, nullsFirst: false })
@@ -272,7 +273,17 @@ export default async function DashboardPage() {
               effect we pulled off the landing hero for the same reason: a
               coloured haze behind a card adds atmosphere and no information,
               and it is the first thing that reads as generated. */}
-          <DashScoreRing value={latestScore ?? 0} size={160} />
+          {/* Rank above the score ring. The ring says how this one stream
+              went; the rank says where they are and what is next, which is
+              the thing worth opening the dashboard for. */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+            <RankBadge
+              points={(profile?.rank_points as number | null) ?? null}
+              delta={(latest?.rank_delta as number | null) ?? null}
+              size="lg"
+            />
+            <DashScoreRing value={latestScore ?? 0} size={132} />
+          </div>
           <div className="col gap-sm" style={{ position: "relative" }}>
             <span className="mono-label">Next session goal</span>
             <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
