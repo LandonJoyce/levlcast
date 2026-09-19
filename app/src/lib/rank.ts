@@ -49,18 +49,17 @@ export const TIERS: RankTier[] = [
   { name: "Diamond", floor: 2000 },
   { name: "Master", floor: 2400 },
   { name: "Grandmaster", floor: 2800 },
-  { name: "Challenger", floor: 3200 },
 ];
 
 /**
- * The top three tiers have no divisions.
+ * The top two tiers have no divisions.
  *
  * Same convention as the ladder this borrows from, and it exists for a
  * reason: above a certain point the interesting question stops being
  * "which quarter of the tier" and starts being "how far past the bar", so
  * these report a raw number instead of a grid position.
  */
-const DIVISIONLESS = new Set(["Master", "Grandmaster", "Challenger"]);
+const DIVISIONLESS = new Set(["Master", "Grandmaster"]);
 
 export const MAX_POINTS = 4000;
 

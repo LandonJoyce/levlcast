@@ -22,7 +22,6 @@ const TIER_COLOR: Record<string, { fg: string; bg: string }> = {
   Diamond: { fg: "#7CC5F5", bg: "rgba(124,197,245,0.14)" },
   Master: { fg: "#C084FC", bg: "rgba(192,132,252,0.16)" },
   Grandmaster: { fg: "#A855F7", bg: "rgba(168,85,247,0.18)" },
-  Challenger: { fg: "#E879F9", bg: "rgba(232,121,249,0.18)" },
 };
 
 export function RankBadge({

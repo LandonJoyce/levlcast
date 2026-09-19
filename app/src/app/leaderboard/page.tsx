@@ -34,7 +34,6 @@ const TIER_COLOR: Record<string, string> = {
   Diamond: "#7CC5F5",
   Master: "#C084FC",
   Grandmaster: "#A855F7",
-  Challenger: "#E879F9",
 };
 
 interface Row {

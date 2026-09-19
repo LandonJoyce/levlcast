@@ -4,7 +4,7 @@ import type { CoachingArcData } from "@/lib/coaching-arc";
 const TIER_HEX: Record<string, string> = {
   Iron: "#9AA0A6", Bronze: "#C1804B", Silver: "#B8C2CC", Gold: "#E3B341",
   Platinum: "#4FD1B9", Diamond: "#7CC5F5", Master: "#C084FC",
-  Grandmaster: "#A855F7", Challenger: "#E879F9",
+  Grandmaster: "#A855F7",
 };
 
 function scoreColors(s: number) {

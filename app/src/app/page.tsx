@@ -161,12 +161,12 @@ export default function HomePage() {
         <h2 className="lv2-h2">You get ranked</h2>
         <p className="lv2-rank-lede">
           Every stream you analyze earns or loses points toward your next rank,
-          like any ladder you already grind. Iron at the bottom, Challenger at
+          like any ladder you already grind. Iron at the bottom, Grandmaster at
           the top.
         </p>
 
         <div className="lv2-rank-strip" aria-hidden="true">
-          {["iron", "bronze", "silver", "gold", "platinum", "diamond", "master", "grandmaster", "challenger"].map((tier) => (
+          {["iron", "bronze", "silver", "gold", "platinum", "diamond", "master", "grandmaster"].map((tier) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={tier} src={`/ranks/${tier}.png`} alt="" loading="lazy" />
           ))}
@@ -183,7 +183,7 @@ export default function HomePage() {
           </div>
           <div className="lv2-def">
             <dt>Going up</dt>
-            <dd>Gets harder the higher you are. Iron is quick. Challenger is not.</dd>
+            <dd>Gets harder the higher you are. Iron is quick. Grandmaster is not.</dd>
           </div>
           <div className="lv2-def">
             <dt>Everyone sees it</dt>
