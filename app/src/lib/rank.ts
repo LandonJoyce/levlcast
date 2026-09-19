@@ -169,14 +169,31 @@ export interface DeltaResult {
 }
 
 /** Biggest single-stream swing. One bad night costs points, never a tier. */
-const MAX_GAIN = 45;
+const MAX_GAIN = 70;
 const MAX_LOSS = 25;
 /** Losses count for less than wins. See the header for why. */
 const LOSS_WEIGHT = 0.45;
 /** Awarded for streaming and analysing at all, before performance. */
-const PARTICIPATION = 14;
+const PARTICIPATION = 10;
 /** How many points a single point of score improvement is worth. */
-const SCORE_TO_POINTS = 3;
+const SCORE_TO_POINTS = 2;
+
+/**
+ * Absolute quality, not just improvement.
+ *
+ * The first version paid ONLY for beating your own recent average, which
+ * had a flaw worth naming: a streamer who is consistently good is
+ * consistently not improving, so someone scoring 65 every night climbed at
+ * the same crawl as someone scoring 25 every night. That is backwards. A
+ * good stream should pay because it was good.
+ *
+ * QUALITY_BASELINE is roughly a mediocre stream. Above it you earn every
+ * time, below it you bleed slowly. Improvement still counts on top, so the
+ * small streamer grinding from 25 to 35 is still rewarded for the climb —
+ * they just no longer out-earn someone holding a 70.
+ */
+const QUALITY_BASELINE = 35;
+const QUALITY_WEIGHT = 1.2;
 
 /**
  * How fast the ladder moves, by where you are on it.
@@ -219,9 +236,15 @@ export function computeDelta(input: DeltaInput): DeltaResult {
   const average = window.reduce((sum, s) => sum + s, 0) / window.length;
   const diff = input.score - average;
 
-  let raw = diff * SCORE_TO_POINTS;
+  // Three parts: how good the stream was, how much better than your recent
+  // form, and showing up at all.
+  const quality = (input.score - QUALITY_BASELINE) * QUALITY_WEIGHT;
+  const improvement = diff * SCORE_TO_POINTS;
+
+  let raw = quality + improvement + PARTICIPATION;
+  // Only the net result is softened, so a genuinely bad night still costs
+  // something while never costing as much as a good one earns.
   if (raw < 0) raw *= LOSS_WEIGHT;
-  raw += PARTICIPATION;
 
   // Climbing slows as you rise: 1.6 at the very bottom down to 0.3 at the
   // ceiling. Same stream performance is worth roughly five times more in
