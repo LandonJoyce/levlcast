@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { scoreColorVar, rankFor } from "@/lib/score-utils";
+import { scoreColorVar } from "@/lib/score-utils";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import PendingVodHandler from "@/components/dashboard/pending-vod-handler";
 import PendingCheckoutHandler from "@/components/dashboard/pending-checkout-handler";
@@ -238,7 +238,6 @@ export default async function DashboardPage() {
   }
 
   // ─── Populated state ───────────────────────────────────
-  const rank = rankFor(latestScore ?? 0);
   const delta = latestScore !== null && previousScore !== null ? latestScore - previousScore : null;
   const tableStreams = (recentVods ?? []).slice(0, 5);
 
@@ -255,8 +254,12 @@ export default async function DashboardPage() {
           <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
           <p className="page-sub">One thing to fix before you go live again.</p>
         </div>
+        {/* The "Fresh Streamer" chip is gone. It was a second, older title
+            system derived straight from the last score, so a user could be
+            Bronze III on the ladder and "Fresh Streamer" in the header at
+            the same time. Two competing names for how someone is doing is
+            worse than either one alone, and the ladder is the one we mean. */}
         <div className="row gap-md">
-          <span className={`rank-chip ${rank.cls}`}><Icons.Spark /> {rank.label}</span>
           <Link href="/dashboard/vods" className="btn btn-blue"><Icons.Twitch /> Sync streams</Link>
         </div>
       </div>

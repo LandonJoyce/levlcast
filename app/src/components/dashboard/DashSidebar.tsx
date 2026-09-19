@@ -22,6 +22,7 @@ const baseNavItems = [
   { id: "dashboard",    label: "Dashboard",   href: "/dashboard" },
   { id: "vods",         label: "VODs",        href: "/dashboard/vods" },
   { id: "clips",        label: "Clips",       href: "/dashboard/clips" },
+  { id: "leaderboard",  label: "Leaderboard", href: "/leaderboard" },
   { id: "collabs",      label: "Collabs",     href: "/dashboard/collabs" },
   { id: "connections",  label: "Connections", href: "/dashboard/connections" },
   { id: "account",      label: "Account",     href: "/dashboard/settings" },
