@@ -2210,9 +2210,22 @@ export const outreachHarvest = inngest.createFunction(
         console.log("[outreach] harvest skipped — OUTREACH_ENABLED is not 'true'");
         return { skipped: true };
       }
-      const result = await fillOutreachQueue(6);
-      console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped}`);
-      return result;
+
+      try {
+        const result = await fillOutreachQueue(6);
+        console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped}`);
+        return result;
+      } catch (err) {
+        // Reddit refusing us is expected, not a fault. Without an OAuth app
+        // it blocks datacenter IPs outright, and throwing here painted the
+        // Inngest dashboard red every six hours for a condition no retry
+        // can fix. A failure that fires on a timer and can never succeed
+        // trains you to ignore failures, which is how the real one gets
+        // missed. Logged and returned instead.
+        const message = err instanceof Error ? err.message : "harvest failed";
+        console.warn(`[outreach] harvest stood down: ${message}`);
+        return { skipped: true, reason: message };
+      }
     });
   }
 );
