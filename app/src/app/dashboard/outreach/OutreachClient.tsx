@@ -154,6 +154,49 @@ export default function OutreachPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Manual lead entry, for when Reddit will not serve discovery.
+  const [manualAuthor, setManualAuthor] = useState("");
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualBody, setManualBody] = useState("");
+
+  const manualInput: React.CSSProperties = {
+    background: "var(--surface-2)",
+    border: "1px solid var(--line)",
+    borderRadius: 8,
+    padding: "9px 12px",
+    color: "var(--ink)",
+    fontSize: 13,
+    outline: "none",
+    width: "100%",
+  };
+
+  function addManualLead() {
+    const author = manualAuthor.trim().replace(/^u\//i, "");
+    const body = manualBody.trim();
+    if (!author || !body) return;
+
+    const title = manualTitle.trim();
+    const lead: Lead = {
+      id: `manual-${Date.now()}`,
+      title: title || null,
+      body,
+      author,
+      subreddit: "manual",
+      // Best guess at their profile, since we have no permalink.
+      url: `https://www.reddit.com/user/${encodeURIComponent(author)}`,
+      created: Math.floor(Date.now() / 1000),
+      flair: null,
+      // No title means it reads as a comment, which changes how the
+      // drafting prompt opens.
+      isComment: !title,
+    };
+
+    setLeads((prev) => [lead, ...prev]);
+    setManualAuthor("");
+    setManualTitle("");
+    setManualBody("");
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem("outreach_sent_v1");
     if (saved) setSent(new Set(JSON.parse(saved)));
@@ -309,11 +352,57 @@ export default function OutreachPage() {
         </div>
       </div>
 
+      {/* Manual entry.
+          Reddit will not serve lead discovery without an OAuth app, and
+          that app cannot currently be created on this account. But finding
+          posts was only half of what this page did — the drafting half
+          never needed Reddit at all. Paste a post you found yourself and
+          it joins the list exactly like a fetched lead, with the same
+          draft, copy and compose buttons. */}
+      <div className="card card-pad" style={{ marginBottom: 20 }}>
+        <span className="mono-label" style={{ display: "block", marginBottom: 10 }}>
+          Paste a post
+        </span>
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 10 }}>
+            <input
+              value={manualAuthor}
+              onChange={(e) => setManualAuthor(e.target.value)}
+              placeholder="username"
+              style={manualInput}
+            />
+            <input
+              value={manualTitle}
+              onChange={(e) => setManualTitle(e.target.value)}
+              placeholder="post title (optional for comments)"
+              style={manualInput}
+            />
+          </div>
+          <textarea
+            value={manualBody}
+            onChange={(e) => setManualBody(e.target.value)}
+            placeholder="paste the post or comment text"
+            rows={3}
+            style={{ ...manualInput, resize: "vertical", fontFamily: "inherit" }}
+          />
+          <div className="row gap-md" style={{ justifyContent: "flex-end" }}>
+            <button
+              onClick={addManualLead}
+              disabled={!manualAuthor.trim() || !manualBody.trim()}
+              className="btn btn-blue"
+              style={{ fontSize: 12, padding: "7px 16px", opacity: !manualAuthor.trim() || !manualBody.trim() ? 0.5 : 1 }}
+            >
+              Add to list
+            </button>
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="card card-pad" style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px" }}>
           Fetching leads...
         </div>
-      ) : fetchError ? (
+      ) : fetchError && leads.length === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
           <p style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{fetchError}</p>
           <button onClick={fetchLeads} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 16px" }}>Try again</button>
