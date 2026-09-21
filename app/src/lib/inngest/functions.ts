@@ -2209,13 +2209,31 @@ export const outreachHarvest = inngest.createFunction(
   { cron: "0 * * * *" },
   async ({ step }) => {
     return await step.run("harvest", async () => {
-      if (process.env.OUTREACH_ENABLED !== "true") {
-        console.log("[outreach] harvest skipped — OUTREACH_ENABLED is not 'true'");
-        return { skipped: true };
-      }
+      // There is deliberately no env gate here any more. This function
+      // cannot send anything — it writes rows to our own table and stops.
+      // The brake that matters lives on outreachDispatch, which needs
+      // OUTREACH_AUTOSEND, and on the dashboard, where a person clicks.
+      // Gating the draft step as well only ever produced a silent no-op
+      // that looked identical to a working feature with no leads.
+      //
+      // The real cost of running hourly is Claude calls, so that is what
+      // is bounded: stop drafting once enough messages are waiting. At a
+      // send rate of a handful a day there is no point paying to write
+      // the hundredth draft nobody will reach.
+      const QUEUE_CEILING = 12;
 
       try {
-        const result = await fillOutreachQueue(6);
+        const { count: waiting } = await createAdminClient()
+          .from("outreach_contacts")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "queued");
+
+        if ((waiting ?? 0) >= QUEUE_CEILING) {
+          console.log(`[outreach] harvest idle — ${waiting} already queued`);
+          return { skipped: true, reason: "queue full", queued: waiting };
+        }
+
+        const result = await fillOutreachQueue(Math.min(6, QUEUE_CEILING - (waiting ?? 0)));
         console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped}`);
         return result;
       } catch (err) {

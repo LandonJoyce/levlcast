@@ -15,7 +15,6 @@ const SUBREDDITS = [
   { value: "Twitch", label: "r/Twitch" },
   { value: "streaming", label: "r/streaming" },
   { value: "ContentCreators", label: "r/ContentCreators" },
-  { value: "NewTubers", label: "r/NewTubers" },
   { value: "PartneredYoutube", label: "r/PartneredYoutube" },
 ];
 
@@ -157,6 +156,32 @@ export default function OutreachPage() {
   const [sending, setSending] = useState<string | null>(null);
   /** Reddit's own refusal text. Shown verbatim: it usually says how long to wait. */
   const [sendError, setSendError] = useState<string | null>(null);
+  /**
+   * Whether the server can post to Reddit itself. Without an OAuth app it
+   * cannot, and every Send falls back to a plain link that opens Reddit's
+   * compose screen already filled in.
+   *
+   * A link is used rather than window.open on purpose. Opening a window
+   * after an await has lost the user gesture, which is exactly what makes
+   * Firefox interrupt with a popup prompt. An anchor click never is.
+   */
+  const [canSendDirect, setCanSendDirect] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/outreach/send")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCanSendDirect(Boolean(d?.configured)))
+      .catch(() => setCanSendDirect(false));
+  }, []);
+
+  /** Reddit's compose screen, prefilled. */
+  function composeUrl(to: string, subject: string, body: string): string {
+    return (
+      `https://www.reddit.com/message/compose/?to=${encodeURIComponent(to)}` +
+      `&subject=${encodeURIComponent(subject)}` +
+      `&message=${encodeURIComponent(body)}`
+    );
+  }
 
   /**
    * The queue: drafts the scheduled harvest has already written and that
@@ -613,14 +638,30 @@ export default function OutreachPage() {
                 </p>
 
                 <div className="row gap-md">
-                  <button
-                    onClick={() => sendQueued(item)}
-                    disabled={sending === item.id}
-                    className="btn btn-blue"
-                    style={{ fontSize: 12, padding: "7px 18px", opacity: sending === item.id ? 0.6 : 1 }}
-                  >
-                    {sending === item.id ? "Sending..." : "Send"}
-                  </button>
+                  {canSendDirect ? (
+                    <button
+                      onClick={() => sendQueued(item)}
+                      disabled={sending === item.id}
+                      className="btn btn-blue"
+                      style={{ fontSize: 12, padding: "7px 18px", opacity: sending === item.id ? 0.6 : 1 }}
+                    >
+                      {sending === item.id ? "Sending..." : "Send"}
+                    </button>
+                  ) : (
+                    /* The message is already written, so this link needs no
+                       request first and opens on the click itself — which
+                       is what keeps the popup blocker out of the way. */
+                    <a
+                      href={composeUrl(item.reddit_username, item.message_subject ?? "Saw your post", item.message_body ?? "")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => resolveQueued(item, "sent")}
+                      className="btn btn-blue"
+                      style={{ fontSize: 12, padding: "7px 18px", textDecoration: "none" }}
+                    >
+                      Send
+                    </a>
+                  )}
                   <button
                     onClick={() => resolveQueued(item, "skip")}
                     style={{
@@ -742,9 +783,11 @@ export default function OutreachPage() {
                       there is no popup to unblock and no compose screen
                       to confirm. */}
                   {!messages[lead.id] && (
-                    <button onClick={() => writeAndSend(lead)} disabled={generating === lead.id || sending === lead.id}
+                    <button
+                      onClick={() => (canSendDirect ? writeAndSend(lead) : generateMessage(lead))}
+                      disabled={generating === lead.id || sending === lead.id}
                       className="btn btn-blue" style={{ fontSize: 12, padding: "6px 18px", whiteSpace: "nowrap", opacity: generating === lead.id || sending === lead.id ? 0.6 : 1 }}>
-                      {generating === lead.id ? "Writing..." : sending === lead.id ? "Sending..." : "Send"}
+                      {generating === lead.id ? "Writing..." : sending === lead.id ? "Sending..." : canSendDirect ? "Send" : "Write"}
                     </button>
                   )}
                   <button onClick={() => markSent(lead.id, lead.author)}
@@ -787,12 +830,22 @@ export default function OutreachPage() {
                     {messages[lead.id].body}
                   </p>
                   <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
-                    <button
-                      onClick={() => sendDraft(lead)}
-                      disabled={sending === lead.id}
-                      style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, fontWeight: 600, cursor: sending === lead.id ? "default" : "pointer", opacity: sending === lead.id ? 0.6 : 1 }}>
-                      {sending === lead.id ? "Sending..." : "Send this"}
-                    </button>
+                    {canSendDirect ? (
+                      <button
+                        onClick={() => sendDraft(lead)}
+                        disabled={sending === lead.id}
+                        style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, fontWeight: 600, cursor: sending === lead.id ? "default" : "pointer", opacity: sending === lead.id ? 0.6 : 1 }}>
+                        {sending === lead.id ? "Sending..." : "Send this"}
+                      </button>
+                    ) : (
+                      <a
+                        href={composeUrl(lead.author, messages[lead.id].subject, messages[lead.id].body)}
+                        target="_blank" rel="noopener noreferrer"
+                        onClick={() => markSent(lead.id, lead.author)}
+                        style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
+                        Send this
+                      </a>
+                    )}
                     <button onClick={() => copyMessage(lead.id)} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
                       {copied === lead.id ? "Copied!" : "Copy"}
                     </button>

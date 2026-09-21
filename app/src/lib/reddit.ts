@@ -233,6 +233,5 @@ export const OUTREACH_SUBS = [
   "Twitch",
   "streaming",
   "ContentCreators",
-  "NewTubers",
   "PartneredYoutube",
 ];

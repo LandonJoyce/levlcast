@@ -42,6 +42,21 @@ function missingCredentials(): string[] {
     .filter((name) => !process.env[name]);
 }
 
+/**
+ * Whether a message can be posted server-side right now.
+ *
+ * The dashboard asks once on load and picks its Send behaviour from the
+ * answer, so adding the credentials later upgrades the buttons with no
+ * code change, and their absence never produces a dead button.
+ */
+export async function GET(req: NextRequest) {
+  if (!(await requireAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const missing = missingCredentials();
+  return NextResponse.json({ configured: missing.length === 0, missing });
+}
+
 export async function POST(req: NextRequest) {
   if (!(await requireAdmin(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
