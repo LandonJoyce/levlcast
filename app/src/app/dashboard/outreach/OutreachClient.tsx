@@ -300,7 +300,37 @@ export default function OutreachPage() {
     setMessages((prev) => ({ ...prev, [lead.id]: { body, subject } }));
   }
 
-  async function generateMessage(lead: Lead) {
+  /**
+   * Write the message and open Reddit with it, in one click.
+   *
+   * The tab is opened BEFORE the fetch, not after. Browsers only allow
+   * window.open inside a real user gesture, and awaiting a request first
+   * breaks that chain, so the popup gets blocked. Opening blank and then
+   * pointing it at the compose URL keeps the gesture intact.
+   */
+  async function writeAndSend(lead: Lead) {
+    const tab = window.open("", "_blank", "noopener");
+    const result = await generateMessage(lead);
+
+    if (!result || result.skip) {
+      // Nothing worth sending. Close the tab we speculatively opened and
+      // leave the skip reason on screen.
+      tab?.close();
+      return;
+    }
+
+    const url =
+      `https://www.reddit.com/message/compose/?to=${encodeURIComponent(lead.author)}` +
+      `&subject=${encodeURIComponent(result.subject)}` +
+      `&message=${encodeURIComponent(result.body)}`;
+
+    if (tab) tab.location.href = url;
+    else window.open(url, "_blank", "noopener");
+
+    markSent(lead.id, lead.author);
+  }
+
+  async function generateMessage(lead: Lead): Promise<{ body: string; subject: string; skip?: boolean } | null> {
     setGenerating(lead.id);
     try {
       const res = await fetch("/api/outreach/message", {
@@ -317,17 +347,22 @@ export default function OutreachPage() {
       if (data.skip) {
         // Model decided LevlCast isn't a fit for this post. Surface that
         // verbatim so we don't paper over it with a forced DM.
-        setMessages((prev) => ({
-          ...prev,
-          [lead.id]: {
-            body: `[SKIP] ${data.reason ?? "Not a fit for LevlCast"}`,
-            subject: "Skip — not a fit",
-            skip: true,
-          },
-        }));
-        return;
+        const skipped = {
+          body: `[SKIP] ${data.reason ?? "Not a fit for LevlCast"}`,
+          subject: "Skip — not a fit",
+          skip: true,
+        };
+        setMessages((prev) => ({ ...prev, [lead.id]: skipped }));
+        return skipped;
       }
-      setMessages((prev) => ({ ...prev, [lead.id]: { body: data.message, subject: data.subject ?? (lead.isComment ? "Saw your comment" : "Saw your post") } }));
+      const written = {
+        body: data.message as string,
+        subject: (data.subject as string) ?? (lead.isComment ? "Saw your comment" : "Saw your post"),
+      };
+      setMessages((prev) => ({ ...prev, [lead.id]: written }));
+      return written;
+    } catch {
+      return null;
     } finally {
       setGenerating(null);
     }
@@ -598,10 +633,14 @@ export default function OutreachPage() {
                 </div>
 
                 <div className="row gap-sm" style={{ flexShrink: 0 }}>
+                  {/* One click: writes the message and opens Reddit with it
+                      already filled in. "Write message" then a second
+                      button was two steps for something that is always the
+                      same two steps. */}
                   {!messages[lead.id] && (
-                    <button onClick={() => generateMessage(lead)} disabled={generating === lead.id}
-                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap", opacity: generating === lead.id ? 0.6 : 1 }}>
-                      {generating === lead.id ? "Writing..." : "Write message"}
+                    <button onClick={() => writeAndSend(lead)} disabled={generating === lead.id}
+                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 18px", whiteSpace: "nowrap", opacity: generating === lead.id ? 0.6 : 1 }}>
+                      {generating === lead.id ? "Writing..." : "Send"}
                     </button>
                   )}
                   <button onClick={() => markSent(lead.id, lead.author)}

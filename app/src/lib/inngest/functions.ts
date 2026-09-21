@@ -2197,13 +2197,16 @@ export const rescueUnactivatedSignups = inngest.createFunction(
 /**
  * Outreach harvest — fills the queue, sends nothing.
  *
- * Runs a few times a day rather than constantly: Reddit's /new in ten
- * streamer subs does not turn over fast enough for more to find anything,
- * and every extra pass is Claude spend on posts already judged.
+ * Hourly. Ten streamer subs do not turn over fast enough for most runs to
+ * find anything new, and that is fine: the dedup table means a repeat pass
+ * over the same posts costs one mirror request and stops there, before any
+ * Claude call. Only genuinely new people reach the drafting step, so the
+ * cost of running often is close to zero and the queue is never stale when
+ * the page is opened.
  */
 export const outreachHarvest = inngest.createFunction(
   { id: "outreach-harvest", retries: 1 },
-  { cron: "0 */6 * * *" },
+  { cron: "0 * * * *" },
   async ({ step }) => {
     return await step.run("harvest", async () => {
       if (process.env.OUTREACH_ENABLED !== "true") {
