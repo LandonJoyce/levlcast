@@ -25,7 +25,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { redditGet, OUTREACH_SUBS } from "@/lib/reddit";
+import { OUTREACH_SUBS } from "@/lib/reddit";
 import { createAdminClient } from "@/lib/supabase/server";
 
 /** Help-seeking language. Mirrors the manual leads route. */
@@ -133,9 +133,34 @@ export function judgeLead(lead: HarvestedLead): { ok: boolean; reason?: string }
  */
 export async function harvestLeads(limit = 25): Promise<HarvestedLead[]> {
   const admin = createAdminClient();
-  const path = `/r/${OUTREACH_SUBS.join("+")}/new?limit=100`;
-  const json = await redditGet(path);
-  const children: Array<{ data?: Record<string, unknown> }> = json?.data?.children ?? [];
+
+  // Reddit's own API needs an OAuth app we do not have, and it blocks
+  // credential-free reads from datacenter IPs. Arctic Shift is a public
+  // Reddit mirror with no such restriction, and it is what this feature
+  // ran on before it was switched to OAuth and broke.
+  //
+  // Mirror data lags roughly two weeks behind real time. For automated
+  // outreach that is fine: a post from last week is still a person who
+  // asked for help, and nobody else has messaged them either.
+  const rows = await Promise.all(
+    OUTREACH_SUBS.map(async (sub) => {
+      try {
+        const res = await fetch(
+          `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&limit=100`,
+          { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
+        );
+        if (!res.ok) return [] as Array<Record<string, unknown>>;
+        const json = await res.json();
+        return (json?.data ?? []) as Array<Record<string, unknown>>;
+      } catch {
+        // One dead subreddit must not take the whole harvest with it.
+        return [] as Array<Record<string, unknown>>;
+      }
+    })
+  );
+
+  const children = rows.flat().map((d) => ({ data: d }));
+  if (children.length === 0) return [];
 
   const candidates: HarvestedLead[] = [];
   for (const child of children) {
