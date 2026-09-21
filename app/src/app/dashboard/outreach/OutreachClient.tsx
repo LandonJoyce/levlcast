@@ -154,6 +154,62 @@ export default function OutreachPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  /**
+   * The queue: drafts the scheduled harvest has already written and that
+   * are waiting to go out. This is the one-click path — the message is
+   * done, so all that is left is opening Reddit with it prefilled.
+   */
+  type QueueItem = {
+    id: string;
+    reddit_username: string;
+    subreddit: string | null;
+    permalink: string | null;
+    post_title: string | null;
+    post_excerpt: string | null;
+    message_subject: string | null;
+    message_body: string | null;
+    angle: string | null;
+  };
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+
+  const loadQueue = useCallback(async () => {
+    try {
+      const res = await fetch("/api/outreach/queue");
+      const data = await res.json();
+      setQueue(data.queue ?? []);
+    } catch {
+      // Queue is an enhancement; a failure here must not break the page.
+    }
+  }, []);
+
+  useEffect(() => { loadQueue(); }, [loadQueue]);
+
+  async function resolveQueued(item: QueueItem, action: "sent" | "skip") {
+    // Drop it from view immediately. Waiting on the round trip makes a
+    // one-click flow feel like a two-click one.
+    setQueue((prev) => prev.filter((q) => q.id !== item.id));
+    try {
+      await fetch("/api/outreach/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, action }),
+      });
+    } catch {
+      // Left queued server-side and will reappear on next load, which is
+      // the safe direction: better to see it twice than to lose it.
+      loadQueue();
+    }
+  }
+
+  function sendQueued(item: QueueItem) {
+    const url =
+      `https://www.reddit.com/message/compose/?to=${encodeURIComponent(item.reddit_username)}` +
+      `&subject=${encodeURIComponent(item.message_subject ?? "Saw your post")}` +
+      `&message=${encodeURIComponent(item.message_body ?? "")}`;
+    window.open(url, "_blank", "noopener");
+    resolveQueued(item, "sent");
+  }
+
   // Manual lead entry, for when Reddit will not serve discovery.
   const [manualAuthor, setManualAuthor] = useState("");
   const [manualTitle, setManualTitle] = useState("");
@@ -351,6 +407,100 @@ export default function OutreachPage() {
           </button>
         </div>
       </div>
+
+      {/* The queue. Written unattended by the six-hourly harvest, so this
+          is usually full before you open the page. Everything here is
+          already drafted; Send opens Reddit with it filled in. */}
+      {queue.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, overflow: "hidden" }}>
+          <div className="card-head">
+            <h3>Ready to send</h3>
+            <div className="right">
+              <span className="label-mono">{queue.length} drafted</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {queue.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: "14px 18px",
+                  borderTop: "1px solid var(--line)",
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <div className="row gap-md" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                    u/{item.reddit_username}
+                    {item.subreddit && (
+                      <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", marginLeft: 8 }}>
+                        r/{item.subreddit}
+                      </span>
+                    )}
+                  </span>
+                  {item.permalink && (
+                    <a
+                      href={item.permalink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mono"
+                      style={{ fontSize: 11, color: "var(--blue)" }}
+                    >
+                      their post
+                    </a>
+                  )}
+                </div>
+
+                {item.post_title && (
+                  <p style={{ margin: 0, fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.45 }}>
+                    {item.post_title}
+                  </p>
+                )}
+
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: "var(--ink-2)",
+                    whiteSpace: "pre-wrap",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 8,
+                    padding: "10px 12px",
+                  }}
+                >
+                  {item.message_body}
+                </p>
+
+                <div className="row gap-md">
+                  <button
+                    onClick={() => sendQueued(item)}
+                    className="btn btn-blue"
+                    style={{ fontSize: 12, padding: "7px 18px" }}
+                  >
+                    Send
+                  </button>
+                  <button
+                    onClick={() => resolveQueued(item, "skip")}
+                    style={{
+                      fontSize: 12,
+                      background: "transparent",
+                      border: 0,
+                      color: "var(--ink-3)",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Manual entry.
           Reddit will not serve lead discovery without an OAuth app, and
