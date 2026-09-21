@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { redditGet, OUTREACH_SUBS } from "@/lib/reddit";
+import { redditGet, isRedditConfigured, OUTREACH_SUBS } from "@/lib/reddit";
 
 export const runtime = "edge";
 
@@ -39,17 +39,37 @@ export async function GET(req: NextRequest) {
   const useAll = !subParam || subParam.toLowerCase() === "all";
   const subPath = useAll ? OUTREACH_SUBS.join("+") : subParam!;
 
+  /** Same credential-free mirror the posts route uses. See that file. */
+  const fetchCommentsFromMirror = async (sub: string): Promise<any[]> => {
+    const r = await fetch(
+      `https://arctic-shift.photon-reddit.com/api/comments/search?subreddit=${encodeURIComponent(sub)}&limit=100`,
+      { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
+    );
+    if (!r.ok) throw new Error(`Mirror returned ${r.status}`);
+    const j = await r.json();
+    return (j?.data ?? []) as any[];
+  };
+
   let children: any[] = [];
   try {
-    // /comments gives the newest comments across the sub(s).
-    const json = await redditGet(`/r/${encodeURIComponent(subPath)}/comments?limit=100`);
-    children = json?.data?.children ?? [];
+    if (isRedditConfigured()) {
+      // /comments gives the newest comments across the sub(s).
+      const json = await redditGet(`/r/${encodeURIComponent(subPath)}/comments?limit=100`);
+      children = json?.data?.children ?? [];
+    } else {
+      const subs = useAll ? OUTREACH_SUBS : [subParam!];
+      const results = await Promise.all(
+        subs.map((s) => fetchCommentsFromMirror(s).catch(() => [] as any[]))
+      );
+      children = results.flat().map((d) => ({ data: d }));
+    }
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? "Reddit fetch failed", comments: [] }, { status: 502 });
   }
 
   const seenAuthors = new Set<string>();
-  const cutoffSec = (Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000;
+  // Mirror data lags, so widen the window when running without OAuth.
+  const cutoffSec = (Date.now() - (isRedditConfigured() ? 14 : 30) * 24 * 60 * 60 * 1000) / 1000;
 
   const comments = children
     .map((c: any) => {

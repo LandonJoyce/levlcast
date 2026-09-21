@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { redditGet, OUTREACH_SUBS } from "@/lib/reddit";
+import { redditGet, isRedditConfigured, OUTREACH_SUBS } from "@/lib/reddit";
 
 export const runtime = "edge";
 
@@ -51,18 +51,59 @@ export async function GET(req: NextRequest) {
   const subPath = useAll ? OUTREACH_SUBS.join("+") : subParam!;
   const isPromo = !useAll && PROMO_SUBS.has(subParam!.toLowerCase());
 
+  /**
+   * Arctic Shift — a third-party Reddit mirror that needs no credentials.
+   *
+   * This is how the page worked before, and removing it in favour of Reddit
+   * OAuth is what killed it: Reddit blocks credential-free reads from
+   * datacenter IPs, so when the API keys went missing there was no path
+   * left. The mirror has no such restriction.
+   *
+   * It runs roughly two weeks behind real time, which is why the recency
+   * window below is generous rather than tight. Slightly stale leads beat
+   * no leads.
+   */
+  const fetchFromMirror = async (sub: string): Promise<any[]> => {
+    const r = await fetch(
+      `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&limit=100`,
+      { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
+    );
+    if (!r.ok) throw new Error(`Mirror returned ${r.status}`);
+    const j = await r.json();
+    return (j?.data ?? []) as any[];
+  };
+
   let children: any[] = [];
   try {
-    // /new gives freshest posts. Real-time via OAuth (no mirror lag).
-    const json = await redditGet(`/r/${encodeURIComponent(subPath)}/new?limit=100`);
-    children = json?.data?.children ?? [];
+    // Prefer OAuth when it is configured: real time rather than mirrored.
+    if (isRedditConfigured()) {
+      const json = await redditGet(`/r/${encodeURIComponent(subPath)}/new?limit=100`);
+      children = json?.data?.children ?? [];
+    } else {
+      // Mirror returns flat post objects, not Reddit's {kind, data} wrapper,
+      // so wrap them to keep one shape downstream.
+      const subs = useAll ? OUTREACH_SUBS : [subParam!];
+      const results = await Promise.all(
+        subs.map((s) => fetchFromMirror(s).catch(() => [] as any[]))
+      );
+      children = results.flat().map((d) => ({ data: d }));
+      if (children.length === 0) {
+        return NextResponse.json(
+          { error: "Could not load any subreddits from the mirror. Try again shortly.", posts: [] },
+          { status: 502 }
+        );
+      }
+    }
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? "Reddit fetch failed", posts: [] }, { status: 502 });
   }
 
   const seenAuthors = new Set<string>();
   // OAuth data is real-time, so we can use a tight, useful recency window.
-  const cutoffSec = (Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000;
+  // The mirror lags about two weeks, so a 14-day window would return almost
+  // nothing when running without OAuth. 30 days keeps the list populated.
+  const recencyDays = isRedditConfigured() ? 14 : 30;
+  const cutoffSec = (Date.now() - recencyDays * 24 * 60 * 60 * 1000) / 1000;
 
   const posts = children
     .map((c: any) => {
