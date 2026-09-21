@@ -139,9 +139,10 @@ export async function harvestLeads(limit = 25): Promise<HarvestedLead[]> {
   // Reddit mirror with no such restriction, and it is what this feature
   // ran on before it was switched to OAuth and broke.
   //
-  // Mirror data lags roughly two weeks behind real time. For automated
-  // outreach that is fine: a post from last week is still a person who
-  // asked for help, and nobody else has messaged them either.
+  // Measured against the live mirror: it returns posts minutes old, not
+  // the multi-week lag its archive reputation suggests. A full pass over
+  // all ten subs yields ~130 qualifying leads from 1000 posts, so the
+  // constraint on this feature is send pacing, not supply.
   const rows = await Promise.all(
     OUTREACH_SUBS.map(async (sub) => {
       try {

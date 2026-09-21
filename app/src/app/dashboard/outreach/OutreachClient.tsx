@@ -153,6 +153,10 @@ export default function OutreachPage() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  /** Lead or queue id currently in flight, so its button can show progress. */
+  const [sending, setSending] = useState<string | null>(null);
+  /** Reddit's own refusal text. Shown verbatim: it usually says how long to wait. */
+  const [sendError, setSendError] = useState<string | null>(null);
 
   /**
    * The queue: drafts the scheduled harvest has already written and that
@@ -201,13 +205,41 @@ export default function OutreachPage() {
     }
   }
 
-  function sendQueued(item: QueueItem) {
-    const url =
-      `https://www.reddit.com/message/compose/?to=${encodeURIComponent(item.reddit_username)}` +
-      `&subject=${encodeURIComponent(item.message_subject ?? "Saw your post")}` +
-      `&message=${encodeURIComponent(item.message_body ?? "")}`;
-    window.open(url, "_blank", "noopener");
-    resolveQueued(item, "sent");
+  /**
+   * Send a queued message. No tab, no popup, no second click inside
+   * Reddit — the server posts it to /api/compose and the row only leaves
+   * the queue once Reddit has confirmed.
+   *
+   * Deliberately NOT optimistic. A message that silently failed to send
+   * but vanished from the queue is unrecoverable: you cannot tell who was
+   * missed. So the row stays put until the send is confirmed, and a
+   * failure puts Reddit's own reason on screen.
+   */
+  async function sendQueued(item: QueueItem) {
+    setSending(item.id);
+    setSendError(null);
+    try {
+      const res = await fetch("/api/outreach/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: item.reddit_username,
+          subject: item.message_subject ?? "Saw your post",
+          body: item.message_body ?? "",
+          queueId: item.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSendError(data.error ?? "Reddit refused the message");
+        return;
+      }
+      setQueue((prev) => prev.filter((q) => q.id !== item.id));
+    } catch {
+      setSendError("Could not reach the server. Nothing was sent.");
+    } finally {
+      setSending(null);
+    }
   }
 
   // Manual lead entry, for when Reddit will not serve discovery.
@@ -301,33 +333,76 @@ export default function OutreachPage() {
   }
 
   /**
-   * Write the message and open Reddit with it, in one click.
+   * Write the message and send it, in one actual click.
    *
-   * The tab is opened BEFORE the fetch, not after. Browsers only allow
-   * window.open inside a real user gesture, and awaiting a request first
-   * breaks that chain, so the popup gets blocked. Opening blank and then
-   * pointing it at the compose URL keeps the gesture intact.
+   * Nothing opens. The draft is written, handed to the server, and posted
+   * to Reddit in the same gesture, so there is no popup to unblock and no
+   * compose screen to confirm. The lead is only marked sent once Reddit
+   * has accepted it.
    */
   async function writeAndSend(lead: Lead) {
-    const tab = window.open("", "_blank", "noopener");
+    setSendError(null);
     const result = await generateMessage(lead);
+    if (!result || result.skip) return; // Skip reason is already on screen.
 
-    if (!result || result.skip) {
-      // Nothing worth sending. Close the tab we speculatively opened and
-      // leave the skip reason on screen.
-      tab?.close();
-      return;
+    setSending(lead.id);
+    try {
+      const res = await fetch("/api/outreach/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: lead.author,
+          subject: result.subject,
+          body: result.body,
+          subreddit: lead.subreddit,
+          permalink: lead.url,
+          postTitle: lead.title ?? "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSendError(data.error ?? "Reddit refused the message");
+        return;
+      }
+      markSent(lead.id, lead.author);
+    } catch {
+      setSendError("Could not reach the server. Nothing was sent.");
+    } finally {
+      setSending(null);
     }
+  }
 
-    const url =
-      `https://www.reddit.com/message/compose/?to=${encodeURIComponent(lead.author)}` +
-      `&subject=${encodeURIComponent(result.subject)}` +
-      `&message=${encodeURIComponent(result.body)}`;
+  /** Send a draft already on screen, without rewriting it. */
+  async function sendDraft(lead: Lead) {
+    const draft = messages[lead.id];
+    if (!draft || draft.skip) return;
 
-    if (tab) tab.location.href = url;
-    else window.open(url, "_blank", "noopener");
-
-    markSent(lead.id, lead.author);
+    setSendError(null);
+    setSending(lead.id);
+    try {
+      const res = await fetch("/api/outreach/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: lead.author,
+          subject: draft.subject,
+          body: draft.body,
+          subreddit: lead.subreddit,
+          permalink: lead.url,
+          postTitle: lead.title ?? "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSendError(data.error ?? "Reddit refused the message");
+        return;
+      }
+      markSent(lead.id, lead.author);
+    } catch {
+      setSendError("Could not reach the server. Nothing was sent.");
+    } finally {
+      setSending(null);
+    }
   }
 
   async function generateMessage(lead: Lead): Promise<{ body: string; subject: string; skip?: boolean } | null> {
@@ -392,8 +467,36 @@ export default function OutreachPage() {
       <div style={{ marginBottom: 28 }}>
         <span className="page-eyebrow">Growth</span>
         <h1 className="page-title">Reddit Outreach</h1>
-        <p className="page-sub">Find streamers asking for help. AI writes a personal message. One click opens Reddit with it pre-filled.</p>
+        <p className="page-sub">Find streamers asking for help. AI writes a personal message. One click sends it.</p>
       </div>
+
+      {/* Reddit's refusals are shown verbatim, because the text almost
+          always says what to do: how many minutes a rate limit has left,
+          or which credential is missing. */}
+      {sendError && (
+        <div
+          style={{
+            marginBottom: 18,
+            padding: "12px 16px",
+            background: "rgba(248,113,113,0.08)",
+            border: "1px solid rgba(248,113,113,0.35)",
+            borderRadius: 10,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 13, color: "#FCA5A5", lineHeight: 1.55, flex: 1 }}>
+            <strong style={{ color: "#F87171" }}>Not sent.</strong> {sendError}
+          </p>
+          <button
+            onClick={() => setSendError(null)}
+            style={{ background: "transparent", border: 0, color: "var(--ink-3)", cursor: "pointer", fontSize: 12 }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Mode switcher */}
       <div className="row gap-sm" style={{ marginBottom: 20 }}>
@@ -512,10 +615,11 @@ export default function OutreachPage() {
                 <div className="row gap-md">
                   <button
                     onClick={() => sendQueued(item)}
+                    disabled={sending === item.id}
                     className="btn btn-blue"
-                    style={{ fontSize: 12, padding: "7px 18px" }}
+                    style={{ fontSize: 12, padding: "7px 18px", opacity: sending === item.id ? 0.6 : 1 }}
                   >
-                    Send
+                    {sending === item.id ? "Sending..." : "Send"}
                   </button>
                   <button
                     onClick={() => resolveQueued(item, "skip")}
@@ -633,14 +737,14 @@ export default function OutreachPage() {
                 </div>
 
                 <div className="row gap-sm" style={{ flexShrink: 0 }}>
-                  {/* One click: writes the message and opens Reddit with it
-                      already filled in. "Write message" then a second
-                      button was two steps for something that is always the
-                      same two steps. */}
+                  {/* One click, start to finish: writes the message and
+                      posts it to Reddit server-side. No tab opens, so
+                      there is no popup to unblock and no compose screen
+                      to confirm. */}
                   {!messages[lead.id] && (
-                    <button onClick={() => writeAndSend(lead)} disabled={generating === lead.id}
-                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 18px", whiteSpace: "nowrap", opacity: generating === lead.id ? 0.6 : 1 }}>
-                      {generating === lead.id ? "Writing..." : "Send"}
+                    <button onClick={() => writeAndSend(lead)} disabled={generating === lead.id || sending === lead.id}
+                      className="btn btn-blue" style={{ fontSize: 12, padding: "6px 18px", whiteSpace: "nowrap", opacity: generating === lead.id || sending === lead.id ? 0.6 : 1 }}>
+                      {generating === lead.id ? "Writing..." : sending === lead.id ? "Sending..." : "Send"}
                     </button>
                   )}
                   <button onClick={() => markSent(lead.id, lead.author)}
@@ -683,13 +787,12 @@ export default function OutreachPage() {
                     {messages[lead.id].body}
                   </p>
                   <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
-                    <a
-                      href={`https://www.reddit.com/message/compose/?to=${encodeURIComponent(lead.author)}&subject=${encodeURIComponent(messages[lead.id].subject)}&message=${encodeURIComponent(messages[lead.id].body)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={() => setTimeout(() => markSent(lead.id, lead.author), 800)}
-                      style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
-                      Send on Reddit
-                    </a>
+                    <button
+                      onClick={() => sendDraft(lead)}
+                      disabled={sending === lead.id}
+                      style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, fontWeight: 600, cursor: sending === lead.id ? "default" : "pointer", opacity: sending === lead.id ? 0.6 : 1 }}>
+                      {sending === lead.id ? "Sending..." : "Send this"}
+                    </button>
                     <button onClick={() => copyMessage(lead.id)} className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }}>
                       {copied === lead.id ? "Copied!" : "Copy"}
                     </button>
