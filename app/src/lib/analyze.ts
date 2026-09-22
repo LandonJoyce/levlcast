@@ -1604,13 +1604,32 @@ TONE (non-negotiable). The report decides whether this streamer opens another on
 - NEVER use em dashes (—) in any output you produce. Use periods, commas, or rewrite the sentence. This is absolute and enforced by post-processing, but writing them and getting them stripped leaves awkward double-spaces, so just don't.
 
 VOICE RULES — non-negotiable:
-- Write directly to the streamer as "you" and "your" everywhere except stream_story and community_note.
+- Write directly to the streamer as "you" and "your". EVERY field, with no exceptions. stream_story and community_note included. Never "the streamer", never "this streamer", never third person about the person reading it.
 - Use contractions: it's, you're, didn't, wasn't, they're, that's, you've, don't.
 - Short sentences. Hard cap: 15 words per sentence. If a sentence is longer, split it.
 - No em-dashes to chain long thoughts. Use a period instead.
 - Sound like a text message from a smart friend, not a film review.
-- Never write "the streamer" in fields addressed to them — say "you".
 - Never pad with filler. If you've made the point, stop. No "and that's the key" or "this is important" endings.
+
+WRITE FOR A GAMER, NOT A CRITIC — read this twice:
+Your reader is 19, just finished streaming, and is skimming this on their phone. If a sentence would make them say "what the hell does that mean", you have failed, no matter how accurate it was.
+
+BANNED WORDS AND PHRASES. Never use any of these, in any field:
+arc, emotional arc, narrative, storyline, register, cadence, framing, frame (as a noun), identity, dynamic, compressed, sustained, trajectory, texture, beat (as a noun), through-line, leverage, high-leverage, signal, surfaced, articulate, establish, demonstrate, showcase, underscore, juxtapose, punctuate, "the moment where", "what makes X worth Y", "the opposite of", "reads as", "lands as", "serves the".
+
+Real examples of what NOT to write, taken from live reports:
+BAD:  "the compressed panic-to-resignation arc at 15:16 is the only real clip"
+GOOD: "you actually lost it at 15:16, then gave up two seconds later. that's the only clip here."
+BAD:  "naming Lucky and framing it as a war gave the stream an instant identity"
+GOOD: "calling out Lucky in the first 30 seconds gave people a reason to care. do that every match."
+BAD:  "got 91% silence instead, which is the opposite of what makes a competitive stream worth watching"
+GOOD: "you were silent for 91% of it. nobody sticks around for that."
+BAD:  "The streamer established the matchup framing and rallied the team in the first minute"
+GOOD: "you set up the matchup and hyped the team in the first minute. good start."
+
+The test for every sentence: would a real person type this to a friend on Discord? If it sounds like a review in a magazine, rewrite it shorter and dumber. Plain beats clever every single time.
+
+LABELS. Strength and improvement labels are two or three plain words naming the thing, not a clever title. "Silent Grind", "Rivalry Frame", "No Take" and "Cold Ending" are all wrong: they sound like album tracks and mean nothing on their own. Write "You went quiet", "You called out Lucky", "No opinions", "Ended abruptly". A label should be understandable with zero context.
 
 VOICE MATCH — read before writing:
 Read the transcript and pick up the streamer's actual register. The report should sound like a friend who streams the same way they do. Then write feedback in a tone that matches:
@@ -1836,8 +1855,8 @@ SOLE EXCEPTION — anti_patterns.quote: The quote field in anti_patterns entries
 
 Respond with ONLY a JSON object (no markdown, no code fences):
 {
-  "stream_story": "<2-4 sentences. The story arc of this stream — what happened, main turning points, overall vibe. No scores or advice. Written like a friend summarizing it.>",
-  "community_note": "<1-2 sentences. Who watches this stream type, what they came for, and one specific thing this stream did or missed for that community.>",
+  "stream_story": "<2-4 short sentences saying what actually happened on this stream, in plain words, written to YOU. No scores, no advice, no words from the banned list. Example of the right voice: 'you queued into Lucky and it went badly early. you barely talked for the middle ten minutes. right at the end you finally got loud, but it was already over.'>",
+  "community_note": "<1-2 short sentences, written to YOU, about who watches this kind of stream and the one thing this stream gave them or did not. Plain words only. Example: 'people watching a 1v1 want to hear you talk trash and react. you gave them almost nothing to react to.'>",
   "overall_score": <integer 0-100>,
   "streamer_type": "<gaming | just_chatting | irl | variety | educational>",
   "energy_trend": "<building | declining | consistent | volatile>",
@@ -1864,20 +1883,20 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "context": "<1 sentence explaining why it's impressive>"
   },
   "strengths": [
-    "**Label** — what you did at MM:SS and how to do more of it. Max 20 words. Use 'you'.",
-    "**Label** — what you did at MM:SS and how to do more of it. Max 20 words. Use 'you'.",
-    "**Label** — what you did at MM:SS and how to do more of it. Max 20 words. Use 'you'."
+    "**Label**. what you did at MM:SS and how to do more of it. Label is 2-3 plain words anyone understands, not a clever title. Max 20 words. Use 'you'.",
+    "**Label**. what you did at MM:SS and how to do more of it. Label is 2-3 plain words anyone understands, not a clever title. Max 20 words. Use 'you'.",
+    "**Label**. what you did at MM:SS and how to do more of it. Label is 2-3 plain words anyone understands, not a clever title. Max 20 words. Use 'you'."
   ],
   "improvements": [
-    "**Label** — what happened at MM:SS and the one fix. Max 20 words. Use 'you'.",
-    "**Label** — what happened at MM:SS and the one fix. Max 20 words. Use 'you'.",
-    "**Label** — what happened at MM:SS and the one fix. Max 20 words. Use 'you'."
+    "**Label**. what happened at MM:SS and the one fix. Label is 2-3 plain words anyone understands, not a clever title. Max 20 words. Use 'you'.",
+    "**Label**. what happened at MM:SS and the one fix. Label is 2-3 plain words anyone understands, not a clever title. Max 20 words. Use 'you'.",
+    "**Label**. what happened at MM:SS and the one fix. Label is 2-3 plain words anyone understands, not a clever title. Max 20 words. Use 'you'."
   ],
   "best_moment": {
     "time": "<MM:SS>",
     "description": "<EXACTLY 3 sentences, max 20 words each. No em-dashes. Use 'you'. Sentence 1: what was building before (e.g. 'You'd been quiet for three minutes and chat was sitting still.'). Sentence 2: what you did at this moment and why it landed (e.g. 'Then you went on a run that built from setup into a payoff nobody saw coming.'). Sentence 3: how to engineer it next time (e.g. 'Frame the rivalry before the match starts so the trash talk has context when it hits.'). Actions only, no reconstructed words.>"
   },
-  "punch_line": "<ONE sentence. The single highest-leverage takeaway from this stream, written forward-looking. NOT a sting, NOT a verdict, a 'here's the lock-in move' line that points at the next stream, not blame for this one. It should make the streamer think 'okay I see it, I can do that', not 'I suck'. Lean on what was almost there: an instinct they showed and can lean into, a moment they nearly built, a habit one tweak away from clicking. Example tone (notice: NO em dashes, no exceptions): 'Your instinct to call out specific chatters is already there. Let one of those moments breathe next stream and watch what happens.' or 'You almost had a viral run at the boss kill. Hold the silence two more seconds before the reaction.' or 'The opening had real energy. Carrying that into the first loading screen instead of going quiet is the unlock.' No em dashes. Under 22 words. No quoted words. No timestamps.>",
+  "punch_line": "<ONE sentence, under 22 words, in plain words a 19 year old would text. The one thing worth taking into the next stream. Not a verdict, not blame. It should make you think 'okay, I can do that', not 'I suck'. Point at something you nearly did right and say how to finish it. Good examples: 'You already call chatters out by name. Do it once more per hour and it sticks.' or 'You almost had a clip at the boss kill. Wait two seconds before you react next time.' or 'The opening had real energy. Keep talking through the loading screen instead of going quiet.' No em dashes. No quoted words. No timestamps.>",
   "recommendation": "<1-2 short sentences addressed to 'you'. Reference this specific stream. Most impactful change. No buildup. Use contractions.>",
   "rewatch_moments": [
     { "time": "<MM:SS>", "kind": "best", "note": "<1 sentence telling 'you' what to watch for in the next 60 seconds. Specific behavior to study and repeat. No quoted words.>" },
@@ -1987,7 +2006,19 @@ function verifyAntiPatternQuotes(
  */
 function stripEmDashes<T>(obj: T): T {
   if (typeof obj === "string") {
-    return obj.replace(/ — /g, ". ").replace(/—/g, " ") as unknown as T;
+    // En dash as well as em dash. Only the em dash was handled, so every
+    // "–" the model wrote reached the UI untouched.
+    //
+    // Replaced with a comma rather than a period. A dash is used
+    // parenthetically at least as often as it joins clauses, and turning
+    // "your voice — the stakes, the swings — and got silence" into
+    // sentences produces two fragments and a sentence starting with
+    // "and". A comma is never wrong in either position.
+    return obj
+      .replace(/\s+[—–]\s+/g, ", ")
+      .replace(/[—–]/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([,.])/g, "$1") as unknown as T;
   }
   if (Array.isArray(obj)) {
     return obj.map(stripEmDashes) as unknown as T;

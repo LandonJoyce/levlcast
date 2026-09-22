@@ -106,7 +106,11 @@ function Stamp({ time, vodId }: { time: string; vodId?: string }) {
 function parseItem(raw: string): { label: string; body: string } {
   // [\s\S] rather than the /s flag: the build targets an ES version that
   // does not support dotAll, and these strings do contain newlines.
-  const bold = raw.match(/^\s*\*\*([\s\S]+?)\*\*\s*[—–:-]?\s*([\s\S]*)$/);
+  // The separator after the bold label may be a period, colon or dash, or
+  // absent. The prompt now asks for a period; older reports in the database
+  // still carry the dash, and both have to render without a stray leading
+  // punctuation mark on the body.
+  const bold = raw.match(/^\s*\*\*([\s\S]+?)\*\*\s*[—–.:-]?\s*([\s\S]*)$/);
   if (bold) return { label: bold[1].trim(), body: bold[2].trim() };
   const dash = raw.match(/^([\s\S]{3,42}?)\s*[—–]\s*([\s\S]+)$/);
   if (dash) return { label: dash[1].trim(), body: dash[2].trim() };
