@@ -69,7 +69,7 @@ export function SubscriptionSection({
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   /** Which tier to preselect when opening the upgrade modal. */
   const [upgradeInitialTier, setUpgradeInitialTier] = useState<"pro" | "pro_plus">("pro");
-  const planLabel = plan === "pro" ? (proPlus ? "Pro Plus" : "Pro") : onTrial ? "Free trial" : "Free";
+  const planLabel = plan === "pro" ? (proPlus ? "Pro Plus" : "Pro") : "Free";
 
   async function openPortal() {
     setPortalLoading(true);
@@ -114,7 +114,7 @@ export function SubscriptionSection({
           <div className="space-y-3">
             <p className="text-sm text-muted">
               {onTrial
-                ? `Your free trial includes ${analysesLimit} analyses and ${clipsLimit} clips. Subscribe for 15 analyses and 20 clips every month.`
+                ? `Free gives you ${analysesLimit} analyses and ${clipsLimit} clips every week, resetting Monday. Pro is 15 analyses and 20 clips a month.`
                 : "Upgrade to Pro for 15 VOD analyses and 20 clips per month, plus streams up to 8 hours each."}
             </p>
             <button

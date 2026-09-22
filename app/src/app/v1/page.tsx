@@ -43,7 +43,7 @@ const faqItems = [
   { q: "Do I need an account?", a: "Not to try it. Paste any public Twitch VOD link on this page and you'll get a real coaching report on the opening of that stream, no signup and no card. You only connect Twitch when you want the whole stream read instead of the opening, and every stream after it." },
   { q: "How does the analysis work?", a: "We pull the audio from the VOD, transcribe it, and read the full transcript to find your best moments and your weakest ones. About 5 minutes for a 2-hour stream. The free version on this page reads the opening 12 minutes and takes about a minute." },
   { q: "Do you store my VODs?", a: "No. We pull the audio from Twitch while we're analyzing it, then throw it away. The only things we keep are the report output and any clips you explicitly generate." },
-  { q: "Is it actually free?", a: "The report on this page is free with no account at all. If you connect Twitch, the free trial adds 2 full VOD analyses and 5 clips, still with no credit card. Enough to see what the report tells you and decide if Pro is worth it." },
+  { q: "Is it actually free?", a: "The report on this page is free with no account at all. Connect Twitch and you get 2 full VOD analyses and 5 clips every week, forever, still with no credit card. Nothing in the report is held back for free users." },
   { q: "Does it work for my channel?", a: "Any public Twitch channel works: partner, affiliate, or 3 viewers. Paste a link to try it, or sign in with Twitch and hit Sync after a stream." },
   { q: "What about YouTube?", a: "Connect your channel once. After that you can post clips straight to Shorts from inside LevlCast. The title and description come from the report. Edit them if you want, or just tap post." },
 ];
@@ -85,11 +85,11 @@ export default async function LandingPage() {
                 <span className="ll-nav-ios-label">iOS App</span>
               </a>
               <Link href="/auth/login" className="ll-btn ll-btn-white ll-nav-cta">
-                Start Free Trial
+                Start Free
                 <span className="ll-nav-arrow-icon">↗</span>
               </Link>
               <Link href="/auth/login" className="ll-btn ll-btn-grad ll-nav-cta-mobile" style={{ fontSize: 13, padding: "9px 16px" }}>
-                Start Free Trial
+                Start Free
               </Link>
             </div>
           </nav>
@@ -274,13 +274,13 @@ export default async function LandingPage() {
             {/* Free trial */}
             <article className="ll-plan">
               <div>
-                <div className="ll-plan-name">Free Trial</div>
+                <div className="ll-plan-name">Free</div>
                 <div className="ll-plan-cycle">No card required</div>
               </div>
               <div className="ll-plan-price">$0 <small>to start</small></div>
               <hr className="ll-plan-sep" />
               <ul className="ll-plan-feats">
-                {["2 full VOD analyses (lifetime)", "5 clips on the house", "Streams up to 4 hours each", "Full coaching report + score", "iOS app + web"].map((f) => (
+                {["2 full VOD analyses every week", "5 clips every week", "The whole report, nothing held back", "Ranked ladder + leaderboard", "iOS app + web"].map((f) => (
                   <li key={f}>
                     <svg className="ll-plan-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ll-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
@@ -290,7 +290,7 @@ export default async function LandingPage() {
                 ))}
               </ul>
               <Link href="/auth/login" className="ll-btn ll-btn-grad ll-btn-arrow">
-                Start Free Trial
+                Start Free
                 <span className="ll-btn-arrow-circle">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </span>

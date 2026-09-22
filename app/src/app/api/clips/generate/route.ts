@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   const usage = await getUserUsage(user.id, supabase);
   if (!usage.can_generate_clip) {
     const limitMsg = usage.on_trial
-      ? `You've used all ${usage.clips_limit} clips on your free trial. Subscribe to keep clipping.`
+      ? `You've used all ${usage.clips_limit} free clips this week. They reset Monday, or Pro gives you 20 a month.`
       : `You've reached your ${usage.clips_limit} clip limit for this month.`;
     return NextResponse.json(
       {

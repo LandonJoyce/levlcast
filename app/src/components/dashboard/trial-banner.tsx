@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UpgradeModal } from "@/components/dashboard/upgrade-modal";
 
 /**
- * Persistent banner shown to users on the lifetime free trial.
+ * Persistent banner shown to free users, tracking the weekly allowance.
  *
  * Surfaces remaining analyses/clips so the user can pace their use, and
  * shifts to a "trial used up" state with a direct upgrade CTA when both
@@ -46,23 +46,24 @@ export function TrialBanner({
         ? "var(--orange, #d97706)"
         : "var(--blue)";
 
-  // Cap-hit copy specifically calls out what the user LOSES by not upgrading,
-  // not what they gain. Loss aversion converts better than feature lists at
-  // the moment of paywall-hit, and references the cross-stream tracking they
-  // genuinely cannot access without Pro.
-  const headline = exhausted
-    ? "Trial used up. You can't track what's changing."
-    : analysesExhausted
-      ? "Out of analyses. Pro shows what changes between streams."
-      : lastAnalysis
-        ? "One free analysis left. Make it count."
-        : "Free trial";
+  // This used to run on loss aversion: "Trial used up. You can't track
+  // what's changing." That was written when the trial was two analyses
+  // ever and cross-stream tracking was locked. Neither is true now — the
+  // allowance refills Monday and nothing in the report is withheld — so
+  // the old copy would simply be lying to the reader.
+  //
+  // What replaces it says when you get more and what Pro is actually for.
+  // Running out on Wednesday is not a loss, it is a wait, and pretending
+  // otherwise to squeeze a conversion is how you lose the next one.
+  const headline = analysesExhausted
+    ? "That's both analyses this week."
+    : lastAnalysis
+      ? "One analysis left this week."
+      : "Free";
 
-  const subline = exhausted
-    ? "Your reports are still here, but you can't compare them or see what's improving. Pro is $14.99 a month."
-    : analysesExhausted
-      ? "You've used all 3. Pro is 15 analyses a month plus the stream-to-stream view that only works once you have more than one report."
-      : `${analysesLeft} ${analysesLeft === 1 ? "analysis" : "analyses"} and ${clipsLeft} ${clipsLeft === 1 ? "clip" : "clips"} remaining.`;
+  const subline = analysesExhausted
+    ? "Two more unlock Monday. Streaming more often than that? Pro is 15 a month and 20 clips."
+    : `${analysesLeft} ${analysesLeft === 1 ? "analysis" : "analyses"} and ${clipsLeft} ${clipsLeft === 1 ? "clip" : "clips"} left this week. Resets Monday.`;
 
   return (
     <>

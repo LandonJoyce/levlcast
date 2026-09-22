@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 import { CoachReportCard } from "@/components/dashboard/coach-report-card";
+import { RankMoment } from "@/components/dashboard/rank-moment";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
@@ -303,6 +304,15 @@ export default async function VodReportPage({
           );
         })()
       )}
+
+      {/* What the ladder did, above the report itself. Rank moved silently
+          before this: the number changed in the database and the badge read
+          differently on the next dashboard visit, which is not a climb
+          anybody feels. */}
+      <RankMoment
+        pointsAfter={(vod.rank_points_after as number | null) ?? null}
+        delta={(vod.rank_delta as number | null) ?? null}
+      />
 
       {/* Coach report */}
       {coachReport ? (

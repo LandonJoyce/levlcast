@@ -220,12 +220,12 @@ export default function HomePage() {
           <div className="lv2-plan">
             <p className="lv2-plan-n">Free</p>
             <p className="lv2-plan-p">$0</p>
-            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and five clips.</p>
+            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and five clips <em>every week</em>, forever. Nothing in the report is held back.</p>
           </div>
           <div className="lv2-plan lv2-plan-lead">
             <p className="lv2-plan-n">Pro</p>
             <p className="lv2-plan-p">$14.99<span>/mo</span></p>
-            <p className="lv2-plan-b">Fifteen full streams a month, twenty clips, and a history that shows if you are getting better.</p>
+            <p className="lv2-plan-b">For streamers going live more than twice a week. Fifteen streams a month, twenty clips, and posting straight to YouTube.</p>
             <Link href="/auth/login?plan=monthly" className="lv2-cta">Start free</Link>
           </div>
         </div>
@@ -240,6 +240,8 @@ export default function HomePage() {
             { q: "Do you keep my streams?", a: "No. We listen to the audio while we work, then throw it away. We keep the report and any clips you make." },
             { q: "How long does it take?", a: "About a minute for the free one. About five minutes for a full two hour stream." },
             { q: "Does it work on small channels?", a: "Any channel. It does not matter if you have three viewers." },
+            { q: "What do I actually get for free?", a: "Two full reports a week, every week. Full means full. There is no blurred section, no locked fix, no part of the report you have to pay to read. Pro is for people streaming more than twice a week who want more of them." },
+            { q: "What is the rank?", a: "Every stream you run moves you up or down a ladder, Iron through Grandmaster. Good streams pull you up, bad ones cost you less than good ones gain, and it gets harder the higher you climb. There is a leaderboard if you want to see where you sit." },
           ]}
         />
       </section>

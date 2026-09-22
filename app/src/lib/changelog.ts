@@ -20,6 +20,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.14.0",
+    date: "2026-09-21",
+    title: "Free gets the whole report, every week",
+    items: [
+      { type: "improved", text: "Free is now 2 full analyses and 5 clips every week, resetting Monday, instead of 2 for the life of the account. If you used yours up months ago, they are already back." },
+      { type: "improved", text: "Nothing in the report is held back any more. Score change since last stream, whether you fixed what you were told to fix last time, your trajectory, rewatch moments, opening and closing notes, best moment, growth-killer flags and the full list of fixes are all there on Free. The blurred sections are gone." },
+      { type: "fix", text: "Your rank now moves on Free. It only ever updated for Pro accounts before, which meant most people had a rank that never changed no matter how they streamed." },
+      { type: "new", text: "Every report opens with what the ladder did: points gained or lost, how far to your next division, and a proper moment when you get promoted." },
+      { type: "new", text: "Weekly streaks. Analyse at least one stream a week to keep it going." },
+      { type: "improved", text: "Pro is now about volume rather than unlocking things: 15 analyses and 20 clips a month, longer streams, and posting straight to YouTube." },
+    ],
+  },
+  {
     version: "v0.13.2",
     date: "2026-05-27",
     title: "Pro report unlocks the coaching",

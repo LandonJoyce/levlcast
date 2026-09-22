@@ -661,11 +661,11 @@ export function CoachReportCard({
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {streamerTitle && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", border: `1px solid ${PURPLE_BORDER}`, borderRadius: 6, background: PURPLE_SOFT, color: PURPLE, fontSize: 11, fontFamily: '"JetBrains Mono", monospace', letterSpacing: "0.06em" }}>
-                    ◆ {streamerTitle}
-                  </span>
-                )}
+                {/* The "Fresh Streamer" / "Rising Talent" title used to sit
+                    here. It was a second ranking system running alongside the
+                    real one, derived from a rolling average, and now that the
+                    rank moment sits at the top of this page the two disagreed
+                    in public. One ladder only. */}
                 {streak >= 2 && (
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", border: "1px solid rgba(245,158,11,0.32)", borderRadius: 6, background: "rgba(245,158,11,0.06)", color: "#F59E0B", fontSize: 11, fontFamily: '"JetBrains Mono", monospace' }}>
                     ▲ {streak}-stream streak
