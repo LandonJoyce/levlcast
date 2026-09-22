@@ -4,6 +4,8 @@ import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 import { CoachReportCard } from "@/components/dashboard/coach-report-card";
 import { RankMoment } from "@/components/dashboard/rank-moment";
+import { StreamScorecard } from "@/components/dashboard/stream-scorecard";
+import { FullBreakdown } from "@/components/dashboard/full-breakdown";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
@@ -315,8 +317,22 @@ export default async function VodReportPage({
         })()
       )}
 
+      {/* The post-match screen: where the points went, and the one thing to
+          do next stream. This is the whole report for most visits — the
+          essay below it is there for the people who want it, not in front
+          of the people who don't. */}
+      {coachReport && (
+        <StreamScorecard
+          scores={coachReport.score_breakdown ?? null}
+          previousScores={previousReport?.score_breakdown ?? null}
+          mission={coachReport.next_stream_goals?.[0] ?? coachReport.recommendation ?? null}
+          deadAirPct={coachReport.dead_air_pct ?? null}
+        />
+      )}
+
       {/* Coach report */}
       {coachReport ? (
+        <FullBreakdown>
         <CoachReportCard
           report={coachReport}
           previousScore={previousScore}
@@ -339,6 +355,7 @@ export default async function VodReportPage({
           comparisonIsSameType={comparisonIsSameType}
           currentStreamerType={currentStreamerType ?? undefined}
         />
+        </FullBreakdown>
       ) : (
         <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
           Coach report not available for this VOD. Re-analyze to generate one.
