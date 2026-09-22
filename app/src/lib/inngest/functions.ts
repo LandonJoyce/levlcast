@@ -2260,8 +2260,13 @@ export const outreachHarvest = inngest.createFunction(
           return { skipped: true, reason: "queue full", queued: waiting };
         }
 
-        const result = await fillOutreachQueue(Math.min(6, QUEUE_CEILING - (waiting ?? 0)));
-        console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped}`);
+        // Both numbers are Claude calls, so both are money. The second is
+        // the one that actually bounds a run: without it, a pass where the
+        // model skips every lead kept drafting and cost three times a
+        // successful pass while queueing nothing.
+        const room = QUEUE_CEILING - (waiting ?? 0);
+        const result = await fillOutreachQueue(Math.min(3, room), 4);
+        console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped} claude_calls=${result.attempts}`);
         return result;
       } catch (err) {
         // Reddit refusing us is expected, not a fault. Without an OAuth app

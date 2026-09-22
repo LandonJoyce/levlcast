@@ -246,7 +246,9 @@ HARD RULES
 - Mention the free tier once, accurately: two full reports every week, no card. Full means full, nothing is blurred or held back.
 - Do not name a price. Do not say "trial".
 - No pressure, no urgency, no follow-up promise, no question at the end fishing for a reply.
-- If this person is NOT a good fit, or the post gives you nothing specific to respond to, reply with exactly: SKIP
+
+WHEN TO SKIP
+Rarely. These posts have already been filtered for people asking about streaming growth, retention or content, so the default is to WRITE. Reply with exactly SKIP only when the post is about something this genuinely cannot help with — hardware, OBS, bitrate, bans, payouts, someone advertising a service — or when the text is empty or deleted. A short post is not a reason to skip. A vague post is not a reason to skip. Being unsure is not a reason to skip.
 
 SUBJECT
 Three to six words naming the topic they posted about, nothing more. It is a label, not a sentence and not a pitch. "Re your retention question" is right. "That early drop-off is fixable once you see it" is a sentence and is wrong.
@@ -286,22 +288,43 @@ Return JSON only: {"subject": "...", "body": "..."} or the single word SKIP.`,
  * Harvest, draft and queue. Records skips as rows so the same person is
  * never evaluated twice.
  */
-export async function fillOutreachQueue(max = 5): Promise<{ queued: number; skipped: number }> {
+export async function fillOutreachQueue(
+  max = 5,
+  /**
+   * Hard ceiling on Claude calls for this run, whatever the outcome.
+   *
+   * The loop used to break on `queued >= max`, which counts successes
+   * only. A run where the model skipped every lead therefore never broke
+   * early and drafted against all of harvestLeads(max * 3) — three times
+   * the intended spend, on a run that queued nothing. In production that
+   * was 18 calls an hour producing one usable message, which is paying
+   * full price to be told no.
+   *
+   * Attempts are what cost money, so attempts are what is capped.
+   */
+  maxAttempts = max + 2
+): Promise<{ queued: number; skipped: number; attempts: number }> {
   const admin = createAdminClient();
-  const leads = await harvestLeads(max * 3);
+  const leads = await harvestLeads(maxAttempts);
 
   let queued = 0;
   let skipped = 0;
+  let attempts = 0;
+
+  const { count: contactedSoFar } = await admin
+    .from("outreach_contacts")
+    .select("id", { count: "exact", head: true });
+  const angleSeed = contactedSoFar ?? 0;
 
   for (const lead of leads) {
-    if (queued >= max) break;
+    if (queued >= max || attempts >= maxAttempts) break;
+    attempts++;
 
-    // Rotate the angle by how many have been queued so far, so a run of
-    // messages does not all make the same argument.
-    const { count } = await admin
-      .from("outreach_contacts")
-      .select("id", { count: "exact", head: true });
-    const angle = ANGLES[(count ?? 0) % ANGLES.length];
+    // Rotate the angle so a run of messages does not all make the same
+    // argument. Counted once before the loop, not once per lead: this was
+    // a full count query per candidate, and it never changed often enough
+    // to be worth re-reading mid-run.
+    const angle = ANGLES[(angleSeed + attempts - 1) % ANGLES.length];
 
     let drafted: { subject: string; body: string } | null = null;
     try {
@@ -333,5 +356,5 @@ export async function fillOutreachQueue(max = 5): Promise<{ queued: number; skip
     else skipped++;
   }
 
-  return { queued, skipped };
+  return { queued, skipped, attempts };
 }
