@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
-import { CoachReportCard } from "@/components/dashboard/coach-report-card";
+import { CoachReport } from "@/components/dashboard/coach-report";
 import { RankMoment } from "@/components/dashboard/rank-moment";
 import { StreamScorecard } from "@/components/dashboard/stream-scorecard";
 import { FullBreakdown } from "@/components/dashboard/full-breakdown";
@@ -102,8 +102,8 @@ export default async function VodReportPage({
     !(profileForPlan.subscription_expires_at && new Date(profileForPlan.subscription_expires_at) < new Date());
 
   // Personalized upgrade pitch using the user's actual reports — fed to
-  // the locked-tease modal inside CoachReportCard so the conversion
-  // moment references real numbers instead of a generic feature list.
+  // the upgrade modal so the moment references real numbers rather
+  // than a generic feature list.
   const upgradePitch = isPro ? null : await buildUpgradePitch(user!.id, supabase);
 
   const peaks = (vod.peak_data as any[]) || [];
@@ -333,28 +333,12 @@ export default async function VodReportPage({
       {/* Coach report */}
       {coachReport ? (
         <FullBreakdown>
-        <CoachReportCard
-          report={coachReport}
-          previousScore={previousScore}
-          previousReport={previousReport}
-          streak={streak}
-          isPersonalBest={isPersonalBest}
-          streamerTitle={streamerTitle}
-          isPro={isPro}
-          streamDurationSeconds={vod.duration_seconds ?? undefined}
-          chatPulse={chatPulse}
-          trajectory={trajectory}
-          wordTimestamps={wordTimestamps}
-          twitchVodId={vod.twitch_vod_id ?? undefined}
-          recurringImprovements={
-            Array.isArray((profileForPlan?.coaching_arc as { recurring_improvements?: unknown } | null)?.recurring_improvements)
-              ? ((profileForPlan!.coaching_arc as { recurring_improvements?: string[] }).recurring_improvements ?? [])
-              : []
-          }
-          personalizedUpgradeReason={upgradePitch?.reason}
-          comparisonIsSameType={comparisonIsSameType}
-          currentStreamerType={currentStreamerType ?? undefined}
-        />
+          <CoachReport
+            report={coachReport}
+            twitchVodId={vod.twitch_vod_id ?? undefined}
+            streamDurationSeconds={vod.duration_seconds ?? undefined}
+            trajectory={trajectory}
+          />
         </FullBreakdown>
       ) : (
         <div className="card card-pad" style={{ color: "var(--ink-3)", fontSize: 14 }}>
