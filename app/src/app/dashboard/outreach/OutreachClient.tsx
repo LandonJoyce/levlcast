@@ -350,10 +350,10 @@ export default function OutreachPage() {
   // of an actual LevlCast user reaching out, no fake observations. Includes
   // the founding-price urgency so the template doesn't lose conversion lift.
   function useTemplate(lead: Lead) {
-    const body = `yo! saw your ${lead.isComment ? "comment" : "post"}. LevlCast watches your VODs and tells you what to improve next stream. it also has a clipping tool so you don't have to waste time finding moments.
+    const body = `saw your ${lead.isComment ? "comment" : "post"}. something that helped me was running my VODs through levlcast. it flags where people dropped off and gives you one thing to change next stream, then tells you next time whether it actually worked. also cuts your best moments into clips so you're not scrubbing footage.
 
-2 free analyses, no card. try it at levlcast.com`;
-    const subject = "Built a Twitch coaching tool";
+2 free reports a week, no card. levlcast.com`;
+    const subject = "Re your stream question";
     setMessages((prev) => ({ ...prev, [lead.id]: { body, subject } }));
   }
 

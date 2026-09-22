@@ -80,6 +80,10 @@ export const ANGLES = [
     id: "progress",
     brief: "Lead with tracking: it compares this stream to the last one and tells them whether the thing they were told to fix actually got fixed.",
   },
+  {
+    id: "rank",
+    brief: "Lead with the rank. Every analysed stream moves you up or down a ladder from Iron to Grandmaster, there is a public leaderboard, and it turns 'am I getting better' into a number that moves. Do not oversell it as a game; the point is that progress becomes visible.",
+  },
 ] as const;
 
 export interface HarvestedLead {
@@ -223,19 +227,29 @@ export async function draftMessage(
 
   const res = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 400,
-    system: `You write one-to-one Reddit messages for LevlCast, a tool that reads a streamer's Twitch VOD and tells them what to fix: where viewers dropped off, how much dead air there was, which moments are worth clipping, and whether last week's problem got fixed.
+    // Generous because the reply is not the only thing counted: this model
+    // can emit a thinking block first, and at 400 the budget ran out mid
+    // thought and returned stop_reason "max_tokens" with no text at all.
+    max_tokens: 1500,
+    system: `You are answering a streamer on Reddit who asked for help. You know a tool called LevlCast that reads a Twitch VOD and reports where viewers dropped off, how much dead air there was, which moments are worth clipping, and whether the thing it told you to fix last stream actually got fixed.
 
 You have ONE source of truth: the post text you are given. You cannot see their stream, their numbers, or their channel. Never imply you watched anything or looked anything up.
 
+VOICE
+You are one streamer replying to another, not a founder pitching. Answer the question they actually asked first, in your own words, and mention the tool as the thing that would show them the answer. If your message would still be useful with the tool removed from it, you have written it correctly.
+
 HARD RULES
 - Open by responding to the specific thing THEY said. Quote or paraphrase it so it is obvious this was written for them.
-- Under 90 words. Short enough to read in a glance.
-- Plain sentences. No marketing voice, no exclamation marks, no emoji, no "hey there!", no bulleted feature list.
-- Mention the free no-account report once: they can paste a VOD link at levlcast.com and read a report without signing up.
-- No pressure, no urgency, no follow-up promise.
-- Sign off as Landon, who built it.
+- Under 90 words.
+- Plain sentences. No marketing voice, no exclamation marks, no emoji, no "hey there", no bulleted feature list.
+- Do NOT sign your name, do NOT claim you built it, do NOT say "I made this" or "my tool". Never imply ownership.
+- Mention the free tier once, accurately: two full reports every week, no card. Full means full, nothing is blurred or held back.
+- Do not name a price. Do not say "trial".
+- No pressure, no urgency, no follow-up promise, no question at the end fishing for a reply.
 - If this person is NOT a good fit, or the post gives you nothing specific to respond to, reply with exactly: SKIP
+
+SUBJECT
+Three to six words naming the topic they posted about, nothing more. It is a label, not a sentence and not a pitch. "Re your retention question" is right. "That early drop-off is fixable once you see it" is a sentence and is wrong.
 
 ANGLE FOR THIS MESSAGE
 ${angle.brief}
@@ -249,7 +263,12 @@ Return JSON only: {"subject": "...", "body": "..."} or the single word SKIP.`,
     ],
   });
 
-  const raw = res.content[0]?.type === "text" ? res.content[0].text.trim() : "";
+  // Find the text block rather than assuming it is first. content[0] can be
+  // a thinking block, in which case indexing position zero silently yields
+  // an empty string and every lead is recorded as "model judged poor fit" —
+  // a drafting failure that looks exactly like a filtering decision.
+  const textBlock = res.content.find((b) => b.type === "text");
+  const raw = textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
   if (!raw || raw.toUpperCase().startsWith("SKIP")) return null;
 
   try {

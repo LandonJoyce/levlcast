@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
     : `Their post:\nTitle: ${postTitle}\n${postBody ? `Body: ${postBody}` : ""}`;
 
   const msg = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 350,
+    model: "claude-sonnet-5",
+    max_tokens: 1500,
     system: `You write cold Reddit DMs for LevlCast. You have ONE source of truth: the post or comment text provided. You cannot see the stream, the VODs, the analytics, or anything else. If it is not in the text, you do not know it.
 
 LevlCast helps streamers with these specific problems:
@@ -65,7 +65,7 @@ LevlCast features:
 1. Coach report on every VOD: scores 0-100, pinpoints when viewers left, gives one specific thing to fix, tracks improvement over time.
 2. Auto-clips your best moments, you edit captions and post.
 
-PRICE: $14.99/mo or 2 free analyses to try with no card. Mention the free trial as the soft hook, not the paid price.
+FREE TIER: two full reports every week, no card. "Full" is literal, nothing is blurred or withheld from free users. Mention the free tier as the soft hook. Do NOT name a price. Do NOT call it a trial, it does not run out.
 
 If SKIP, return only: "SKIP: <reason>"
 
@@ -80,11 +80,13 @@ Body rules (the JSON \"body\" value):
 - Sentence 1 must open with a SHORT direct quote (3 to 8 words) in straight quotes from their post or comment, followed by a connection to LevlCast. The quote goes HERE, never in the subject.
 - Sentence 2 says what the coach report would do for THEIR specific situation. Use hypothetical "would", not "does". Frame it as TWITCH VOD coaching explicitly — "coach report on your Twitch VODs", "your Twitch stream", or similar. Streamers should know this is for Twitch from one read.
 - Optional sentence 3 only if clips add real value to their question.
-- End with this exact final sentence on its own: 2 free analyses, no card. try it at levlcast.com
+- End with this exact final sentence on its own: 2 free reports a week, no card. levlcast.com
 - 60 words MAX total (excluding the final CTA sentence).
 - No dashes of any kind. No em, no en, no double hyphen, no single hyphen as a separator. Use periods, commas, or colons.
 - No "I hope", "just wanted to", "might be worth", "would love to", "feel free to".
 - Casual, blunt, like a streamer texting another streamer.
+- Do NOT sign a name at the end. Do NOT say you built it, made it, or own it. You are a streamer who uses it, nothing more. Any phrasing like "I built", "I made", "my tool", "our tool" is forbidden.
+- Answer their actual question first. If the message would be worthless with the tool removed, rewrite it.
 
 Subject rules (the JSON \"subject\" value):
 - 4 to 7 words, hard cap.
@@ -107,7 +109,11 @@ Return ONLY the JSON object, OR a SKIP line.`,
       .replace(/\s+(?:—|–|--|- )\s+/g, ". ")
       .replace(/—|–|--/g, " ")
       .replace(/\s{2,}/g, " ");
-  const raw = (msg.content[0].type === "text" ? msg.content[0].text.trim() : "");
+  // Find the text block rather than assuming it is first: content[0] can be
+  // a thinking block, which would make this an empty string and send the
+  // request down the JSON-parse fallback with nothing to parse.
+  const textBlock = msg.content.find((b) => b.type === "text");
+  const raw = textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
 
   // Fit-check escape hatch — model decides not a fit and returns "SKIP: <reason>".
   if (/^skip\s*:/i.test(raw)) {
@@ -151,7 +157,7 @@ Return ONLY the JSON object, OR a SKIP line.`,
   // which leaves outreach DMs with no link to levlcast.com — the entire
   // point of the message. Detect by case-insensitive substring match so
   // any variant ("LevlCast.com", "LevLcast.com") still counts as present.
-  const CTA_LINE = "2 free analyses, no card. try it at levlcast.com";
+  const CTA_LINE = "2 free reports a week, no card. levlcast.com";
   if (!/levlcast\.com/i.test(body)) {
     body = `${body.trim().replace(/\.?\s*$/, ".")}\n\n${CTA_LINE}`;
   }
