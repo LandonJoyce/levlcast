@@ -60,13 +60,19 @@ export function RankMoment({
     return () => clearTimeout(t);
   }, []);
 
-  if (pointsAfter === null || delta === null) return null;
+  if (pointsAfter === null) return null;
+
+  // A null delta is a placement, or a row the backfill wrote before
+  // per-stream deltas were recorded. There is no movement to report, but
+  // there is still a rank, and showing it beats showing nothing on a page
+  // whose whole point is that the ladder is visible.
+  const moved = delta ?? 0;
 
   const to = rankFromPoints(pointsAfter);
-  const from = rankFromPoints(pointsAfter - delta);
+  const from = rankFromPoints(pointsAfter - moved);
 
-  const tierUp = from.tier !== to.tier && pointsAfter > pointsAfter - delta;
-  const tierDown = from.tier !== to.tier && delta < 0;
+  const tierUp = from.tier !== to.tier && moved > 0;
+  const tierDown = from.tier !== to.tier && moved < 0;
   const divisionUp =
     !tierUp && !tierDown && from.division !== null && to.division !== null && to.division < from.division;
 
@@ -143,17 +149,17 @@ export function RankMoment({
             >
               {to.label}
             </span>
-            {delta !== 0 && (
+            {moved !== 0 && (
               <span
                 style={{
                   fontFamily: '"JetBrains Mono", monospace',
                   fontSize: 13,
                   fontWeight: 700,
-                  color: delta > 0 ? "#A3E635" : "#F87171",
+                  color: moved > 0 ? "#A3E635" : "#F87171",
                 }}
               >
-                {delta > 0 ? "+" : ""}
-                {delta}
+                {moved > 0 ? "+" : ""}
+                {moved}
               </span>
             )}
           </div>

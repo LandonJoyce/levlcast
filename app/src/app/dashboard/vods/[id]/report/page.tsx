@@ -183,6 +183,16 @@ export default async function VodReportPage({
         </Link>
       </div>
 
+      {/* What the ladder did — first thing on the page, above the score and
+          the clip player. It sat just above the coach report card at first,
+          which on a real report is several screens down past the video: a
+          promotion nobody scrolls to is not a promotion. The rank is the
+          reason to run another stream, so it opens. */}
+      <RankMoment
+        pointsAfter={(vod.rank_points_after as number | null) ?? null}
+        delta={(vod.rank_delta as number | null) ?? null}
+      />
+
       {/* Header */}
       <div style={{ marginBottom: 28, display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
         <div>
@@ -304,15 +314,6 @@ export default async function VodReportPage({
           );
         })()
       )}
-
-      {/* What the ladder did, above the report itself. Rank moved silently
-          before this: the number changed in the database and the badge read
-          differently on the next dashboard visit, which is not a climb
-          anybody feels. */}
-      <RankMoment
-        pointsAfter={(vod.rank_points_after as number | null) ?? null}
-        delta={(vod.rank_delta as number | null) ?? null}
-      />
 
       {/* Coach report */}
       {coachReport ? (
