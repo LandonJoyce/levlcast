@@ -27,7 +27,7 @@ import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
-import { incrementTrialAnalysis, incrementTrialClip, FREE_TRIAL_LIMITS, FOUNDING_LIMITS, PRO_LIMITS } from "@/lib/limits";
+import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, currentWeekStart, touchStreak } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
 import { computeDelta } from "@/lib/rank";
 import { fillOutreachQueue } from "@/lib/outreach";
@@ -362,39 +362,64 @@ export const analyzeVod = inngest.createFunction(
 
         // Double-check limit before recording success. This catches anyone who
         // bypassed the API-level check (deleted their analyzed VOD, raced two
-        // requests, etc.). Free users hit the lifetime trial cap; Pro/founding
-        // hit a monthly cap. Both are read from the same tamper-proof tables
-        // the user-facing limits.ts uses.
+        // requests, etc.). Free users hit a weekly cap; Pro/founding hit a
+        // monthly one. Both read from the same tamper-proof tables the
+        // user-facing limits.ts uses.
         if (plan === "free") {
           const twitchId = profile?.twitch_id as string | undefined;
           let analysesUsed = 0;
           if (twitchId) {
             const { data: trial } = await supabase
               .from("trial_records")
-              .select("analyses_used")
+              .select("analyses_this_week, week_start")
               .eq("twitch_id", twitchId)
               .maybeSingle();
-            analysesUsed = trial?.analyses_used ?? 0;
+            // Must match limits.ts exactly: a stored week that is not the
+            // current one reads as zero. Reading the lifetime column here
+            // instead would keep every existing free user blocked forever
+            // no matter what the weekly allowance says.
+            const sameWeek = ((trial?.week_start as string | null) ?? null) === currentWeekStart();
+            analysesUsed = sameWeek ? trial?.analyses_this_week ?? 0 : 0;
           }
-          if (analysesUsed >= FREE_TRIAL_LIMITS.analyses_lifetime) {
+          if (analysesUsed >= FREE_WEEKLY_LIMITS.analyses_per_week) {
             await supabase.from("vods").update({
               status: "failed",
-              failed_reason: `You've used all ${FREE_TRIAL_LIMITS.analyses_lifetime} free analyses. Subscribe to keep analyzing streams.`,
+              failed_reason: `You've used both free analyses this week. They reset Monday, or go Pro for 15 a month.`,
             }).eq("id", vodId);
-            console.warn(`[inngest] analyze-vod blocked at save — user ${userId} on free trial already used ${analysesUsed}/${FREE_TRIAL_LIMITS.analyses_lifetime}`);
+            console.warn(`[inngest] analyze-vod blocked at save — user ${userId} free weekly cap ${analysesUsed}/${FREE_WEEKLY_LIMITS.analyses_per_week}`);
             return;
           }
+
+          // Free users move on the ladder too. This used to run only in the
+          // Pro branch below, which meant rank — the whole reason to come
+          // back — only ever moved for people who were already paying. The
+          // hook cannot be the reward for converting; it has to be what
+          // makes converting feel worth it.
+          const rank = await applyRankForAnalysis(
+            supabase,
+            userId,
+            vodId,
+            (coachReport as { overall_score?: number } | null)?.overall_score ?? null
+          );
 
           await supabase.from("vods").update({
             status: "ready",
             peak_data: peaks,
             coach_report: coachReport,
             analyzed_at: now.toISOString(),
+            ...(rank
+              ? {
+                  rank_delta: rank.delta,
+                  rank_points_after: rank.points,
+                  rank_tier_change: rank.tierChange,
+                }
+              : {}),
           }).eq("id", vodId);
 
           if (twitchId) {
             await incrementTrialAnalysis(twitchId);
           }
+          await touchStreak(userId);
         } else {
           // Pro / founding — monthly counter
           const { data: usageLog } = await supabase
@@ -443,6 +468,7 @@ export const analyzeVod = inngest.createFunction(
               { onConflict: "user_id,month" }
             ),
           ]);
+          await touchStreak(userId);
         }
       });
 
@@ -474,13 +500,14 @@ export const analyzeVod = inngest.createFunction(
           if (twitchId) {
             const { data: trial } = await supabase
               .from("trial_records")
-              .select("clips_used")
+              .select("clips_this_week, week_start")
               .eq("twitch_id", twitchId)
               .maybeSingle();
-            clipsUsed = trial?.clips_used ?? 0;
+            const sameWeek = ((trial?.week_start as string | null) ?? null) === currentWeekStart();
+            clipsUsed = sameWeek ? trial?.clips_this_week ?? 0 : 0;
           }
-          if (clipsUsed >= FREE_TRIAL_LIMITS.clips_lifetime) {
-            console.log(`[analyze] Auto-generate skipped — trial clip limit reached (${clipsUsed}/${FREE_TRIAL_LIMITS.clips_lifetime})`);
+          if (clipsUsed >= FREE_WEEKLY_LIMITS.clips_per_week) {
+            console.log(`[analyze] Auto-generate skipped — free weekly clip cap (${clipsUsed}/${FREE_WEEKLY_LIMITS.clips_per_week})`);
             return null;
           }
         } else {

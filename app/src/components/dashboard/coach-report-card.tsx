@@ -698,12 +698,11 @@ export function CoachReportCard({
                 Performance Score
               </div>
               <CircularDial score={report.overall_score} displayScore={displayScore} draw={draw} />
-              {/* Delta — Pro-only. Free users see the real value below in
-                  the locked tease (blurred), which is the whole funnel hook.
-                  Showing the real "+6 from last stream" up here would leak
-                  the cross-stream insight Pro is selling. */}
-              {isPro ? (
-                <div style={{
+              {/* Delta — shown to everyone. "+6 from last stream" is the
+                  number people come back for; it was hidden from free users
+                  to protect an upsell, which meant hiding the reason to
+                  upgrade in order to sell the upgrade. */}
+              <div style={{
                   marginTop: 16, fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 20,
                   color: delta !== null && delta > 0 ? "#A3E635" : delta !== null && delta < 0 ? "#F87171" : "#6F7C95",
                   fontStyle: "italic", display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
@@ -715,11 +714,6 @@ export function CoachReportCard({
                     : <span style={{ fontSize: 13, color: "#4D5876" }}>First report</span>
                   }
                 </div>
-              ) : (
-                <div style={{ marginTop: 16, fontSize: 13, color: "#4D5876", fontStyle: "italic" }}>
-                  {previousScore !== undefined ? "Cross-stream tracking unlocks with Pro" : "First report. Pro tracks the change from here."}
-                </div>
-              )}
               {isPersonalBest && draw && (
                 <div style={{ marginTop: 14, fontSize: 12, color: "#fbbf24", letterSpacing: "0.04em" }}>
                   New personal best
@@ -750,7 +744,7 @@ export function CoachReportCard({
               the user can see "you fixed X" or "you regressed on Y" pinned
               to a concrete prior ask. Always rendered above the rest of the
               report so it's the first thing the streamer sees after the score. */}
-          {isPro && report.progress_on_prior_fix?.prior_priority && report.progress_on_prior_fix.evidence && (() => {
+          {report.progress_on_prior_fix?.prior_priority && report.progress_on_prior_fix.evidence && (() => {
             const p = report.progress_on_prior_fix;
             const STATUS_STYLE: Record<typeof p.status, { label: string; color: string; bg: string; border: string; verdictPrefix: string }> = {
               fixed:          { label: "FIXED",          color: "#A3E635", bg: "rgba(163,230,53,0.06)",  border: "rgba(163,230,53,0.28)",  verdictPrefix: "You addressed it." },
@@ -828,118 +822,15 @@ export function CoachReportCard({
             );
           })()}
 
-          {/* ── DELTA TEASE (free only, top-of-report Pro hook) ── */}
-          {!isPro && (
-            <div style={{
-              margin: "0 0 36px",
-              padding: "24px 26px 22px",
-              borderRadius: 14,
-              background: `linear-gradient(135deg, rgba(255,88,0,0.08), rgba(242,97,121,0.04))`,
-              border: `1px solid ${PURPLE_BORDER}`,
-              position: "relative",
-              overflow: "hidden",
-            }}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: GRAD }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <Lock size={11} style={{ color: PURPLE }} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: PURPLE }}>
-                  Locked for Free
-                </span>
-              </div>
-              <h3 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.2, color: "#ECF1FA", margin: "0 0 6px", fontWeight: 400, letterSpacing: "-0.01em" }}>
-                One report is a snapshot.{" "}
-                <em style={{ fontStyle: "italic", ...gradText }}>What changes between streams is the coaching.</em>
-              </h3>
-              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 18px" }}>
-                Free is 1 stream/month. You can't see what changed because there's nothing to compare to. Pro tracks every stream so you can prove what's working.
-              </p>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
-                {(() => {
-                  // Use the REAL recapDelta values when present (returning user
-                  // with a previous report). Falls back to evergreen feature
-                  // labels for first-time users so we never blur fake numbers.
-                  const realDelta = recapDelta;
-                  const tiles = realDelta ? [
-                    {
-                      label: "Score change",
-                      value: realDelta.score.delta > 0
-                        ? `+${realDelta.score.delta}`
-                        : `${realDelta.score.delta}`,
-                      color: realDelta.score.delta >= 0 ? "#A3E635" : "#F87171",
-                    },
-                    {
-                      label: realDelta.biggestWin?.key ? `${realDelta.biggestWin.key} change` : "Biggest win",
-                      value: realDelta.biggestWin
-                        ? (realDelta.biggestWin.delta > 0 ? `+${realDelta.biggestWin.delta}` : `${realDelta.biggestWin.delta}`)
-                        : "?",
-                      color: (realDelta.biggestWin?.delta ?? 0) >= 0 ? "#A3E635" : "#F87171",
-                    },
-                    {
-                      label: "Dead air change",
-                      value: realDelta.deadAir
-                        ? `${realDelta.deadAir.improved ? "-" : "+"}${Math.abs(realDelta.deadAir.currentTotalSec - realDelta.deadAir.prevTotalSec)}s`
-                        : "?",
-                      color: realDelta.deadAir?.improved ? "#A3E635" : "#F87171",
-                    },
-                  ] : [
-                    { label: "Score change", value: "track", color: "#A3E635" },
-                    { label: "Recurring patterns", value: "track", color: "#A3E635" },
-                    { label: "Dead air trend", value: "track", color: "#A3E635" },
-                  ];
-                  return tiles;
-                })().map((m) => (
-                  <div key={m.label} style={{
-                    position: "relative", padding: "14px 12px", borderRadius: 10,
-                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-                    textAlign: "center", overflow: "hidden",
-                  }}>
-                    <div style={{ filter: "blur(4px)", opacity: 0.55 }}>
-                      <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 24, lineHeight: 1, color: m.color, fontStyle: "italic" }}>
-                        {m.value}
-                      </div>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6F7C95", marginTop: 6 }}>
-                        {m.label}
-                      </div>
-                    </div>
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Lock size={14} style={{ color: "rgba(255,255,255,0.35)" }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={openUpgrade}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 10,
-                  fontSize: 13, fontWeight: 700, padding: "11px 22px",
-                  borderRadius: 10, border: "none",
-                  background: GRAD, color: "#fff",
-                  cursor: "pointer", letterSpacing: "0.01em",
-                }}
-              >
-                Unlock Pro · $14.99/month{" "}
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
-              </button>
-            </div>
-          )}
-
-          {/* The #1 Fix block used to live here. The /report page now leads
-              with a TL;DR hero that already surfaces punch_line / recommendation
-              above the card, so rendering it again here was duplicated content.
-              Free users still get the upsell teaser since the hero only shows
-              when there's a punch line to show. */}
-          {!isPro && (
-            <div style={{ marginBottom: 32 }}>
-              <LockedSection
-                label="#1 Priority Fix"
-                hint="Pro reveals the single most important fix for next stream pulled from this report's biggest weakness."
-                height={100}
-                onUpgrade={openUpgrade}
-              />
-            </div>
-          )}
+          {/* A blurred "Locked for Free" tease used to sit here, with the #1
+              Priority Fix locked directly below it. Between them a free user
+              got a score and nothing to do about it: the single instruction
+              the report exists to deliver was behind the paywall, and their
+              real cross-stream numbers were rendered blurred as proof of
+              what they were missing.
+              Both are gone. Pro sells volume — 15 analyses a month against
+              2 a week — and clips, which is something you want more of
+              rather than something you were shown and denied. */}
 
           <GradDiv />
 
@@ -952,19 +843,16 @@ export function CoachReportCard({
                 </h2>
                 <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 18 }}>Keep doing these</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => {
+                  {(report.strengths ?? []).map((s, i) => {
                     const { label, body, ts } = parseItem(s);
                     return <InsightCard key={i} accent="#A3E635" label={label} body={body} ts={ts} index={i + 1} vodId={twitchVodId} />;
                   })}
                 </div>
-                {!isPro && (report.strengths ?? []).length > 1 && (
-                  <button onClick={openUpgrade} style={{ fontSize: 11, fontFamily: '"JetBrains Mono", monospace', color: PURPLE, paddingLeft: 4, marginTop: 12, background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", letterSpacing: "0.04em" }}>
-                    + {(report.strengths ?? []).length - 1} more strength{(report.strengths ?? []).length - 1 !== 1 ? "s" : ""} unlock with Pro
-                  </button>
-                )}
               </div>
-              {isPro ? (
-                <div>
+              {/* The fixes are the product. This whole column was Pro-only,
+                  so a free report told you your score and then refused to
+                  say what to do about it. */}
+              <div>
                   <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
                     What to <em style={{ fontStyle: "italic", color: "#F59E0B" }}>fix.</em>
                   </h2>
@@ -988,37 +876,11 @@ export function CoachReportCard({
                     })}
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 20, color: "#ECF1FA" }}>
-                    What to <em style={{ fontStyle: "italic", color: "#F59E0B" }}>fix.</em>
-                  </h2>
-                  <LockedSection
-                    label={fixCount > 0 ? `${fixCount} Specific Fix${fixCount !== 1 ? "es" : ""}` : "Fix For Next"}
-                    hint={fixCount > 0 ? `${fixCount} actionable fix${fixCount !== 1 ? "es" : ""} for next stream with timestamps.` : undefined}
-                    height={140}
-                    onUpgrade={openUpgrade}
-                  />
-                </div>
-              )}
             </div>
           )}
 
           {/* ── 3. REWATCH MOMENTS ── two specific minutes to study, one win one mistake */}
-          {/* Locked for free: rewatch moments are pure actionable insight
-              ("rewatch 23:14, you lost chat right after this clutch"). Free
-              gets a count tease so they know there's more under the lock. */}
-          {!isPro && (report.rewatch_moments ?? []).length > 0 && (
-            <div style={{ margin: "0 0 36px" }}>
-              <LockedSection
-                label={`${(report.rewatch_moments ?? []).length} Rewatch Moment${(report.rewatch_moments ?? []).length !== 1 ? "s" : ""}`}
-                hint="Two specific minutes from this stream to study before going live again. Pro reveals the timestamps and what to watch for."
-                height={140}
-                onUpgrade={openUpgrade}
-              />
-            </div>
-          )}
-          {isPro && (report.rewatch_moments ?? []).length > 0 && (
+          {(report.rewatch_moments ?? []).length > 0 && (
             <div style={{ margin: "0 0 36px", padding: "24px 26px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <h2 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontWeight: 400, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 4, color: "#ECF1FA" }}>
                 Rewatch <em style={{ fontStyle: "italic", ...gradText }}>two minutes.</em>
@@ -1058,20 +920,7 @@ export function CoachReportCard({
           )}
 
           {/* ── 4. OPENING / CLOSING ── */}
-          {/* Locked for free: per the gating spec, the closing note is locked,
-              and the opening note is actionable structural feedback too. Free
-              sees only the count of analyzed sections. */}
-          {!isPro && (report.cold_open?.note || report.closing?.note) && (
-            <div style={{ margin: "0 0 36px" }}>
-              <LockedSection
-                label="Opening & Closing"
-                hint="Pro shows how you opened and closed this stream and what to change about the first and last 60 seconds, the most retention-critical windows."
-                height={140}
-                onUpgrade={openUpgrade}
-              />
-            </div>
-          )}
-          {isPro && (report.cold_open?.note || report.closing?.note) && (
+          {(report.cold_open?.note || report.closing?.note) && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, margin: "0 0 36px" }}>
               {report.cold_open?.note && (
                 <ArcCard
@@ -1095,7 +944,7 @@ export function CoachReportCard({
           )}
 
           {/* ── 5. GROWTH KILLERS ── */}
-          {isPro && (report.anti_patterns ?? []).length > 0 && (
+          {(report.anti_patterns ?? []).length > 0 && (
             <div style={{ margin: "0 0 36px", padding: "22px 24px", borderRadius: 12, background: "rgba(248,113,113,0.04)", border: "1px solid rgba(248,113,113,0.16)" }}>
               <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: "#F87171", marginBottom: 20 }}>
                 Growth Killers Flagged
@@ -1127,10 +976,16 @@ export function CoachReportCard({
           )}
 
           {/* ── 6. LAST STREAM RECAP ── */}
-          {/* Pro-only. This card is the literal cross-stream proof we sell on
-              the paywall; showing it for free hands the value away. Free users
-              with a prior report get a locked teaser pointing at the upgrade. */}
-          {recapDelta && isPro && (
+          {/* Shown to everyone. This was Pro-only, blurred behind a locked
+              teaser, and it was the single worst decision in the product:
+              the recap IS the payoff for streaming again, so a free user
+              reached the moment the whole thing pays off and got frosted
+              glass and a price tag. Conversion in the four months after
+              that gate tightened ran about a third of the four months
+              before it.
+              Pro sells volume, clips and YouTube posting. It does not need
+              to sell the part that makes anyone want it. */}
+          {recapDelta && (
             <LastStreamRecap
               delta={recapDelta}
               comparisonLabel={
@@ -1140,19 +995,11 @@ export function CoachReportCard({
               }
             />
           )}
-          {recapDelta && !isPro && (
-            <div style={{ margin: "0 0 28px" }}>
-              <LockedSection
-                label="Last Stream Recap"
-                hint="Pro shows score change vs last stream, biggest win, biggest regression, dead-air change, and which weaknesses came back."
-                height={180}
-                onUpgrade={openUpgrade}
-              />
-            </div>
-          )}
 
           {/* ── 6b. LONGITUDINAL TREND ── */}
-          {isPro && report.trend_vs_history && report.trend_vs_history.direction !== "first_stream" && (() => {
+          {/* Also unlocked. Same reasoning as the recap above: knowing
+              whether you are trending up is the reason to run another one. */}
+          {report.trend_vs_history && report.trend_vs_history.direction !== "first_stream" && (() => {
             const { direction } = report.trend_vs_history!;
             const note = clean(report.trend_vs_history!.note);
             const isUp = direction === "improving";
@@ -1178,19 +1025,10 @@ export function CoachReportCard({
           })()}
 
           {/* ── 7. SCORE TRAJECTORY ── */}
-          {/* Pro-only. Same reason as the Last Stream Recap above: the trend
-              line across streams IS the cross-stream insight Pro is selling. */}
-          {trajectory && trajectory.length >= 2 && isPro && <ScoreTrajectory points={trajectory} />}
-          {trajectory && trajectory.length >= 2 && !isPro && (
-            <div style={{ margin: "0 0 28px" }}>
-              <LockedSection
-                label="Score Trajectory"
-                hint="Pro plots your score across every stream so you can see whether you're actually trending up."
-                height={160}
-                onUpgrade={openUpgrade}
-              />
-            </div>
-          )}
+          {/* Unlocked for the same reason. A line that goes up is the whole
+              dopamine of this product; hiding it from the people who have
+              not yet decided to pay is hiding the reason to pay. */}
+          {trajectory && trajectory.length >= 2 && <ScoreTrajectory points={trajectory} />}
 
           {/* ── STREAM TIMELINE ── */}
           {(gaps.length > 0 || (chatPulse && chatPulse.length > 0)) && totalSecs > 0 && (
@@ -1339,7 +1177,7 @@ export function CoachReportCard({
                     })}
                     {/* Pro-only: the marker leaks WHERE the best moment is.
                         Free sees the locked Best Moment card below the timeline. */}
-                    {isPro && report.best_moment && (() => {
+                    {report.best_moment && (() => {
                       const pct = (parseTimeSecs(report.best_moment.time) / totalSecs) * 100;
                       if (pct < 0 || pct > 100) return null;
                       return (
@@ -1350,7 +1188,7 @@ export function CoachReportCard({
                         </div>
                       );
                     })()}
-                    {isPro && (report.anti_patterns ?? []).map((ap, i) => {
+                    {(report.anti_patterns ?? []).map((ap, i) => {
                       const secs = parseTimeSecs(ap.time);
                       const pct = (secs / totalSecs) * 100;
                       if (pct < 0 || pct > 100) return null;
@@ -1380,13 +1218,13 @@ export function CoachReportCard({
                         </span>
                       </>
                     )}
-                    {isPro && report.best_moment && (
+                    {report.best_moment && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                         <span style={{ display: "inline-block", width: 2, height: 14, background: "#A3E635", boxShadow: "0 0 5px rgba(163,230,53,0.6)" }} />
                         Best moment
                       </span>
                     )}
-                    {isPro && (report.anti_patterns ?? []).length > 0 && (
+                    {(report.anti_patterns ?? []).length > 0 && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                         <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#F87171", boxShadow: "0 0 4px rgba(248,113,113,0.6)" }} />
                         Growth killer
@@ -1428,7 +1266,7 @@ export function CoachReportCard({
                         <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: "#6F7C95", letterSpacing: "0.08em", textTransform: "uppercase" }}>Gaps · longest {fmtDur(Math.max(...gaps.map(g => g.duration)))}</div>
                       </div>
                     </div>
-                    {report.best_moment && isPro && (
+                    {report.best_moment && (
                       <div style={{ flex: 1, minWidth: 180, padding: "12px 16px", borderRadius: 8, background: "rgba(163,230,53,0.05)", border: "1px solid rgba(163,230,53,0.18)" }}>
                         <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: "calc(var(--cs, 1) * 10px)", color: "#A3E635", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
                           Best moment ·{" "}
@@ -1444,83 +1282,37 @@ export function CoachReportCard({
                         </div>
                       </div>
                     )}
-                    {report.best_moment && !isPro && (
-                      <div style={{ flex: 1, minWidth: 180 }}>
-                        <LockedSection
-                          label="Best Moment"
-                          hint="Pro reveals the timestamp and what made it the highest-leverage moment of this stream."
-                          height={90}
-                          onUpgrade={openUpgrade}
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* ── PRO UNLOCK CTA (free only) ── */}
+          {/* ── PRO NUDGE (free only) ── */}
+          {/* Two blocks used to sit here: one headed "You're seeing the
+              surface" listing everything withheld, and one telling the
+              reader their next stream is what matters — while capping them
+              at two streams ever. Both were true only because the report
+              above them had been hollowed out.
+              What is left is a single line about volume, after the whole
+              report, that interrupts nothing. Someone who just read a full
+              report and wants another one is a far better prospect than
+              someone staring at a blur. */}
           {!isPro && (
-            <div style={{ marginTop: 44, padding: "28px 28px 24px", borderRadius: 14, background: `linear-gradient(135deg, rgba(255,88,0,0.10), rgba(242,97,121,0.05))`, border: `1px solid ${PURPLE_BORDER}`, position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: GRAD }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <Lock size={11} style={{ color: PURPLE }} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: PURPLE }}>
-                  Locked in this report
-                </span>
-              </div>
-              <h3 style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 26, lineHeight: 1.15, color: "#ECF1FA", margin: 0, fontWeight: 400, letterSpacing: "-0.01em" }}>
-                You&apos;re seeing the surface.{" "}
-                <em style={{ fontStyle: "italic", ...gradText }}>Pro shows the rest.</em>
-              </h3>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginTop: 22, marginBottom: 22 }}>
-                {fixCount > 0 && (
-                  <UnlockStat n={fixCount} label={`Specific fix${fixCount !== 1 ? "es" : ""} for next stream`} color="#F59E0B" />
-                )}
-                {antiPatternCount > 0 && (
-                  <UnlockStat n={antiPatternCount} label={`Growth killer${antiPatternCount !== 1 ? "s" : ""} flagged`} color="#F87171" />
-                )}
-                {lockedStrengths > 0 && (
-                  <UnlockStat n={lockedStrengths} label={`More strength${lockedStrengths !== 1 ? "s" : ""} to keep doing`} color="#A3E635" />
-                )}
-                <UnlockStat n={15} label="VOD analyses per month" color={PURPLE} />
-                <UnlockStat n={20} label="Clips per month with captions" color={PURPLE} />
-              </div>
-
-              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: "0 0 20px" }}>
-                One report tells you where you stand. Tracking score changes across streams, recurring weaknesses, what you fixed and what you didn&apos;t is where the actual coaching lives.
+            <div style={{ marginTop: 40, padding: "18px 22px", borderRadius: 12, background: PURPLE_SOFT, border: `1px solid ${PURPLE_BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
+              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13.5px)", color: "#A6B3C9", lineHeight: 1.6, margin: 0, flex: 1, minWidth: 220 }}>
+                That&apos;s a full report, and you get <strong style={{ color: "#ECF1FA", fontWeight: 600 }}>two every week</strong> free.
+                Streaming more than twice a week? Pro is 15 a month plus clips you can post.
               </p>
-
               <button
                 onClick={openUpgrade}
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 10,
-                  fontSize: 13, fontWeight: 700, padding: "12px 24px",
-                  borderRadius: 10, border: "none",
-                  background: GRAD, color: "#fff",
-                  cursor: "pointer", letterSpacing: "0.01em",
+                  fontSize: 13, fontWeight: 700, padding: "10px 20px", borderRadius: 10,
+                  border: "none", background: GRAD, color: "#fff", cursor: "pointer", whiteSpace: "nowrap",
                 }}
               >
-                Unlock Pro · $14.99/month{" "}
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, opacity: 0.8 }}>cancel anytime</span>
+                See Pro · $14.99/mo
               </button>
-            </div>
-          )}
-
-          {/* ── COMEBACK HOOK (free only) ── */}
-          {!isPro && (
-            <div style={{ marginTop: 20, padding: "20px 24px", borderRadius: 12, background: PURPLE_SOFT, border: `1px solid ${PURPLE_BORDER}` }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: PURPLE, marginBottom: 10 }}>
-                What this report can&apos;t tell you yet
-              </div>
-              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 14px)", color: "#ECF1FA", lineHeight: 1.6, margin: "0 0 6px" }}>
-                Your <strong style={{ color: PURPLE, fontWeight: 600 }}>next stream</strong> is the one that matters.
-              </p>
-              <p style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "calc(var(--cs, 1) * 13px)", color: "#A6B3C9", lineHeight: 1.6, margin: 0 }}>
-                One report is a snapshot. The change between this stream and your next is the proof. Track it, see what improved, see what didn&apos;t that&apos;s how coaching actually works.
-              </p>
             </div>
           )}
 

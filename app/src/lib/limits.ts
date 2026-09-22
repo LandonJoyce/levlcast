@@ -2,18 +2,21 @@
  * lib/limits.ts — subscription plan limits and usage enforcement.
  *
  * PLAN LIMITS:
- *   Free trial:     2 VOD analyses + 5 clips LIFETIME (one-time, per Twitch ID)
+ *   Free:           2 VOD analyses + 5 clips PER WEEK, 8h/week (per Twitch ID)
  *   Pro:            15 VOD analyses/month, 20 clips/month — $14.99/mo (was $9.99 founding through 2026-06-03)
  *   Founding (20/20): grandfathered users who subscribed before the limit drop;
  *                    all $9.99 subscribers keep their original rate via Stripe.
  *
- * FREE TRIAL — BYPASS-PROOF:
- *   Free users do not get a monthly refresh. They get 2 analyses + 5 clips,
- *   ever. Counters live in the trial_records table keyed by twitch_id, not
- *   by profile.id, so deleting and re-creating a Supabase account with the
- *   same Twitch login does NOT reset the trial. RLS on trial_records blocks
- *   all client access — only the service-role admin client increments it
- *   from server-side success handlers (Inngest analyze + clip-success).
+ * FREE TIER — BYPASS-PROOF:
+ *   Free users get a weekly allowance that resets Monday (UTC). Counters
+ *   live in trial_records keyed by twitch_id, not profile.id, so deleting
+ *   and re-creating a Supabase account with the same Twitch login does NOT
+ *   hand out a fresh week. RLS on trial_records blocks all client access —
+ *   only the service-role admin client increments it from server-side
+ *   success handlers (Inngest analyze + clip-success).
+ *
+ *   The lifetime columns (analyses_used / clips_used) still accumulate but
+ *   no longer gate anything; see FREE_WEEKLY_LIMITS for why that changed.
  *
  * HOW USAGE IS COUNTED:
  *   Pro / Founding (monthly):
@@ -23,8 +26,11 @@
  *       check before either finishes.
  *     - Clips: rows with status = "ready" or "deleted" created this calendar
  *       month. Failed/processing clips do not count.
- *   Free trial (lifetime):
- *     - Both counters read directly from trial_records.{analyses_used, clips_used}.
+ *   Free (weekly):
+ *     - Counts read from trial_records.{analyses_this_week, clips_this_week},
+ *       treated as zero whenever week_start is not the current Monday.
+ *     - Hours are summed from the user's own VODs analysed since Monday,
+ *       plus anything still in progress.
  *     - Increment from incrementTrialAnalysis() / incrementTrialClip() —
  *       admin-client only. NEVER call from client code.
  *
@@ -40,16 +46,64 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/server";
 
-export const FREE_TRIAL_LIMITS = {
-  // Dropped from 3 to 2 on 2026-06-05. Rationale: with 3, free users had
-  // enough data to self-coach across multiple reports and never hit the
-  // moment where the cross-stream pitch lands. At 2, their second report
-  // renders with LastStreamRecap and Score Trajectory both locked +
-  // blurred in-place — the strongest conversion moment in the product.
-  // Clips stay at 5 (essentially free on R2, no reason to gate).
-  analyses_lifetime: 2,
-  clips_lifetime: 5,
+/**
+ * Free tier — a weekly allowance, not a lifetime trial.
+ *
+ * The lifetime cap was cut from 3 to 2 on 2026-06-05 on the theory that
+ * less free meant more urgency, and the second report was deliberately
+ * rendered with its cross-stream sections locked and blurred as "the
+ * strongest conversion moment in the product". It did the opposite:
+ * conversion over the four months after ran about a third of the four
+ * months before it.
+ *
+ * The reason is structural. The hook here is cross-stream — report N sets
+ * one priority and report N+1 grades whether it got fixed. A lifetime cap
+ * of 2 let someone reach that payoff exactly once, blurred, and then
+ * locked them out permanently. Nobody forms a habit on two uses, and rank
+ * is a ladder nobody can climb in two games.
+ *
+ * Two a week rather than one is deliberate: the loop needs two data points
+ * close enough together to connect. At one a week you wait seven days to
+ * learn whether you fixed anything, which is too slow to feel like cause
+ * and effect.
+ *
+ * Cost is ~$0.53 per analysis (2.1h median VOD at ~$0.25/h blended). The
+ * hours cap is the real backstop — two 8-hour VODs a week would cost far
+ * more than the count alone implies, so hours are bounded directly.
+ */
+export const FREE_WEEKLY_LIMITS = {
+  analyses_per_week: 2,
+  // Clips are essentially free on R2, and a postable clip is the most
+  // immediately shareable thing the product makes. No reason to be stingy.
+  clips_per_week: 5,
+  hours_per_week: 8,
 };
+
+/**
+ * @deprecated Enforcement moved to FREE_WEEKLY_LIMITS. Lifetime counters
+ * still accumulate in trial_records for reporting, but nothing gates on
+ * them. Kept so existing imports keep compiling.
+ */
+export const FREE_TRIAL_LIMITS = {
+  analyses_lifetime: FREE_WEEKLY_LIMITS.analyses_per_week,
+  clips_lifetime: FREE_WEEKLY_LIMITS.clips_per_week,
+};
+
+/**
+ * Monday of the current week, UTC, as YYYY-MM-DD.
+ *
+ * Must agree exactly with `date_trunc('week', now() AT TIME ZONE 'UTC')`
+ * in migration 030, which is what writes the stored week. Postgres weeks
+ * start on Monday; JavaScript puts Sunday at 0, hence the remap. A
+ * mismatch would either hand out an extra allowance every week or strand
+ * users a day early, and neither would be obvious from the outside.
+ */
+export function currentWeekStart(now: Date = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const daysSinceMonday = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - daysSinceMonday);
+  return d.toISOString().slice(0, 10);
+}
 
 export const PRO_LIMITS = {
   analyses_per_month: 15,
@@ -167,6 +221,7 @@ export async function getUserUsage(
   // (intentionally — counters must not be reachable from the browser).
   if (plan === "free") {
     const twitchId = profile?.twitch_id as string | undefined;
+    const weekStart = currentWeekStart();
     let analysesUsed = 0;
     let clipsUsed = 0;
 
@@ -174,15 +229,49 @@ export async function getUserUsage(
       const admin = createAdminClient();
       const { data: trial } = await admin
         .from("trial_records")
-        .select("analyses_used, clips_used")
+        .select("analyses_this_week, clips_this_week, week_start")
         .eq("twitch_id", twitchId)
         .maybeSingle();
-      analysesUsed = trial?.analyses_used ?? 0;
-      clipsUsed = trial?.clips_used ?? 0;
+
+      // Any week other than this one — including NULL, which is every row
+      // written before migration 030 — reads as a fresh allowance. This is
+      // what un-blocks the users who already spent the old lifetime cap:
+      // they come back with a full week rather than staying locked out.
+      const storedWeek = (trial?.week_start as string | null) ?? null;
+      const sameWeek = storedWeek === weekStart;
+      analysesUsed = sameWeek ? (trial?.analyses_this_week ?? 0) : 0;
+      clipsUsed = sameWeek ? (trial?.clips_this_week ?? 0) : 0;
     }
 
-    const limit = FREE_TRIAL_LIMITS;
-    const canAnalyzeCount = analysesUsed < limit.analyses_lifetime;
+    // Hours this week, counted from the VODs themselves. The count cap
+    // alone does not bound cost: two 8-hour streams cost four times two
+    // 2-hour ones. In-progress VODs count so two long analyses started
+    // together cannot both pass the check before either finishes.
+    const weekStartIso = new Date(`${weekStart}T00:00:00.000Z`).toISOString();
+    const [{ data: weekVods }, { data: runningVods }] = await Promise.all([
+      supabase
+        .from("vods")
+        .select("duration_seconds")
+        .eq("user_id", userId)
+        .eq("status", "ready")
+        .gte("analyzed_at", weekStartIso),
+      supabase
+        .from("vods")
+        .select("duration_seconds")
+        .eq("user_id", userId)
+        .in("status", ["transcribing", "analyzing"]),
+    ]);
+
+    const secondsUsed =
+      (weekVods ?? []).reduce((s, v) => s + ((v.duration_seconds as number | null) ?? 0), 0) +
+      (runningVods ?? []).reduce((s, v) => s + ((v.duration_seconds as number | null) ?? 0), 0);
+    const hoursUsed = secondsUsed / 3600;
+
+    const limit = FREE_WEEKLY_LIMITS;
+    const canAnalyzeCount = analysesUsed < limit.analyses_per_week;
+    const canAnalyzeHours = hoursUsed < limit.hours_per_week;
+    const canAnalyze = canAnalyzeCount && canAnalyzeHours;
+
     return {
       plan: "free",
       founding_member: false,
@@ -190,20 +279,18 @@ export async function getUserUsage(
       on_trial: true,
       analyses_used: analysesUsed,
       clips_used: clipsUsed,
-      analyses_limit: limit.analyses_lifetime,
-      clips_limit: limit.clips_lifetime,
-      can_analyze: canAnalyzeCount,
-      can_generate_clip: clipsUsed < limit.clips_lifetime,
-      period_label: "ever",
+      analyses_limit: limit.analyses_per_week,
+      clips_limit: limit.clips_per_week,
+      can_analyze: canAnalyze,
+      can_generate_clip: clipsUsed < limit.clips_per_week,
+      period_label: "this week",
       analyses_this_month: analysesUsed,
       clips_this_month: clipsUsed,
-      // Free trial uses count-only — the per-analysis 4h cap already
-      // bounds total hours to ~12 lifetime, no separate hour cap needed.
-      hours_used: 0,
-      hours_limit: 0,
+      hours_used: Math.round(hoursUsed * 10) / 10,
+      hours_limit: limit.hours_per_week,
       can_analyze_count: canAnalyzeCount,
-      can_analyze_hours: true,
-      block_reason: canAnalyzeCount ? null : "count_cap",
+      can_analyze_hours: canAnalyzeHours,
+      block_reason: canAnalyze ? null : !canAnalyzeCount ? "count_cap" : "hours_cap",
     };
   }
 
@@ -333,20 +420,76 @@ export async function incrementTrialAnalysis(twitchId: string): Promise<void> {
   });
   if (error) {
     console.warn("[limits] trial_record_increment rpc failed, falling back to read-modify-write:", error.message);
-    const { data: existing } = await admin
-      .from("trial_records")
-      .select("analyses_used, clips_used")
-      .eq("twitch_id", twitchId)
-      .maybeSingle();
-    await admin
-      .from("trial_records")
-      .upsert({
-        twitch_id: twitchId,
-        analyses_used: (existing?.analyses_used ?? 0) + 1,
-        clips_used: existing?.clips_used ?? 0,
-        last_used_at: new Date().toISOString(),
-      });
+    await fallbackIncrement(twitchId, 1, 0);
   }
+}
+
+/**
+ * Read-modify-write fallback for when the RPC is missing (a database that
+ * has not run migration 030 yet).
+ *
+ * It has to roll the weekly counters over exactly as the RPC does,
+ * otherwise a stale week would keep accumulating and a free user would be
+ * locked out permanently — the precise failure this release exists to fix.
+ * Racy by nature, which is why it is only the fallback.
+ */
+async function fallbackIncrement(
+  twitchId: string,
+  analyses: number,
+  clips: number
+): Promise<void> {
+  const admin = createAdminClient();
+  const week = currentWeekStart();
+  const { data: existing } = await admin
+    .from("trial_records")
+    .select("analyses_used, clips_used, analyses_this_week, clips_this_week, week_start")
+    .eq("twitch_id", twitchId)
+    .maybeSingle();
+
+  const sameWeek = ((existing?.week_start as string | null) ?? null) === week;
+
+  await admin.from("trial_records").upsert({
+    twitch_id: twitchId,
+    analyses_used: (existing?.analyses_used ?? 0) + analyses,
+    clips_used: (existing?.clips_used ?? 0) + clips,
+    analyses_this_week: (sameWeek ? existing?.analyses_this_week ?? 0 : 0) + analyses,
+    clips_this_week: (sameWeek ? existing?.clips_this_week ?? 0 : 0) + clips,
+    week_start: week,
+    last_used_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Credit this week toward a user's streak and return the new count.
+ *
+ * Idempotent within a week, so it is safe to call on every completed
+ * analysis without checking first. Returns 0 when the streak could not be
+ * updated — a streak is decoration, and it must never be the reason an
+ * analysis is recorded as failed.
+ */
+export async function touchStreak(userId: string): Promise<number> {
+  if (!userId) return 0;
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("streak_touch", { p_user_id: userId });
+  if (error) {
+    console.warn("[limits] streak_touch failed:", error.message);
+    return 0;
+  }
+  return typeof data === "number" ? data : 0;
+}
+
+/**
+ * How many consecutive weeks a user currently has, as displayed.
+ *
+ * Read separately from the stored count because a streak lapses silently:
+ * nothing runs on Monday to zero it out, so a value credited three weeks
+ * ago is stale and must read as zero rather than as a live streak.
+ */
+export function liveStreak(streakWeeks: number, streakWeek: string | null): number {
+  if (!streakWeek || streakWeeks <= 0) return 0;
+  const thisWeek = currentWeekStart();
+  const lastWeek = currentWeekStart(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  return streakWeek === thisWeek || streakWeek === lastWeek ? streakWeeks : 0;
 }
 
 /**
@@ -366,19 +509,7 @@ export async function incrementTrialClip(twitchId: string): Promise<void> {
   });
   if (error) {
     console.warn("[limits] trial_record_increment rpc failed, falling back to read-modify-write:", error.message);
-    const { data: existing } = await admin
-      .from("trial_records")
-      .select("analyses_used, clips_used")
-      .eq("twitch_id", twitchId)
-      .maybeSingle();
-    await admin
-      .from("trial_records")
-      .upsert({
-        twitch_id: twitchId,
-        analyses_used: existing?.analyses_used ?? 0,
-        clips_used: (existing?.clips_used ?? 0) + 1,
-        last_used_at: new Date().toISOString(),
-      });
+    await fallbackIncrement(twitchId, 0, 1);
   }
 }
 
