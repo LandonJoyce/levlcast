@@ -709,3 +709,84 @@ export async function sendCollabAcceptedEmail(
 </body></html>`,
   });
 }
+
+/**
+ * A recurring charge was declined.
+ *
+ * This is the only email in here that exists to save a customer rather
+ * than to serve one. It was written after a Pro member with nine
+ * analyses churned on an insufficient-funds decline and was never told:
+ * the webhook logged a warning and nothing reached the person whose card
+ * had bounced.
+ *
+ * Deliberately short, and deliberately not a sales email. Someone whose
+ * payment just failed does not need the feature list again — they need
+ * to know it happened, that their history is intact, and where the
+ * button is. `reason` carries Stripe's own wording when it gives one,
+ * because "insufficient funds" and "card expired" call for different
+ * actions from the reader.
+ */
+export async function sendPaymentFailedEmail(
+  to: string,
+  name: string,
+  reason?: string | null
+): Promise<void> {
+  await resend.emails.send({
+    from: "Landon @ LevlCast <hello@levlcast.com>",
+    to,
+    replyTo: "support@levlcast.com",
+    subject: "Your LevlCast payment didn't go through",
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payment failed</title></head>
+<body style="margin:0;padding:0;background:#0A0A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+        <tr><td style="padding-bottom:32px;">
+          <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LevlCast</span>
+        </td></tr>
+
+        <tr><td style="background:#141418;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+
+          <p style="margin:0 0 20px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Hey ${name},</p>
+
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            Your card was declined when we tried to renew your Pro subscription${reason ? `, and the bank gave the reason as <span style="color:#ffffff;">${reason}</span>` : ""}. Nothing is wrong on your end that I can see, and this happens all the time.
+          </p>
+
+          <p style="margin:0 0 24px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            Your reports, your rank and your whole history are exactly where you left them. Update your card and Pro turns back on immediately.
+          </p>
+
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+            <tr><td style="background:#7C3AED;border-radius:12px;">
+              <a href="https://levlcast.com/dashboard/settings" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">
+                Update payment method →
+              </a>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 18px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
+            If you meant to cancel, no hard feelings and you don't need to do anything. If something else is going on, just reply to this email and it comes straight to me.
+          </p>
+
+          <p style="margin:0 0 6px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">Landon</p>
+          <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.35);">Founder, LevlCast</p>
+
+        </td></tr>
+
+        <tr><td style="padding-top:24px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">
+            LevlCast · <a href="https://levlcast.com/dashboard/settings" style="color:rgba(255,255,255,0.2);text-decoration:underline;">Manage subscription</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}

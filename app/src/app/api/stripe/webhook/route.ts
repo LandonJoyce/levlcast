@@ -8,14 +8,14 @@
  *   customer.subscription.updated    — plan change / renewal
  *   customer.subscription.deleted    — cancellation took effect
  *   invoice.payment_succeeded        — recurring renewal, extend expiry
- *   invoice.payment_failed           — payment failed, warn (don't downgrade yet)
+ *   invoice.payment_failed           — payment failed, email the customer (no downgrade yet)
  */
 
 export const dynamic = "force-dynamic";
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
-import { sendProWelcomeEmail } from "@/lib/email";
+import { sendProWelcomeEmail, sendPaymentFailedEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
@@ -302,6 +302,44 @@ export async function POST(request: Request) {
         const userId = await getUserId(admin, customerId, null);
         // Don't downgrade yet — Stripe retries automatically. subscription_expires_at lapses naturally.
         console.warn(`[webhook/stripe] payment_failed — customer ${customerId} user ${userId ?? "unknown"}`);
+
+        // Tell the person. This used to stop at the line above, and a Pro
+        // member with nine analyses churned on an insufficient-funds
+        // decline without ever hearing about it. A failed card is the
+        // cheapest customer there is to keep, but only if they know.
+        if (userId) {
+          try {
+            const { data: { user: authUser } } = await admin.auth.admin.getUserById(userId);
+            const { data: profile } = await admin
+              .from("profiles")
+              .select("twitch_display_name")
+              .eq("id", userId)
+              .single();
+
+            if (authUser?.email) {
+              // Stripe's own wording where it has it: "insufficient funds"
+              // and "expired card" ask different things of the reader.
+              const reason =
+                (invoice as unknown as { last_finalization_error?: { message?: string } })
+                  .last_finalization_error?.message ?? null;
+
+              await sendPaymentFailedEmail(
+                authUser.email,
+                profile?.twitch_display_name ?? authUser.email.split("@")[0],
+                reason
+              );
+              console.log(`[webhook/stripe] payment_failed — notified ${authUser.email}`);
+            }
+          } catch (err) {
+            // Never fail the webhook over an email. Stripe retries a
+            // non-2xx, and a retried payment_failed would send duplicates
+            // to someone already having a bad day.
+            console.warn(
+              `[webhook/stripe] payment_failed — could not notify user ${userId}:`,
+              err instanceof Error ? err.message : err
+            );
+          }
+        }
         break;
       }
 
