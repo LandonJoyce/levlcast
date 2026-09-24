@@ -125,22 +125,47 @@ function romanise(n: number): string {
  * we have the data showing they do.
  */
 export function placementPoints(score: number): number {
-  const clamped = Math.max(0, Math.min(100, score));
   // Iron II up to Gold IV.
   //
-  // The first version of this ran Bronze IV to Platinum IV, and a backfill
-  // over 53 real users showed why that was wrong: coach scores cluster
-  // hard in the 40s and 50s, so almost every single user placed into
-  // Silver. A ladder where everyone is the same rank is not a ladder, and
-  // someone with twelve analysed streams sat in the same tier as someone
-  // with one.
+  // The first version ran Bronze IV to Platinum IV and put nearly every
+  // backfilled user into Silver. Narrowing the destination range helped,
+  // but it treated the symptom: the input was still being read as though
+  // it used the full 0-100.
   //
-  // Placing lower leaves somewhere to climb, which is the entire product.
-  // The floor is Iron II rather than Iron IV so a bad first stream still
-  // is not rock bottom.
+  // It does not. Measured over 150 real analysed streams:
+  //
+  //   min 8  ·  p25 38  ·  median 52  ·  p75 58  ·  max 75
+  //
+  // Nothing has ever scored above 75 or below 8, and a third of all
+  // streams land between 50 and 59. Mapping 0-100 onto the ladder meant
+  // only the middle third of the ladder was ever reachable, so two
+  // completely different streams — a two hour lore playthrough and a one
+  // hour story game — both scored 52 and both placed at exactly 720.
+  //
+  // The fix is to map the band scores actually occupy, not the band the
+  // scale advertises. Tested against the first-stream score of all 57
+  // users with analysed streams:
+  //
+  //   15-70  ->  Iron 6   Bronze 16  Silver 33  Gold 2   (a Silver pile)
+  //   30-68  ->  Iron 10  Bronze 26  Silver 19  Gold 2
+  //   30-62  ->  Iron 10  Bronze 16  Silver 21  Gold 10  (18% pinned at cap)
+  //
+  // 30-68 wins. Not because it is the most even — 30-62 is — but because
+  // it puts almost nobody at the ceiling. A band that caps 18% of first
+  // streams at Gold IV hands out the top of the placement range for one
+  // good night and leaves them nothing to climb toward, which is the same
+  // failure as everyone sharing a rank, just at the other end.
+  //
+  // The median still lands at Bronze I. That is deliberate: a new user
+  // should be able to see Silver above them on day one.
+  const SCORE_FLOOR = 30;
+  const SCORE_CEILING = 68;
   const IRON_II = 200;
   const GOLD_IV = 1200;
-  return Math.round(IRON_II + (clamped / 100) * (GOLD_IV - IRON_II));
+
+  const clamped = Math.max(SCORE_FLOOR, Math.min(SCORE_CEILING, score));
+  const position = (clamped - SCORE_FLOOR) / (SCORE_CEILING - SCORE_FLOOR);
+  return Math.round(IRON_II + position * (GOLD_IV - IRON_II));
 }
 
 export interface DeltaInput {
@@ -192,7 +217,22 @@ const SCORE_TO_POINTS = 2;
  * small streamer grinding from 25 to 35 is still rewarded for the climb —
  * they just no longer out-earn someone holding a 70.
  */
-const QUALITY_BASELINE = 35;
+/**
+ * Measured at 52: the median of 150 real analysed streams.
+ *
+ * This was 35, picked as "roughly a mediocre stream" before there was
+ * data. The actual median is 52, which meant the typical stream scored
+ * seventeen points above baseline and earned quality points for being
+ * completely ordinary. Stack participation on top and every user gained
+ * rating almost every time they analysed anything. A ladder where nobody
+ * goes down is a participation counter.
+ *
+ * At the true median an average stream is roughly neutral: you hold your
+ * rank by being consistent, and you climb by being better than your own
+ * middle. Below it you bleed slowly, which is the pressure that makes
+ * climbing mean something.
+ */
+const QUALITY_BASELINE = 52;
 const QUALITY_WEIGHT = 1.2;
 
 /**
