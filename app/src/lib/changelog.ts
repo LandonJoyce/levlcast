@@ -24,7 +24,7 @@ export const changelog: ChangelogEntry[] = [
     date: "2026-09-21",
     title: "Free gets the whole report, every week",
     items: [
-      { type: "improved", text: "Free is now 2 full analyses and 5 clips every week, resetting Monday, instead of 2 for the life of the account. If you used yours up months ago, they are already back." },
+      { type: "improved", text: "Free is now 2 full analyses and 2 clips every week, resetting Monday, instead of 2 for the life of the account. If you used yours up months ago, they are already back." },
       { type: "improved", text: "Nothing in the report is held back any more. Score change since last stream, whether you fixed what you were told to fix last time, your trajectory, rewatch moments, opening and closing notes, best moment, growth-killer flags and the full list of fixes are all there on Free. The blurred sections are gone." },
       { type: "fix", text: "Your rank now moves on Free. It only ever updated for Pro accounts before, which meant most people had a rank that never changed no matter how they streamed." },
       { type: "new", text: "Every report opens with what the ladder did: points gained or lost, how far to your next division, and a proper moment when you get promoted." },

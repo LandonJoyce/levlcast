@@ -225,7 +225,7 @@ export default function HowToGrowPage() {
                 LevlCast is built for exactly this. It&apos;s an AI Twitch stream manager it analyzes your VODs, generates clips from your best moments, scores every stream 0–100, tracks burnout, and tells you specifically what to fix before your next broadcast. The five things above, done for you, every session.
               </p>
               <p className="text-base text-muted/90 leading-[1.8]">
-                It&apos;s free to start. One VOD analysis a month, five clips enough to try the system on your actual streams before committing.
+                It&apos;s free to start. Two full VOD analyses and two clips every week, forever, so you can run the system on your actual streams before committing.
               </p>
               <div className="mt-8">
                 <Link

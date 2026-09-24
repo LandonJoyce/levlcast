@@ -142,7 +142,7 @@ const faqStructuredData = {
       name: "Is LevlCast free to use?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes, no credit card required. Free gives you 2 full VOD analyses and 5 clips every week, forever, with nothing in the report held back. Pro is for streamers going live more than twice a week: 15 analyses and 20 clips a month.",
+        text: "Yes, no credit card required. Free gives you 2 full VOD analyses and 2 clips every week, forever, with nothing in the report held back. Pro is for streamers going live more than twice a week: 15 analyses and 20 clips a month.",
       },
     },
     {

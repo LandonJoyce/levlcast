@@ -79,7 +79,7 @@ const faqs = [
   },
   {
     q: "What does the clip generator cost?",
-    a: "Free: 2 full VOD analyses and 5 clips every week, forever, no credit card. Pro is $14.99/month or $149/year for 15 analyses and 20 clips a month.",
+    a: "Free: 2 full VOD analyses and 2 clips every week, forever, no credit card. Pro is $14.99/month or $149/year for 15 analyses and 20 clips a month.",
   },
 ];
 
@@ -150,7 +150,7 @@ export default function ClipGeneratorPage() {
                     </span>
                   </Link>
                 </div>
-                <p className="text-xs text-muted">Free plan includes 5 clips. No credit card.</p>
+                <p className="text-xs text-muted">Free plan includes 2 clips a week. No credit card.</p>
               </div>
               <div className="md:col-span-6 lg:col-span-6 md:translate-y-4">
                 <div className="rounded-2xl overflow-hidden border border-border shadow-glow-lg">
@@ -301,7 +301,7 @@ export default function ClipGeneratorPage() {
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </span>
             </Link>
-            <p className="text-xs text-muted">Free plan includes 5 clips. No credit card.</p>
+            <p className="text-xs text-muted">Free plan includes 2 clips a week. No credit card.</p>
           </div>
         </section>
 

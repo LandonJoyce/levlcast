@@ -73,9 +73,11 @@ import { createAdminClient } from "@/lib/supabase/server";
  */
 export const FREE_WEEKLY_LIMITS = {
   analyses_per_week: 2,
-  // Clips are essentially free on R2, and a postable clip is the most
-  // immediately shareable thing the product makes. No reason to be stingy.
-  clips_per_week: 5,
+  // Was 5, on the reasoning that clips are near-free on R2 so there was no
+  // point being stingy. That was true about cost and wrong about tiers:
+  // 5 a week is ~21 a month against Pro's 20, so free users were getting
+  // more clips than paying ones. One per analysis is the honest number.
+  clips_per_week: 2,
   hours_per_week: 8,
 };
 

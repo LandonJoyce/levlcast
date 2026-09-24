@@ -220,7 +220,7 @@ export default function HomePage() {
           <div className="lv2-plan">
             <p className="lv2-plan-n">Free</p>
             <p className="lv2-plan-p">$0</p>
-            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and five clips <em>every week</em>, forever. Nothing in the report is held back.</p>
+            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and two clips <em>every week</em>, forever. Nothing in the report is held back.</p>
           </div>
           <div className="lv2-plan lv2-plan-lead">
             <p className="lv2-plan-n">Pro</p>
