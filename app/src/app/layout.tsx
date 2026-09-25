@@ -109,61 +109,6 @@ const structuredData = {
   ],
 };
 
-const faqStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "How long does Twitch VOD analysis take?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Most VODs are analyzed within 2-5 minutes depending on stream length. We process audio transcription and AI peak detection in parallel so you're not waiting long.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Does LevlCast store my Twitch VODs?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "No. We stream your VOD directly from Twitch, analyze it, then discard it. Only the transcription data and generated clip files are stored in your account.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Does LevlCast work with YouTube?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. You can connect your YouTube channel from the dashboard and post clips directly. TikTok and Instagram integrations are coming soon.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Is LevlCast free to use?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes, no credit card required. Free gives you 2 full VOD analyses and 2 clips every week, forever, with nothing in the report held back. Pro is for streamers going live more than twice a week: 15 analyses and 20 clips a month.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Does LevlCast work with any Twitch streamer?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "LevlCast works with any Twitch account. Just connect with Twitch OAuth and start analyzing your past VODs immediately.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What is a peak moment on Twitch?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Our AI detects moments by category: hype (chat spikes, hype trains), funny (laughter, reactions), clutch (key gameplay moments), and educational (insight or tips you drop mid-stream).",
-      },
-    },
-  ],
-};
-
 export default function RootLayout({
   children,
 }: {
@@ -183,10 +128,10 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
-        />
+        {/* FAQ structured data lives on the homepage now, built from the
+            same list the visible FAQ renders. Here it was emitted on every
+            page of the site, dashboard included, and had drifted from the
+            questions anyone could actually see. */}
       </head>
       <body className={`${plusJakarta.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased`}>
         {children}

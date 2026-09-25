@@ -1,7 +1,8 @@
-/* ═══ /v2 — alternative homepage ════════════════════════════════════════
-   Scoped entirely under .lv2, which sits alongside .ll-page so it inherits
-   the colour tokens and the paste-box styling while overriding every
-   layout decision. Nothing here can affect the live homepage.
+/* ═══ Homepage ═══════════════════════════════════════════════════════════
+   Started life as /v2 and was promoted to the homepage; the previous one
+   lives at /v1. Scoped entirely under .lv2, which sits alongside .ll-page
+   so it inherits the colour tokens and the paste-box styling while
+   overriding every layout decision.
 
    Direction: left-aligned, no cards, one accent. Structure comes from
    rules, indents and mono labels rather than boxes, because a box around
@@ -9,6 +10,11 @@
 .lv2 {
   --lv2-pad: clamp(20px, 6vw, 88px);
   --lv2-maxw: 1080px;
+  /* The shared faint grey measures 4.2:1 on this background, under the
+     4.5:1 small text needs, and on this page it carries every 11px label
+     plus "No account. No card." Lifted here to 5.5:1; the one place it is
+     used large (the dim half of the headline) keeps the original below. */
+  --ll-fg-faint: rgb(146, 134, 136);
   background: var(--ll-bg);
 }
 .lv2 > * {
@@ -16,6 +22,10 @@
   margin-inline: auto;
   padding-inline: var(--lv2-pad);
 }
+/* Overscroll (the iOS bounce, a trackpad rubber-band) shows the body
+   behind the page, which is a cooler blue-black than this page's warm
+   one, so the top and bottom edges flashed a second colour. */
+body:has(.lv2) { background: rgb(16, 13, 14); }
 
 /* ── Bar ── */
 .lv2 .lv2-bar {
@@ -76,7 +86,7 @@
 /* The second line drops back instead of reaching for a gradient. Gradient
    text on a headline is the most over-used effect on software landing
    pages; the accent is saved for the timeline below. */
-.lv2 .lv2-h1-soft { color: var(--ll-fg-faint); }
+.lv2 .lv2-h1-soft { color: rgb(126, 114, 116); }
 .lv2 .lv2-sub {
   font-size: clamp(16px, 1.6vw, 19px);
   line-height: 1.55;
@@ -86,6 +96,9 @@
 }
 .lv2 .lv2-paste { max-width: 560px; }
 .lv2 .lv2-paste .ll-url-hero { margin: 0; }
+/* Shared helper is centred for the old centred hero; this page is left
+   aligned, so an error under the box lines up with everything else. */
+.lv2 .lv2-paste .ll-url-hero-helper { text-align: left; }
 .lv2 .lv2-fine {
   font-family: var(--ll-mono);
   font-size: 11px;
@@ -227,10 +240,16 @@
 
 /* ── Price ── */
 .lv2 .lv2-price { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+/* Column flex with the copy taking the slack, so both plans' buttons sit
+   on the same line however the two descriptions wrap. */
 .lv2 .lv2-plan {
   padding: 26px 26px 26px 0;
   border-top: 1px solid var(--ll-line-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
+.lv2 .lv2-plan .lv2-plan-b { flex: 1; }
 .lv2 .lv2-plan-lead { padding-left: 26px; border-left: 1px solid var(--ll-line-soft); }
 .lv2 .lv2-plan-n {
   font-family: var(--ll-mono);
@@ -271,9 +290,32 @@
   font-size: 15px;
   padding: 12px 22px;
   border-radius: 9px;
+  transition: filter 140ms ease, transform 140ms ease, border-color 140ms ease;
 }
+/* Every other control on the page answered the pointer; the two buttons
+   that matter most did not. */
+.lv2 .lv2-cta:hover { filter: brightness(1.08); }
+.lv2 .lv2-cta:active { transform: translateY(1px); }
+/* Secondary: same shape, no fill, so Free has a way in without competing
+   with Pro for the one filled button in the row. */
+.lv2 .lv2-cta-ghost {
+  background: transparent;
+  color: var(--ll-fg);
+  font-weight: 600;
+  border: 1px solid var(--ll-line-med);
+  padding: 11px 21px;
+}
+.lv2 .lv2-cta-ghost:hover { filter: none; border-color: var(--ll-fg-dim); }
 
 /* ── Foot ── */
+/* Rule drawn as a background inset by the page padding rather than as a
+   border. A border spans the padding too, so this line and the one above
+   the iOS section ran wider than every other rule on the page, which all
+   stop at the text column. */
+.lv2 .lv2-foot,
+.lv2 .lv2-ios-sec {
+  background: linear-gradient(var(--ll-line-soft), var(--ll-line-soft)) no-repeat top center / calc(100% - 2 * var(--lv2-pad)) 1px;
+}
 .lv2 .lv2-foot {
   display: flex;
   justify-content: space-between;
@@ -282,7 +324,6 @@
   flex-wrap: wrap;
   padding-block: 34px 52px;
   margin-top: 24px;
-  border-top: 1px solid var(--ll-line-soft);
   font-family: var(--ll-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -327,7 +368,6 @@
   gap: clamp(28px, 5vw, 72px);
   align-items: center;
   padding-block: clamp(56px, 8vw, 96px);
-  border-top: 1px solid var(--ll-line-soft);
   margin-top: clamp(32px, 5vw, 56px);
 }
 .lv2 .lv2-ios-h {
@@ -423,18 +463,20 @@
   margin: -8px 0 28px;
   max-width: 52ch;
 }
+/* Eight equal columns that shrink to fit. The strip used to be a fixed
+   44px minimum per emblem with a sideways scroll, which on a phone pushed
+   Grandmaster, the top of the ladder and the whole point of the row, off
+   the edge behind a scroll nobody finds. */
 .lv2 .lv2-rank-strip {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 84px));
+  align-items: end;
   gap: clamp(4px, 1.5vw, 14px);
   margin-bottom: 34px;
-  overflow-x: auto;
-  padding-bottom: 4px;
 }
 .lv2 .lv2-rank-strip img {
-  width: clamp(44px, 8.5vw, 84px);
+  width: 100%;
   height: auto;
-  flex-shrink: 0;
   display: block;
 }
 /* Lower tiers sit back so the row has a visible gradient of importance

@@ -33,6 +33,32 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+/**
+ * One list for the visible FAQ and its structured data, so the two can
+ * never say different things. The structured data used to live in the
+ * root layout, where it went out on every page and had drifted to
+ * questions this page does not ask.
+ */
+const FAQ = [
+  { q: "Do I need an account?", a: "Not to try it. Paste any Twitch stream link and you get a real report on the start of it. You only sign in when you want the whole stream read instead of the start." },
+  { q: "Do you keep my streams?", a: "No. We listen to the audio while we work, then throw it away. We keep the report and any clips you make." },
+  { q: "How long does it take?", a: "About a minute for the free one. About five minutes for a full two hour stream." },
+  { q: "Does it work on small channels?", a: "Any channel. It does not matter if you have three viewers." },
+  { q: "What do I actually get for free?", a: "Two full reports a week, every week. Full means full. There is no blurred section, no locked fix, no part of the report you have to pay to read. Pro is for people streaming more than twice a week who want more of them." },
+  { q: "What is the rank?", a: "Every stream you analyze moves you up or down a ladder, Iron through Grandmaster. Good streams pull you up, bad ones cost you less than good ones gain, and it gets harder the higher you climb. Each week you also race a small league of streamers near your rank, and the top three earn bonus points." },
+  { q: "Who can see my rank?", a: "Your league sees your Twitch name and picture, your rank and the points you gained that week. Never your score or your reports. The public leaderboard only shows the top 50. You can leave leagues any time in Account." },
+];
+
+const FAQ_STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 /** Marks on the hero timeline. Percentages are positions across the stream. */
 const MARKS = [
   { at: 4, label: "Slow start", note: "8 minutes before anything happened", tone: "warn" },
@@ -81,7 +107,9 @@ export default function HomePage() {
           Paste a link. We listen to the whole stream and tell you what went wrong and when.
         </p>
         <div className="lv2-paste">
-          <UrlPasteHero />
+          {/* No hint: the line below already says it, and two stacked lines
+              of fine print under one box read as clutter. */}
+          <UrlPasteHero hint={null} />
         </div>
         <p className="lv2-fine">No account. No card. Works on anyone&apos;s stream.</p>
       </section>
@@ -131,12 +159,13 @@ export default function HomePage() {
       <section className="lv2-sec" id="report">
         <h2 className="lv2-h2">What you get</h2>
         <dl className="lv2-defs">
-          {/* Was "a score out of 100". The product does not lead with that
-              number any more, so promising it here set up the wrong
-              expectation before anyone even signed in. */}
+          {/* Was "a score out of 100", then "Points", which repeated the
+              rank section's first line word for word one screen later. The
+              rank has its own section; this row is the thing every report
+              ends on. */}
           <div className="lv2-def">
-            <dt>Points</dt>
-            <dd>Every stream earns or loses points toward your next rank.</dd>
+            <dt>The fix</dt>
+            <dd>One thing to change before you go live again.</dd>
           </div>
           <div className="lv2-def">
             <dt>Quotes</dt>
@@ -168,7 +197,7 @@ export default function HomePage() {
         <div className="lv2-rank-strip" aria-hidden="true">
           {["iron", "bronze", "silver", "gold", "platinum", "diamond", "master", "grandmaster"].map((tier) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={tier} src={`/ranks/${tier}.png`} alt="" loading="lazy" />
+            <img key={tier} src={`/ranks/${tier}.png`} alt="" width={256} height={256} loading="lazy" decoding="async" />
           ))}
         </div>
 
@@ -179,11 +208,19 @@ export default function HomePage() {
           </div>
           <div className="lv2-def">
             <dt>Bad night</dt>
-            <dd>Costs you less than a good one earns. One stream never drops your rank.</dd>
+            <dd>Costs you less than a good one earns. One bad stream never drops you a tier.</dd>
           </div>
           <div className="lv2-def">
             <dt>Going up</dt>
             <dd>Gets harder the higher you are. Iron is quick. Grandmaster is not.</dd>
+          </div>
+          <div className="lv2-def">
+            <dt>Every week</dt>
+            <dd>You race the streamers closest to your rank. Top three earn bonus points.</dd>
+          </div>
+          <div className="lv2-def">
+            <dt>Every stream</dt>
+            <dd>Goes in your match history as a win or a loss, with the points it moved.</dd>
           </div>
           <div className="lv2-def">
             <dt>Everyone sees it</dt>
@@ -208,7 +245,10 @@ export default function HomePage() {
           <img
             src="/la/clip-editor.png"
             alt="The LevlCast clip editor: trim sliders, an editable caption list, caption style picker, hook frame chooser, and format and destination options"
+            width={1697}
+            height={896}
             loading="lazy"
+            decoding="async"
           />
         </figure>
       </section>
@@ -221,12 +261,17 @@ export default function HomePage() {
             <p className="lv2-plan-n">Free</p>
             <p className="lv2-plan-p">$0</p>
             <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and two clips <em>every week</em>, forever. Nothing in the report is held back.</p>
+            <Link href="/analyze" className="lv2-cta lv2-cta-ghost">Try it free</Link>
           </div>
           <div className="lv2-plan lv2-plan-lead">
             <p className="lv2-plan-n">Pro</p>
             <p className="lv2-plan-p">$14.99<span>/mo</span></p>
             <p className="lv2-plan-b">For streamers going live more than twice a week. Fifteen streams a month, twenty clips, and posting straight to YouTube.</p>
-            <Link href="/auth/login?plan=monthly" className="lv2-cta">Start free</Link>
+            {/* Said "Start free", but ?plan=monthly sends you through sign-in
+                straight into a $14.99 Stripe checkout. A button that says
+                free and opens a card form is the fastest way to lose trust
+                on a pricing section. */}
+            <Link href="/auth/login?plan=monthly" className="lv2-cta">Go Pro</Link>
           </div>
         </div>
       </section>
@@ -234,15 +279,10 @@ export default function HomePage() {
       {/* ── FAQ ── */}
       <section className="lv2-sec" id="faq">
         <h2 className="lv2-h2">Questions</h2>
-        <FaqAccordion
-          items={[
-            { q: "Do I need an account?", a: "Not to try it. Paste any Twitch stream link and you get a real report on the start of it. You only sign in when you want the whole stream read instead of the start." },
-            { q: "Do you keep my streams?", a: "No. We listen to the audio while we work, then throw it away. We keep the report and any clips you make." },
-            { q: "How long does it take?", a: "About a minute for the free one. About five minutes for a full two hour stream." },
-            { q: "Does it work on small channels?", a: "Any channel. It does not matter if you have three viewers." },
-            { q: "What do I actually get for free?", a: "Two full reports a week, every week. Full means full. There is no blurred section, no locked fix, no part of the report you have to pay to read. Pro is for people streaming more than twice a week who want more of them." },
-            { q: "What is the rank?", a: "Every stream you run moves you up or down a ladder, Iron through Grandmaster. Good streams pull you up, bad ones cost you less than good ones gain, and it gets harder the higher you climb. There is a leaderboard if you want to see where you sit." },
-          ]}
+        <FaqAccordion items={FAQ} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }}
         />
       </section>
 
@@ -281,16 +321,18 @@ export default function HomePage() {
         </div>
         <div className="lv2-ios-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/la/newphone.png" alt="The LevlCast dashboard on iPhone" loading="lazy" />
+          <img src="/la/newphone.png" alt="The LevlCast dashboard on iPhone" width={558} height={611} loading="lazy" decoding="async" />
         </div>
       </section>
 
       <footer className="lv2-foot">
         <span>LevlCast</span>
         <span className="lv2-foot-links">
+          {/* "Current site" pointed at "/", this page, left over from when
+              this design was /v2 and linked back to the real homepage. */}
+          <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>
-          <Link href="/">Current site</Link>
         </span>
       </footer>
     </div>

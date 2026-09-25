@@ -18,7 +18,18 @@ function isValidTwitchVodUrl(input: string): boolean {
   return /twitch\.tv\/videos\/\d{6,}/i.test(trimmed);
 }
 
-export default function UrlPasteHero() {
+/**
+ * `hint` is the line under the box when there is no error. It used to say
+ * "Sign in with Twitch", which stopped being true when the paste started
+ * going to the free analyzer instead of OAuth. Pass null where the page
+ * already says it in its own words; the line then only appears to show an
+ * error.
+ */
+export default function UrlPasteHero({
+  hint = "No sign-in, no card. Takes about a minute.",
+}: {
+  hint?: string | null;
+} = {}) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -80,12 +91,17 @@ export default function UrlPasteHero() {
             disabled={submitting}
             aria-label="Twitch VOD URL"
             aria-invalid={!!error}
+            aria-describedby={error || hint ? "ll-url-hero-helper" : undefined}
             className="ll-url-hero-input"
           />
         </div>
+        {/* Only disabled while submitting. Disabling it while the box was
+            empty greyed out the one button the page exists for, so on first
+            load the main call to action looked broken. An empty submit now
+            just shows the example link below. */}
         <button
           type="submit"
-          disabled={submitting || url.trim().length === 0}
+          disabled={submitting}
           className="ll-btn ll-btn-grad ll-url-hero-submit"
         >
           {submitting ? "Loading…" : (
@@ -98,13 +114,15 @@ export default function UrlPasteHero() {
           )}
         </button>
       </div>
-      <p className="ll-url-hero-helper">
-        {error ? (
-          <span className="ll-url-hero-error">{error}</span>
-        ) : (
-          <span>Sign in with Twitch. 2 free reports a week, no card.</span>
-        )}
-      </p>
+      {(error || hint) && (
+        <p id="ll-url-hero-helper" className="ll-url-hero-helper">
+          {error ? (
+            <span className="ll-url-hero-error" role="alert">{error}</span>
+          ) : (
+            <span>{hint}</span>
+          )}
+        </p>
+      )}
     </form>
   );
 }
