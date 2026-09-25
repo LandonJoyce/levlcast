@@ -12,8 +12,12 @@
  */
 
 import type { Metadata } from "next";
+import Link from "next/link";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
 import { createAdminClient } from "@/lib/supabase/server";
-import { rankFromPoints } from "@/lib/rank";
+import { rankFromPoints, TIER_HEX } from "@/lib/rank";
+import "../home-ranked.css";
 import "./leaderboard.css";
 
 export const revalidate = 300;
@@ -23,17 +27,6 @@ export const metadata: Metadata = {
   description:
     "The highest ranked streamers on LevlCast, ranked on how much they improve stream to stream.",
   alternates: { canonical: "/leaderboard" },
-};
-
-const TIER_COLOR: Record<string, string> = {
-  Iron: "#9AA0A6",
-  Bronze: "#C1804B",
-  Silver: "#B8C2CC",
-  Gold: "#E3B341",
-  Platinum: "#4FD1B9",
-  Diamond: "#7CC5F5",
-  Master: "#C084FC",
-  Grandmaster: "#A855F7",
 };
 
 interface Row {
@@ -62,68 +55,76 @@ export default async function LeaderboardPage() {
   const rows = await topStreamers();
 
   return (
-    <main className="lb">
-      <header className="lb-head">
-        <p className="lb-kicker">LevlCast</p>
-        <h1 className="lb-h1">Leaderboard</h1>
-        <p className="lb-sub">
-          Rank moves on how much a stream improves on the streamer&apos;s own recent
-          form, so this is a board of who is getting better fastest, not who is
-          already biggest.
+    <div className="ll-page v3">
+      <SiteHeader />
+      <main className="lb">
+        <header className="lb-head">
+          <p className="v3-label">Top 50</p>
+          <h1 className="lb-h1">Leaderboard</h1>
+          <p className="lb-sub">
+            Rank moves on how much a stream improves on the streamer&apos;s own recent
+            form, so this is a board of who is getting better fastest, not who is
+            already biggest.
+          </p>
+        </header>
+
+        {rows.length === 0 ? (
+          <p className="lb-empty">Nobody has placed yet.</p>
+        ) : (
+          <ol className="lb-list">
+            {rows.map((row, i) => {
+              const rank = rankFromPoints(row.rank_points ?? 0);
+              const name = row.twitch_display_name || row.twitch_login || "Streamer";
+              const color = TIER_HEX[rank.tier] ?? TIER_HEX.Iron;
+              return (
+                <li key={`${row.twitch_login}-${i}`} className="lb-row">
+                  <span className="lb-pos">{i + 1}</span>
+
+                  {row.twitch_avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="lb-avatar" src={row.twitch_avatar_url} alt="" />
+                  ) : (
+                    <span className="lb-avatar lb-avatar-blank" />
+                  )}
+
+                  {row.twitch_login ? (
+                    <a
+                      className="lb-name"
+                      href={`https://twitch.tv/${row.twitch_login}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {name}
+                    </a>
+                  ) : (
+                    <span className="lb-name">{name}</span>
+                  )}
+
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="lb-emblem"
+                    src={`/ranks/${rank.tier.toLowerCase()}.png`}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span className="lb-tier" style={{ color }}>
+                    {rank.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
+        {/* This used to say you could get ranked with no account, but the
+            free no-account report doesn't rank anyone. A rank needs a
+            signed-in stream. */}
+        <p className="lb-foot">
+          Want your name on here? <Link href="/auth/login">Sign in with Twitch</Link> and your first report places you
+          on the ladder.
         </p>
-      </header>
-
-      {rows.length === 0 ? (
-        <p className="lb-empty">Nobody has placed yet.</p>
-      ) : (
-        <ol className="lb-list">
-          {rows.map((row, i) => {
-            const rank = rankFromPoints(row.rank_points ?? 0);
-            const name = row.twitch_display_name || row.twitch_login || "Streamer";
-            const color = TIER_COLOR[rank.tier] ?? TIER_COLOR.Iron;
-            return (
-              <li key={`${row.twitch_login}-${i}`} className="lb-row">
-                <span className="lb-pos">{i + 1}</span>
-
-                {row.twitch_avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className="lb-avatar" src={row.twitch_avatar_url} alt="" />
-                ) : (
-                  <span className="lb-avatar lb-avatar-blank" />
-                )}
-
-                {row.twitch_login ? (
-                  <a
-                    className="lb-name"
-                    href={`https://twitch.tv/${row.twitch_login}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {name}
-                  </a>
-                ) : (
-                  <span className="lb-name">{name}</span>
-                )}
-
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="lb-emblem"
-                  src={`/ranks/${rank.tier.toLowerCase()}.png`}
-                  alt=""
-                  aria-hidden="true"
-                />
-                <span className="lb-tier" style={{ color }}>
-                  {rank.label}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-
-      <footer className="lb-foot">
-        <a href="/analyze">Get ranked. Paste a stream, no account needed.</a>
-      </footer>
-    </main>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }
