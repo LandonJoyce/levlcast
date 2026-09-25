@@ -1,7 +1,11 @@
 ﻿import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { scoreColorVar } from "@/lib/score-utils";
+import { buildMatchHistory, summarizeMatches, type MatchVodRow } from "@/lib/match-history";
+import { getLeagueResults, getLeagueView, previousWeekStart } from "@/lib/league";
+import { currentWeekStart } from "@/lib/limits";
+import { MatchHistoryList, recordLabel } from "@/components/dashboard/match-history";
+import { LeagueCard } from "@/components/dashboard/league-card";
 import WelcomeModal from "@/components/dashboard/welcome-modal";
 import PendingVodHandler from "@/components/dashboard/pending-vod-handler";
 import PendingCheckoutHandler from "@/components/dashboard/pending-checkout-handler";
@@ -239,7 +243,30 @@ export default async function DashboardPage() {
 
   // ─── Populated state ───────────────────────────────────
   const delta = latestScore !== null && previousScore !== null ? latestScore - previousScore : null;
-  const tableStreams = (recentVods ?? []).slice(0, 5);
+
+  // Match history and this week's league. League tables are closed to the
+  // browser, so they are read through the admin client; the helpers only
+  // return public fields. Every read here fails soft: a league problem
+  // must never take the dashboard down with it.
+  const admin = createAdminClient();
+  const [{ data: rankedVods }, { data: leagueSettings }, leagueView, recentResults] = await Promise.all([
+    supabase
+      .from("vods")
+      .select("id, title, analyzed_at, stream_date, created_at, duration_seconds, rank_delta, rank_points_after")
+      .eq("user_id", user.id)
+      .eq("status", "ready"),
+    supabase.from("profiles").select("league_opt_out").eq("id", user.id).maybeSingle(),
+    getLeagueView(admin, user.id).catch(() => null),
+    // Enough settled weeks that any payout inside the six rows shown below
+    // is there; the newest one doubles as "last week" on the league card.
+    getLeagueResults(admin, user.id, { limit: 6 }).catch(() => []),
+  ]);
+
+  const matches = buildMatchHistory((rankedVods ?? []) as MatchVodRow[], recentResults);
+  const matchSummary = summarizeMatches(matches);
+  const leagueOptOut = Boolean((leagueSettings as { league_opt_out?: boolean } | null)?.league_opt_out);
+  const lastWeekResult =
+    recentResults[0]?.weekStart === previousWeekStart(currentWeekStart()) ? recentResults[0] : null;
 
   return (
     <>
@@ -316,6 +343,11 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* The league sits directly under the rank because it is the other
+          half of the same question: the badge says where you stand, the
+          league says who you are racing to get further. */}
+      {!leagueOptOut && <LeagueCard view={leagueView} lastResult={lastWeekResult} />}
 
       {/* Unposted clips nudge */}
       {unpostedClips.length > 0 && (
@@ -406,56 +438,27 @@ export default async function DashboardPage() {
       </div>
       </div>
 
-      {/* Recent streams table */}
+      {/* Match history.
+          This was a "Recent streams" table with every stream's raw score in
+          a coloured pill, which put a red 31 beside each row on a page that
+          had otherwise stopped leading with the score. The rows now say
+          what each stream did to the ladder, win or loss and by how much;
+          the score is one click away in the report. */}
       <div className="card">
         <div className="card-head">
-          <h3>Recent streams</h3>
+          <h3>Match history</h3>
           <div className="right">
-            <span className="label-mono">{totalAnalyzed} total</span>
-            <Link href="/dashboard/vods" className="btn-link mono" style={{ fontSize: 11, letterSpacing: ".06em" }}>
+            {matchSummary.games > 0 && (
+              <span className="label-mono">
+                {recordLabel(matchSummary)} · last {matchSummary.games}
+              </span>
+            )}
+            <Link href="/dashboard/history" className="btn-link mono" style={{ fontSize: 11, letterSpacing: ".06em" }}>
               SEE ALL <Icons.Arrow />
             </Link>
           </div>
         </div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th style={{ width: "40%" }}>Stream</th>
-              <th>Date</th>
-              <th>Duration</th>
-              <th>Moments</th>
-              <th style={{ textAlign: "right" }}>Score</th>
-              <th style={{ width: 30 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {tableStreams.map((s) => {
-              const score = (s.coach_report as { overall_score?: number } | null)?.overall_score ?? 0;
-              const moments = Array.isArray(s.peak_data) ? s.peak_data.length : 0;
-              return (
-                <tr key={s.id} style={{ cursor: "pointer" }}>
-                  <td>
-                    <Link href={`/dashboard/vods/${s.id}`} style={{ display: "flex", alignItems: "center", gap: 12, color: "inherit" }}>
-                      <div style={{ width: 48, height: 30, borderRadius: 5, background: "linear-gradient(135deg, oklch(0.32 0.05 245), oklch(0.22 0.04 245))", display: "grid", placeItems: "center", color: "var(--ink-3)", flexShrink: 0 }}>
-                        <Icons.Play />
-                      </div>
-                      <span className="stream-title" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</span>
-                    </Link>
-                  </td>
-                  <td className="mono" style={{ fontSize: 12 }}>{formatDate(s.analyzed_at ?? s.created_at)}</td>
-                  <td className="mono" style={{ fontSize: 12 }}>{formatDuration(s.duration_seconds)}</td>
-                  <td>{moments > 0 ? <span className="chip b">{moments} clips</span> : <span style={{ color: "var(--ink-3)" }}>...</span>}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <div className="score-pill" style={{ color: scoreColorVar(score), justifyContent: "flex-end" }}>
-                      {score}<small>/100</small>
-                    </div>
-                  </td>
-                  <td><Icons.Chev /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <MatchHistoryList matches={matches.slice(0, 6)} />
       </div>
     </>
   );

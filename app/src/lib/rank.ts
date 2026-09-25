@@ -51,6 +51,18 @@ export const TIERS: RankTier[] = [
   { name: "Grandmaster", floor: 2800 },
 ];
 
+/** Emblem colour per tier, for anything that tints by rank. */
+export const TIER_HEX: Record<string, string> = {
+  Iron: "#9AA0A6",
+  Bronze: "#C1804B",
+  Silver: "#B8C2CC",
+  Gold: "#E3B341",
+  Platinum: "#4FD1B9",
+  Diamond: "#7CC5F5",
+  Master: "#C084FC",
+  Grandmaster: "#A855F7",
+};
+
 /**
  * The top two tiers have no divisions.
  *
@@ -348,4 +360,16 @@ function describe(diff: number, delta: number, shielded: boolean): string {
 /** Points at which a named tier begins. */
 export function tierFloor(name: string): number {
   return TIERS.find((t) => t.name === name)?.floor ?? 0;
+}
+
+/**
+ * True when a stored per-stream delta was a placement, not a climb.
+ *
+ * A placement records the whole starting rating as its delta (200 to
+ * 1200), while a climb is capped at MAX_GAIN, so anything above the cap
+ * can only have been a placement. Lets a page tell the two apart from the
+ * vods row alone.
+ */
+export function isPlacementDelta(delta: number): boolean {
+  return delta > MAX_GAIN;
 }

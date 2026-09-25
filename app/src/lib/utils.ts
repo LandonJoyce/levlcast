@@ -16,6 +16,13 @@ export function formatDuration(seconds: number): string {
   return `${s}s`;
 }
 
+/** 1 → "1st", 2 → "2nd", 11 → "11th", 23 → "23rd" */
+export function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
 /** Format a number with K/M suffix (e.g., 128000 → "128K") */
 export function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;

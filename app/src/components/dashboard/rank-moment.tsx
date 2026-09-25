@@ -26,6 +26,7 @@
 
 import { useEffect, useState } from "react";
 import { rankFromPoints, TIERS, type Rank } from "@/lib/rank";
+import { ordinal } from "@/lib/utils";
 
 const TIER_COLOR: Record<string, string> = {
   Iron: "#9AA0A6",
@@ -45,12 +46,33 @@ function nextStepLabel(rank: Rank): string {
   return TIERS[idx + 1]?.name ?? "the top";
 }
 
+/**
+ * Where this stream left you in this week's league. Only passed for a
+ * stream analysed this week; `passed` is filled only for your latest one,
+ * since that is the only stream whose effect on the table is still exact.
+ */
+export interface RankMomentLeague {
+  name: string;
+  position: number;
+  size: number;
+  passed: string[];
+}
+
+function passedLine(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return ` Passed ${names[0]}.`;
+  if (names.length <= 3) return ` Passed ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}.`;
+  return ` Passed ${names.slice(0, 2).join(", ")} and ${names.length - 2} more.`;
+}
+
 export function RankMoment({
   pointsAfter,
   delta,
+  league,
 }: {
   pointsAfter: number | null;
   delta: number | null;
+  league?: RankMomentLeague | null;
 }) {
   // Entrance is delayed by a beat so the bar visibly fills rather than
   // appearing already full, which reads as a static image.
@@ -192,6 +214,17 @@ export function RankMoment({
           {tierUp && (
             <p style={{ margin: "10px 0 0", fontSize: 13.5, color: "#A6B3C9", lineHeight: 1.6 }}>
               You moved out of {from.tier}. Analyse another stream to keep it.
+            </p>
+          )}
+
+          {/* The league line. The ladder says how you did against yourself;
+              this says what it did to the race against everyone else. */}
+          {league && (
+            <p style={{ margin: "10px 0 0", fontSize: 13, color: "#A6B3C9", lineHeight: 1.6 }}>
+              <span style={{ color: "#ECF1FA", fontWeight: 700 }}>
+                {ordinal(league.position)} of {league.size}
+              </span>{" "}
+              in {league.name} this week.{passedLine(league.passed)}
             </p>
           )}
         </div>

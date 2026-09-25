@@ -7,6 +7,8 @@ Just write a task on its own line starting with `- [ ]`. Add a line below it sta
 
 ## Pending
 
+- [ ] Scout any streamer: click anyone on the leaderboard or in your league to see their rank, W/L record and match history (never their coach scores). op.gg for streamers.
+Context: picked 2026-09-24 alongside leagues + match history. Needs a public profile route; decide whether scouting follows the league opt-out or has its own switch.
 
 - [ ] lets do some research for the growth playbook page It has the slides of the 10 things to do based on stats but the rest of the page should focus on growth not just why streamer archetype you fall under.The direction of the page should be on how to be always growing at a good rate of speed.
 

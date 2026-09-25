@@ -22,6 +22,7 @@ const baseNavItems = [
   { id: "dashboard",    label: "Dashboard",   href: "/dashboard" },
   { id: "vods",         label: "VODs",        href: "/dashboard/vods" },
   { id: "clips",        label: "Clips",       href: "/dashboard/clips" },
+  { id: "history",      label: "Match history", href: "/dashboard/history" },
   { id: "leaderboard",  label: "Leaderboard", href: "/leaderboard" },
   { id: "collabs",      label: "Collabs",     href: "/dashboard/collabs" },
   { id: "connections",  label: "Connections", href: "/dashboard/connections" },
@@ -53,6 +54,12 @@ const Icons = {
       <circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="1.6"/>
       <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.6"/>
       <path d="M20 4L8.5 15.5M20 20L8.5 8.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  ),
+  History: () => (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      <path d="M4 4v4M4 10v4M4 16v4" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"/>
     </svg>
   ),
   User: () => (
@@ -131,6 +138,8 @@ export default function DashSidebar({ user, vodCount, clipCount, collabPendingCo
     ? "vods"
     : pathname.startsWith("/dashboard/clips")
     ? "clips"
+    : pathname.startsWith("/dashboard/history")
+    ? "history"
     : pathname.startsWith("/dashboard/collabs")
     ? "collabs"
     : pathname.startsWith("/dashboard/connections")
@@ -144,6 +153,7 @@ export default function DashSidebar({ user, vodCount, clipCount, collabPendingCo
       case "dashboard":   return <Icons.Grid />;
       case "vods":        return <Icons.Vid />;
       case "clips":       return <Icons.Clip />;
+      case "history":     return <Icons.History />;
       case "collabs":     return <Icons.Collab />;
       case "connections": return <Icons.Link />;
       case "outreach":    return <Icons.Target />;

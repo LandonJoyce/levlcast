@@ -2730,3 +2730,322 @@
 .dash .rank-badge[data-size="sm"] .rank-badge-emblem { width: 26px; height: 26px; }
 .dash .rank-badge[data-size="lg"] .rank-badge-emblem { width: 62px; height: 62px; }
 .dash .rank-badge-row { align-items: center; }
+
+/* ── Match history ──────────────────────────────────────────────────────
+   Each analysed stream as a ranked game. The coloured left edge carries
+   win or loss before anything is read, which is how ranked players scan a
+   history: colour first, numbers second. The tint is kept faint so a run
+   of losses reads as information, not as a wall of red. */
+.dash .mh-list { display: flex; flex-direction: column; }
+.dash .mh-row {
+  display: grid;
+  grid-template-columns: 72px 150px minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px 12px 17px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--mh-c, var(--line-2));
+  background: color-mix(in oklab, var(--mh-c, transparent) 5%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+.dash .mh-row:last-child { border-bottom: none; }
+.dash a.mh-row:hover { background: color-mix(in oklab, var(--mh-c, var(--ink)) 10%, transparent); }
+.dash .mh-row[data-result="win"] { --mh-c: var(--green); }
+.dash .mh-row[data-result="loss"] { --mh-c: var(--danger); }
+.dash .mh-row[data-result="league"] { --mh-c: #E3B341; }
+.dash .mh-row[data-result="placement"] { --mh-c: var(--blue); }
+
+.dash .mh-result { display: flex; flex-direction: column; gap: 3px; }
+.dash .mh-result-label {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mh-c, var(--ink-3));
+}
+.dash .mh-delta {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--mh-c, var(--ink-2));
+}
+
+.dash .mh-rank { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dash .mh-rank img { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
+.dash .mh-rank span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tier, var(--ink-2));
+  white-space: nowrap;
+}
+.dash .mh-rank .mh-rank-none { color: var(--ink-4); font-weight: 500; }
+
+.dash .mh-main { min-width: 0; }
+.dash .mh-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash .mh-meta {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash .mh-meta-rank { display: none; }
+
+.dash .mh-tag-cell { display: flex; justify-content: flex-end; }
+.dash .mh-tag {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.dash .mh-tag[data-tag="promoted"],
+.dash .mh-tag[data-tag="division_up"] {
+  color: var(--green);
+  border-color: color-mix(in oklab, var(--green) 35%, var(--line-2));
+  background: color-mix(in oklab, var(--green-soft) 40%, transparent);
+}
+.dash .mh-tag[data-tag="demoted"],
+.dash .mh-tag[data-tag="division_down"] {
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger) 30%, var(--line-2));
+}
+.dash .mh-tag[data-tag="shield"] { color: var(--blue); border-color: color-mix(in oklab, var(--blue) 35%, var(--line-2)); }
+.dash .mh-chev { color: var(--ink-4); display: flex; }
+
+.dash .mh-summary {
+  display: grid;
+  grid-template-columns: repeat(3, auto) 1fr;
+  gap: 28px;
+  align-items: start;
+}
+.dash .mh-stat { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.dash .mh-stat-n {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.dash .mh-stat-n[data-sign="up"] { color: var(--green); }
+.dash .mh-stat-n[data-sign="down"] { color: var(--danger); }
+.dash .mh-w { color: var(--green); }
+.dash .mh-l { color: var(--danger); }
+.dash .mh-stat-sub { font-size: 11.5px; color: var(--ink-3); }
+.dash .mh-form { display: flex; gap: 4px; flex-wrap: wrap; }
+.dash .mh-pip {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+}
+.dash .mh-pip[data-r="win"] {
+  color: var(--green);
+  background: color-mix(in oklab, var(--green-soft) 55%, var(--surface-2));
+  border-color: color-mix(in oklab, var(--green) 35%, var(--line-2));
+}
+.dash .mh-pip[data-r="loss"] {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger-soft) 45%, var(--surface-2));
+  border-color: color-mix(in oklab, var(--danger) 30%, var(--line-2));
+}
+.dash .mh-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 36px;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .dash .mh-row {
+    grid-template-columns: 58px minmax(0, 1fr) 14px;
+    gap: 12px;
+    padding: 12px 14px 12px 12px;
+  }
+  .dash .mh-rank,
+  .dash .mh-tag-cell { display: none; }
+  .dash .mh-meta-rank { display: inline; }
+  .dash .mh-summary { grid-template-columns: 1fr 1fr; gap: 20px; }
+  /* Ten pips do not fit in half a phone; give the form row the full width. */
+  .dash .mh-summary .mh-stat:last-child { grid-column: 1 / -1; }
+  .dash .mh-hero { grid-template-columns: 1fr; gap: 22px; }
+}
+
+/* ── Weekly league ──────────────────────────────────────────────────────
+   The one block on the dashboard about other people. The rival line sits
+   above the table because it is the whole point: one name, one gap, one
+   stream to close it. The table is the context for that sentence. */
+.dash .lg-head { display: flex; flex-direction: column; gap: 3px; }
+.dash .lg-head h3 { margin: 0; }
+.dash .lg-rival {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in oklab, var(--blue-soft) 18%, transparent);
+}
+.dash .lg-you-pos {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.dash .lg-you-pos small { font-size: 13px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+.dash .lg-rival-copy p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
+.dash .lg-rival-copy .lg-prize-note { margin-top: 4px; font-size: 12.5px; color: #E3B341; }
+
+.dash .lg-table { list-style: none; margin: 0; padding: 0; }
+.dash .lg-row {
+  display: grid;
+  grid-template-columns: 22px 28px minmax(0, 1fr) 130px 84px 56px 38px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.dash .lg-row:last-child { border-bottom: none; }
+.dash .lg-row[data-you="yes"] {
+  background: color-mix(in oklab, var(--blue-soft) 35%, transparent);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+.dash .lg-row[data-played="no"] { opacity: 0.55; }
+.dash .lg-pos {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-align: right;
+}
+.dash .lg-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line-2); }
+.dash .lg-avatar-blank { display: block; background: var(--surface-2); }
+.dash .lg-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dash .lg-name a { color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+.dash .lg-name a:hover { text-decoration: underline; }
+.dash .lg-you-chip {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+  border: 1px solid color-mix(in oklab, var(--blue) 40%, var(--line-2));
+  border-radius: 999px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+}
+.dash .lg-tier { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; min-width: 0; }
+.dash .lg-tier img { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+.dash .lg-streams { font-family: var(--font-geist-mono), monospace; font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+.dash .lg-points {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+  color: var(--ink-2);
+}
+.dash .lg-points[data-sign="up"] { color: var(--green); }
+.dash .lg-points[data-sign="down"] { color: var(--danger); }
+.dash .lg-prize {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #E3B341;
+  text-align: right;
+}
+.dash .lg-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.dash .lg-last { color: var(--ink-2); }
+.dash .lg-card-empty { display: flex; flex-direction: column; gap: 10px; }
+.dash .lg-empty-h { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.dash .lg-empty-p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); max-width: 60ch; }
+.dash .lg-card-empty .lg-last { margin: 0; font-size: 12.5px; }
+
+@media (max-width: 720px) {
+  .dash .lg-rival { padding: 14px 16px; gap: 14px; }
+  .dash .lg-row {
+    grid-template-columns: 18px 26px minmax(0, 1fr) 52px 34px;
+    gap: 10px;
+    padding: 10px 16px;
+  }
+  .dash .lg-tier,
+  .dash .lg-streams { display: none; }
+  .dash .lg-foot { padding: 12px 16px; }
+}
+
+/* League opt-out switch (Account). A real checkbox underneath, so it is
+   keyboard and screen-reader operable without any extra wiring. */
+.dash .lg-switch { position: relative; display: inline-flex; flex-shrink: 0; cursor: pointer; }
+.dash .lg-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.dash .lg-switch-track {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  position: relative;
+  transition: background 160ms ease;
+}
+.dash .lg-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  transition: transform 160ms ease, background 160ms ease;
+}
+.dash .lg-switch input:checked + .lg-switch-track { background: color-mix(in oklab, var(--green) 45%, var(--surface-3)); }
+.dash .lg-switch input:checked + .lg-switch-track::after { transform: translateX(16px); background: var(--ink); }
+.dash .lg-switch input:focus-visible + .lg-switch-track { outline: 2px solid var(--blue); outline-offset: 2px; }
+.dash .lg-switch input:disabled + .lg-switch-track { opacity: 0.5; }

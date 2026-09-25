@@ -1,9 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 import { CoachReport } from "@/components/dashboard/coach-report";
-import { RankMoment } from "@/components/dashboard/rank-moment";
+import { RankMoment, type RankMomentLeague } from "@/components/dashboard/rank-moment";
+import { getLeagueView, passedByStream } from "@/lib/league";
+import { currentWeekStart } from "@/lib/limits";
+import { isPlacementDelta } from "@/lib/rank";
 import { StreamScorecard } from "@/components/dashboard/stream-scorecard";
 import { FullBreakdown } from "@/components/dashboard/full-breakdown";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
@@ -58,6 +61,51 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Where this stream left the streamer in this week's league, for the rank
+ * moment. Null for anything analysed before this week, since an old
+ * report cannot say anything true about a table that has moved since.
+ * "Passed" is only worked out for the latest analysis, the one stream
+ * whose effect on the table is still exact.
+ */
+async function getLeagueMoment(
+  userId: string,
+  vodId: string,
+  analyzedAt: string | null,
+  rankDelta: number | null
+): Promise<RankMomentLeague | null> {
+  const weekStart = currentWeekStart();
+  if (!analyzedAt || Date.parse(analyzedAt) < Date.parse(`${weekStart}T00:00:00Z`)) return null;
+
+  try {
+    const admin = createAdminClient();
+    const view = await getLeagueView(admin, userId, weekStart);
+    if (!view) return null;
+
+    const { data: latest } = await admin
+      .from("vods")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "ready")
+      .order("analyzed_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+
+    // A placement counted as a stream played, for zero points.
+    const delta = rankDelta ?? 0;
+    const leagueDelta = isPlacementDelta(delta) ? 0 : delta;
+
+    return {
+      name: view.name,
+      position: view.you.position,
+      size: view.standings.length,
+      passed: latest?.id === vodId ? passedByStream(view, leagueDelta) : [],
+    };
+  } catch {
+    return null;
+  }
 }
 
 export default async function VodReportPage({
@@ -174,6 +222,8 @@ export default async function VodReportPage({
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
   const scoreColor = currentScore !== undefined ? scoreColorHex(currentScore) : "#A6B3C9";
 
+  const leagueMoment = await getLeagueMoment(user!.id, id, vod.analyzed_at as string | null, vod.rank_delta as number | null);
+
   return (
     <>
       <VodStatusPoller hasProcessing={hasProcessingClip} />
@@ -193,6 +243,7 @@ export default async function VodReportPage({
       <RankMoment
         pointsAfter={(vod.rank_points_after as number | null) ?? null}
         delta={(vod.rank_delta as number | null) ?? null}
+        league={leagueMoment}
       />
 
       {/* Header */}

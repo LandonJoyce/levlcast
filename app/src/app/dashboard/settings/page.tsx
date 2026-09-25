@@ -2,6 +2,7 @@
 import { getUserUsage } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
+import { LeagueSection } from "./league-section";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -168,6 +169,8 @@ export default async function SettingsPage({
           </div>
         </div>
       </div>
+
+      <LeagueSection optedOut={Boolean(profile?.league_opt_out)} />
 
       {/* Delete account — bare, no danger-zone framing */}
       <div style={{ marginTop: 12 }}>

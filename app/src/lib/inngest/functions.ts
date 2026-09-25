@@ -8,6 +8,7 @@
  *   cleanupStuckClips    — cron: mark stuck clips as failed
  *   computeBurnoutScores — cron (weekly): burnout detection for all active users
  *   sendActivationNudge  — cron (hourly): email users who signed up 24h ago but never analyzed
+ *   runWeeklyLeagues     — cron (Monday 00:05 UTC): pay out last week's leagues, seat this week's
  */
 
 import { NonRetriableError } from "inngest";
@@ -30,6 +31,7 @@ import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, currentWeekStart, touchStreak } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
 import { computeDelta } from "@/lib/rank";
+import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
 import { fillOutreachQueue } from "@/lib/outreach";
 import { redditSendMessage } from "@/lib/reddit";
 
@@ -1683,6 +1685,24 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
   }
 );
 
+// ─── Weekly Leagues ────────────────────────────────────────────────────────
+// Monday 00:05 UTC, five minutes after the week turns. Last week is closed
+// and paid first, then this week's groups are seated, so a bonus is already
+// on someone's rank when the rank-sorted groups are cut. Both steps are safe
+// to re-run; see lib/league.ts.
+
+export const runWeeklyLeagues = inngest.createFunction(
+  { id: "run-weekly-leagues" },
+  { cron: "5 0 * * 1" }, // every Monday 00:05 UTC
+  async ({ step }) => {
+    const supabase = createAdminClient();
+    const settled = await step.run("settle-last-week", () => settleFinishedLeagues(supabase));
+    const formed = await step.run("form-this-week", () => formWeeklyLeagues(supabase));
+    console.log(`[leagues] settled ${settled.settled} (${settled.paid} paid), formed ${formed.leagues} with ${formed.members} streamers`);
+    return { settled, formed };
+  }
+);
+
 // ─── Streak Nudge ──────────────────────────────────────────────────────────
 // Runs daily at 2pm UTC. Finds users whose most recent ready VOD was analyzed
 // in the 4–5 day window — at risk but not yet broken. Fires exactly once per
@@ -2120,6 +2140,19 @@ async function applyRankForAnalysis(
     console.log(
       `[rank] ${userId}: ${result.from.label} -> ${result.to.label} (${result.delta >= 0 ? "+" : ""}${result.delta})`
     );
+
+    // This week's league. Its own try, so a league problem can never undo
+    // the rank change the report is about to show.
+    try {
+      await recordLeagueStream(supabase, {
+        userId,
+        delta: result.delta,
+        pointsAfter: result.points,
+        isPlacement: recentScores.length === 0,
+      });
+    } catch (err) {
+      console.warn("[league] skipped:", err instanceof Error ? err.message : err);
+    }
 
     return { delta: result.delta, points: result.points, tierChange: result.tierChange };
   } catch (err) {

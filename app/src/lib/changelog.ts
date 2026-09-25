@@ -20,6 +20,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v0.15.0",
+    date: "2026-09-24",
+    title: "Weekly leagues and match history",
+    items: [
+      { type: "new", text: "Weekly leagues. Every Monday you're put in a group with the streamers nearest your rank, and the week is a race on rank points gained. Every stream you analyze counts. Top three on Monday earn +20, +10 and +5 rank points." },
+      { type: "new", text: "Your rival is whoever sits one place above you in your league, and the dashboard tells you exactly how many points it takes to pass them." },
+      { type: "new", text: "Reports now say where the stream left you in your league this week, and who it moved you past." },
+      { type: "new", text: "Match history. Every analyzed stream is a ranked game with a win or loss, the points it moved, and the rank it left you on, plus your record, win rate and recent form." },
+      { type: "improved", text: "The Recent streams table on the dashboard is now your match history, so each stream shows what it did to your rank instead of a raw score." },
+      { type: "new", text: "Rather not be in a league? Turn it off in Account and you're out right away. Your league only ever sees your name, avatar, rank and weekly points, never your coach score." },
+    ],
+  },
+  {
     version: "v0.14.0",
     date: "2026-09-21",
     title: "Free gets the whole report, every week",

@@ -36,6 +36,8 @@ export default function DashTopbar() {
     crumbs.push("VODs");
   } else if (pathname.startsWith("/dashboard/clips")) {
     crumbs.push("Clips");
+  } else if (pathname.startsWith("/dashboard/history")) {
+    crumbs.push("Match history");
   } else if (pathname.startsWith("/dashboard/settings")) {
     crumbs.push("Account");
   } else if (pathname.startsWith("/dashboard/connections")) {
