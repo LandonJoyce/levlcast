@@ -216,7 +216,7 @@ export default async function LandingPage() {
                 </div>
                 <div>
                   <div className="ll-trust-name">Landon</div>
-                  <div className="ll-trust-role">Founder · twitch.tv/orbitxd</div>
+                  <div className="ll-trust-role">Founder</div>
                 </div>
               </div>
             </div>

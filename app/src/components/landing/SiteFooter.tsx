@@ -13,11 +13,7 @@ export default function SiteFooter() {
       <div className="v3-foot-maker">
         <span className="v3-foot-mark">LevlCast</span>
         <p>
-          Made by Landon, who streams at{" "}
-          <a href="https://twitch.tv/orbitxd" target="_blank" rel="noopener noreferrer">
-            twitch.tv/orbitxd
-          </a>
-          . Questions or ideas:{" "}
+          Made by Landon. Questions or ideas:{" "}
           <a href="mailto:Landon@LevlCast.com">Landon@LevlCast.com</a>
         </p>
         <a className="v3-foot-app" href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
