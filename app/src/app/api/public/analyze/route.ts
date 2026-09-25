@@ -167,7 +167,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Free reports are maxed out for today — they've been popular. Connect Twitch to analyze your own streams right now, or come back tomorrow.",
+          "Free reports are maxed out for today. Sign in with Twitch to analyze your own streams right now, or come back tomorrow.",
       },
       { status: 429 }
     );
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
 
   if (meta.durationSeconds > 0 && meta.durationSeconds < MIN_PREVIEW_SECONDS) {
     return NextResponse.json(
-      { error: "That stream is under 5 minutes. There isn't enough in it to coach — try a longer VOD." },
+      { error: "That stream is under 5 minutes, which isn't enough to coach. Try a longer one." },
       { status: 400 }
     );
   }

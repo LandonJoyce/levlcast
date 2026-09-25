@@ -109,13 +109,13 @@ export function describeBadUrl(input: string): string {
   const raw = (input || "").trim();
   if (!raw) return "Paste a Twitch VOD link to get started.";
   if (/\/clip\//i.test(raw) || /clips\.twitch\.tv/i.test(raw)) {
-    return "That's a clip link. Open the full stream on Twitch and copy that URL instead — it looks like twitch.tv/videos/1234567890.";
+    return "That's a clip link. Open the full stream on Twitch and copy that link instead. It looks like twitch.tv/videos/1234567890.";
   }
   if (/youtube\.com|youtu\.be/i.test(raw)) {
-    return "That's a YouTube link. LevlCast reads Twitch VODs right now — paste a link like twitch.tv/videos/1234567890.";
+    return "That's a YouTube link. LevlCast only reads Twitch streams for now, so paste a link like twitch.tv/videos/1234567890.";
   }
   if (/twitch\.tv/i.test(raw)) {
-    return "That looks like a Twitch channel rather than a specific stream. Open the VOD you want and copy the URL — it looks like twitch.tv/videos/1234567890.";
+    return "That looks like a Twitch channel rather than one stream. Open the stream you want under Videos and copy that link. It looks like twitch.tv/videos/1234567890.";
   }
   return "That doesn't look like a Twitch VOD link. Paste one that looks like twitch.tv/videos/1234567890.";
 }

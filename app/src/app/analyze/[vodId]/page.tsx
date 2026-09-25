@@ -7,11 +7,16 @@
  */
 
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import { PreviewReport, type PreviewPayload } from "@/components/preview/preview-report";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
 import { AnalyzeClient } from "../analyze-client";
+import { shoulders } from "../../fonts";
+import "../../home-ranked.css";
+import "../analyze.css";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +45,7 @@ export async function generateMetadata(
   const score = preview.coach_report?.overall_score ?? "?";
 
   return {
-    title: `${name} — ${score}/100`,
+    title: `${name}: ${score}/100`,
     description: preview.coach_report?.recommendation ?? "A free coaching report on this Twitch stream.",
     openGraph: {
       title: `${name} scored ${score}/100`,
@@ -58,23 +63,23 @@ export default async function PreviewPermalink(
 
   if (!preview) notFound();
 
-  // Still running, or it failed. Hand it to the client component, which
-  // already knows how to poll, show progress, and offer a retry.
-  if (preview.status !== "ready" || !preview.coach_report) {
-    return (
-      <main style={{ minHeight: "100vh", background: "#0A0C10" }}>
-        <Suspense fallback={null}>
-          <AnalyzeClient initialPreview={preview} />
-        </Suspense>
-      </main>
-    );
-  }
-
   return (
-    <main style={{ minHeight: "100vh", background: "#0A0C10", padding: "48px 20px 80px" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <PreviewReport preview={preview} />
-      </div>
-    </main>
+    <div className={`ll-page v3 az ${shoulders.variable}`}>
+      <SiteHeader />
+      {preview.status !== "ready" || !preview.coach_report ? (
+        // Still running, or it failed. Hand it to the client component,
+        // which already knows how to poll, show progress, and offer a retry.
+        <AnalyzeClient initialPreview={preview} />
+      ) : (
+        <main className="az-main az-done">
+          <PreviewReport preview={preview} />
+          {/* Most people opening a shared report are streamers themselves. */}
+          <Link href="/analyze" className="v3-btn v3-btn-ghost az-again">
+            Try it on your own stream
+          </Link>
+        </main>
+      )}
+      <SiteFooter />
+    </div>
   );
 }
