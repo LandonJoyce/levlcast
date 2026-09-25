@@ -1,0 +1,160 @@
+/* ═══ Sign in ════════════════════════════════════════════════════════════
+   Built on the homepage's tokens and type (home-ranked.css, .v3 scope):
+   a column for the button, a column for what happens after it, and a
+   rule between them. Nothing on this page is decoration. */
+
+.ll-page.v3.au {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+/* Flex items with auto side margins shrink to their content; the homepage
+   is a block, so its sections never needed this. */
+.v3.au > * { width: 100%; }
+
+.v3 .au-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-content: center;
+  align-items: start;
+  padding-block: clamp(32px, 6vh, 72px) clamp(48px, 10vh, 112px);
+}
+.v3 .au-signin { padding-right: clamp(32px, 6vw, 88px); }
+.v3 .au-next {
+  padding-left: clamp(32px, 6vw, 88px);
+  border-left: 1px solid var(--ll-line-soft);
+}
+
+.v3 .au-h1 {
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(34px, 4.2vw, 52px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin: 0 0 16px;
+  text-wrap: balance;
+}
+.v3 .au-sub {
+  max-width: 40ch;
+  margin: 0 0 30px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ll-fg-mute);
+}
+
+.v3 .au-action,
+.v3 .au-perm,
+.v3 .au-terms { max-width: 400px; }
+
+/* White like every other button on the site. The Twitch glyph keeps
+   Twitch's own purple, which is the only colour on the page. */
+.v3 .au-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px 22px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ll-fg);
+  color: rgb(16, 13, 14);
+  font-family: var(--ll-body);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, transform 140ms ease, opacity 140ms ease;
+}
+.v3 .au-btn svg { flex-shrink: 0; color: #9146ff; }
+.v3 .au-btn:hover { background: #ffffff; }
+.v3 .au-btn:active { transform: translateY(1px); }
+.v3 .au-btn:disabled { opacity: 0.65; cursor: default; transform: none; }
+.v3 .au-btn:focus-visible { outline: 2px solid var(--ll-fg); outline-offset: 3px; }
+
+/* Errors and the phone tip: a ruled note, the same shape as the partner
+   line on the homepage, instead of a tinted box. */
+.v3 .au-note {
+  margin: 0 0 18px;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--ll-line-med);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ll-fg-mute);
+}
+.v3 .au-note b { color: var(--ll-fg); font-weight: 600; }
+.v3 .au-note a { color: var(--ll-fg); text-decoration: underline; text-underline-offset: 3px; }
+.v3 .au-note-bad { border-left-color: var(--v3-bad); color: rgb(252, 180, 180); }
+
+.v3 .au-perm {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ll-fg-dim);
+}
+.v3 .au-terms {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ll-fg-faint);
+}
+.v3 .au-terms a { color: var(--ll-fg-dim); text-decoration: underline; text-underline-offset: 3px; }
+.v3 .au-terms a:hover { color: var(--ll-fg); }
+
+/* ── What happens next ── */
+.v3 .au-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--ll-line-soft);
+}
+.v3 .au-steps li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.v3 .au-n {
+  padding-top: 3px;
+  font-family: var(--ll-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ll-fg-faint);
+}
+.v3 .au-steps p {
+  max-width: 44ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ll-fg-dim);
+}
+.v3 .au-steps b { display: block; margin-bottom: 3px; color: var(--ll-fg); font-weight: 600; }
+.v3 .au-free {
+  margin: 18px 0 0;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--ll-fg-faint);
+}
+
+.v3 .au-foot {
+  padding-block: 22px 30px;
+  background: linear-gradient(var(--ll-line-soft), var(--ll-line-soft)) no-repeat top center / calc(100% - 2 * var(--v3-pad)) 1px;
+}
+.v3 .au-foot p { margin: 0; font-size: 13px; color: var(--ll-fg-dim); }
+.v3 .au-foot a { color: var(--ll-fg); text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 800px) {
+  .v3 .au-main {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    padding-block: 20px 56px;
+  }
+  .v3 .au-signin { padding-right: 0; }
+  .v3 .au-next { margin-top: 52px; padding-left: 0; border-left: 0; }
+  .v3 .au-action,
+  .v3 .au-perm,
+  .v3 .au-terms { max-width: none; }
+}
