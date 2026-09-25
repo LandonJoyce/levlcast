@@ -1,21 +1,31 @@
 import Link from "next/link";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
+import "./home-ranked.css";
 
+/**
+ * 404. Most people who follow a dead link aren't signed in, so this wears
+ * the public header and footer and points home first. The old page only
+ * offered "Go to Dashboard", which sent them to a login wall.
+ */
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        <p className="text-7xl font-extrabold text-accent-light mb-4">404</p>
-        <h1 className="text-2xl font-extrabold tracking-tight mb-2">Page not found</h1>
-        <p className="text-sm text-muted mb-8">
-          This page doesn't exist or was moved. Head back to your dashboard.
-        </p>
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 bg-accent hover:opacity-85 text-white font-semibold px-6 py-3 rounded-xl transition-opacity text-sm"
-        >
-          Go to Dashboard
-        </Link>
-      </div>
+    <div className="ll-page v3">
+      <SiteHeader />
+      <main className="v3-sec">
+        <p className="v3-label">404</p>
+        <h1 className="v3-h1">This page doesn&rsquo;t exist</h1>
+        <p className="v3-sub">It might have moved, or the link has a typo in it.</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <Link href="/" className="v3-btn">
+            Go to the homepage
+          </Link>
+          <Link href="/dashboard" className="v3-btn v3-btn-ghost">
+            Your dashboard
+          </Link>
+        </div>
+      </main>
+      <SiteFooter />
     </div>
   );
 }

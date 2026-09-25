@@ -1,7 +1,11 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
-import NavBar from "@/components/NavBar";
-import Footer from "@/components/Footer";
+import FaqAccordion from "@/components/FaqAccordion";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
+import { shoulders } from "../fonts";
+import "../home-ranked.css";
+import "../seo.css";
 
 export const metadata: Metadata = {
   title: "How to Grow on Twitch 2026: What Works and What Doesn't",
@@ -12,278 +16,227 @@ export const metadata: Metadata = {
     type: "article",
     url: "https://www.levlcast.com/how-to-grow-on-twitch",
     title: "How to Grow on Twitch 2026: What Works and What Doesn't",
-    description:
-      "5 tactics that actually grow a Twitch channel in 2026, and the popular advice that wastes your time.",
+    description: "5 tactics that actually grow a Twitch channel in 2026, and the popular advice that wastes your time.",
     siteName: "LevlCast",
     images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
     title: "How to Grow on Twitch 2026",
-    description:
-      "5 tactics that actually grow Twitch in 2026. The honest version, no bots or fluff.",
+    description: "5 tactics that actually grow a Twitch channel in 2026. The honest version, with no bots or fluff.",
     images: ["/opengraph-image"],
   },
 };
 
-const faqs = [
+const FAQS = [
   {
     q: "How long does it realistically take to grow on Twitch?",
-    a: "Affiliate status (50 followers, 3 average viewers) is achievable in 2–4 months of consistent streaming. Partner is a 1–3 year arc for most who make it. If you're trying to go full-time in under a year without an existing audience, the odds are against you and that's not a you problem, that's the math.",
+    a: "Affiliate (50 followers and 3 average viewers) is doable in 2 to 4 months of consistent streaming. Partner is a 1 to 3 year arc for most people who get there. If you're trying to go full-time in under a year without an existing audience, the odds are against you, and that's not a you problem, that's the math.",
   },
   {
     q: "Is it better to stream every day or on a schedule?",
-    a: "A schedule you can sustain beats daily streams you burn out from. Three predictable days a week is better than seven chaotic ones. Viewers come back to what they can plan around.",
+    a: "A schedule you can keep beats daily streams you burn out from. Three predictable days a week is better than seven chaotic ones, because viewers come back to what they can plan around.",
   },
   {
     q: "Should I buy viewers or followers to kickstart growth?",
-    a: "No. Twitch actively detects viewbotting and will ban you. More importantly: fake viewers never buy subs, clip your content, or tell friends about you. You'll have a bigger number and the same empty chat. Every hour you spend on bots is an hour not spent on the real work.",
+    a: "No. Twitch detects viewbotting and will ban you for it. Fake viewers also never subscribe, clip your stuff or tell their friends about you, so you end up with a bigger number and the same empty chat.",
   },
   {
     q: "Does streaming on weekends vs weekdays matter?",
-    a: "Less than you think. Consistency matters more than timing. The streamer who goes live every Tuesday 7pm for six months beats the one who guesses at 'optimal' slots and never shows up twice in a row.",
+    a: "Less than you'd think. Consistency matters more than timing. The streamer who goes live every Tuesday at 7pm for six months beats the one who chases the perfect slot and never shows up twice at the same time.",
   },
   {
     q: "What's the fastest way to find out what's holding my stream back?",
-    a: "Get feedback on your actual VOD not generic advice. Most streamers plateau because they can't see their own blind spots (dead air, weak openings, not responding to chat). An AI stream coach or an honest friend watching a VOD is faster than 50 more broadcasts.",
+    a: "Get feedback on your actual VOD instead of generic advice. Most streamers plateau because they can't see their own blind spots, like dead air, a slow opening or missing chat. A stream coach or an honest friend watching one VOD will teach you more than 50 more broadcasts.",
   },
 ];
 
-const articleStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: "How to Grow on Twitch in 2026 The Honest Guide",
-  description:
-    "The honest version of how to grow on Twitch in 2026. No gimmicks, no bots the tactics that actually move the needle, and the ones that don't.",
-  datePublished: "2026-04-24",
-  dateModified: "2026-04-24",
-  author: {
-    "@type": "Organization",
-    name: "LevlCast",
-    url: "https://www.levlcast.com",
-  },
-  publisher: {
-    "@type": "Organization",
-    name: "LevlCast",
-    logo: {
-      "@type": "ImageObject",
-      url: "https://www.levlcast.com/logo-mark.png",
+const STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: "How to Grow on Twitch in 2026: The Honest Guide",
+    description:
+      "The honest version of how to grow on Twitch in 2026: the tactics that actually move the needle, and the popular ones that don't.",
+    datePublished: "2026-04-24",
+    dateModified: "2026-09-25",
+    author: { "@type": "Organization", name: "LevlCast", url: "https://www.levlcast.com" },
+    publisher: {
+      "@type": "Organization",
+      name: "LevlCast",
+      logo: { "@type": "ImageObject", url: "https://www.levlcast.com/logo-mark.png" },
     },
+    mainEntityOfPage: "https://www.levlcast.com/how-to-grow-on-twitch",
   },
-  mainEntityOfPage: "https://www.levlcast.com/how-to-grow-on-twitch",
-};
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  },
+];
 
-const faqStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqs.map((f) => ({
-    "@type": "Question",
-    name: f.q,
-    acceptedAnswer: { "@type": "Answer", text: f.a },
-  })),
-};
-
+/**
+ * The growth guide, laid out as something to read: one column at a
+ * comfortable measure, on the homepage's type. The advice is the same as
+ * before; the sentences that had lost their dashes (and with them their
+ * sense) are rewritten, and the pitch at the end matches what LevlCast
+ * does now.
+ */
 export default function HowToGrowPage() {
   return (
-    <main className="min-h-screen bg-bg text-white noise">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleStructuredData) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
-      />
-      <div className="relative z-[1]">
-        <NavBar />
+    <div className={`ll-page v3 ${shoulders.variable}`}>
+      {STRUCTURED_DATA.map((d, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(d) }} />
+      ))}
+      <SiteHeader />
 
-        {/* ─── Hero ─── */}
-        <section className="relative pt-32 md:pt-40 pb-16 overflow-hidden">
-          <div className="absolute -top-40 -left-40 w-[700px] h-[700px] bg-accent/[0.06] rounded-full blur-[120px] pointer-events-none" />
-          <div className="relative max-w-[780px] mx-auto px-6">
-            <div className="inline-flex items-center gap-2 bg-accent/[0.08] border border-accent/[0.2] text-accent-light/80 text-[11px] font-semibold px-4 py-1.5 rounded-full tracking-[0.08em] mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-light/70 animate-pulse" />
-              Guide
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-[-2px] leading-[1.05] mb-6">
-              How to grow on Twitch<br />
-              <span className="text-gradient">in 2026.</span>
-            </h1>
-            <p className="text-lg text-muted/90 leading-relaxed">
-              The honest version. No gimmicks, no bots, no follow-for-follow. Five things that actually move the needle and the ones that don&apos;t, so you stop wasting cycles on them.
-            </p>
-          </div>
-        </section>
+      <main className="gd">
+        <header className="gd-head">
+          <p className="v3-label">Guide</p>
+          <h1 className="gd-h1">How to grow on Twitch in 2026</h1>
+          <p className="gd-lede">
+            The honest version, with no bots and no follow-for-follow. Five things that actually move the needle, and
+            the popular ones that don&apos;t, so you can stop spending time on them.
+          </p>
+          <p className="gd-date">Updated September 2026</p>
+        </header>
 
-        {/* ─── Article body ─── */}
-        <article className="pb-20">
-          <div className="max-w-[740px] mx-auto px-6">
+        <article className="gd-body">
+          <p>
+            Most Twitch growth advice is either recycled from 2019 or written by people who&apos;ve never streamed. The
+            reality in 2026 is that the algorithm won&apos;t save you, the raid train is mostly dead, and the streamers
+            who are actually climbing are doing a handful of unglamorous things, consistently.
+          </p>
+          <p>Here&apos;s what those things are, in order of how much they matter.</p>
 
-            {/* Intro */}
-            <section className="mb-14">
-              <p className="text-base text-muted/90 leading-[1.8] mb-5">
-                Most Twitch growth advice is either recycled from 2019 or written by people who&apos;ve never streamed. The reality in 2026: the algorithm doesn&apos;t save you, the raid train is mostly dead, and the streamers actually climbing are doing a handful of unglamorous things consistently.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                Here&apos;s what those things are in the order of what moves the needle most.
-              </p>
-            </section>
+          <h2>1. Fix the things you can&rsquo;t see</h2>
+          <p>
+            You have blind spots on your own stream. Everyone does. You can&apos;t hear your own dead air because you
+            were busy the whole time. You can&apos;t feel a weak opening because by the time it happens again next
+            stream, you&apos;ve forgotten the last one. You miss chat because the game has your attention.
+          </p>
+          <p>
+            The streamers who grow watch their VODs back and fix what they find. The ones who plateau never watch back
+            because &ldquo;that was a rough one,&rdquo; and that&apos;s exactly the one to watch.
+          </p>
+          <p>
+            If sitting through a three hour VOD isn&apos;t realistic, a{" "}
+            <Link href="/twitch-vod-analyzer">Twitch VOD analyzer</Link> or a{" "}
+            <Link href="/twitch-stream-coach">stream coach</Link> can find the moments that hurt you for you: dead air
+            with timestamps, a slow opening, the stretch where chat went quiet. A few minutes of focused review beats
+            three hours of rewatching.
+          </p>
 
-            {/* Section 1 */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">1. Fix the things you can&apos;t see</h2>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                You have blind spots on your own stream. Everyone does. You can&apos;t hear your own dead air because you were mentally engaged the whole time. You can&apos;t feel a weak opening because you&apos;ve already been live for two hours when it happens again on stream two. You miss chat because the game has your attention.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The streamers who grow are the ones who watch their VODs and fix what they find. The streamers who plateau are the ones who never watch back because &ldquo;that was a rough one.&rdquo; Especially then.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                If watching three-hour VODs back isn&apos;t realistic, use a <Link href="/twitch-vod-analyzer" className="text-accent-light hover:text-white underline">Twitch VOD analyzer</Link> or <Link href="/twitch-stream-coach" className="text-accent-light hover:text-white underline">AI stream coach</Link> to surface the specific moments that hurt you dead air with timestamps, weak openings, retention drops. Five minutes of focused review beats three hours of self-critique.
-              </p>
-            </section>
+          <h2>2. Clip what worked, every stream</h2>
+          <p>
+            The biggest unforced error streamers make is having great moments and never turning them into anything.
+            The moment sits in a VOD that expires in a couple of weeks, and nobody outside the three people watching
+            ever sees it.
+          </p>
+          <p>
+            YouTube Shorts and TikTok are where new viewers find streamers now, much more than the Twitch directory.
+            Every hype moment, clutch play and funny reaction you don&apos;t clip is discovery you threw away.
+          </p>
+          <p>
+            You don&apos;t need 50 clips a stream. You need three to five good ones, posted consistently, for months.
+            That&apos;s how a small channel builds a path from Shorts to live. A{" "}
+            <Link href="/twitch-clip-generator">Twitch clip generator</Link> takes away the &ldquo;I&apos;ll do it
+            later&rdquo; friction that kills the habit.
+          </p>
 
-            {/* Section 2 */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">2. Clip what worked. Every stream.</h2>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The single biggest unforced error streamers make: they have great moments and never turn them into content. The clip sits in a VOD that expires in two weeks. Nobody outside your current 3 viewers ever sees it.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                YouTube Shorts and TikTok are where new Twitch viewers find streamers in 2026. Not the Twitch directory. Not Twitter. Short-form verticals. Which means every hype moment, clutch play, and funny reaction that goes unclipped is discovery traffic you chose to throw away.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                You don&apos;t need 50 clips per stream. You need 3–6 good ones, posted consistently, over months. That&apos;s how a small channel builds a pipeline from Shorts to live. A <Link href="/twitch-clip-generator" className="text-accent-light hover:text-white underline">Twitch clip generator</Link> removes the &ldquo;I&apos;ll do it later&rdquo; friction that kills this habit.
-              </p>
-            </section>
+          <h2>3. Stream on a schedule you can actually keep</h2>
+          <p>
+            The advice is always to stream more. The honest version is to stream consistently. A viewer who knows
+            you&apos;re live every Tuesday and Thursday at 7pm will plan around it. A viewer who has to check whether
+            you&apos;re live today eventually stops checking.
+          </p>
+          <p>
+            Three predictable streams a week beat seven chaotic ones, partly because the seven-a-week schedule burns
+            you out in three months. Then you disappear for two, and your small audience finds someone else.
+          </p>
+          <p>
+            Burnout is the biggest threat to growth, and you rarely notice it until you&apos;re in it. Watch your energy
+            across streams. If it keeps dropping, you&apos;re not lazy, you&apos;re doing too much. Pull back before the
+            break gets forced on you.
+          </p>
 
-            {/* Section 3 */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">3. Stream on a schedule you can actually keep</h2>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The advice is always &ldquo;stream more.&rdquo; The honest version is &ldquo;stream consistently.&rdquo; A viewer who knows you&apos;re live every Tuesday and Thursday at 7pm will organize their week around it. A viewer who has to check whether you&apos;re live today will stop checking.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                Three predictable sessions a week beats seven chaotic ones. Especially because the seven-a-week schedule gets you burnt out in three months and then you disappear for two, and your small audience finds someone else.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                Burnout is growth&apos;s biggest enemy and it&apos;s invisible until you&apos;re already in it. Watch your energy curve across streams. If it&apos;s dropping session over session, you&apos;re not lazy you&apos;re overextending. Pull back before the break is forced on you.
-              </p>
-            </section>
+          <h2>4. Use your own data instead of guessing</h2>
+          <p>
+            If you can&apos;t say which kind of content does best for you, you&apos;re leaving growth on the table. You
+            have the data, you just haven&apos;t looked at it. Which streams had your best moments? What were you
+            playing? What time was it, and how far into the stream?
+          </p>
+          <p>
+            The pattern is usually there. Your best stuff is probably bunched into two or three kinds of content, at a
+            certain point in the stream, when your energy is at a certain level. Lean into that.
+          </p>
+          <p>
+            That doesn&apos;t mean dropping what you love streaming. It means noticing what lands and giving it more
+            room: more airtime and more clips.
+          </p>
 
-            {/* Section 4 */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">4. Stop guessing. Use your own data.</h2>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The streamer who can&apos;t tell you their best-performing content category is leaving growth on the table. You have data you just haven&apos;t looked at it. Which streams scored your highest moments? What category were they? What time of day? How long into the session?
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The pattern is usually there. Your best content is probably concentrated in 2–3 categories, at a specific point in your stream, when your energy is at a certain level. Lean into it.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                This doesn&apos;t mean abandoning what you love streaming. It means noticing which things resonate and giving them more oxygen more airtime, more clips, more room to breathe in your scene.
-              </p>
-            </section>
+          <h2>5. Show up like you&rsquo;re already bigger</h2>
+          <p>
+            This sounds vague, but it&apos;s specific. The streamer at 10 average viewers who opens like it&apos;s a
+            real show, with a clean intro, their energy up and talking to the three people who are there, comes across
+            like a 500 viewer channel having a slow day. People treat them that way, and they grow faster.
+          </p>
+          <p>
+            The streamer at 10 viewers who waits for an audience before performing, makes the &ldquo;chat&apos;s dead
+            today&rdquo; joke in the first minute and skips a proper opening because nobody&apos;s watching yet, stays
+            at 10. The person who would have been their 11th viewer left in the first 20 seconds.
+          </p>
 
-            {/* Section 5 */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">5. Show up like you&apos;re already bigger</h2>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                This sounds vague but it&apos;s specific. The streamer at 10 average viewers who opens the stream like it&apos;s a real show clean intro, energy up, engaging the three people there reads like a 500-viewer channel having a slow day. They get treated that way. They grow faster.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                The streamer at 10 average viewers who waits for an audience before performing who does the &ldquo;empty chat today&rdquo; joke in the first minute, who doesn&apos;t bother with a proper opening because &ldquo;no one&apos;s watching yet&rdquo; stays at 10. Forever. The person who would have been your 11th viewer clicked away in the first 20 seconds.
-              </p>
-            </section>
+          <h2>What doesn&rsquo;t work</h2>
+          <ul className="gd-list">
+            <li>
+              <strong>Viewbots and follow-for-follow.</strong> Twitch detects them and bans you for them, and they
+              don&apos;t produce real engagement anyway. Every hour spent on them is an hour taken from the work that
+              actually grows a channel.
+            </li>
+            <li>
+              <strong>Chasing trending games.</strong> Unless you&apos;re genuinely good at it or into it, you&apos;re
+              competing with 10,000 streamers for the same spillover audience. It&apos;s better to be in the top 20 of a
+              smaller category than the bottom 1,000 of the biggest one.
+            </li>
+            <li>
+              <strong>Raid swaps with streamers nobody watches.</strong> Raiding back and forth doesn&apos;t bring new
+              followers. The people in a raid have to like what they see when they land on your channel, which comes
+              back to everything above.
+            </li>
+            <li>
+              <strong>Asking for follows instead of earning them.</strong> &ldquo;Drop a follow if you&apos;re enjoying
+              the stream&rdquo; is fine. Begging for follows in the middle of a clutch is not. People follow because
+              they want to come back, so give them a reason first.
+            </li>
+          </ul>
 
-            {/* What doesn't work */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">What doesn&apos;t work (so you stop trying)</h2>
-              <ul className="space-y-4 text-base text-muted/90 leading-[1.8]">
-                <li>
-                  <strong className="text-white">Viewbots and follow-for-follow.</strong> Twitch detects them, bans you for them, and they don&apos;t produce real engagement anyway. Every hour spent on this is an hour stolen from the work that actually grows a channel.
-                </li>
-                <li>
-                  <strong className="text-white">Chasing trending games.</strong> Unless you&apos;re genuinely good at it or genuinely interested, you&apos;re competing against 10,000 streamers for the same spillover audience. Better to be top 20 in a smaller category than bottom 1,000 in the biggest one.
-                </li>
-                <li>
-                  <strong className="text-white">Raid swaps with streamers nobody watches.</strong> Raiding each other back and forth doesn&apos;t produce new followers. The raid audience has to actually like what they see when they land on your channel which loops back to sections 1–5.
-                </li>
-                <li>
-                  <strong className="text-white">Asking for follows instead of earning them.</strong> &ldquo;Drop a follow if you&apos;re enjoying the stream&rdquo; is fine. Begging mid-clutch for a follow is a retention killer. People follow because they want to come back make them want to come back first.
-                </li>
-              </ul>
-            </section>
-
-            {/* The tool */}
-            <section className="mb-14">
-              <h2 className="text-3xl font-extrabold tracking-tight mb-4">The tool that does most of this for you</h2>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                The hard part about these five tactics is that doing them consistently requires a system. Watching VODs back. Clipping highlights. Tracking what resonated. Noticing burnout. Holding a schedule.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8] mb-4">
-                LevlCast is built for exactly this. It&apos;s an AI Twitch stream manager it analyzes your VODs, generates clips from your best moments, scores every stream 0–100, tracks burnout, and tells you specifically what to fix before your next broadcast. The five things above, done for you, every session.
-              </p>
-              <p className="text-base text-muted/90 leading-[1.8]">
-                It&apos;s free to start. Two full VOD analyses and two clips every week, forever, so you can run the system on your actual streams before committing.
-              </p>
-              <div className="mt-8">
-                <Link
-                  href="/auth/login"
-                  className="group inline-flex items-center gap-3 bg-accent text-white font-bold px-7 py-4 rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(124,58,237,0.45)] hover:-translate-y-0.5 active:scale-[0.97]"
-                >
-                  Analyze Your Last Stream Free
-                  <span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </span>
-                </Link>
-              </div>
-            </section>
-          </div>
+          <h2>Where LevlCast fits</h2>
+          <p>
+            Doing all five consistently takes a system: watching VODs back, clipping highlights, keeping track of what
+            landed, noticing when you&apos;re burning out.
+          </p>
+          <p>
+            That&apos;s what LevlCast is for. It goes through your VODs, clips your best moments, gives you one thing
+            to fix before your next stream, and ranks every stream on a ladder from Iron to Grandmaster so you can see
+            yourself improve. Free is two full reports and two clips every week, so you can try it on your real
+            streams first.
+          </p>
+          <p className="gd-cta">
+            <Link href="/analyze" className="v3-btn">
+              Try it on your last stream
+            </Link>
+          </p>
         </article>
+      </main>
 
-        {/* ─── FAQ ─── */}
-        <section className="py-24 border-t border-border" id="faq">
-          <div className="max-w-[760px] mx-auto px-6">
-            <h2 className="text-4xl font-extrabold tracking-tight mb-10 text-center">
-              Twitch growth FAQ
-            </h2>
-            <div className="space-y-4">
-              {faqs.map((f) => (
-                <div key={f.q} className="card p-6">
-                  <h3 className="font-bold text-base mb-2">{f.q}</h3>
-                  <p className="text-sm text-muted leading-relaxed">{f.a}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+      <section className="v3-sec" id="faq">
+        <p className="v3-label">Questions</p>
+        <h2 className="v3-h2">Twitch growth questions</h2>
+        <FaqAccordion items={FAQS} />
+      </section>
 
-        {/* ─── Related ─── */}
-        <section className="py-20 border-t border-border">
-          <div className="max-w-[1080px] mx-auto px-6">
-            <h2 className="text-2xl font-extrabold tracking-tight mb-8 text-center">
-              Tools that support the five tactics
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link href="/twitch-vod-analyzer" className="card p-6 hover:border-accent/25 transition-colors block">
-                <h3 className="font-bold text-base mb-2">VOD Analyzer &rarr;</h3>
-                <p className="text-sm text-muted leading-relaxed">Find the dead air and weak openings you can&apos;t see. Five-minute review, real fixes.</p>
-              </Link>
-              <Link href="/twitch-clip-generator" className="card p-6 hover:border-accent/25 transition-colors block">
-                <h3 className="font-bold text-base mb-2">Clip Generator &rarr;</h3>
-                <p className="text-sm text-muted leading-relaxed">Turn every stream into 3–6 posted Shorts. The discovery pipeline you&apos;re missing.</p>
-              </Link>
-              <Link href="/twitch-stream-coach" className="card p-6 hover:border-accent/25 transition-colors block">
-                <h3 className="font-bold text-base mb-2">AI Stream Coach &rarr;</h3>
-                <p className="text-sm text-muted leading-relaxed">One priority fix per stream. Score that tracks progress. The feedback loop you&apos;ve been missing.</p>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <Footer />
-      </div>
-    </main>
+      <SiteFooter />
+    </div>
   );
 }

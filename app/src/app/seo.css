@@ -1,0 +1,133 @@
+/* ═══ Search landing pages and the growth guide ═══════════════════════════
+   /twitch-vod-analyzer, /twitch-clip-generator, /twitch-stream-coach
+   (SeoLanding.tsx) and /how-to-grow-on-twitch. Built on home-ranked.css
+   (.v3 scope); these are only the pieces the homepage doesn't have. */
+
+.v3 .sl-h1 {
+  max-width: 16ch;
+  margin: 0 0 20px;
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(36px, 4.8vw, 58px);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.v3 .sl-visual { min-width: 0; }
+
+/* What it does: name on the left, what it means on the right. */
+.v3 .sl-rows { margin: 0; border-top: 1px solid var(--ll-line-soft); }
+.v3 .sl-rows > div {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 6px clamp(20px, 3vw, 40px);
+  padding: 20px 0;
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.v3 .sl-rows dt {
+  font-family: var(--ll-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--ll-fg);
+}
+.v3 .sl-rows dd { max-width: 60ch; margin: 0; font-size: 16px; line-height: 1.6; color: var(--ll-fg-mute); }
+.v3 .sl-note { max-width: 60ch; margin: 18px 0 0; font-size: 14.5px; line-height: 1.55; color: var(--ll-fg-dim); }
+
+/* How it works: three columns split by rules. */
+.v3 .sl-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ll-line-soft);
+}
+.v3 .sl-steps li { padding: 22px 24px 0 0; }
+.v3 .sl-steps li + li { padding-left: 24px; border-left: 1px solid var(--ll-line-soft); }
+.v3 .sl-n {
+  display: block;
+  margin-bottom: 12px;
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--ll-fg-faint);
+}
+.v3 .sl-steps p { max-width: 34ch; margin: 0; font-size: 16px; line-height: 1.55; color: var(--ll-fg-mute); }
+
+/* Links to the other pages. */
+.v3 .sl-related {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ll-line-soft);
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.v3 .sl-related a { display: block; height: 100%; padding: 20px 24px 22px 0; text-decoration: none; }
+.v3 .sl-related li + li a { padding-left: 24px; border-left: 1px solid var(--ll-line-soft); }
+.v3 .sl-rel-t {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--ll-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--ll-fg);
+}
+.v3 .sl-rel-b { display: block; font-size: 14.5px; line-height: 1.5; color: var(--ll-fg-dim); }
+.v3 .sl-related a:hover .sl-rel-t { text-decoration: underline; text-underline-offset: 4px; }
+
+/* ── The growth guide ── */
+.v3 .gd { padding-block: clamp(28px, 5vw, 72px) clamp(48px, 6vw, 80px); }
+.v3 .gd-head { max-width: 780px; margin-bottom: clamp(28px, 4vw, 44px); }
+.v3 .gd-h1 {
+  margin: 0 0 20px;
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(38px, 5.2vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.v3 .gd-lede { max-width: 56ch; margin: 0 0 18px; font-size: clamp(17px, 1.6vw, 19px); line-height: 1.55; color: var(--ll-fg-mute); }
+.v3 .gd-date {
+  margin: 0;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.v3 .gd-body { max-width: 680px; padding-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--ll-line-soft); }
+.v3 .gd-body h2 {
+  margin: 48px 0 14px;
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(24px, 2.6vw, 30px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+.v3 .gd-body p { margin: 0 0 18px; font-size: 17px; line-height: 1.75; color: var(--ll-fg-mute); }
+.v3 .gd-body a:not(.v3-btn) { color: var(--ll-fg); text-decoration: underline; text-underline-offset: 3px; }
+.v3 .gd-body strong { color: var(--ll-fg); font-weight: 700; }
+.v3 .gd-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--ll-line-soft); }
+.v3 .gd-list li {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ll-line-soft);
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--ll-fg-mute);
+}
+.v3 .gd-cta { margin-top: 8px; }
+
+@media (max-width: 760px) {
+  .v3 .sl-rows > div { grid-template-columns: minmax(0, 1fr); }
+  .v3 .sl-steps,
+  .v3 .sl-related { grid-template-columns: minmax(0, 1fr); }
+  .v3 .sl-steps li { padding: 20px 0; }
+  .v3 .sl-steps li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--ll-line-soft); }
+  .v3 .sl-related a { padding-right: 0; }
+  .v3 .sl-related li + li a { padding-left: 0; border-left: 0; border-top: 1px solid var(--ll-line-soft); }
+}

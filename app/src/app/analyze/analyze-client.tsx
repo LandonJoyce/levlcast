@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PreviewReport, fmtDuration, type PreviewPayload } from "@/components/preview/preview-report";
+import ExampleReport from "@/components/landing/ExampleReport";
 
 /** How often we ask whether the report is done. */
 const POLL_MS = 4000;
@@ -266,33 +267,7 @@ export function AnalyzeClient({
 
         {/* What comes back, before anyone has to paste anything. Someone
             arriving from a DM wants to know what this is first. */}
-        <aside className="v3-frame az-eg" aria-label="Example report">
-          <div className="v3-result-top">
-            <span>Example report</span>
-            <span>First 12 min</span>
-          </div>
-          <div className="az-eg-score">
-            <span className="az-eg-num">68</span>
-            <span className="az-eg-k">Opening score</span>
-          </div>
-          <div className="az-eg-row">
-            <p className="az-eg-k">Fix this first</p>
-            <p className="az-eg-text">
-              Say what today&apos;s stream is in the first minute. It took four minutes before chat could tell.
-            </p>
-          </div>
-          <div className="az-eg-row">
-            <p className="az-eg-k">Clip these</p>
-            <ul className="az-eg-clips">
-              <li>
-                <span>4:12</span>The jump you missed three times
-              </li>
-              <li>
-                <span>9:47</span>Chat roasting your aim
-              </li>
-            </ul>
-          </div>
-        </aside>
+        <ExampleReport />
       </section>
     </main>
   );

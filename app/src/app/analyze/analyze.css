@@ -24,47 +24,6 @@
   text-wrap: balance;
 }
 
-/* The example report, in the homepage's corner-marked frame. */
-.v3 .az-eg { text-align: left; }
-.v3 .az-eg::after { display: none; }
-.v3 .az-eg-score {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  margin-top: 18px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--ll-line-soft);
-}
-.v3 .az-eg-num {
-  font-family: var(--v3-display);
-  font-weight: 900;
-  font-size: 64px;
-  line-height: 0.9;
-  color: var(--v3-warn);
-  font-variant-numeric: tabular-nums;
-}
-.v3 .az-eg-k {
-  margin: 0;
-  font-family: var(--ll-mono);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ll-fg-faint);
-}
-.v3 .az-eg-row { padding: 16px 0; border-bottom: 1px solid var(--ll-line-soft); }
-.v3 .az-eg-row:last-child { padding-bottom: 0; border-bottom: 0; }
-.v3 .az-eg-text { margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: var(--ll-fg); }
-.v3 .az-eg-clips { display: grid; gap: 7px; margin: 9px 0 0; padding: 0; list-style: none; }
-.v3 .az-eg-clips li { display: flex; gap: 12px; font-size: 14.5px; line-height: 1.4; color: var(--ll-fg-mute); }
-.v3 .az-eg-clips span {
-  min-width: 34px;
-  padding-top: 1px;
-  font-family: var(--ll-mono);
-  font-size: 12.5px;
-  color: var(--ll-fg-dim);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── Working / failed ── */
 .v3 .az-run { max-width: 640px; }
 .v3 .az-run-title {
@@ -269,7 +228,6 @@
 
 @media (max-width: 900px) {
   .v3 .az-hero { grid-template-columns: minmax(0, 1fr); }
-  .v3 .az-eg { max-width: 540px; }
 }
 @media (max-width: 640px) {
   .v3 .pr-head { flex-wrap: wrap; align-items: flex-start; }
