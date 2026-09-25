@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { stripe } from "@/lib/stripe";
+import { parsePartnerCode } from "@/lib/partners";
 import { PartnerKit } from "./PartnerKit";
 import type { Metadata } from "next";
+// The kit is laid out with the homepage's own classes; see partners.css.
+import "../../home.css";
+import "./partners.css";
 
 /**
  * /partners/[code] — public partner kit page.
@@ -37,6 +41,8 @@ interface ResolvedCode {
   percentOff: number | null;
   /** Stripe coupon duration: "once" | "repeating" | "forever". */
   duration: string | null;
+  /** Months the discount lasts when duration is "repeating". */
+  durationInMonths: number | null;
 }
 
 async function loadCode(code: string): Promise<ResolvedCode | null> {
@@ -57,7 +63,9 @@ async function loadCode(code: string): Promise<ResolvedCode | null> {
     // PromotionCode, but the SDK's static type still defines it as
     // string | Coupon. Cast to access the expanded fields cleanly.
     const couponField = (promo as unknown as {
-      coupon?: string | { name?: string | null; percent_off?: number | null; duration?: string };
+      coupon?:
+        | string
+        | { name?: string | null; percent_off?: number | null; duration?: string; duration_in_months?: number | null };
     }).coupon;
     const coupon = couponField && typeof couponField !== "string" ? couponField : null;
     return {
@@ -65,6 +73,7 @@ async function loadCode(code: string): Promise<ResolvedCode | null> {
       couponName: coupon?.name ?? null,
       percentOff: coupon?.percent_off ?? null,
       duration: coupon?.duration ?? null,
+      durationInMonths: coupon?.duration_in_months ?? null,
     };
   } catch {
     return null;
@@ -77,8 +86,9 @@ export async function generateMetadata(
   const { code } = await params;
   const resolved = await loadCode(code);
   if (!resolved) return { title: "LevlCast Partner Kit" };
+  const name = parsePartnerCode(resolved.code).name ?? resolved.code;
   return {
-    title: `${resolved.code} · LevlCast Partner Kit`,
+    title: `${name} · LevlCast Partner Kit`,
     description: `Your link, code, and assets for promoting LevlCast.`,
     robots: { index: false, follow: false }, // partner pages aren't for SEO
   };

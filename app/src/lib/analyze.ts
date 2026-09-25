@@ -924,6 +924,47 @@ WHAT TO LOOK FOR: Is the teaching style engaging or dry lecture? Are complex top
  * by writing the module — no schema or pipeline changes required.
  */
 const GAME_COACHING_MODULES: Array<{ name: string; keywords: string[]; module: string }> = [
+  // First on purpose. pickGameModule takes the first match, and League's
+  // " lol " keyword matches a laughing "lol" in any title, which cozy and
+  // chaotic Sims titles are full of. Life-sim names never collide with
+  // anything, so checking them first costs nothing.
+  {
+    name: "Life sims & cozy games",
+    keywords: [
+      "sims", "inzoi", "stardew", "animal crossing", "acnh", "dreamlight",
+      "hello kitty island", "coral island", "palia", "fae farm", "story of seasons",
+      "harvest moon", "paralives", "house flipper",
+    ],
+    module: `LIFE SIMS AND COZY GAMES, game-specific coaching:
+
+Covers The Sims 4, inZOI, Paralives, Stardew Valley, Animal Crossing, Disney Dreamlight Valley, Hello Kitty Island Adventure, Coral Island, Palia, Fae Farm, Story of Seasons. Nothing is at stake on screen, so the game is the backdrop and the streamer is the show. Viewers come for the vibe, the story, the creativity and hanging out in chat. The bar is not hype, it is presence: a calm voice is fine, a missing one is not.
+
+- **The story is the product**: Sims and inZOI streams live or die on narration. Give the household personalities, voice the sims, react to their choices, set up drama ("she has no idea he's been flirting with the neighbour"). A sim doing chores in silence is a screensaver. A sim doing chores while the streamer narrates her villain arc is content.
+- **Recap for people who just arrived**: Life-sim streams are serialized, and new viewers land mid-story with no idea who anyone is. A 15-second recap every 20 to 30 minutes ("quick catch-up: this is generation 3, Bella's granddaughter, she just got fired") is the single cheapest retention win in the genre. Streamers who never recap lose everyone who wasn't there last week.
+- **Chat as co-author**: Let chat name the baby, the pet, the villager, the farm. Run polls on the big decision (the career, the breakup, which room to build next). Put chatters in the game as townies or neighbours. Invested chatters come back to see what happened to "their" sim. This is how cozy streamers build loyal communities faster than any other genre.
+- **Repetitive loops are narration tests**: Watering crops, fishing, catching bugs, decorating, sorting inventory, hours in Create-a-Sim. These stretches are where viewers either settle in or leave. Silent CAS or silent farming for 10+ minutes is the most common mistake in the genre. Talk about what you're making and why, read chat, tell a story from your day, anything but silence.
+- **Build reveals and room tours are the payoff**: Finishing a house, a room, a farm layout, an island area. Build up to it ("okay, lighting's done, are you ready?"), do the walkthrough, ask chat to rate it. Rushing past a finished build throws away the moment people waited for.
+- **Session goals give a cozy stream a shape**: "Today we finish the greenhouse and get Leah to eight hearts" or "we're moving the family into the new house tonight." Say the goal at the start, check in on it, recap at the end, tease next time. Without it, a four hour cozy stream has no middle and no reason to stay for the end.
+- **Chaos is the clip**: Sims catching fire, drowning in a pool with the ladder gone, the Grim Reaper showing up, a villager saying something unhinged, a disastrous date, a rare fish on the last cast. React out loud and let it breathe. Cozy streams earn their clips from the rare moments things go wrong.
+- **Mods and custom content are content**: CC hauls, mod showcases, build-challenge rules, legacy challenge rules. Explain them for new viewers and credit the creators; it gives the stream a hook beyond "playing Sims".
+
+Common streamer mistakes specific to life sims:
+- Silent Create-a-Sim, build mode or farming for long stretches
+- No recap for viewers who arrive mid-story
+- Letting the game music be the only sound for minutes at a time
+- No session goal, so the stream drifts with no middle or end
+- Making every decision alone instead of letting chat vote or name things
+- Rushing past build completions and story beats instead of milking them
+
+Clip moment patterns specific to this genre:
+- Sim deaths and household disasters (fires, drownings, the Grim Reaper), with a big reaction
+- Drama beats: breakups, betrayals, surprise pregnancies, a sim doing something unhinged
+- Build reveals and room tours with a before/after
+- A chatter-named sim or villager doing something ridiculous
+- Emotional story payoffs after a long arc (a legacy sim dying, a wedding, finally befriending someone)
+- Rare catches, festival wins and first-time moments (first Stardew perfection, first 5-star island)
+- The streamer voicing sims or villagers in character`,
+  },
   {
     name: "VALORANT",
     keywords: ["valorant", "valo", "val ranked", "val comp", "val unrated"],

@@ -84,6 +84,7 @@ export function gameCategoryLabel(code: string): string {
     case "card_game": return "Card";
     case "racing": return "Racing";
     case "sandbox": return "Sandbox";
+    case "life_sim": return "Life Sim";
     case "general": return "Variety";
     default: return code;
   }

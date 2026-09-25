@@ -25,6 +25,7 @@ export type GameCategory =
   | "card_game"
   | "racing"
   | "sandbox"
+  | "life_sim"
   | "general";
 
 export type GameId =
@@ -122,6 +123,18 @@ const SANDBOX: string[] = [
   "village", "nether", "end", "elytra", "diamond", "netherite",
 ];
 
+// Life sims and cozy games. Names and mechanics a transcriber has never
+// heard ("Simoleons", "moodlet", "Junimo", "Nook Miles") are exactly the
+// words it flubs, and they are the words a coach quotes back.
+const LIFE_SIM: string[] = [
+  "Sims", "Sim", "CAS", "Create a Sim", "build mode", "live mode",
+  "Simoleons", "plumbob", "moodlet", "legacy challenge", "Willow Creek",
+  "Bella Goth", "Grim Reaper", "custom content", "CC", "inZOI", "Zoi",
+  "Stardew", "Pelican Town", "Junimo", "Krobus", "Animal Crossing",
+  "Tom Nook", "Nook Miles", "Isabelle", "Bells", "villager", "Dreamlight",
+  "Palia", "Paralives",
+];
+
 const KEYWORDS_BY_CATEGORY: Record<GameCategory, string[]> = {
   mmo: MMO,
   fps: FPS,
@@ -131,6 +144,7 @@ const KEYWORDS_BY_CATEGORY: Record<GameCategory, string[]> = {
   card_game: CARD_GAME,
   racing: RACING,
   sandbox: SANDBOX,
+  life_sim: LIFE_SIM,
   general: [],
 };
 
@@ -368,12 +382,23 @@ const CATEGORY_ONLY_PATTERNS: Array<[RegExp, GameCategory]> = [
 ];
 
 /**
+ * Life sims, checked before everything else. The names are distinctive
+ * enough to never collide, while the League pattern above matches a bare
+ * "lol", which cozy and chaotic Sims titles are full of ("sims 4 but my
+ * sim is unhinged lol"). Checked later, those streams got League jargon
+ * boosted into their transcript.
+ */
+const LIFE_SIM_PATTERN =
+  /\b(the sims|sims\s?[1-4]|sims|inzoi|stardew|animal crossing|acnh|dreamlight|hello kitty island|coral island|palia|fae farm|story of seasons|harvest moon|paralives|house flipper)\b/i;
+
+/**
  * Detect the most likely game (and its category) from a VOD title.
  * Falls back to category-only when the game isn't in our pack list,
  * and to "general" when nothing matches.
  */
 export function detectGame(title: string): GameDetection {
   if (!title) return { category: "general", gameId: null };
+  if (LIFE_SIM_PATTERN.test(title)) return { category: "life_sim", gameId: null };
   for (const [pattern, detection] of GAME_PATTERNS) {
     if (pattern.test(title)) return detection;
   }

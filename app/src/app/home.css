@@ -65,6 +65,28 @@ body:has(.lv2) { background: rgb(16, 13, 14); }
 
 /* ── Hero ── */
 .lv2 .lv2-hero { padding-block: clamp(56px, 9vw, 108px) 8px; }
+
+/* Partner referral line. The one place outside the timeline the accent is
+   allowed: it only shows to someone a streamer sent here with a promise,
+   and confirming that promise is worth the colour. A rule, not a card, so
+   it still belongs to the page. */
+.lv2 .lv2-ref {
+  max-width: 52ch;
+  margin: 0 0 34px;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid rgb(255, 88, 0);
+}
+.lv2 .lv2-ref-k {
+  display: block;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(255, 176, 140);
+  margin-bottom: 6px;
+}
+.lv2 .lv2-ref-main { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ll-fg-mute); }
+.lv2 .lv2-ref-main b { color: var(--ll-fg); font-weight: 700; }
 .lv2 .lv2-kicker {
   font-family: var(--ll-mono);
   font-size: 11px;

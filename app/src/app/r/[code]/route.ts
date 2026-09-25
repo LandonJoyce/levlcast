@@ -24,10 +24,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { rateLimit } from "@/lib/rate-limit";
+import { encodeTerms, termsFromCoupon, type DiscountTerms } from "@/lib/partners";
 
 export const dynamic = "force-dynamic";
 
 const REFERRAL_COOKIE = "lc_promo";
+const REFERRAL_TERMS_COOKIE = "lc_promo_terms";
 /** 30 days in seconds. Matches typical affiliate-attribution windows. */
 const REFERRAL_COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
 /** Defensive: reject obviously garbage codes so we don't burn Stripe API calls. */
@@ -60,13 +62,21 @@ export async function GET(
   // match the code text count. If no match, redirect without setting
   // the cookie — viewer sees the normal landing, no fake discount badge.
   let validated = false;
+  let terms: DiscountTerms | null = null;
   try {
     const res = await stripe.promotionCodes.list({
       code: normalized,
       active: true,
       limit: 1,
+      expand: ["data.coupon"],
     });
     validated = (res.data[0]?.code ?? "") === normalized;
+    // Expanded, `coupon` is the full Coupon; the SDK's static type still
+    // says string | Coupon, same cast as the partner kit page.
+    const coupon = (res.data[0] as unknown as {
+      coupon?: string | { duration?: string; duration_in_months?: number | null };
+    } | undefined)?.coupon;
+    terms = termsFromCoupon(coupon && typeof coupon !== "string" ? coupon : null);
   } catch (err) {
     // Stripe transient failure: don't set the cookie (no fake attribution).
     // Log but don't break the redirect — visitor still lands on the site.
@@ -94,6 +104,20 @@ export async function GET(
     sameSite: "lax",
     // Not httpOnly so the landing client can read it for the badge.
     // The cookie carries no auth weight — only attribution metadata.
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  // How long the discount lasts, so the landing line can say "for your
+  // first 3 months" instead of promising forever on a coupon that isn't.
+  // Always rewritten alongside the code, so a visitor who follows a second
+  // partner's link never sees the first partner's terms.
+  response.cookies.set({
+    name: REFERRAL_TERMS_COOKIE,
+    value: terms ? encodeTerms(terms) : "",
+    maxAge: terms ? REFERRAL_COOKIE_MAX_AGE : 0,
+    path: "/",
+    sameSite: "lax",
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
   });

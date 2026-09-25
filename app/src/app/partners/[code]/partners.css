@@ -1,0 +1,124 @@
+/* ═══ Partner kit ══════════════════════════════════════════════════════════
+   Built on the homepage's classes (lv2-* from home.css), so the kit reads
+   as part of the same site a partner's viewers land on. Only what the
+   homepage has no equivalent for lives here, scoped under .pk. */
+
+.pk .pk-bar-tag {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+/* Long handles must wrap rather than push the page sideways. */
+.pk .pk-h1 { overflow-wrap: anywhere; }
+
+/* A kit is read top to bottom in one sitting; the homepage's full section
+   spacing made it scroll twice as far as it needed to. */
+.pk .lv2-sec.pk-sec { padding-block: clamp(30px, 4.5vw, 54px); }
+
+.pk .pk-lede {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ll-fg-mute);
+  margin: -8px 0 22px;
+  max-width: 56ch;
+}
+
+/* The link is the thing a partner comes back for, so it is the largest
+   text below the headline, between two rules like every other row. */
+.pk .pk-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--ll-line-soft);
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.pk .pk-link-url {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--ll-mono);
+  font-size: clamp(17px, 2.4vw, 24px);
+  font-weight: 600;
+  color: var(--ll-fg);
+  overflow-wrap: anywhere;
+}
+.pk .pk-code {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 14px;
+  font-size: 14px;
+  color: var(--ll-fg-mute);
+}
+.pk .pk-code > span { flex: 1; }
+.pk .pk-code b {
+  font-family: var(--ll-mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ll-fg);
+}
+
+.pk .pk-copy {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 13px;
+  border-radius: 7px;
+  border: 1px solid var(--ll-line-med);
+  background: transparent;
+  color: var(--ll-fg-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+.pk .pk-copy:hover { color: var(--ll-fg); border-color: var(--ll-fg-dim); }
+.pk .pk-copy[data-copied] {
+  color: var(--ll-green);
+  border-color: color-mix(in oklab, var(--ll-green) 50%, transparent);
+}
+
+.pk .pk-lines dd { display: flex; align-items: flex-start; gap: 18px; }
+.pk .pk-lines dd > span { flex: 1; }
+
+/* The viewer-facing line, framed so it reads as a preview of another
+   page rather than as part of this one. */
+.pk .pk-preview {
+  padding: 22px 24px;
+  border: 1px dashed var(--ll-line-med);
+  border-radius: 12px;
+}
+.pk .pk-preview .lv2-ref { margin: 0; }
+
+.pk .pk-overlay { display: flex; flex-direction: column; align-items: flex-start; }
+.pk .pk-overlay img { width: 100%; max-width: 480px; height: auto; display: block; }
+.pk .pk-note { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ll-fg-mute); }
+
+/* list-style set explicitly: the landing reset strips it from every list
+   under .ll-page, which left these as unnumbered indented lines. */
+.pk .pk-steps {
+  list-style: decimal outside;
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 10px;
+  max-width: 64ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ll-fg-mute);
+}
+.pk .pk-steps li::marker { font-family: var(--ll-mono); color: var(--ll-fg-faint); }
+
+.pk .pk-contact p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--ll-fg-mute); }
+.pk .pk-contact a { color: var(--ll-fg); text-underline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .pk .pk-link { flex-direction: column; align-items: stretch; }
+  .pk .pk-code { flex-direction: column; align-items: flex-start; }
+  .pk .pk-lines dd { flex-direction: column; gap: 10px; }
+  /* A comfortable thumb target; these get tapped more than anything else here. */
+  .pk .pk-copy { padding: 12px 16px; }
+}

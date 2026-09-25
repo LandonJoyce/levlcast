@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import FaqAccordion from "@/components/FaqAccordion";
 import UrlPasteHero from "@/components/landing/UrlPasteHero";
+import ReferralLine from "@/components/landing/ReferralLine";
 import "./home.css";
 
 /**
@@ -92,6 +93,8 @@ export default function HomePage() {
 
       {/* ── Hero ── */}
       <section className="lv2-hero">
+        {/* Only renders for visitors who came through a partner link. */}
+        <ReferralLine />
         <p className="lv2-kicker">Twitch VOD coaching</p>
         {/* The dim half is the setup, not the punch. "You streamed four
             hours" is a fact the reader already knows, so it steps back and
