@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { APP_STORE_URL } from "@/components/landing/SiteHeader";
+import { APP_STORE_URL } from "@/components/landing/site-links";
 
 /**
  * The interactive part of the sign-in page: the Twitch button, the error

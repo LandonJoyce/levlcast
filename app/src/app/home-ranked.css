@@ -125,6 +125,156 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-signin:hover,
 .v3 .v3-ios:hover { border-color: var(--ll-line-med); }
 
+/* ── Product menu (SiteNav.tsx) ── */
+/* The panel hangs from the bar, so the bar is its positioning box and sits
+   above the page. */
+.v3 .v3-bar { position: relative; z-index: 40; }
+.v3 .nv-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--ll-fg-dim);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.v3 .nv-trigger:hover,
+.v3 .nv-trigger[aria-expanded="true"] { color: var(--ll-fg); }
+.v3 .nv-trigger svg { transition: transform 160ms ease; }
+.v3 .nv-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+/* padding-top bridges the gap between the word and the panel, so moving
+   the mouse down into the panel doesn't count as leaving it. */
+.v3 .nv-drop {
+  position: absolute;
+  top: calc(100% - 10px);
+  right: var(--v3-pad);
+  width: min(860px, calc(100% - 2 * var(--v3-pad)));
+  padding-top: 10px;
+  animation: nv-in 140ms ease both;
+}
+@keyframes nv-in { from { opacity: 0; transform: translateY(-4px); } }
+.v3 .nv-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 14px;
+  background: rgb(22, 18, 19);
+  box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.75);
+  /* The bar's links are small mono capitals; the menu is ordinary text. */
+  font-family: var(--ll-body);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.v3 .nv-h {
+  margin: 0 0 8px 10px;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.v3 .nv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
+.v3 .nv-list { display: grid; gap: 2px; }
+.v3 .nv-side { padding-left: 18px; border-left: 1px solid var(--ll-line-soft); }
+.v3 .v3-nav .nv-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+.v3 .v3-nav .nv-item:hover,
+.v3 .v3-nav .nv-item:focus-visible { background: rgba(255, 238, 230, 0.05); }
+.v3 .nv-ico {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 9px;
+  background: rgba(255, 238, 230, 0.05);
+  color: var(--ll-fg-mute);
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.v3 .nv-item:hover .nv-ico { color: var(--ll-fg); border-color: var(--ll-line-med); }
+.v3 .nv-t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ll-display);
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  color: var(--ll-fg);
+}
+.v3 .nv-b { display: block; margin-top: 3px; font-size: 13px; line-height: 1.4; color: var(--ll-fg-dim); }
+.v3 .nv-tag {
+  padding: 1px 7px;
+  border: 1px solid var(--ll-line-med);
+  border-radius: 999px;
+  font-family: var(--ll-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ll-fg-dim);
+}
+/* Phone only: the menu button, and the sheet it opens. */
+.v3 .nv-burger {
+  display: none;
+  place-items: center;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 7px;
+  background: none;
+  color: var(--ll-fg-mute);
+  cursor: pointer;
+}
+.v3 .nv-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow-y: auto;
+  padding: 0 var(--v3-pad) 32px;
+  background: var(--ll-bg);
+  font-family: var(--ll-body);
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+  animation: nv-in 140ms ease both;
+}
+.v3 .nv-sheet-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 22px 18px;
+}
+.v3 .nv-sheet .nv-close { display: grid; }
+.v3 .nv-sheet .v3-mark { color: var(--ll-fg); }
+.v3 .nv-sheet .nv-grid { grid-template-columns: minmax(0, 1fr); }
+.v3 .nv-sheet .nv-h { margin-left: 0; }
+.v3 .nv-sheet .nv-item { padding-inline: 0; }
+.v3 .nv-sheet .nv-h-gap { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--ll-line-soft); }
+.v3 .nv-sheet .v3-btn.nv-sheet-cta { display: block; margin-top: 22px; text-align: center; color: rgb(16, 13, 14); }
+@media (prefers-reduced-motion: reduce) {
+  .v3 .nv-drop,
+  .v3 .nv-sheet { animation: none; }
+  .v3 .nv-trigger svg { transition: none; }
+}
+
 /* Partner line (same component as the homepage, same look). */
 .v3 .lv2-ref {
   max-width: 52ch;
@@ -873,8 +1023,12 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-match-tag { display: none; }
 }
 @media (max-width: 760px) {
-  /* Pricing and Updates stay reachable from the footer on a phone. */
-  .v3 .v3-nav-extra { display: none; }
+  /* On a phone the bar keeps iOS and Sign in; everything else, the
+     leaderboard included, is one tap away in the menu sheet. */
+  .v3 .v3-nav-extra,
+  .v3 .nv-wrap,
+  .v3 .nv-desk { display: none; }
+  .v3 .nv-burger { display: grid; }
   .v3 .v3-foot { grid-template-columns: minmax(0, 1fr); }
   /* Two numbers per row; the rule between rows replaces the one beside. */
   .v3 .v3-proof-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -882,7 +1036,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-proof-list > div:nth-child(n + 3) { border-top: 1px solid var(--ll-line-soft); }
 }
 @media (max-width: 480px) {
-  /* Logo, Leaderboard, iOS and Sign in all have to fit on one line. */
+  /* Logo, iOS, Sign in and the menu button all have to fit on one line. */
   .v3 .v3-nav { gap: 10px; }
   .v3 .v3-signin,
   .v3 .v3-ios { padding: 8px 10px; }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { APP_STORE_URL } from "./SiteHeader";
+import { APP_STORE_URL } from "./site-links";
 
 /**
  * A real person made this, so the footer says who. An anonymous, polished
