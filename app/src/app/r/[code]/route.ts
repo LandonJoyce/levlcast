@@ -68,15 +68,14 @@ export async function GET(
       code: normalized,
       active: true,
       limit: 1,
-      expand: ["data.coupon"],
+      // Since API 2025-09-30 a promotion code's coupon sits under
+      // `promotion`, not at the top level. Expanding the old `data.coupon`
+      // path silently returned nothing.
+      expand: ["data.promotion.coupon"],
     });
     validated = (res.data[0]?.code ?? "") === normalized;
-    // Expanded, `coupon` is the full Coupon; the SDK's static type still
-    // says string | Coupon, same cast as the partner kit page.
-    const coupon = (res.data[0] as unknown as {
-      coupon?: string | { duration?: string; duration_in_months?: number | null };
-    } | undefined)?.coupon;
-    terms = termsFromCoupon(coupon && typeof coupon !== "string" ? coupon : null);
+    const coupon = res.data[0]?.promotion?.coupon;
+    terms = termsFromCoupon(coupon && typeof coupon === "object" ? coupon : null);
   } catch (err) {
     // Stripe transient failure: don't set the cookie (no fake attribution).
     // Log but don't break the redirect — visitor still lands on the site.

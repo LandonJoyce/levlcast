@@ -54,20 +54,17 @@ async function loadCode(code: string): Promise<ResolvedCode | null> {
       code: normalized,
       active: true,
       limit: 1,
-      expand: ["data.coupon"],
+      // Since API 2025-09-30 the coupon sits under `promotion`. The old
+      // `data.coupon` expand silently returned nothing, so every kit fell
+      // back to reading the discount off the code's digits and could never
+      // see how long a coupon lasts.
+      expand: ["data.promotion.coupon"],
     });
     const promo = res.data[0];
     if (!promo || promo.code !== normalized) return null;
 
-    // Stripe expand fills `coupon` with the full Coupon object on the
-    // PromotionCode, but the SDK's static type still defines it as
-    // string | Coupon. Cast to access the expanded fields cleanly.
-    const couponField = (promo as unknown as {
-      coupon?:
-        | string
-        | { name?: string | null; percent_off?: number | null; duration?: string; duration_in_months?: number | null };
-    }).coupon;
-    const coupon = couponField && typeof couponField !== "string" ? couponField : null;
+    const couponField = promo.promotion?.coupon;
+    const coupon = couponField && typeof couponField === "object" ? couponField : null;
     return {
       code: normalized,
       couponName: coupon?.name ?? null,
