@@ -1,206 +1,309 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { Big_Shoulders } from "next/font/google";
 import FaqAccordion from "@/components/FaqAccordion";
 import UrlPasteHero from "@/components/landing/UrlPasteHero";
 import ReferralLine from "@/components/landing/ReferralLine";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
-import "./home.css";
+import { TIER_HEX, TIERS } from "@/lib/rank";
+import "./home-ranked.css";
 
 /**
- * Homepage.
+ * Homepage: the post-match design. Trialled at /v3 and promoted on
+ * 2026-09-25; the previous homepage is kept at /v2 and the one before it
+ * at /v1, so either can be compared or restored.
  *
- * The organising idea is that the VOD is the page. Every other streaming
- * tool's site is a centred headline over a product screenshot; this one is
- * built around a timeline, because a timeline is the only object this
- * product is actually about. The hero art is not decoration or a glow, it
- * is a stream drawn to scale with the things LevlCast finds marked on it.
+ * The organising idea: every stream is a ranked match, so the homepage is
+ * the screen you see after one. The hero is a result (a promotion, the
+ * points, the bar filling), the proof is a scoreboard, a match history and
+ * a league table, and the ladder is drawn as a literal climb. The product
+ * turned into a ranked game this month; the page now looks like one.
  *
- * Principles here, so later edits don't undo them:
- *  - Left-aligned, not centre-stacked. Everything centred is the house
- *    style of generated pages.
- *  - No cards. Structure comes from rules, indents and mono labels.
- *  - Far less prose. Most sections are a line, not a paragraph.
- *  - The accent is spent in one place, the timeline. Everything else is
- *    neutral so that one thing lands.
- *  - Plain English throughout. No jargon a new streamer has to decode.
+ * It keeps the rules the current homepage wrote down, because they were
+ * right: left-aligned, rules and frames instead of cards, no atmospheric
+ * glow, no gradient headline text, the accent gradient spent in one place
+ * (the match timeline), plain English. What makes it look custom is the
+ * game-UI structure and a condensed results typeface, not decoration.
  *
- * The previous design is preserved at /v1 so this can be reverted by
- * swapping two files if it converts worse.
+ * Every number on the page is one consistent sample stream: Silver I at
+ * 1176 points, +34 to Gold IV at 1210, the same stream the timeline, the
+ * stats and the top match history row describe.
  */
 
+const shoulders = Big_Shoulders({
+  subsets: ["latin"],
+  weight: ["800", "900"],
+  variable: "--font-shoulders",
+  display: "swap",
+});
+
+// Title kept from the previous homepage so search listings don't churn
+// with the redesign; the description now mentions the rank.
 export const metadata: Metadata = {
   title: "LevlCast - Your Personal Streaming Manager",
   description:
-    "Paste a Twitch stream link and read a real coaching report on it. Dead air, weak openings, the moments worth clipping. No account, no card.",
+    "Paste a Twitch stream link and get a real coaching report on it: slow starts, dead air, the moments worth clipping, and where you rank. Free to try, no account needed.",
   alternates: { canonical: "/" },
 };
 
-/** Marks on the hero timeline. Percentages are positions across the stream. */
+/** Marks on the match timeline. Percentages are positions across the stream. */
 const MARKS = [
-  { at: 4, label: "Slow start", note: "8 minutes before anything happened", tone: "warn" },
-  { at: 31, label: "Best bit", note: "You never clipped this one", tone: "good" },
-  { at: 58, label: "Quiet", note: "17 minutes where nobody said much", tone: "bad" },
-  { at: 86, label: "Ending", note: "You ran out of steam by hour three", tone: "warn" },
+  { at: 4, label: "Slow start", tone: "warn" },
+  { at: 41, label: "Best moment", tone: "good" },
+  { at: 58, label: "Quiet stretch", tone: "bad" },
+  { at: 86, label: "Energy dropped", tone: "warn" },
 ] as const;
+
+// Plain statements, the way a friend would say them. The first draft's
+// notes ("and you never clipped it", "cut and ready to post") had the
+// neat, slightly dramatic rhythm that reads as generated.
+const STATS = [
+  { k: "Slow start", v: "8:12", note: "before things picked up", tone: "warn" },
+  { k: "Best moment", v: "1:42:10", note: "you didn't clip this one", tone: "good" },
+  { k: "Dead air", v: "17 min", note: "mostly in the third hour", tone: "bad" },
+  { k: "Clips", v: "6", note: "ready to post", tone: "plain" },
+] as const;
+
+const MATCHES = [
+  { r: "win", delta: "+34", tier: "Gold", rank: "Gold IV", title: "Hollow Knight Pantheon attempts", meta: "Sep 22 · 4h 11m", tag: "Promoted" },
+  { r: "loss", delta: "−7", tier: "Silver", rank: "Silver I", title: "Valorant with viewers", meta: "Sep 19 · 2h 15m", tag: null },
+  { r: "win", delta: "+41", tier: "Silver", rank: "Silver I", title: "Late night Just Chatting", meta: "Sep 16 · 3h 02m", tag: null },
+  { r: "win", delta: "+52", tier: "Silver", rank: "Silver I", title: "Speedrun practice, any%", meta: "Sep 11 · 1h 48m", tag: "Division up" },
+] as const;
+
+const LEAGUE = [
+  { name: "NovaPlays", tier: "Gold", rank: "Gold III", pts: "+64", prize: "+20" },
+  { name: "You", tier: "Gold", rank: "Gold IV", pts: "+34", prize: "+10", you: true },
+  { name: "kiwi_tv", tier: "Silver", rank: "Silver I", pts: "+33", prize: "+5" },
+  { name: "DeadAirDan", tier: "Bronze", rank: "Bronze I", pts: "+12", prize: null },
+  { name: "LoreGoblin", tier: "Bronze", rank: "Bronze II", pts: "−6", prize: null },
+] as const;
+
+function Emblem({ tier, className, size }: { tier: string; className?: string; size: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className={className}
+      src={`/ranks/${tier.toLowerCase()}.png`}
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      decoding="async"
+    />
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="ll-page lv2">
-
-      {/* ── Bar ── */}
-      <header className="lv2-bar">
-        <Link href="/" className="lv2-mark">LevlCast</Link>
-        <div className="lv2-bar-right">
+    <div className={`ll-page v3 ${shoulders.variable}`}>
+      <header className="v3-bar">
+        <Link href="/" className="v3-mark">LevlCast</Link>
+        <nav className="v3-nav" aria-label="Main">
+          <Link href="/leaderboard">Leaderboard</Link>
           <a
-            className="lv2-ios"
+            className="v3-ios"
             href="https://apps.apple.com/us/app/levlcast/id6761281566"
             target="_blank"
             rel="noopener noreferrer"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
             </svg>
             iOS
           </a>
-          <Link href="/auth/login" className="lv2-signin">Sign in</Link>
-        </div>
+          <Link href="/auth/login" className="v3-signin">Sign in</Link>
+        </nav>
       </header>
 
-      {/* ── Hero ── */}
-      <section className="lv2-hero">
-        {/* Only renders for visitors who came through a partner link. */}
-        <ReferralLine />
-        <p className="lv2-kicker">Twitch VOD coaching</p>
-        {/* The dim half is the setup, not the punch. "You streamed four
-            hours" is a fact the reader already knows, so it steps back and
-            the question it sets up gets the weight. Asking something also
-            beats asserting something: a claim invites disagreement, a
-            question invites the reader to answer it, and the honest answer
-            is the reason to paste a link. */}
-        <h1 className="lv2-h1">
-          <span className="lv2-h1-soft">You streamed four hours.</span><br />
-          But did you perform?
-        </h1>
-        <p className="lv2-sub">
-          Paste a link. We listen to the whole stream and tell you what went wrong and when.
-        </p>
-        <div className="lv2-paste">
-          {/* No hint: the line below already says it, and two stacked lines
-              of fine print under one box read as clutter. */}
-          <UrlPasteHero hint={null} />
+      {/* ── Hero: the result screen ── */}
+      <section className="v3-hero">
+        <div className="v3-hero-copy">
+          {/* Only renders for visitors who came through a partner link. */}
+          <ReferralLine />
+          <p className="v3-label">Twitch VOD coaching</p>
+          <h1 className="v3-h1">
+            <span className="v3-soft">You streamed four hours.</span>
+            <br />
+            Did you rank up?
+          </h1>
+          <p className="v3-sub">
+            Paste a Twitch VOD. We go through the whole stream, tell you what went wrong and when, and rank you on a
+            ladder from Iron to Grandmaster.
+          </p>
+          <div className="v3-paste">
+            <UrlPasteHero hint={null} />
+          </div>
+          <p className="v3-fine">Free to try, and you don&apos;t need an account.</p>
         </div>
-        <p className="lv2-fine">No account. No card. Works on anyone&apos;s stream.</p>
+
+        {/* The promotion plays once on load: the old emblem steps back, the
+            new one lands, the word and the points arrive, the bar fills.
+            Under reduced motion it simply shows the finished state. */}
+        <div className="v3-result" role="img" aria-label="Example result: promoted from Silver I to Gold IV, plus 34 points">
+          <div className="v3-frame">
+            <div className="v3-result-top">
+              <span>Example result</span>
+              <span>4h 11m</span>
+            </div>
+            <div className="v3-rankup">
+              <Emblem tier="silver" className="v3-from" size={256} />
+              <span className="v3-arrow" aria-hidden="true" />
+              <Emblem tier="gold" className="v3-to" size={256} />
+            </div>
+            <p className="v3-result-word">Promoted</p>
+            <p className="v3-result-line">
+              <span className="v3-result-rank">Gold IV</span>
+              <span className="v3-result-delta">+34</span>
+            </p>
+            <div className="v3-bar-track" aria-hidden="true">
+              <span className="v3-bar-fill" />
+            </div>
+            <p className="v3-result-sub">10% to Gold III</p>
+          </div>
+        </div>
       </section>
 
-      {/* ── The timeline ──
-          The hero art. A stream drawn to scale with what we find marked on
-          it. Everything here is CSS, so it stays sharp at any zoom, costs
-          nothing to load, and cannot look like stock art. */}
-      <section className="lv2-tl-wrap" aria-label="What a report marks on a stream">
-        <div className="lv2-tl-head">
-          <span className="lv2-tl-t">00:00</span>
-          <span className="lv2-tl-cap">one stream, start to finish</span>
-          <span className="lv2-tl-t">04:11</span>
+      {/* ── The breakdown: timeline + scoreboard ── */}
+      <section className="v3-sec" id="breakdown">
+        <p className="v3-label">The breakdown</p>
+        <h2 className="v3-h2">
+          Here&apos;s what we found <span className="v3-soft">in one four hour stream.</span>
+        </h2>
+
+        <div className="v3-tl" aria-label="Where things happened across the stream">
+          <div className="v3-tl-times" aria-hidden="true">
+            <span>00:00</span>
+            <span>04:11</span>
+          </div>
+          <div className="v3-tl-track">
+            <span className="v3-tl-dead" style={{ left: "52%", width: "11%" }} />
+            {/* Labels alternate between two rows so neighbours never collide
+                on a narrow screen, and the last one hangs left of its pin so
+                it can't run off the edge. */}
+            {MARKS.map((m, i) => (
+              <span
+                key={m.label}
+                className="v3-tl-pin"
+                data-tone={m.tone}
+                data-row={i % 2 === 1 ? "2" : undefined}
+                data-edge={m.at > 70 ? "end" : undefined}
+                style={{ left: `${m.at}%` }}
+              >
+                <span className="v3-tl-pin-label">{m.label}</span>
+              </span>
+            ))}
+          </div>
         </div>
 
-        <div className="lv2-tl">
-          <div className="lv2-tl-track" />
-          <div className="lv2-tl-dead" style={{ left: "52%", width: "11%" }} />
-          {MARKS.map((m) => (
-            <div key={m.label} className={`lv2-pin lv2-pin-${m.tone}`} style={{ left: `${m.at}%` }}>
-              <span className="lv2-pin-stem" />
-              <span className="lv2-pin-dot" />
+        <dl className="v3-stats">
+          {STATS.map((s) => (
+            <div key={s.k} className="v3-stat" data-tone={s.tone}>
+              <dt>{s.k}</dt>
+              <dd>
+                <span className="v3-stat-v">{s.v}</span>
+                <span className="v3-stat-n">{s.note}</span>
+              </dd>
             </div>
           ))}
+        </dl>
+
+        {/* The coach's advice, in one line. This was a whole section of
+            quotes and notes, which was more reading than the page needed;
+            the stats above already show what happened, so all that's left
+            to say is what to do about it. */}
+        <p className="v3-fix">
+          <span className="v3-fix-k">Your fix for next stream</span>
+          Talk through the quiet parts and tell chat what you&apos;re doing next.
+        </p>
+      </section>
+
+      {/* ── Match history + league ── */}
+      <section className="v3-sec v3-split" id="ranked">
+        <div className="v3-col">
+          <p className="v3-label">Match history</p>
+          <h2 className="v3-h2">
+            Every stream is <span className="v3-soft">a win or a loss.</span>
+          </h2>
+          <ol className="v3-matches">
+            {MATCHES.map((m) => (
+              <li key={m.title} className="v3-match" data-r={m.r} style={{ ["--tier" as string]: TIER_HEX[m.tier] } as CSSProperties}>
+                <span className="v3-match-res">
+                  <span className="v3-match-word">{m.r === "win" ? "Win" : "Loss"}</span>
+                  <span className="v3-match-delta">{m.delta}</span>
+                </span>
+                <span className="v3-match-main">
+                  <span className="v3-match-title">{m.title}</span>
+                  <span className="v3-match-meta">
+                    {m.meta} · <span className="v3-match-rank">{m.rank}</span>
+                  </span>
+                </span>
+                {m.tag && <span className="v3-match-tag">{m.tag}</span>}
+              </li>
+            ))}
+          </ol>
         </div>
 
-        <ul className="lv2-legend">
-          {MARKS.map((m) => (
-            <li key={m.label} className={`lv2-leg lv2-leg-${m.tone}`}>
-              <span className="lv2-leg-l">{m.label}</span>
-              <span className="lv2-leg-n">{m.note}</span>
+        <div className="v3-col">
+          <p className="v3-label">This week&apos;s league</p>
+          <h2 className="v3-h2">
+            Race the streamers <span className="v3-soft">nearest your rank.</span>
+          </h2>
+          <p className="v3-rival">
+            <b>NovaPlays</b> is 30 points ahead. One good stream passes them.
+          </p>
+          <ol className="v3-league">
+            {LEAGUE.map((row, i) => (
+              <li key={row.name} className="v3-lg-row" data-you={"you" in row ? "yes" : undefined}>
+                <span className="v3-lg-pos">{i + 1}</span>
+                <Emblem tier={row.tier} className="v3-lg-emb" size={256} />
+                <span className="v3-lg-name">{row.name}</span>
+                <span className="v3-lg-rank" style={{ color: TIER_HEX[row.tier] }}>{row.rank}</span>
+                <span className="v3-lg-pts" data-sign={row.pts.startsWith("+") ? "up" : "down"}>{row.pts}</span>
+                <span className="v3-lg-prize">{row.prize ?? ""}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="v3-small">Every analyzed stream counts. Top three on Monday earn +20, +10 and +5 rank points.</p>
+        </div>
+      </section>
+
+      {/* ── The ladder, drawn as a climb ── */}
+      <section className="v3-sec" id="ladder">
+        <p className="v3-label">The ladder</p>
+        <h2 className="v3-h2">
+          Iron to Grandmaster. <span className="v3-soft">Same shape as the ladders you already grind.</span>
+        </h2>
+        <ol className="v3-ladder">
+          {TIERS.map((t, i) => (
+            <li
+              key={t.name}
+              className="v3-rung"
+              data-you={t.name === "Gold" ? "yes" : undefined}
+              style={{ ["--i" as string]: i, ["--tier" as string]: TIER_HEX[t.name] } as CSSProperties}
+            >
+              {t.name === "Gold" && <span className="v3-you">You</span>}
+              <Emblem tier={t.name} className="v3-rung-emb" size={256} />
+              <span className="v3-rung-name">{t.name}</span>
+              <span className="v3-rung-floor">{t.floor.toLocaleString("en-US")}</span>
             </li>
           ))}
-        </ul>
-      </section>
-
-      {/* ── Three lines ── */}
-      <section className="lv2-sec">
-        <ol className="lv2-lines">
-          <li>Paste a link. <em>Yours, or someone you watch.</em></li>
-          <li>See where people stopped watching. <em>Down to the minute.</em></li>
-          <li>Sign in when you want more. <em>Not before.</em></li>
         </ol>
-      </section>
-
-      {/* ── What comes back ── */}
-      <section className="lv2-sec" id="report">
-        <h2 className="lv2-h2">What you get</h2>
-        <dl className="lv2-defs">
-          {/* Was "a score out of 100", then "Points", which repeated the
-              rank section's first line word for word one screen later. The
-              rank has its own section; this row is the thing every report
-              ends on. */}
-          <div className="lv2-def">
-            <dt>The fix</dt>
-            <dd>One thing to change before you go live again.</dd>
-          </div>
-          <div className="lv2-def">
-            <dt>Quotes</dt>
-            <dd>The things you said that made people leave.</dd>
-          </div>
-          <div className="lv2-def">
-            <dt>Clips</dt>
-            <dd>Your best bits, cut and ready to post.</dd>
-          </div>
-          <div className="lv2-def">
-            <dt>Progress</dt>
-            <dd>Did you fix what we told you last time?</dd>
-          </div>
-        </dl>
-      </section>
-
-      {/* ── Rank ──
-          Written the way the rest of the page is: short sentences, no
-          marketing voice, nothing a streamer has to decode. The emblems do
-          the selling, so the copy just explains the rule and gets out. */}
-      <section className="lv2-sec" id="rank">
-        <h2 className="lv2-h2">You get ranked</h2>
-        <p className="lv2-rank-lede">
-          Every stream you analyze earns or loses points toward your next rank,
-          like any ladder you already grind. Iron at the bottom, Grandmaster at
-          the top.
-        </p>
-
-        <div className="lv2-rank-strip" aria-hidden="true">
-          {["iron", "bronze", "silver", "gold", "platinum", "diamond", "master", "grandmaster"].map((tier) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={tier} src={`/ranks/${tier}.png`} alt="" width={256} height={256} loading="lazy" decoding="async" />
-          ))}
-        </div>
-
-        <dl className="lv2-defs">
-          <div className="lv2-def">
+        <dl className="v3-rules">
+          <div>
             <dt>You climb</dt>
             <dd>By beating your own last few streams. Not by being big.</dd>
           </div>
-          <div className="lv2-def">
+          <div>
             <dt>Bad night</dt>
             <dd>Costs you less than a good one earns. One bad stream never drops you a tier.</dd>
           </div>
-          <div className="lv2-def">
+          <div>
             <dt>Going up</dt>
             <dd>Gets harder the higher you are. Iron is quick. Grandmaster is not.</dd>
           </div>
-          <div className="lv2-def">
-            <dt>Every week</dt>
-            <dd>You race the streamers closest to your rank. Top three earn bonus points.</dd>
-          </div>
-          <div className="lv2-def">
-            <dt>Every stream</dt>
-            <dd>Goes in your match history as a win or a loss, with the points it moved.</dd>
-          </div>
-          <div className="lv2-def">
+          <div>
             <dt>Everyone sees it</dt>
             <dd>
               The <Link href="/leaderboard">top 50</Link> are public.
@@ -209,16 +312,12 @@ export default function HomePage() {
         </dl>
       </section>
 
-      {/* ── Clip editor ──
-          Landon's screenshot. Given room rather than framed in a card, with
-          the caption set as a single line above it, because the shot is
-          detailed enough to be the whole argument on its own. */}
-      <section className="lv2-sec" id="features">
-        <h2 className="lv2-h2">The clip editor</h2>
-        <p className="lv2-shot-cap">
-          Trim it, fix the captions, pick the cover frame. Post it to YouTube without leaving.
-        </p>
-        <figure className="lv2-shot">
+      {/* ── Clips ── */}
+      <section className="v3-sec" id="clips">
+        <p className="v3-label">Clips</p>
+        <h2 className="v3-h2">We clip your best moments for you.</h2>
+        <p className="v3-shot-cap">Trim it, fix the captions, and post it to YouTube without leaving.</p>
+        <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/la/clip-editor.png"
@@ -232,31 +331,35 @@ export default function HomePage() {
       </section>
 
       {/* ── Price ── */}
-      <section className="lv2-sec" id="pricing">
-        <h2 className="lv2-h2">Price</h2>
-        <div className="lv2-price">
-          <div className="lv2-plan">
-            <p className="lv2-plan-n">Free</p>
-            <p className="lv2-plan-p">$0</p>
-            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two full reports and two clips <em>every week</em>, forever. Nothing in the report is held back.</p>
-            <Link href="/analyze" className="lv2-cta lv2-cta-ghost">Try it free</Link>
+      <section className="v3-sec" id="pricing">
+        <p className="v3-label">Price</p>
+        <div className="v3-price">
+          <div className="v3-plan">
+            <p className="v3-plan-n">Free</p>
+            <p className="v3-plan-p">$0</p>
+            <p className="v3-plan-b">
+              Try it on any stream with no account. Sign in and you get two full reports and two clips every week, forever.
+              Nothing in the report is held back.
+            </p>
+            <Link href="/analyze" className="v3-btn v3-btn-ghost">Try it free</Link>
           </div>
-          <div className="lv2-plan lv2-plan-lead">
-            <p className="lv2-plan-n">Pro</p>
-            <p className="lv2-plan-p">$14.99<span>/mo</span></p>
-            <p className="lv2-plan-b">For streamers going live more than twice a week. Fifteen streams a month, twenty clips, and posting straight to YouTube.</p>
-            {/* Said "Start free", but ?plan=monthly sends you through sign-in
-                straight into a $14.99 Stripe checkout. A button that says
-                free and opens a card form is the fastest way to lose trust
-                on a pricing section. */}
-            <Link href="/auth/login?plan=monthly" className="lv2-cta">Go Pro</Link>
+          <div className="v3-plan v3-plan-lead">
+            <p className="v3-plan-n">Pro</p>
+            <p className="v3-plan-p">
+              $14.99<span>/mo</span>
+            </p>
+            <p className="v3-plan-b">
+              For streamers going live more than twice a week. Fifteen streams a month, twenty clips, and posting straight
+              to YouTube.
+            </p>
+            <Link href="/auth/login?plan=monthly" className="v3-btn">Go Pro</Link>
           </div>
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section className="lv2-sec" id="faq">
-        <h2 className="lv2-h2">Questions</h2>
+      <section className="v3-sec" id="faq">
+        <p className="v3-label">Questions</p>
         <FaqAccordion items={FAQ} />
         <script
           type="application/ld+json"
@@ -264,50 +367,22 @@ export default function HomePage() {
         />
       </section>
 
-      {/* ── iOS ──
-          Landon's phone shot. Sits at the bottom as the closing pitch, and
-          it is the one place a second image earns its keep: the dashboard
-          on a real phone says "this is finished software" faster than any
-          sentence about it could. */}
-      <section className="lv2-ios-sec">
-        <div className="lv2-ios-copy">
-          <h2 className="lv2-h2">On your phone</h2>
-          <p className="lv2-ios-h">
-            Read the report in bed<br />
-            <span className="lv2-h1-soft">right after you go offline.</span>
-          </p>
-          <p className="lv2-ios-b">
-            Same reports, same clips, on iOS. Free either way, no credit card.
-          </p>
-          <div className="lv2-ios-btns">
-            <a
-              className="lv2-store"
-              href="https://apps.apple.com/us/app/levlcast/id6761281566"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <svg width="17" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M17.6 12.7c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.3.9 1.2 1.9 2.6 3.3 2.6 1.3-.1 1.8-.9 3.4-.9 1.6 0 2 .9 3.4.8 1.4 0 2.3-1.3 3.2-2.5.7-.9 1.3-2.1 1.7-3.4-2.5-1-3.3-3.6-3.3-3.6Zm-2.6-7c.7-.9 1.2-2.1 1.1-3.3-1 .1-2.3.7-3 1.6-.7.7-1.3 2-1.1 3.2 1.1.1 2.3-.6 3-1.5Z"/>
-              </svg>
-              <span>
-                <span className="lv2-store-top">Download on the</span>
-                <span className="lv2-store-main">App Store</span>
-              </span>
-            </a>
-            <Link href="/auth/login" className="lv2-cta">Get your first report free</Link>
-          </div>
+      {/* ── Closer ── */}
+      <section className="v3-close">
+        <h2 className="v3-close-h">
+          Play your first match.
+          <br />
+          <span className="v3-soft">It takes about a minute.</span>
+        </h2>
+        <div className="v3-paste">
+          <UrlPasteHero hint={null} />
         </div>
-        <div className="lv2-ios-shot">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/la/newphone.png" alt="The LevlCast dashboard on iPhone" width={558} height={611} loading="lazy" decoding="async" />
-        </div>
+        <p className="v3-fine">Free to try, and you don&apos;t need an account.</p>
       </section>
 
-      <footer className="lv2-foot">
+      <footer className="v3-foot">
         <span>LevlCast</span>
-        <span className="lv2-foot-links">
-          {/* "Current site" pointed at "/", this page, left over from when
-              this design was /v2 and linked back to the real homepage. */}
+        <span className="v3-foot-links">
           <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/privacy">Privacy</Link>

@@ -1,7 +1,8 @@
-/* ═══ /v3 — the post-match homepage ══════════════════════════════════════
+/* ═══ Homepage — the post-match design ═══════════════════════════════════
+   Trialled at /v3 (hence the .v3 scope) and promoted to / on 2026-09-25.
    Scoped entirely under .v3, which sits alongside .ll-page for the colour
-   tokens, the paste box, the FAQ and the reduced-motion rule. Nothing here
-   touches the live homepage.
+   tokens, the paste box, the FAQ and the reduced-motion rule. The previous
+   homepage at /v2 and the partner kit use home.css, not this file.
 
    Custom by structure, not decoration: a results screen with HUD corner
    marks, a scoreboard with tabular numbers, win/loss rows with a coloured
