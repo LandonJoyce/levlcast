@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const PENDING_KEY = "levlcast_pending_checkout";
+const PLAN_RE = /^(monthly|annual|pro_plus|pro_plus_annual)$/;
 
 /**
  * After OAuth returns to /dashboard, this component checks localStorage for
@@ -11,6 +12,10 @@ const PENDING_KEY = "levlcast_pending_checkout";
  * Stripe so the user doesn't have to find the upgrade button manually.
  *
  * Mirrors the PendingVodHandler pattern used for URL-paste analyze flow.
+ *
+ * Someone who was already signed in when they pressed Go Pro never sees the
+ * login page, so the middleware hands the plan over as ?checkout=<plan>
+ * instead. That wins over localStorage and is removed from the URL once read.
  *
  * Renders a small "Redirecting to checkout..." overlay while in flight so
  * the user doesn't accidentally interact with the dashboard during the
@@ -25,10 +30,18 @@ export default function PendingCheckoutHandler() {
     if (firedRef.current) return;
 
     let pendingPlan: string | null = null;
-    try {
-      pendingPlan = localStorage.getItem(PENDING_KEY);
-    } catch {
-      return;
+    const fromUrl = new URLSearchParams(window.location.search).get("checkout");
+    if (fromUrl && PLAN_RE.test(fromUrl)) {
+      pendingPlan = fromUrl;
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("checkout");
+      window.history.replaceState(window.history.state, "", clean.pathname + clean.search + clean.hash);
+    } else {
+      try {
+        pendingPlan = localStorage.getItem(PENDING_KEY);
+      } catch {
+        return;
+      }
     }
     if (!pendingPlan) return;
 

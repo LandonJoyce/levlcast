@@ -69,6 +69,14 @@ export async function middleware(request: NextRequest) {
   // Redirect logged-in users away from login page
   if (request.nextUrl.pathname === "/auth/login" && user) {
     const dashUrl = new URL("/dashboard", request.url);
+    // "Go Pro" links go through the login page, which is where the plan
+    // normally gets saved for after sign-in. A visitor who is already
+    // signed in never sees that page, so the plan rides along in the URL
+    // instead and the dashboard opens checkout from it.
+    const plan = request.nextUrl.searchParams.get("plan");
+    if (plan && /^(monthly|annual|pro_plus|pro_plus_annual)$/.test(plan)) {
+      dashUrl.searchParams.set("checkout", plan);
+    }
     return NextResponse.redirect(dashUrl);
   }
 
