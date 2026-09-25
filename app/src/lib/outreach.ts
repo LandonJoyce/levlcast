@@ -22,6 +22,14 @@
  *     stops consecutive messages reading as one template with the names
  *     swapped, which is both what makes outreach work and what stops it
  *     looking like a bot.
+ *
+ * And one rule about honesty: messages go out from Landon's account and
+ * say, once and plainly, that he made the tool. An earlier version had the
+ * model write as a random streamer who merely uses it. Undisclosed
+ * self-promotion is what gets DMs reported and accounts banned on Reddit,
+ * and it made a message sound less like Landon, not more. What stops a
+ * message reading as a founder pitch is the tone (help first, casual, no
+ * selling), not hiding who's sending it.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -55,36 +63,54 @@ const OFF_TOPIC = [
 ];
 
 /**
- * Rotating pitch angles. The draft prompt is told which one to take, so
- * consecutive messages differ in substance and not just wording. Each one
- * maps to something the product actually does.
+ * Rotating angles: which one thing the message says the tool would show
+ * them. Consecutive messages then differ in substance and not just
+ * wording. Each one maps to something the product actually does.
  */
 export const ANGLES = [
   {
     id: "retention",
-    brief: "They do not know WHERE viewers leave. Lead with the fact that the report timestamps the exact minutes people dropped off, so they stop guessing.",
+    brief: "it shows the exact minutes in their VOD where people dropped off, so they stop guessing why viewers leave.",
   },
   {
     id: "dead_air",
-    brief: "Lead with dead air: the report measures how many minutes of a stream were silence and shows where, which is the most common invisible growth killer.",
+    brief: "it measures how much of their stream was dead air and shows where the quiet stretches were.",
   },
   {
     id: "clipping",
-    brief: "Lead with time saved: it finds the clippable moments in a VOD and cuts them captioned, so they stop scrubbing hours of footage to find one clip.",
+    brief: "it finds the best moments in a VOD and cuts them into clips with captions, so they don't have to scrub through hours of footage.",
   },
   {
     id: "cold_open",
-    brief: "Lead with the opening: most viewers decide in the first minutes, and the report scores the cold open specifically and says what to change.",
+    brief: "it looks at how their stream opens, since most people decide whether to stay in the first few minutes, and tells them what to change.",
   },
   {
     id: "progress",
-    brief: "Lead with tracking: it compares this stream to the last one and tells them whether the thing they were told to fix actually got fixed.",
+    brief: "it compares each stream to the last one and tells them whether the thing they were working on actually got better.",
   },
   {
     id: "rank",
-    brief: "Lead with the rank. Every analysed stream moves you up or down a ladder from Iron to Grandmaster, there is a public leaderboard, and it turns 'am I getting better' into a number that moves. Do not oversell it as a game; the point is that progress becomes visible.",
+    brief: "every stream they analyze moves them up or down a rank from Iron to Grandmaster, with a weekly league against streamers at their level, so they can actually see if they're improving. Don't oversell it as a game.",
   },
 ] as const;
+
+export type Angle = (typeof ANGLES)[number];
+
+/** Stable angle for a one-off draft (the manual paste flow), picked from the username. */
+export function angleFor(seed: string): Angle {
+  let hash = 0;
+  for (const ch of seed.toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return ANGLES[hash % ANGLES.length];
+}
+
+/**
+ * Where every message sends people: the free analyzer, where they can
+ * paste a VOD with no account. Written out in full because Reddit only
+ * turns a link into something clickable when it starts with https:// or
+ * www. The old manual drafts ended in a bare "levlcast.com", which
+ * rendered as plain text nobody could click.
+ */
+export const OUTREACH_LINK = "https://www.levlcast.com/analyze";
 
 export interface HarvestedLead {
   username: string;
@@ -212,76 +238,177 @@ export async function harvestLeads(limit = 25): Promise<HarvestedLead[]> {
   return unique.slice(0, limit);
 }
 
+/** What a draft is written from: one person's post or comment. */
+export interface DraftInput {
+  username: string;
+  source: "post" | "comment";
+  subreddit?: string | null;
+  title?: string | null;
+  body?: string | null;
+}
+
+/**
+ * A draft, a skip (the model read it and judged it a bad fit), or a
+ * failure (truncated, refused, unparseable). Skip and failure are kept
+ * apart on purpose: a skip is recorded so the person is never reconsidered,
+ * a failure is not, so the lead can be tried again later.
+ */
+export type DraftResult =
+  | { kind: "draft"; subject: string; body: string }
+  | { kind: "skip"; reason: string }
+  | { kind: "failed"; reason: string };
+
+/**
+ * The drafting prompt, in Landon's voice.
+ *
+ * The examples under "how Landon types" are real messages he sent, because
+ * describing a voice ("casual, like texting") gets a model's idea of casual,
+ * which is still tidier and more symmetrical than a person typing on a
+ * phone. Shown the real thing, it writes closer to it.
+ */
+function systemPrompt(angle: Angle): string {
+  return `You're Landon. You stream on Twitch and you built LevlCast, a site where you paste a Twitch VOD and it tells you what happened in the stream: where people dropped off, how much dead air there was, which moments are worth clipping, and it ranks you from Iron to Grandmaster so you can see if you're getting better.
+
+You're sending a Reddit message to a streamer who posted asking for help. You only know what's in their post. You haven't watched their stream or looked at their channel, so never say or imply you did, and never make up numbers or details they didn't write.
+
+HOW LANDON TYPES
+Like he's texting a friend on his phone. Casual, simple words, contractions, short sentences, a little run-on is fine, starting a sentence lowercase is fine. Real messages he's typed:
+"Awesome! Sorry for forgetting! I hope it proved useful to you."
+"I did a recent update for it including ranks and a bit of an update to how it works so I been putting it back out there lol"
+"thats awesome super proud of that I hope I helped in some ways!"
+It should read like one person typed it in a minute, not like something written and edited.
+
+WHAT TO WRITE, IN THIS ORDER
+1. React to what they actually said, in your own words, so it's obvious you read their post.
+2. One real tip that helps with what they asked. It has to be useful even if they never click anything.
+3. Say plainly that you made a tool for this (for example "I actually made a free site for this" or "I built a thing that does this"), and what it would show them: ${angle.brief}
+4. The link on its own line, exactly: ${OUTREACH_LINK}
+5. That it's free to try and they don't need an account.
+
+RULES
+- 45 to 90 words.
+- The link appears once, written exactly as above so it's clickable. Never write levlcast.com any other way.
+- No dashes of any kind (no em dash, no en dash, no double hyphen). Use commas and periods.
+- Nothing that sounds like an ad or a template: no "Hey there", "just wanted to reach out", "I came across your post", "feel free to", "game changer", "level up", "take your stream to the next level", no lists, no bold, no emoji, no hashtags.
+- At most one exclamation mark.
+- Don't sign your name, Reddit already shows who it's from.
+- No prices, no "trial", no pressure, and don't end by asking them to reply.
+
+WHEN TO SKIP
+Rarely. These have already been filtered for people asking about growing, keeping viewers, or their content, so the default is to write. Skip only if it's about something this can't help with (hardware, OBS, bitrate, bans, payouts), someone advertising their own service, or the text is deleted or empty. Short or vague is not a reason to skip.
+
+OUTPUT
+Return only JSON: {"subject": "...", "body": "..."}
+The subject is 2 to 6 casual words about their post, like "your post about viewers" or "re: growing on twitch". A label, not a pitch.
+If you skip, return only: SKIP: <short reason>`;
+}
+
 /**
  * Draft one message for one person, from their own words.
  *
- * Returns null when the model judges the lead a bad fit, which is treated
- * as a skip rather than an error: the model seeing the full text has more
- * context than the keyword filters and is allowed to overrule them.
+ * A skip is the model overruling the keyword filters, which it's allowed to
+ * do: it sees the whole text, the filters only see keywords.
  */
-export async function draftMessage(
-  lead: HarvestedLead,
-  angle: (typeof ANGLES)[number]
-): Promise<{ subject: string; body: string } | null> {
+export async function draftMessage(input: DraftInput, angle: Angle): Promise<DraftResult> {
   const anthropic = new Anthropic();
+
+  const lines = [
+    input.subreddit ? `Subreddit: r/${input.subreddit}` : null,
+    `Their username: ${input.username}`,
+    input.source === "comment" ? "They left this comment:" : "They posted this:",
+    input.title ? `Title: ${input.title}` : null,
+    input.body ? input.body : input.source === "post" ? "(no body text)" : null,
+  ].filter(Boolean);
 
   const res = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    // Generous because the reply is not the only thing counted: this model
-    // can emit a thinking block first, and at 400 the budget ran out mid
-    // thought and returned stop_reason "max_tokens" with no text at all.
-    max_tokens: 1500,
-    system: `You are answering a streamer on Reddit who asked for help. You know a tool called LevlCast that reads a Twitch VOD and reports where viewers dropped off, how much dead air there was, which moments are worth clipping, and whether the thing it told you to fix last stream actually got fixed.
-
-You have ONE source of truth: the post text you are given. You cannot see their stream, their numbers, or their channel. Never imply you watched anything or looked anything up.
-
-VOICE
-You are one streamer replying to another, not a founder pitching. Answer the question they actually asked first, in your own words, and mention the tool as the thing that would show them the answer. If your message would still be useful with the tool removed from it, you have written it correctly.
-
-HARD RULES
-- Open by responding to the specific thing THEY said. Quote or paraphrase it so it is obvious this was written for them.
-- Under 90 words.
-- Plain sentences. No marketing voice, no exclamation marks, no emoji, no "hey there", no bulleted feature list.
-- Do NOT sign your name, do NOT claim you built it, do NOT say "I made this" or "my tool". Never imply ownership.
-- Mention the free tier once, accurately: two full reports every week, no card. Full means full, nothing is blurred or held back.
-- Do not name a price. Do not say "trial".
-- No pressure, no urgency, no follow-up promise, no question at the end fishing for a reply.
-
-WHEN TO SKIP
-Rarely. These posts have already been filtered for people asking about streaming growth, retention or content, so the default is to WRITE. Reply with exactly SKIP only when the post is about something this genuinely cannot help with — hardware, OBS, bitrate, bans, payouts, someone advertising a service — or when the text is empty or deleted. A short post is not a reason to skip. A vague post is not a reason to skip. Being unsure is not a reason to skip.
-
-SUBJECT
-Three to six words naming the topic they posted about, nothing more. It is a label, not a sentence and not a pitch. "Re your retention question" is right. "That early drop-off is fixable once you see it" is a sentence and is wrong.
-
-ANGLE FOR THIS MESSAGE
-${angle.brief}
-
-Return JSON only: {"subject": "...", "body": "..."} or the single word SKIP.`,
-    messages: [
-      {
-        role: "user",
-        content: `Subreddit: r/${lead.subreddit}\nTitle: ${lead.title}\n\nBody:\n${lead.body || "(no body text)"}`,
-      },
-    ],
+    // Headroom for the thinking this model does before it writes. At 400,
+    // and later 1500, the budget could run out mid-thought and leave no
+    // message at all; a ceiling only costs what's actually used.
+    max_tokens: 8000,
+    system: systemPrompt(angle),
+    messages: [{ role: "user", content: lines.join("\n") }],
   });
+
+  // A cut-off or refused reply is a failed draft, not a judgement about the
+  // person. Treating it as a skip would permanently drop a good lead.
+  if (res.stop_reason === "max_tokens") return { kind: "failed", reason: "ran out of room before finishing" };
+  // "refusal" postdates the installed SDK's types, but the API does send it.
+  if ((res.stop_reason as string | null) === "refusal") return { kind: "failed", reason: "declined to write it" };
 
   // Find the text block rather than assuming it is first. content[0] can be
   // a thinking block, in which case indexing position zero silently yields
-  // an empty string and every lead is recorded as "model judged poor fit" —
-  // a drafting failure that looks exactly like a filtering decision.
+  // an empty string and a drafting failure looks like a filtering decision.
   const textBlock = res.content.find((b) => b.type === "text");
   const raw = textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
-  if (!raw || raw.toUpperCase().startsWith("SKIP")) return null;
+  if (!raw) return { kind: "failed", reason: "empty reply" };
 
-  try {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    const parsed = JSON.parse(match[0]) as { subject?: string; body?: string };
-    if (!parsed.subject || !parsed.body) return null;
-    return { subject: parsed.subject.slice(0, 100), body: parsed.body };
-  } catch {
-    return null;
+  if (/^skip\b/i.test(raw)) {
+    return { kind: "skip", reason: raw.replace(/^skip\s*:?\s*/i, "").trim() || "not a fit" };
   }
+
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return { kind: "failed", reason: "no JSON in the reply" };
+  try {
+    const parsed = JSON.parse(match[0]) as { subject?: string; body?: string };
+    if (!parsed.body) return { kind: "failed", reason: "no message body" };
+    return { kind: "draft", ...finishDraft(parsed.subject ?? "", parsed.body) };
+  } catch {
+    return { kind: "failed", reason: "unreadable JSON" };
+  }
+}
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Enforce in code what the prompt asks for, because the model follows the
+ * prompt most of the time rather than every time:
+ *  - no dashes (the fastest tell that a model wrote it),
+ *  - every way of writing the site becomes the one clickable link,
+ *  - the link appears exactly once, added on its own line if it's missing,
+ *  - the subject stays a short label.
+ */
+export function finishDraft(subject: string, body: string): { subject: string; body: string } {
+  const stripDashes = (s: string) =>
+    s
+      .replace(/\s+(?:—|–|--)\s+/g, ", ")
+      .replace(/—|–|--/g, " ");
+
+  let text = stripDashes(body);
+
+  // levlcast.com, www.levlcast.com/analyze, http://levlcast.com/... all
+  // become the one link. Trailing punctuation stays outside the match, and
+  // the lookbehind leaves an email address like landon@levlcast.com alone.
+  text = text.replace(/(?<![@\w.])(?:https?:\/\/)?(?:www\.)?levlcast\.com(?:\/[^\s)]*[^\s).,!?])?/gi, OUTREACH_LINK);
+
+  // Keep the first link, drop any repeats.
+  let seen = false;
+  text = text.replace(new RegExp(escapeRegExp(OUTREACH_LINK), "g"), (m) => {
+    if (seen) return "";
+    seen = true;
+    return m;
+  });
+  if (!seen) text = `${text.trimEnd()}\n\n${OUTREACH_LINK}`;
+
+  // The link always sits on its own line, so it's the obvious thing to tap
+  // and never runs into the next sentence. The model mostly drops it
+  // mid-paragraph ("...why. https://... it's free to try"), prompt or not.
+  text = text.replace(
+    new RegExp(`[ \\t]*${escapeRegExp(OUTREACH_LINK)}[.,!?;:]?[ \\t]*`),
+    `\n\n${OUTREACH_LINK}\n\n`
+  );
+
+  text = text
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  let label = stripDashes(subject).replace(/^["'`]+|["'`]+$/g, "").trim();
+  const words = label.split(/\s+/).filter(Boolean);
+  if (words.length > 7) label = words.slice(0, 7).join(" ");
+
+  return { subject: label || "saw your post", body: text };
 }
 
 /**
@@ -326,11 +453,17 @@ export async function fillOutreachQueue(
     // to be worth re-reading mid-run.
     const angle = ANGLES[(angleSeed + attempts - 1) % ANGLES.length];
 
-    let drafted: { subject: string; body: string } | null = null;
+    let drafted: DraftResult;
     try {
       drafted = await draftMessage(lead, angle);
     } catch (err) {
       console.warn("[outreach] draft failed:", err instanceof Error ? err.message : err);
+      continue;
+    }
+    // A failed draft leaves no row, so the lead can be tried again on a
+    // later run. Only a real skip is recorded as a decision.
+    if (drafted.kind === "failed") {
+      console.warn(`[outreach] draft failed for ${lead.username}: ${drafted.reason}`);
       continue;
     }
 
@@ -342,9 +475,9 @@ export async function fillOutreachQueue(
       post_title: lead.title,
       post_excerpt: lead.body.slice(0, 600),
       angle: angle.id,
-      ...(drafted
+      ...(drafted.kind === "draft"
         ? { status: "queued", message_subject: drafted.subject, message_body: drafted.body }
-        : { status: "skipped", skip_reason: "model judged poor fit" }),
+        : { status: "skipped", skip_reason: `model: ${drafted.reason}`.slice(0, 200) }),
     };
 
     // Unique index on reddit_username makes this safe against races: a
@@ -352,7 +485,7 @@ export async function fillOutreachQueue(
     const { error } = await admin.from("outreach_contacts").insert(row);
     if (error) continue;
 
-    if (drafted) queued++;
+    if (drafted.kind === "draft") queued++;
     else skipped++;
   }
 

@@ -213,6 +213,40 @@ export default function OutreachPage() {
 
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
+  /**
+   * Rewrite a queued draft with the current prompt. Drafts written before
+   * the prompt changed keep their old wording until rewritten, and the
+   * oldest have no link in them at all.
+   */
+  const [rewriting, setRewriting] = useState<string | null>(null);
+  async function rewriteQueued(item: QueueItem) {
+    setRewriting(item.id);
+    setSendError(null);
+    try {
+      const res = await fetch("/api/outreach/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, action: "redraft" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.skip) {
+        setSendError(`Rewrite says skip this one: ${data.reason ?? "not a fit"}`);
+        return;
+      }
+      if (!res.ok || !data.body) {
+        setSendError(data.error ?? "Couldn't rewrite it. Try again.");
+        return;
+      }
+      setQueue((prev) =>
+        prev.map((q) => (q.id === item.id ? { ...q, message_subject: data.subject, message_body: data.body } : q))
+      );
+    } catch {
+      setSendError("Could not reach the server. Nothing was changed.");
+    } finally {
+      setRewriting(null);
+    }
+  }
+
   async function resolveQueued(item: QueueItem, action: "sent" | "skip") {
     // Drop it from view immediately. Waiting on the round trip makes a
     // one-click flow feel like a two-click one.
@@ -444,6 +478,12 @@ export default function OutreachPage() {
         }),
       });
       const data = await res.json();
+      // A failed draft comes back as an error, not a message. Without this
+      // it rendered as an empty draft that could still be sent.
+      if (!res.ok && !data.skip) {
+        setSendError(data.error ?? "Couldn't write that one. Try again.");
+        return null;
+      }
       if (data.skip) {
         // Model decided LevlCast isn't a fit for this post. Surface that
         // verbatim so we don't paper over it with a forced DM.
@@ -662,6 +702,21 @@ export default function OutreachPage() {
                       Send
                     </a>
                   )}
+                  <button
+                    onClick={() => rewriteQueued(item)}
+                    disabled={rewriting === item.id}
+                    style={{
+                      fontSize: 12,
+                      background: "transparent",
+                      border: 0,
+                      color: "var(--ink-2)",
+                      cursor: rewriting === item.id ? "default" : "pointer",
+                      padding: 0,
+                      opacity: rewriting === item.id ? 0.6 : 1,
+                    }}
+                  >
+                    {rewriting === item.id ? "Rewriting..." : "Rewrite"}
+                  </button>
                   <button
                     onClick={() => resolveQueued(item, "skip")}
                     style={{
