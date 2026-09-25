@@ -7,7 +7,7 @@ import ReferralLine from "@/components/landing/ReferralLine";
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
-import { TIER_HEX, TIERS } from "@/lib/rank";
+import { TIER_HEX, TIERS, rankFromPoints } from "@/lib/rank";
 import { createAdminClient } from "@/lib/supabase/server";
 import { shoulders } from "./fonts";
 import "./home-ranked.css";
@@ -27,6 +27,45 @@ interface SiteStats {
   streams: number;
   hours: number;
   streamers: number;
+}
+
+interface TopStreamer {
+  name: string;
+  avatar: string | null;
+  points: number;
+}
+
+/**
+ * The top five on the public leaderboard, for the homepage. Same query and
+ * same fields as /leaderboard (name, picture, rank), so nothing shows here
+ * that isn't already public there. This replaced a made-up league of
+ * invented streamer names.
+ */
+async function getTopStreamers(): Promise<TopStreamer[]> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("profiles")
+      .select("twitch_login, twitch_display_name, twitch_avatar_url, rank_points")
+      .not("rank_points", "is", null)
+      .order("rank_points", { ascending: false })
+      .limit(5);
+    if (error || !data) return [];
+    return (
+      data as Array<{
+        twitch_login: string | null;
+        twitch_display_name: string | null;
+        twitch_avatar_url: string | null;
+        rank_points: number | null;
+      }>
+    ).map((r) => ({
+      name: r.twitch_display_name || r.twitch_login || "Streamer",
+      avatar: r.twitch_avatar_url || null,
+      points: r.rank_points ?? 0,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function getSiteStats(): Promise<SiteStats | null> {
@@ -109,14 +148,6 @@ const MATCHES = [
   { r: "win", delta: "+52", tier: "Silver", rank: "Silver I", title: "Speedrun practice, any%", meta: "Sep 11 · 1h 48m", tag: "Division up" },
 ] as const;
 
-const LEAGUE = [
-  { name: "NovaPlays", tier: "Gold", rank: "Gold III", pts: "+64", prize: "+20" },
-  { name: "You", tier: "Gold", rank: "Gold IV", pts: "+34", prize: "+10", you: true },
-  { name: "kiwi_tv", tier: "Silver", rank: "Silver I", pts: "+33", prize: "+5" },
-  { name: "DeadAirDan", tier: "Bronze", rank: "Bronze I", pts: "+12", prize: null },
-  { name: "LoreGoblin", tier: "Bronze", rank: "Bronze II", pts: "−6", prize: null },
-] as const;
-
 function Emblem({ tier, className, size }: { tier: string; className?: string; size: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -133,7 +164,7 @@ function Emblem({ tier, className, size }: { tier: string; className?: string; s
 }
 
 export default async function HomePage() {
-  const stats = await getSiteStats();
+  const [stats, top] = await Promise.all([getSiteStats(), getTopStreamers()]);
   const fmt = (n: number) => n.toLocaleString("en-US");
 
   return (
@@ -291,27 +322,37 @@ export default async function HomePage() {
           </ol>
         </div>
 
+        {/* Real streamers from the public leaderboard, not sample names. */}
         <div className="v3-col">
-          <p className="v3-label">This week&apos;s league <span className="v3-eg">Example</span></p>
+          <p className="v3-label">Leaderboard</p>
           <h2 className="v3-h2">
-            Race the streamers nearest your rank.
+            Who&rsquo;s on top right now.
           </h2>
-          <p className="v3-rival">
-            <b>NovaPlays</b> is 30 points ahead. One good stream passes them.
+          {top.length > 0 && (
+            <ol className="v3-league">
+              {top.map((s, i) => {
+                const rank = rankFromPoints(s.points);
+                return (
+                  <li key={`${s.name}-${i}`} className="v3-lg-row">
+                    <span className="v3-lg-pos">{i + 1}</span>
+                    {s.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="v3-lg-avatar" src={s.avatar} alt="" width={28} height={28} loading="lazy" />
+                    ) : (
+                      <span className="v3-lg-avatar" />
+                    )}
+                    <span className="v3-lg-name">{s.name}</span>
+                    <Emblem tier={rank.tier} className="v3-lg-emb" size={256} />
+                    <span className="v3-lg-rank" style={{ color: TIER_HEX[rank.tier] }}>{rank.label}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+          <p className="v3-small">
+            Every week you&apos;re also put in a league with the streamers nearest your rank, and the top three on
+            Monday earn +20, +10 and +5 rank points. <Link href="/leaderboard">See the top 50</Link>
           </p>
-          <ol className="v3-league">
-            {LEAGUE.map((row, i) => (
-              <li key={row.name} className="v3-lg-row" data-you={"you" in row ? "yes" : undefined}>
-                <span className="v3-lg-pos">{i + 1}</span>
-                <Emblem tier={row.tier} className="v3-lg-emb" size={256} />
-                <span className="v3-lg-name">{row.name}</span>
-                <span className="v3-lg-rank" style={{ color: TIER_HEX[row.tier] }}>{row.rank}</span>
-                <span className="v3-lg-pts" data-sign={row.pts.startsWith("+") ? "up" : "down"}>{row.pts}</span>
-                <span className="v3-lg-prize">{row.prize ?? ""}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="v3-small">Every analyzed stream counts. Top three on Monday earn +20, +10 and +5 rank points.</p>
         </div>
       </section>
 

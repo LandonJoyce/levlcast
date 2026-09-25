@@ -641,37 +641,32 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   color: var(--v3-good);
 }
 
-.v3 .v3-rival { margin: -8px 0 18px; font-size: 15px; line-height: 1.5; color: var(--ll-fg-mute); }
-.v3 .v3-rival b { color: var(--ll-fg); }
 .v3 .v3-league { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ll-line-soft); }
+/* The real top five from the leaderboard: position, picture, name, rank. */
 .v3 .v3-lg-row {
   display: grid;
-  grid-template-columns: 18px 26px minmax(0, 1fr) auto 50px 34px;
+  grid-template-columns: 18px 28px minmax(0, 1fr) 24px auto;
   gap: 12px;
   align-items: center;
   padding: 10px 10px;
   border-bottom: 1px solid var(--ll-line-soft);
   font-size: 14px;
 }
-.v3 .v3-lg-row[data-you] {
-  background: color-mix(in oklab, rgb(255, 88, 0) 8%, transparent);
-  box-shadow: inset 3px 0 0 rgb(255, 88, 0);
-}
 .v3 .v3-lg-pos { font-family: var(--ll-mono); font-size: 12px; color: var(--ll-fg-faint); text-align: right; }
-.v3 .v3-lg-emb { width: 26px; height: 26px; display: block; }
+.v3 .v3-lg-avatar {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 238, 230, 0.08);
+}
+.v3 .v3-lg-emb { width: 24px; height: 24px; display: block; }
 .v3 .v3-lg-name { font-weight: 600; color: var(--ll-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v3 .v3-lg-rank { font-size: 12px; font-weight: 700; white-space: nowrap; }
-.v3 .v3-lg-pts {
-  font-family: var(--v3-display);
-  font-weight: 900;
-  font-size: 21px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.v3 .v3-lg-pts[data-sign="up"] { color: var(--v3-good); }
-.v3 .v3-lg-pts[data-sign="down"] { color: var(--v3-bad); }
-.v3 .v3-lg-prize { font-family: var(--ll-mono); font-size: 11px; color: var(--v3-gold); text-align: right; }
 .v3 .v3-small { margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: var(--ll-fg-faint); }
+.v3 .v3-small a { color: var(--ll-fg-mute); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.v3 .v3-small a:hover { color: var(--ll-fg); }
 
 /* ── The ladder, drawn as stairs ──
    Each rung sits a step higher than the one before, with its own step
@@ -1040,8 +1035,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-nav { gap: 10px; }
   .v3 .v3-signin,
   .v3 .v3-ios { padding: 8px 10px; }
-  .v3 .v3-lg-rank { display: none; }
-  .v3 .v3-lg-row { grid-template-columns: 16px 24px minmax(0, 1fr) 46px 30px; gap: 10px; }
+  .v3 .v3-lg-row { grid-template-columns: 16px 26px minmax(0, 1fr) 22px auto; gap: 10px; }
   .v3 .v3-frame { padding: 20px 18px 24px; }
   .v3 .v3-to { width: 128px; height: 128px; }
   .v3 .v3-from { width: 70px; height: 70px; }
