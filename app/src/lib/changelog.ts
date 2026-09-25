@@ -1,5 +1,10 @@
 ﻿/**
- * LevlCast patch notes — add new entries at the top.
+ * LevlCast patch notes, newest first.
+ *
+ * Not shown anywhere on the site since 2026-09-25, when the public patch
+ * notes page was taken down (/changelog now redirects home). Kept as the
+ * record of what shipped and when.
+ *
  * Keep entries user-facing only. No backend details, API names, or implementation info.
  * Write from the streamer's perspective: what changed for them, not how it works.
  */

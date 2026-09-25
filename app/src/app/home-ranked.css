@@ -50,6 +50,9 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   margin: 0 0 18px;
 }
 .v3 .v3-soft { color: var(--v3-dim); }
+/* Plus Jakarta at 800 with tight tracking leaves a visible gap before a
+   full stop or question mark at display sizes. */
+.v3 .v3-punct { margin-left: -0.07em; }
 .v3 .v3-h1 {
   font-family: var(--ll-display);
   font-weight: 800;
@@ -83,6 +86,8 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   color: var(--ll-fg-faint);
   margin: 14px 0 0;
 }
+.v3 .v3-fine a { color: var(--ll-fg-mute); text-decoration: underline; text-underline-offset: 3px; }
+.v3 .v3-fine a:hover { color: var(--ll-fg); }
 .v3 .v3-paste { max-width: 540px; }
 .v3 .v3-paste .ll-url-hero { margin: 0; }
 .v3 .v3-paste .ll-url-hero-helper { text-align: left; }
@@ -306,7 +311,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 /* ── Sections ── */
 .v3 .v3-sec { padding-block: clamp(48px, 6vw, 88px); }
 
-/* ── Match timeline (the one place the accent gradient is spent) ── */
+/* ── Match timeline ── */
 .v3 .v3-tl { margin: 0 0 30px; }
 .v3 .v3-tl-times {
   display: flex;
@@ -321,7 +326,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   position: relative;
   height: 12px;
   border-radius: 6px;
-  background: var(--ll-grad-h);
+  background: var(--ll-fg-dim);
   margin-bottom: 76px;
 }
 /* Dead air punched out of the stream, so absence reads as absence. */
@@ -333,7 +338,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   box-shadow: inset 0 0 0 1px var(--ll-line-soft);
 }
 .v3 .v3-tl-pin {
-  --pin: var(--ll-fg-dim);
+  --pin: var(--ll-fg-mute);
   position: absolute;
   top: 100%;
   width: 1px;
@@ -341,9 +346,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   background: var(--ll-line-med);
 }
 .v3 .v3-tl-pin[data-row="2"] { height: 40px; }
-.v3 .v3-tl-pin[data-tone="good"] { --pin: var(--v3-good); }
-.v3 .v3-tl-pin[data-tone="bad"] { --pin: var(--v3-bad); }
-.v3 .v3-tl-pin[data-tone="warn"] { --pin: var(--v3-warn); }
 .v3 .v3-tl-pin::after {
   content: "";
   position: absolute;
@@ -377,15 +379,12 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 }
 .v3 .v3-stat { padding: 20px 18px 22px 0; }
 .v3 .v3-stat + .v3-stat { padding-left: 18px; border-left: 1px solid var(--ll-line-soft); }
-.v3 .v3-stat[data-tone="good"] { --tone: var(--v3-good); }
-.v3 .v3-stat[data-tone="bad"] { --tone: var(--v3-bad); }
-.v3 .v3-stat[data-tone="warn"] { --tone: var(--v3-warn); }
 .v3 .v3-stat dt {
   font-family: var(--ll-mono);
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--tone, var(--ll-fg-faint));
+  color: var(--ll-fg-faint);
   margin-bottom: 10px;
 }
 .v3 .v3-stat dd { margin: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -404,7 +403,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-fix {
   margin: 26px 0 0;
   padding-left: 16px;
-  border-left: 2px solid var(--v3-gold);
+  border-left: 2px solid var(--ll-fg-dim);
   max-width: 60ch;
   font-family: var(--ll-display);
   font-size: clamp(18px, 2vw, 22px);
@@ -421,7 +420,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v3-gold);
+  color: var(--ll-fg-faint);
 }
 
 /* ── Match history + league ── */
@@ -663,8 +662,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-plan-b { flex: 1; margin: 0; max-width: 36ch; font-size: 15px; line-height: 1.55; color: var(--ll-fg-mute); }
 /* Plain white buttons. The orange-to-pink gradient with a coloured glow is
    the single most common button on generated landing pages; OpusClip,
-   which nobody reads as generated, uses flat white. The gradient is kept
-   for the one place it carries meaning, the stream timeline. */
+   which nobody reads as generated, uses flat white. */
 .v3 .v3-btn {
   display: inline-block;
   margin-top: 20px;
@@ -745,36 +743,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-foot-cols a { font-size: 14px; color: var(--ll-fg-mute); text-decoration: none; }
 .v3 .v3-foot-cols a:hover { color: var(--ll-fg); }
 
-/* ── "New:" line above the headline ── */
-.v3 .v3-new {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 100%;
-  margin: 0 0 22px;
-  padding: 5px 12px 5px 5px;
-  border: 1px solid var(--ll-line-soft);
-  border-radius: 999px;
-  font-size: 13px;
-  color: var(--ll-fg-mute);
-  text-decoration: none;
-  transition: border-color 140ms ease, color 140ms ease;
-}
-.v3 .v3-new:hover { border-color: var(--ll-line-med); color: var(--ll-fg); }
-.v3 .v3-new-tag {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--ll-fg);
-  color: rgb(16, 13, 14);
-  font-family: var(--ll-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.v3 .v3-new-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 /* ── Proof strip: real numbers, live ── */
 .v3 .v3-proof { padding-block: 0 clamp(8px, 2vw, 24px); }
 .v3 .v3-proof-list {
@@ -804,8 +772,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   color: var(--ll-fg);
   font-variant-numeric: tabular-nums;
 }
-.v3 .v3-proof-list dd a { color: inherit; text-decoration: none; border-bottom: 2px solid var(--ll-line-med); }
-.v3 .v3-proof-list dd a:hover { border-color: var(--ll-fg-dim); }
 
 /* "Example" on sections that show made-up data, so nobody mistakes the
    sample names for real users. */
@@ -820,9 +786,52 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   vertical-align: 1px;
 }
 
+/* ── Example report (ExampleReport.tsx): /analyze and the search pages ── */
+.v3 .xr { text-align: left; }
+.v3 .xr::after { display: none; }
+.v3 .xr-score {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.v3 .xr-num {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: 64px;
+  line-height: 0.9;
+  color: var(--v3-warn);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .xr-k {
+  margin: 0;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.v3 .xr-row { padding: 16px 0; border-bottom: 1px solid var(--ll-line-soft); }
+.v3 .xr-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.v3 .xr-text { margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: var(--ll-fg); }
+.v3 .xr-good { color: var(--v3-good); }
+.v3 .xr-clips { display: grid; gap: 7px; margin: 9px 0 0; padding: 0; list-style: none; }
+.v3 .xr-clips li { display: flex; gap: 12px; font-size: 14.5px; line-height: 1.4; color: var(--ll-fg-mute); }
+.v3 .xr-clips span {
+  min-width: 34px;
+  padding-top: 1px;
+  font-family: var(--ll-mono);
+  font-size: 12.5px;
+  color: var(--ll-fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Narrow screens ── */
 @media (max-width: 900px) {
   .v3 .v3-hero { grid-template-columns: minmax(0, 1fr); }
+  .v3 .xr { max-width: 540px; }
   .v3 .v3-split { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {

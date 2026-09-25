@@ -9,7 +9,6 @@ import SiteFooter from "@/components/landing/SiteFooter";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS } from "@/lib/rank";
 import { createAdminClient } from "@/lib/supabase/server";
-import { changelog } from "@/lib/changelog";
 import { shoulders } from "./fonts";
 import "./home-ranked.css";
 
@@ -52,13 +51,6 @@ async function getSiteStats(): Promise<SiteStats | null> {
   }
 }
 
-/** Changelog is newest first; the last entry is where the history starts. */
-const LATEST_UPDATE = changelog[0];
-const UPDATES_SINCE = new Date(`${changelog[changelog.length - 1].date}T12:00:00Z`).toLocaleDateString("en-US", {
-  month: "long",
-  timeZone: "UTC",
-});
-
 /**
  * Homepage: the post-match design. Trialled at /v3 and promoted on
  * 2026-09-25; the previous homepage is kept at /v2 and the one before it
@@ -72,9 +64,11 @@ const UPDATES_SINCE = new Date(`${changelog[changelog.length - 1].date}T12:00:00
  *
  * It keeps the rules the current homepage wrote down, because they were
  * right: left-aligned, rules and frames instead of cards, no atmospheric
- * glow, no gradient headline text, the accent gradient spent in one place
- * (the match timeline), plain English. What makes it look custom is the
- * game-UI structure and a condensed results typeface, not decoration.
+ * glow, no gradient headline text, plain English. The orange gradient
+ * is gone altogether now (the timeline was its last place); colour is kept
+ * for game meaning, like gold for a promotion and green or red for a win or
+ * a loss. What makes it look custom is the game-UI structure and a
+ * condensed results typeface, not decoration.
  *
  * Every number on the page is one consistent sample stream: Silver I at
  * 1176 points, +34 to Gold IV at 1210, the same stream the timeline, the
@@ -92,20 +86,20 @@ export const metadata: Metadata = {
 
 /** Marks on the match timeline. Percentages are positions across the stream. */
 const MARKS = [
-  { at: 4, label: "Slow start", tone: "warn" },
-  { at: 41, label: "Best moment", tone: "good" },
-  { at: 58, label: "Quiet stretch", tone: "bad" },
-  { at: 86, label: "Energy dropped", tone: "warn" },
+  { at: 4, label: "Slow start" },
+  { at: 41, label: "Best moment" },
+  { at: 58, label: "Quiet stretch" },
+  { at: 86, label: "Energy dropped" },
 ] as const;
 
 // Plain statements, the way a friend would say them. The first draft's
 // notes ("and you never clipped it", "cut and ready to post") had the
 // neat, slightly dramatic rhythm that reads as generated.
 const STATS = [
-  { k: "Slow start", v: "8:12", note: "before things picked up", tone: "warn" },
-  { k: "Best moment", v: "1:42:10", note: "you didn't clip this one", tone: "good" },
-  { k: "Dead air", v: "17 min", note: "mostly in the third hour", tone: "bad" },
-  { k: "Clips", v: "6", note: "ready to post", tone: "plain" },
+  { k: "Slow start", v: "8:12", note: "before things picked up" },
+  { k: "Best moment", v: "1:42:10", note: "you didn't clip this one" },
+  { k: "Dead air", v: "17 min", note: "mostly in the third hour" },
+  { k: "Clips", v: "6", note: "ready to post" },
 ] as const;
 
 const MATCHES = [
@@ -151,19 +145,15 @@ export default async function HomePage() {
         <div className="v3-hero-copy">
           {/* Only renders for visitors who came through a partner link. */}
           <ReferralLine />
-          {/* The latest real update, straight from the changelog. A product
-              that shipped something this week reads as looked after. */}
-          <Link href="/changelog" className="v3-new">
-            <span className="v3-new-tag">New</span>
-            <span className="v3-new-text">{LATEST_UPDATE.title}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
+          <p className="v3-label">Twitch VOD coaching</p>
           <h1 className="v3-h1">
-            <span className="v3-soft">You streamed four hours.</span>
+            {/* The marks are set apart so they can be pulled in: at this weight
+                and tracking the face leaves a gap before "." and "?". */}
+            <span className="v3-soft">
+              You streamed four hours<span className="v3-punct">.</span>
+            </span>
             <br />
-            Did you rank up?
+            Did you rank up<span className="v3-punct">?</span>
           </h1>
           <p className="v3-sub">
             Paste a Twitch VOD. We go through the whole stream, tell you what went wrong and when, and rank you on a
@@ -202,39 +192,31 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Proof: real numbers, live ── */}
-      <section className="v3-proof" aria-label="LevlCast so far">
-        <dl className="v3-proof-list">
-          {stats && (
-            <>
-              <div>
-                <dt>Streams analyzed</dt>
-                <dd>{fmt(stats.streams)}</dd>
-              </div>
-              <div>
-                <dt>Hours of streams</dt>
-                <dd>{fmt(stats.hours)}</dd>
-              </div>
-              <div>
-                <dt>Streamers ranked</dt>
-                <dd>{fmt(stats.streamers)}</dd>
-              </div>
-            </>
-          )}
-          <div>
-            <dt>Updates since {UPDATES_SINCE}</dt>
-            <dd>
-              <Link href="/changelog">{changelog.length}</Link>
-            </dd>
-          </div>
-        </dl>
-      </section>
+      {/* ── Proof: real numbers, live. Left out entirely if they can't load. ── */}
+      {stats && (
+        <section className="v3-proof" aria-label="LevlCast so far">
+          <dl className="v3-proof-list">
+            <div>
+              <dt>Streams analyzed</dt>
+              <dd>{fmt(stats.streams)}</dd>
+            </div>
+            <div>
+              <dt>Hours of streams</dt>
+              <dd>{fmt(stats.hours)}</dd>
+            </div>
+            <div>
+              <dt>Streamers ranked</dt>
+              <dd>{fmt(stats.streamers)}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
       {/* ── The breakdown: timeline + scoreboard ── */}
       <section className="v3-sec" id="breakdown">
         <p className="v3-label">The breakdown <span className="v3-eg">Example</span></p>
         <h2 className="v3-h2">
-          Here&apos;s what we found in one four hour stream.
+          Here&rsquo;s what we found in one four hour stream.
         </h2>
 
         <div className="v3-tl" aria-label="Where things happened across the stream">
@@ -251,7 +233,6 @@ export default async function HomePage() {
               <span
                 key={m.label}
                 className="v3-tl-pin"
-                data-tone={m.tone}
                 data-row={i % 2 === 1 ? "2" : undefined}
                 data-edge={m.at > 70 ? "end" : undefined}
                 style={{ left: `${m.at}%` }}
@@ -264,7 +245,7 @@ export default async function HomePage() {
 
         <dl className="v3-stats">
           {STATS.map((s) => (
-            <div key={s.k} className="v3-stat" data-tone={s.tone}>
+            <div key={s.k} className="v3-stat">
               <dt>{s.k}</dt>
               <dd>
                 <span className="v3-stat-v">{s.v}</span>
@@ -435,9 +416,11 @@ export default async function HomePage() {
       {/* ── Closer ── */}
       <section className="v3-close">
         <h2 className="v3-close-h">
-          Play your first match.
+          Play your first match<span className="v3-punct">.</span>
           <br />
-          <span className="v3-soft">It takes about a minute.</span>
+          <span className="v3-soft">
+            It takes about a minute<span className="v3-punct">.</span>
+          </span>
         </h2>
         <div className="v3-paste">
           <UrlPasteHero hint={null} />

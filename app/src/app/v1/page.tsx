@@ -405,7 +405,6 @@ export default async function LandingPage() {
                 <li><Link href="/twitch-vod-analyzer">VOD Analyzer</Link></li>
                 <li><Link href="/twitch-clip-generator">Clip Generator</Link></li>
                 <li><Link href="/twitch-stream-coach">Stream Coach</Link></li>
-                <li><Link href="/changelog">Changelog</Link></li>
               </ul>
             </div>
             <div className="ll-foot-col">

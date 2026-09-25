@@ -27,7 +27,6 @@ export default function SiteFooter() {
           <Link href="/analyze">Analyze a stream</Link>
           <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/#pricing">Pricing</Link>
-          <Link href="/changelog">Updates</Link>
         </div>
         <div>
           <p className="v3-foot-h">Get it</p>

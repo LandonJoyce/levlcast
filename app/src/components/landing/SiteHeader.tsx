@@ -23,7 +23,6 @@ export default function SiteHeader() {
       <Link href="/" className="v3-mark">LevlCast</Link>
       <nav className="v3-nav" aria-label="Main">
         <Link href="/#pricing" className="v3-nav-extra">Pricing</Link>
-        <Link href="/changelog" className="v3-nav-extra">Updates</Link>
         <Link href="/leaderboard">Leaderboard</Link>
         <a className="v3-ios" href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
           <AppleIcon />
