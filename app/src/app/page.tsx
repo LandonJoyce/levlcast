@@ -1,13 +1,63 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import { Big_Shoulders } from "next/font/google";
 import FaqAccordion from "@/components/FaqAccordion";
 import UrlPasteHero from "@/components/landing/UrlPasteHero";
 import ReferralLine from "@/components/landing/ReferralLine";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS } from "@/lib/rank";
+import { createAdminClient } from "@/lib/supabase/server";
+import { changelog } from "@/lib/changelog";
+import { shoulders } from "./fonts";
 import "./home-ranked.css";
+
+/**
+ * The proof strip's numbers, re-read once an hour.
+ *
+ * What made OpusClip's page read as a real company next to ours wasn't its
+ * font (it uses the same one) but proof: real numbers, real people, real
+ * product. These numbers are real and never rounded up; an indie tool's
+ * credibility is that its numbers are true, and one big made-up figure is
+ * exactly what reads as fake.
+ */
+export const revalidate = 3600;
+
+interface SiteStats {
+  streams: number;
+  hours: number;
+  streamers: number;
+}
+
+async function getSiteStats(): Promise<SiteStats | null> {
+  try {
+    const admin = createAdminClient();
+    const [streamsRes, durationsRes, streamersRes] = await Promise.all([
+      admin.from("vods").select("id", { count: "exact", head: true }).eq("status", "ready"),
+      // PostgREST caps a read at 1000 rows, so past that this undercounts
+      // hours rather than overstating them. Fine for now; an RPC sum later.
+      admin.from("vods").select("duration_seconds").eq("status", "ready").limit(1000),
+      admin.from("profiles").select("id", { count: "exact", head: true }).not("rank_points", "is", null),
+    ]);
+    if (streamsRes.error || durationsRes.error || streamersRes.error) return null;
+    const seconds = ((durationsRes.data ?? []) as Array<{ duration_seconds: number | null }>).reduce(
+      (sum, v) => sum + (v.duration_seconds ?? 0),
+      0
+    );
+    return { streams: streamsRes.count ?? 0, hours: Math.round(seconds / 3600), streamers: streamersRes.count ?? 0 };
+  } catch {
+    // The page must render without its numbers rather than not at all.
+    return null;
+  }
+}
+
+/** Changelog is newest first; the last entry is where the history starts. */
+const LATEST_UPDATE = changelog[0];
+const UPDATES_SINCE = new Date(`${changelog[changelog.length - 1].date}T12:00:00Z`).toLocaleDateString("en-US", {
+  month: "long",
+  timeZone: "UTC",
+});
 
 /**
  * Homepage: the post-match design. Trialled at /v3 and promoted on
@@ -31,19 +81,12 @@ import "./home-ranked.css";
  * stats and the top match history row describe.
  */
 
-const shoulders = Big_Shoulders({
-  subsets: ["latin"],
-  weight: ["800", "900"],
-  variable: "--font-shoulders",
-  display: "swap",
-});
-
 // Title kept from the previous homepage so search listings don't churn
 // with the redesign; the description now mentions the rank.
 export const metadata: Metadata = {
   title: "LevlCast - Your Personal Streaming Manager",
   description:
-    "Paste a Twitch stream link and get a real coaching report on it: slow starts, dead air, the moments worth clipping, and where you rank. Free to try, no account needed.",
+    "A coaching report on every Twitch stream: slow starts, dead air, the moments worth clipping, and a rank from Iron to Grandmaster. Try it free on any stream, no account needed.",
   alternates: { canonical: "/" },
 };
 
@@ -95,34 +138,28 @@ function Emblem({ tier, className, size }: { tier: string; className?: string; s
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stats = await getSiteStats();
+  const fmt = (n: number) => n.toLocaleString("en-US");
+
   return (
     <div className={`ll-page v3 ${shoulders.variable}`}>
-      <header className="v3-bar">
-        <Link href="/" className="v3-mark">LevlCast</Link>
-        <nav className="v3-nav" aria-label="Main">
-          <Link href="/leaderboard">Leaderboard</Link>
-          <a
-            className="v3-ios"
-            href="https://apps.apple.com/us/app/levlcast/id6761281566"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-            </svg>
-            iOS
-          </a>
-          <Link href="/auth/login" className="v3-signin">Sign in</Link>
-        </nav>
-      </header>
+      <SiteHeader />
 
       {/* ── Hero: the result screen ── */}
       <section className="v3-hero">
         <div className="v3-hero-copy">
           {/* Only renders for visitors who came through a partner link. */}
           <ReferralLine />
-          <p className="v3-label">Twitch VOD coaching</p>
+          {/* The latest real update, straight from the changelog. A product
+              that shipped something this week reads as looked after. */}
+          <Link href="/changelog" className="v3-new">
+            <span className="v3-new-tag">New</span>
+            <span className="v3-new-text">{LATEST_UPDATE.title}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
           <h1 className="v3-h1">
             <span className="v3-soft">You streamed four hours.</span>
             <br />
@@ -135,7 +172,7 @@ export default function HomePage() {
           <div className="v3-paste">
             <UrlPasteHero hint={null} />
           </div>
-          <p className="v3-fine">Free to try, and you don&apos;t need an account.</p>
+          <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
         </div>
 
         {/* The promotion plays once on load: the old emblem steps back, the
@@ -165,11 +202,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Proof: real numbers, live ── */}
+      <section className="v3-proof" aria-label="LevlCast so far">
+        <dl className="v3-proof-list">
+          {stats && (
+            <>
+              <div>
+                <dt>Streams analyzed</dt>
+                <dd>{fmt(stats.streams)}</dd>
+              </div>
+              <div>
+                <dt>Hours of streams</dt>
+                <dd>{fmt(stats.hours)}</dd>
+              </div>
+              <div>
+                <dt>Streamers ranked</dt>
+                <dd>{fmt(stats.streamers)}</dd>
+              </div>
+            </>
+          )}
+          <div>
+            <dt>Updates since {UPDATES_SINCE}</dt>
+            <dd>
+              <Link href="/changelog">{changelog.length}</Link>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       {/* ── The breakdown: timeline + scoreboard ── */}
       <section className="v3-sec" id="breakdown">
-        <p className="v3-label">The breakdown</p>
+        <p className="v3-label">The breakdown <span className="v3-eg">Example</span></p>
         <h2 className="v3-h2">
-          Here&apos;s what we found <span className="v3-soft">in one four hour stream.</span>
+          Here&apos;s what we found in one four hour stream.
         </h2>
 
         <div className="v3-tl" aria-label="Where things happened across the stream">
@@ -222,9 +287,9 @@ export default function HomePage() {
       {/* ── Match history + league ── */}
       <section className="v3-sec v3-split" id="ranked">
         <div className="v3-col">
-          <p className="v3-label">Match history</p>
+          <p className="v3-label">Match history <span className="v3-eg">Example</span></p>
           <h2 className="v3-h2">
-            Every stream is <span className="v3-soft">a win or a loss.</span>
+            Every stream is a win or a loss.
           </h2>
           <ol className="v3-matches">
             {MATCHES.map((m) => (
@@ -246,9 +311,9 @@ export default function HomePage() {
         </div>
 
         <div className="v3-col">
-          <p className="v3-label">This week&apos;s league</p>
+          <p className="v3-label">This week&apos;s league <span className="v3-eg">Example</span></p>
           <h2 className="v3-h2">
-            Race the streamers <span className="v3-soft">nearest your rank.</span>
+            Race the streamers nearest your rank.
           </h2>
           <p className="v3-rival">
             <b>NovaPlays</b> is 30 points ahead. One good stream passes them.
@@ -273,7 +338,7 @@ export default function HomePage() {
       <section className="v3-sec" id="ladder">
         <p className="v3-label">The ladder</p>
         <h2 className="v3-h2">
-          Iron to Grandmaster. <span className="v3-soft">Same shape as the ladders you already grind.</span>
+          Iron to Grandmaster, same shape as the ladders you already grind.
         </h2>
         <ol className="v3-ladder">
           {TIERS.map((t, i) => (
@@ -377,17 +442,10 @@ export default function HomePage() {
         <div className="v3-paste">
           <UrlPasteHero hint={null} />
         </div>
-        <p className="v3-fine">Free to try, and you don&apos;t need an account.</p>
+        <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
       </section>
 
-      <footer className="v3-foot">
-        <span>LevlCast</span>
-        <span className="v3-foot-links">
-          <Link href="/leaderboard">Leaderboard</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-        </span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

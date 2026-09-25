@@ -4,6 +4,9 @@
    tokens, the paste box, the FAQ and the reduced-motion rule. The previous
    homepage at /v2 and the partner kit use home.css, not this file.
 
+   The sign-in page, /analyze and shared reports import this file too, for
+   the bar, footer, type and buttons, and add their own rules beside it.
+
    Custom by structure, not decoration: a results screen with HUD corner
    marks, a scoreboard with tabular numbers, win/loss rows with a coloured
    edge, and the ladder drawn as stairs. One condensed face (Big Shoulders)
@@ -26,6 +29,10 @@
   color: var(--ll-fg);
   overflow-x: clip;
 }
+/* .ll-page pads the top by 80px to clear the old fixed nav. This page's
+   bar sits in the flow, so that padding was just an empty band above the
+   logo. */
+.ll-page.v3 { padding-top: 0; }
 .v3 > * {
   max-width: var(--v3-maxw);
   margin-inline: auto;
@@ -654,20 +661,34 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   margin-left: 4px;
 }
 .v3 .v3-plan-b { flex: 1; margin: 0; max-width: 36ch; font-size: 15px; line-height: 1.55; color: var(--ll-fg-mute); }
+/* Plain white buttons. The orange-to-pink gradient with a coloured glow is
+   the single most common button on generated landing pages; OpusClip,
+   which nobody reads as generated, uses flat white. The gradient is kept
+   for the one place it carries meaning, the stream timeline. */
 .v3 .v3-btn {
   display: inline-block;
   margin-top: 20px;
   text-decoration: none;
-  background: var(--ll-grad-h);
+  background: var(--ll-fg);
   color: rgb(16, 13, 14);
   font-weight: 700;
   font-size: 15px;
   padding: 12px 22px;
   border-radius: 9px;
-  transition: filter 140ms ease, transform 140ms ease, border-color 140ms ease;
+  transition: background 140ms ease, transform 140ms ease, border-color 140ms ease;
 }
-.v3 .v3-btn:hover { filter: brightness(1.08); }
+.v3 .v3-btn:hover { background: #ffffff; }
 .v3 .v3-btn:active { transform: translateY(1px); }
+/* Same treatment for the paste box's button, which is shared with /v1
+   and /v2 and keeps its gradient there. */
+.v3 .ll-btn-grad {
+  background: var(--ll-fg);
+  color: rgb(16, 13, 14);
+  font-weight: 700;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+.v3 .ll-btn-grad:hover { background: #ffffff; filter: none; }
 .v3 .v3-btn-ghost {
   background: transparent;
   color: var(--ll-fg);
@@ -693,21 +714,111 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   letter-spacing: -0.035em;
   margin: 0 0 26px;
 }
+/* The footer names the person who made it, next to the links. */
 .v3 .v3-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding-block: 34px 52px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 32px clamp(32px, 6vw, 96px);
+  padding-block: 40px 56px;
+}
+.v3 .v3-foot-mark {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--ll-fg);
+}
+.v3 .v3-foot-maker p { margin: 0; max-width: 42ch; font-size: 14px; line-height: 1.6; color: var(--ll-fg-mute); }
+.v3 .v3-foot-maker a { color: var(--ll-fg); text-decoration: underline; text-underline-offset: 3px; }
+.v3 .v3-foot-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.v3 .v3-foot-cols > div { display: flex; flex-direction: column; gap: 9px; }
+.v3 .v3-foot-h {
+  margin: 0 0 4px;
   font-family: var(--ll-mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--ll-fg-faint);
 }
-.v3 .v3-foot-links { display: flex; gap: 18px; }
-.v3 .v3-foot a { color: var(--ll-fg-faint); text-decoration: none; }
-.v3 .v3-foot a:hover { color: var(--ll-fg); }
+.v3 .v3-foot-cols a { font-size: 14px; color: var(--ll-fg-mute); text-decoration: none; }
+.v3 .v3-foot-cols a:hover { color: var(--ll-fg); }
+
+/* ── "New:" line above the headline ── */
+.v3 .v3-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  margin: 0 0 22px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ll-fg-mute);
+  text-decoration: none;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+.v3 .v3-new:hover { border-color: var(--ll-line-med); color: var(--ll-fg); }
+.v3 .v3-new-tag {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ll-fg);
+  color: rgb(16, 13, 14);
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.v3 .v3-new-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Proof strip: real numbers, live ── */
+.v3 .v3-proof { padding-block: 0 clamp(8px, 2vw, 24px); }
+.v3 .v3-proof-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--ll-line-soft);
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.v3 .v3-proof-list > div { padding: 18px 18px 20px 0; }
+.v3 .v3-proof-list > div + div { padding-left: 18px; border-left: 1px solid var(--ll-line-soft); }
+.v3 .v3-proof-list dt {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+  margin-bottom: 8px;
+}
+.v3 .v3-proof-list dd {
+  margin: 0;
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  color: var(--ll-fg);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-proof-list dd a { color: inherit; text-decoration: none; border-bottom: 2px solid var(--ll-line-med); }
+.v3 .v3-proof-list dd a:hover { border-color: var(--ll-fg-dim); }
+
+/* "Example" on sections that show made-up data, so nobody mistakes the
+   sample names for real users. */
+.v3 .v3-eg {
+  margin-left: 8px;
+  padding: 2px 7px;
+  border: 1px solid var(--ll-line-med);
+  border-radius: 999px;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: var(--ll-fg-dim);
+  vertical-align: 1px;
+}
 
 /* ── Narrow screens ── */
 @media (max-width: 900px) {
@@ -751,6 +862,15 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-rung-floor { order: 4; }
   .v3 .v3-match { grid-template-columns: 58px minmax(0, 1fr); }
   .v3 .v3-match-tag { display: none; }
+}
+@media (max-width: 760px) {
+  /* Pricing and Updates stay reachable from the footer on a phone. */
+  .v3 .v3-nav-extra { display: none; }
+  .v3 .v3-foot { grid-template-columns: minmax(0, 1fr); }
+  /* Two numbers per row; the rule between rows replaces the one beside. */
+  .v3 .v3-proof-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .v3 .v3-proof-list > div:nth-child(odd) { border-left: none; padding-left: 0; }
+  .v3 .v3-proof-list > div:nth-child(n + 3) { border-top: 1px solid var(--ll-line-soft); }
 }
 @media (max-width: 480px) {
   /* Logo, Leaderboard, iOS and Sign in all have to fit on one line. */
