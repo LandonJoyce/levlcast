@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 const PENDING_KEY = "levlcast_pending_vod_url";
@@ -34,6 +34,9 @@ export default function UrlPasteHero({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+  // Per-instance, so a page with two paste boxes never has two elements
+  // sharing one id.
+  const helperId = useId();
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -91,7 +94,7 @@ export default function UrlPasteHero({
             disabled={submitting}
             aria-label="Twitch VOD URL"
             aria-invalid={!!error}
-            aria-describedby={error || hint ? "ll-url-hero-helper" : undefined}
+            aria-describedby={error || hint ? helperId : undefined}
             className="ll-url-hero-input"
           />
         </div>
@@ -115,7 +118,7 @@ export default function UrlPasteHero({
         </button>
       </div>
       {(error || hint) && (
-        <p id="ll-url-hero-helper" className="ll-url-hero-helper">
+        <p id={helperId} className="ll-url-hero-helper">
           {error ? (
             <span className="ll-url-hero-error" role="alert">{error}</span>
           ) : (

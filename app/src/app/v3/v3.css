@@ -1,0 +1,769 @@
+/* ═══ /v3 — the post-match homepage ══════════════════════════════════════
+   Scoped entirely under .v3, which sits alongside .ll-page for the colour
+   tokens, the paste box, the FAQ and the reduced-motion rule. Nothing here
+   touches the live homepage.
+
+   Custom by structure, not decoration: a results screen with HUD corner
+   marks, a scoreboard with tabular numbers, win/loss rows with a coloured
+   edge, and the ladder drawn as stairs. One condensed face (Big Shoulders)
+   carries every number and result word, the way a game's results screen
+   does; everything else is the homepage's own type. */
+
+.v3 {
+  --v3-pad: clamp(20px, 5vw, 72px);
+  --v3-maxw: 1160px;
+  --v3-display: var(--font-shoulders), var(--ll-display);
+  --v3-good: rgb(163, 230, 53);
+  --v3-bad: rgb(248, 113, 113);
+  --v3-warn: rgb(252, 208, 147);
+  --v3-gold: #E3B341;
+  --v3-dim: rgb(126, 114, 116);
+  /* Same AA lift the homepage applies: the shared faint grey is 4.2:1
+     here and carries every 11px label. */
+  --ll-fg-faint: rgb(146, 134, 136);
+  background: var(--ll-bg);
+  color: var(--ll-fg);
+  overflow-x: clip;
+}
+.v3 > * {
+  max-width: var(--v3-maxw);
+  margin-inline: auto;
+  padding-inline: var(--v3-pad);
+}
+body:has(.v3) { background: rgb(16, 13, 14); }
+
+/* ── Shared type ── */
+.v3 .v3-label {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+  margin: 0 0 18px;
+}
+.v3 .v3-soft { color: var(--v3-dim); }
+.v3 .v3-h1 {
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(38px, 5.6vw, 68px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+.v3 .v3-h2 {
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(26px, 3.4vw, 40px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin: 0 0 34px;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+.v3 .v3-sub {
+  font-size: clamp(16px, 1.5vw, 18px);
+  line-height: 1.55;
+  color: var(--ll-fg-mute);
+  max-width: 44ch;
+  margin: 0 0 28px;
+}
+.v3 .v3-fine {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--ll-fg-faint);
+  margin: 14px 0 0;
+}
+.v3 .v3-paste { max-width: 540px; }
+.v3 .v3-paste .ll-url-hero { margin: 0; }
+.v3 .v3-paste .ll-url-hero-helper { text-align: left; }
+
+/* ── Bar ── */
+.v3 .v3-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 22px;
+  gap: 20px;
+}
+.v3 .v3-mark {
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--ll-fg);
+  text-decoration: none;
+}
+.v3 .v3-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.v3 .v3-nav a { color: var(--ll-fg-dim); text-decoration: none; transition: color 140ms ease, border-color 140ms ease; }
+.v3 .v3-nav a:hover { color: var(--ll-fg); }
+.v3 .v3-signin { padding: 8px 13px; border: 1px solid var(--ll-line-soft); border-radius: 7px; }
+.v3 .v3-signin:hover { border-color: var(--ll-line-med); }
+
+/* Partner line (same component as the homepage, same look). */
+.v3 .lv2-ref {
+  max-width: 52ch;
+  margin: 0 0 30px;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid rgb(255, 88, 0);
+}
+.v3 .lv2-ref-k {
+  display: block;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(255, 176, 140);
+  margin-bottom: 6px;
+}
+.v3 .lv2-ref-main { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ll-fg-mute); }
+.v3 .lv2-ref-main b { color: var(--ll-fg); font-weight: 700; }
+
+/* ── Hero ── */
+.v3 .v3-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  padding-block: clamp(36px, 6vw, 88px) clamp(56px, 7vw, 96px);
+}
+
+/* The result screen. A frame drawn only at its corners, like a game HUD:
+   it says "this is a screen" without becoming another card. */
+.v3 .v3-frame {
+  --c: rgba(255, 238, 230, 0.34);
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px 28px;
+  text-align: center;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 22px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) top left / 1px 22px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 22px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 1px 22px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 22px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 1px 22px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 22px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 1px 22px no-repeat,
+    rgba(255, 238, 230, 0.02);
+}
+/* One pass of light across the screen as the promotion lands. */
+.v3 .v3-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 38%, rgba(255, 238, 230, 0.07) 50%, transparent 62%);
+  transform: translateX(-110%);
+  animation: v3-sweep 1100ms ease 1300ms both;
+  pointer-events: none;
+}
+.v3 .v3-result-top {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.v3 .v3-rankup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  height: 172px;
+  margin: 18px 0 6px;
+}
+/* Base styles are the FINAL state, so reduced motion (animation: none)
+   shows the finished screen rather than the first frame. */
+.v3 .v3-from {
+  width: 84px;
+  height: 84px;
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  animation: v3-from 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 450ms both;
+}
+.v3 .v3-arrow {
+  position: relative;
+  width: 38px;
+  height: 1px;
+  background: var(--ll-line-med);
+  animation: v3-fade 400ms ease 700ms both;
+}
+.v3 .v3-arrow::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border-left: 7px solid var(--ll-line-med);
+  border-top: 4.5px solid transparent;
+  border-bottom: 4.5px solid transparent;
+}
+.v3 .v3-to {
+  width: 152px;
+  height: 152px;
+  filter: drop-shadow(0 0 18px rgba(227, 179, 65, 0.42));
+  animation: v3-land 900ms cubic-bezier(0.2, 1.35, 0.35, 1) 850ms both;
+}
+.v3 .v3-result-word {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: clamp(58px, 7vw, 86px);
+  line-height: 0.88;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--v3-gold);
+  margin: 6px 0 8px;
+  animation: v3-rise 600ms cubic-bezier(0.2, 0.8, 0.2, 1) 1250ms both;
+}
+.v3 .v3-result-line {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 14px;
+  margin: 0 0 18px;
+  animation: v3-fade 500ms ease 1450ms both;
+}
+.v3 .v3-result-rank { font-family: var(--ll-display); font-weight: 700; font-size: 18px; color: var(--ll-fg); }
+.v3 .v3-result-delta {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--v3-good);
+}
+.v3 .v3-bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 238, 230, 0.08);
+  overflow: hidden;
+}
+.v3 .v3-bar-fill {
+  display: block;
+  height: 100%;
+  width: 10%;
+  border-radius: 3px;
+  background: var(--v3-gold);
+  animation: v3-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 1600ms both;
+}
+.v3 .v3-result-sub {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+  margin: 10px 0 0;
+}
+
+@keyframes v3-from {
+  from { opacity: 1; transform: scale(1.3); filter: none; }
+  to { opacity: 0.45; transform: scale(1); filter: grayscale(0.6); }
+}
+@keyframes v3-land {
+  0% { opacity: 0; transform: translateY(14px) scale(0.55); }
+  60% { opacity: 1; transform: translateY(0) scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes v3-rise {
+  from { opacity: 0; transform: translateY(14px); letter-spacing: 0.12em; }
+  to { opacity: 1; transform: none; letter-spacing: 0.01em; }
+}
+@keyframes v3-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes v3-fill { from { width: 0; } to { width: 10%; } }
+@keyframes v3-sweep { to { transform: translateX(110%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .v3 .v3-from,
+  .v3 .v3-arrow,
+  .v3 .v3-to,
+  .v3 .v3-result-word,
+  .v3 .v3-result-line,
+  .v3 .v3-bar-fill,
+  .v3 .v3-frame::after { animation: none; }
+  .v3 .v3-frame::after { display: none; }
+}
+
+/* ── Sections ── */
+.v3 .v3-sec { padding-block: clamp(48px, 6vw, 88px); }
+
+/* ── Match timeline (the one place the accent gradient is spent) ── */
+.v3 .v3-tl { margin: 0 0 30px; }
+.v3 .v3-tl-times {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ll-fg-faint);
+  margin-bottom: 12px;
+}
+.v3 .v3-tl-track {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--ll-grad-h);
+  margin-bottom: 76px;
+}
+/* Dead air punched out of the stream, so absence reads as absence. */
+.v3 .v3-tl-dead {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--ll-bg);
+  box-shadow: inset 0 0 0 1px var(--ll-line-soft);
+}
+.v3 .v3-tl-pin {
+  --pin: var(--ll-fg-dim);
+  position: absolute;
+  top: 100%;
+  width: 1px;
+  height: 18px;
+  background: var(--ll-line-med);
+}
+.v3 .v3-tl-pin[data-row="2"] { height: 40px; }
+.v3 .v3-tl-pin[data-tone="good"] { --pin: var(--v3-good); }
+.v3 .v3-tl-pin[data-tone="bad"] { --pin: var(--v3-bad); }
+.v3 .v3-tl-pin[data-tone="warn"] { --pin: var(--v3-warn); }
+.v3 .v3-tl-pin::after {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pin);
+}
+.v3 .v3-tl-pin-label {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: -3px;
+  white-space: nowrap;
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pin);
+}
+.v3 .v3-tl-pin[data-edge="end"] .v3-tl-pin-label { left: auto; right: -3px; }
+
+/* ── Scoreboard ── */
+.v3 .v3-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--ll-line-soft);
+  border-bottom: 1px solid var(--ll-line-soft);
+}
+.v3 .v3-stat { padding: 20px 18px 22px 0; }
+.v3 .v3-stat + .v3-stat { padding-left: 18px; border-left: 1px solid var(--ll-line-soft); }
+.v3 .v3-stat[data-tone="good"] { --tone: var(--v3-good); }
+.v3 .v3-stat[data-tone="bad"] { --tone: var(--v3-bad); }
+.v3 .v3-stat[data-tone="warn"] { --tone: var(--v3-warn); }
+.v3 .v3-stat dt {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tone, var(--ll-fg-faint));
+  margin-bottom: 10px;
+}
+.v3 .v3-stat dd { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.v3 .v3-stat-v {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: clamp(40px, 5vw, 62px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  color: var(--ll-fg);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-stat-n { font-size: 14px; line-height: 1.4; color: var(--ll-fg-mute); }
+
+/* ── Coach's notes ── */
+.v3 .v3-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+}
+.v3 .v3-quote { margin: 0; padding: 4px 0 4px 22px; border-left: 2px solid var(--v3-bad); }
+.v3 .v3-ts { font-family: var(--ll-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--v3-bad); }
+.v3 .v3-quote blockquote {
+  margin: 10px 0 14px;
+  font-family: var(--ll-display);
+  font-weight: 700;
+  font-size: clamp(24px, 2.8vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ll-fg);
+  text-wrap: balance;
+}
+.v3 .v3-quote figcaption { font-size: 16px; line-height: 1.55; color: var(--ll-fg-mute); max-width: 44ch; }
+.v3 .v3-note-list { margin: 0; display: grid; }
+.v3 .v3-note-list > div { padding: 16px 0; border-top: 1px solid var(--ll-line-soft); }
+.v3 .v3-note-list > div:last-child { border-bottom: 1px solid var(--ll-line-soft); }
+.v3 .v3-note-list dt {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+  margin-bottom: 6px;
+}
+.v3 .v3-note-list dd { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ll-fg-mute); }
+.v3 .v3-note-fix dt { color: var(--v3-gold); }
+.v3 .v3-note-fix dd { color: var(--ll-fg); font-weight: 600; }
+
+/* ── Match history + league ── */
+.v3 .v3-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(36px, 5vw, 72px);
+}
+.v3 .v3-col .v3-h2 { margin-bottom: 24px; }
+
+.v3 .v3-matches { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ll-line-soft); }
+.v3 .v3-match {
+  --r: var(--v3-good);
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px 12px 14px;
+  border-bottom: 1px solid var(--ll-line-soft);
+  border-left: 3px solid var(--r);
+  background: color-mix(in oklab, var(--r) 6%, transparent);
+}
+.v3 .v3-match[data-r="loss"] { --r: var(--v3-bad); }
+.v3 .v3-match-res { display: flex; flex-direction: column; gap: 2px; }
+.v3 .v3-match-word {
+  font-family: var(--ll-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--r);
+}
+.v3 .v3-match-delta {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 0.95;
+  color: var(--r);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-match-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.v3 .v3-match-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ll-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v3 .v3-match-meta {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  color: var(--ll-fg-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v3 .v3-match-rank { color: var(--tier); }
+.v3 .v3-match-tag {
+  font-family: var(--ll-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--v3-good) 40%, transparent);
+  color: var(--v3-good);
+}
+
+.v3 .v3-rival { margin: -8px 0 18px; font-size: 15px; line-height: 1.5; color: var(--ll-fg-mute); }
+.v3 .v3-rival b { color: var(--ll-fg); }
+.v3 .v3-league { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ll-line-soft); }
+.v3 .v3-lg-row {
+  display: grid;
+  grid-template-columns: 18px 26px minmax(0, 1fr) auto 50px 34px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--ll-line-soft);
+  font-size: 14px;
+}
+.v3 .v3-lg-row[data-you] {
+  background: color-mix(in oklab, rgb(255, 88, 0) 8%, transparent);
+  box-shadow: inset 3px 0 0 rgb(255, 88, 0);
+}
+.v3 .v3-lg-pos { font-family: var(--ll-mono); font-size: 12px; color: var(--ll-fg-faint); text-align: right; }
+.v3 .v3-lg-emb { width: 26px; height: 26px; display: block; }
+.v3 .v3-lg-name { font-weight: 600; color: var(--ll-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3 .v3-lg-rank { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.v3 .v3-lg-pts {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: 21px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-lg-pts[data-sign="up"] { color: var(--v3-good); }
+.v3 .v3-lg-pts[data-sign="down"] { color: var(--v3-bad); }
+.v3 .v3-lg-prize { font-family: var(--ll-mono); font-size: 11px; color: var(--v3-gold); text-align: right; }
+.v3 .v3-small { margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: var(--ll-fg-faint); }
+
+/* ── The ladder, drawn as stairs ──
+   Each rung sits a step higher than the one before, with its own step
+   underneath in the tier colour, so the row reads as a climb before a
+   word of it is read. */
+/* Higher rungs lift UP from a shared baseline, and the lift is reserved
+   as top padding. Pushing the lower rungs down instead (the first try)
+   drew Iron's step straight through the rules list underneath. */
+.v3 .v3-ladder {
+  --step: 11px;
+  list-style: none;
+  margin: 0 0 44px;
+  padding: calc(34px + 7 * var(--step)) 0 0;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: clamp(6px, 1.4vw, 16px);
+  align-items: end;
+}
+.v3 .v3-rung {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 12px;
+  transform: translateY(calc(var(--i) * var(--step) * -1));
+}
+.v3 .v3-rung::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--tier);
+  opacity: 0.55;
+}
+.v3 .v3-rung-emb { width: 100%; max-width: 96px; height: auto; display: block; }
+.v3 .v3-rung-name {
+  font-family: var(--v3-display);
+  font-weight: 800;
+  font-size: clamp(13px, 1.5vw, 20px);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tier);
+}
+.v3 .v3-rung-floor {
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  color: var(--ll-fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-rung[data-you] .v3-rung-emb { filter: drop-shadow(0 0 14px color-mix(in oklab, var(--tier) 55%, transparent)); }
+.v3 .v3-rung[data-you]::after { opacity: 1; }
+.v3 .v3-you {
+  position: absolute;
+  top: -28px;
+  font-family: var(--ll-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(255, 88, 0);
+  border: 1px solid rgba(255, 88, 0, 0.5);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.v3 .v3-rules {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 clamp(24px, 4vw, 56px);
+}
+.v3 .v3-rules > div {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--ll-line-soft);
+  align-items: baseline;
+}
+.v3 .v3-rules dt {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.v3 .v3-rules dd { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ll-fg-mute); }
+.v3 .v3-rules a { color: var(--ll-fg); text-underline-offset: 3px; }
+
+/* ── Clips ── */
+.v3 .v3-shot {
+  margin: 0;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  line-height: 0;
+  background: var(--ll-bg-ink);
+}
+.v3 .v3-shot img { width: 100%; height: auto; display: block; }
+
+/* ── Price ── */
+.v3 .v3-price {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-top: 1px solid var(--ll-line-soft);
+}
+.v3 .v3-plan { padding: 26px 26px 26px 0; display: flex; flex-direction: column; align-items: flex-start; }
+.v3 .v3-plan-lead { padding-left: 26px; border-left: 1px solid var(--ll-line-soft); }
+.v3 .v3-plan-n {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+  margin: 0 0 12px;
+}
+.v3 .v3-plan-p {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: clamp(50px, 6vw, 74px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  color: var(--ll-fg);
+  margin: 0 0 14px;
+}
+.v3 .v3-plan-p span {
+  font-family: var(--ll-display);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ll-fg-faint);
+  margin-left: 4px;
+}
+.v3 .v3-plan-b { flex: 1; margin: 0; max-width: 36ch; font-size: 15px; line-height: 1.55; color: var(--ll-fg-mute); }
+.v3 .v3-btn {
+  display: inline-block;
+  margin-top: 20px;
+  text-decoration: none;
+  background: var(--ll-grad-h);
+  color: rgb(16, 13, 14);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 22px;
+  border-radius: 9px;
+  transition: filter 140ms ease, transform 140ms ease, border-color 140ms ease;
+}
+.v3 .v3-btn:hover { filter: brightness(1.08); }
+.v3 .v3-btn:active { transform: translateY(1px); }
+.v3 .v3-btn-ghost {
+  background: transparent;
+  color: var(--ll-fg);
+  font-weight: 600;
+  border: 1px solid var(--ll-line-med);
+  padding: 11px 21px;
+}
+.v3 .v3-btn-ghost:hover { filter: none; border-color: var(--ll-fg-dim); }
+
+/* ── Closer + foot ── */
+/* Rules drawn as backgrounds inset by the page padding, so they stop at
+   the text column like every other rule on the page. */
+.v3 .v3-close,
+.v3 .v3-foot {
+  background: linear-gradient(var(--ll-line-soft), var(--ll-line-soft)) no-repeat top center / calc(100% - 2 * var(--v3-pad)) 1px;
+}
+.v3 .v3-close { padding-block: clamp(64px, 9vw, 120px); }
+.v3 .v3-close-h {
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(32px, 4.6vw, 56px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin: 0 0 26px;
+}
+.v3 .v3-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-block: 34px 52px;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ll-fg-faint);
+}
+.v3 .v3-foot-links { display: flex; gap: 18px; }
+.v3 .v3-foot a { color: var(--ll-fg-faint); text-decoration: none; }
+.v3 .v3-foot a:hover { color: var(--ll-fg); }
+
+/* ── Narrow screens ── */
+@media (max-width: 900px) {
+  .v3 .v3-hero { grid-template-columns: minmax(0, 1fr); }
+  .v3 .v3-split { grid-template-columns: minmax(0, 1fr); }
+  .v3 .v3-notes { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .v3 .v3-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .v3 .v3-stat:nth-child(3) { border-left: none; padding-left: 0; }
+  .v3 .v3-stat:nth-child(n + 3) { border-top: 1px solid var(--ll-line-soft); }
+  .v3 .v3-rules { grid-template-columns: minmax(0, 1fr); }
+  .v3 .v3-rules > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .v3 .v3-price { grid-template-columns: minmax(0, 1fr); }
+  .v3 .v3-plan-lead { padding-left: 0; border-left: none; border-top: 1px solid var(--ll-line-soft); }
+}
+/* On a phone the stairs turn into an actual ladder: a vertical list with
+   Grandmaster at the top and Iron at the bottom. Eight columns at phone
+   width would shrink every emblem to a thumbnail and break the names. */
+@media (max-width: 640px) {
+  .v3 .v3-ladder {
+    display: flex;
+    flex-direction: column-reverse;
+    /* The desktop grid bottom-aligns its rungs; left as-is, the flex
+       column read that as "align right" and staggered every rung. */
+    align-items: stretch;
+    gap: 0;
+    padding-top: 0;
+    border-bottom: 1px solid var(--ll-line-soft);
+  }
+  .v3 .v3-rung {
+    flex-direction: row;
+    gap: 14px;
+    transform: none;
+    padding: 8px 0 8px 12px;
+    border-top: 1px solid var(--ll-line-soft);
+  }
+  .v3 .v3-rung::after { left: 0; right: auto; top: 8px; bottom: 8px; width: 3px; height: auto; }
+  .v3 .v3-rung-emb { width: 40px; max-width: 40px; }
+  .v3 .v3-rung-name { font-size: 20px; flex: 1; }
+  .v3 .v3-you { position: static; order: 3; }
+  .v3 .v3-rung-floor { order: 4; }
+  .v3 .v3-match { grid-template-columns: 58px minmax(0, 1fr); }
+  .v3 .v3-match-tag { display: none; }
+}
+@media (max-width: 480px) {
+  .v3 .v3-lg-rank { display: none; }
+  .v3 .v3-lg-row { grid-template-columns: 16px 24px minmax(0, 1fr) 46px 30px; gap: 10px; }
+  .v3 .v3-frame { padding: 20px 18px 24px; }
+  .v3 .v3-to { width: 128px; height: 128px; }
+  .v3 .v3-from { width: 70px; height: 70px; }
+  .v3 .v3-rankup { height: 150px; }
+}
