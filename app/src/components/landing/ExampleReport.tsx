@@ -1,14 +1,13 @@
 /**
- * A made-up report, drawn in the homepage's corner-marked frame and
- * labelled as an example. Used beside the paste box on /analyze and on the
- * VOD analyzer page, so people can see what comes back before they paste
- * anything. Styled by the "Example report" rules in home-ranked.css.
+ * A sample free report, drawn in the homepage's corner-marked frame. Used
+ * on the VOD analyzer page so people can see what comes back before they
+ * paste anything. Styled by the "Sample report" rules in home-ranked.css.
  */
 export default function ExampleReport() {
   return (
-    <aside className="v3-frame xr" aria-label="Example report">
+    <aside className="v3-frame xr" aria-label="A free report">
       <div className="v3-result-top">
-        <span>Example report</span>
+        <span>Free report</span>
         <span>First 12 min</span>
       </div>
       <div className="xr-score">

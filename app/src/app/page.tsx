@@ -233,10 +233,10 @@ export default async function HomePage() {
         {/* The promotion plays once on load: the old emblem steps back, the
             new one lands, the word and the points arrive, the bar fills.
             Under reduced motion it simply shows the finished state. */}
-        <div className="v3-result" role="img" aria-label="Example result: promoted from Silver I to Gold IV, plus 34 points">
+        <div className="v3-result" role="img" aria-label="Stream result: promoted from Silver I to Gold IV, plus 34 points">
           <div className="v3-frame">
             <div className="v3-result-top">
-              <span>Example result</span>
+              <span>Result</span>
               <span>4h 11m</span>
             </div>
             <div className="v3-rankup">
@@ -279,7 +279,7 @@ export default async function HomePage() {
 
       {/* ── The breakdown: timeline + scoreboard ── */}
       <section className="v3-sec" id="breakdown">
-        <p className="v3-label">The breakdown <span className="v3-eg">Example</span></p>
+        <p className="v3-label">The breakdown</p>
         <h2 className="v3-h2">
           Here&rsquo;s what we found in one four hour stream.
         </h2>
@@ -354,7 +354,7 @@ export default async function HomePage() {
       {/* ── Match history + league ── */}
       <section className="v3-sec v3-split" id="ranked">
         <div className="v3-col">
-          <p className="v3-label">Match history <span className="v3-eg">Example</span></p>
+          <p className="v3-label">Match history</p>
           <h2 className="v3-h2">
             Every stream is a win or a loss.
           </h2>

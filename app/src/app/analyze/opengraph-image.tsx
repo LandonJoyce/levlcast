@@ -7,7 +7,7 @@ import { OG, OG_SIZE, Framed, OgTop, ogFonts } from "@/lib/og";
  * image, so these links used to unfurl with no picture at all.
  */
 
-export const alt = "LevlCast: get a free report on your last stream. Example report with an opening score of 68.";
+export const alt = "LevlCast: get a free report on your last stream. A report with an opening score of 68.";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
@@ -44,7 +44,7 @@ export default async function Image() {
 
           <Framed width={380}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div style={label}>EXAMPLE REPORT</div>
+              <div style={label}>FREE REPORT</div>
               <div style={label}>FIRST 12 MIN</div>
             </div>
             <div

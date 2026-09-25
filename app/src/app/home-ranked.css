@@ -918,20 +918,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   font-variant-numeric: tabular-nums;
 }
 
-/* "Example" on sections that show made-up data, so nobody mistakes the
-   sample names for real users. */
-.v3 .v3-eg {
-  margin-left: 8px;
-  padding: 2px 7px;
-  border: 1px solid var(--ll-line-med);
-  border-radius: 999px;
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  color: var(--ll-fg-dim);
-  vertical-align: 1px;
-}
-
-/* ── Example report (ExampleReport.tsx): /analyze and the search pages ── */
+/* ── Sample report (ExampleReport.tsx): the VOD analyzer page ── */
 .v3 .xr { text-align: left; }
 .v3 .xr::after { display: none; }
 .v3 .xr-score {

@@ -75,7 +75,6 @@ function TwoStreams() {
   return (
     <aside className="v3-frame xr" aria-label="Example: feedback across two streams">
       <div className="v3-result-top">
-        <span>Example</span>
         <span>Your last two streams</span>
       </div>
       <div className="xr-row">
