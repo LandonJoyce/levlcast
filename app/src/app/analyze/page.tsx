@@ -16,6 +16,14 @@ export const metadata: Metadata = {
     description: "Paste a Twitch VOD link and read a real coaching report on it. No account needed.",
     url: "https://www.levlcast.com/analyze",
   },
+  // The picture itself comes from opengraph-image.tsx next to this file;
+  // X reads its own tag, which otherwise falls back to the homepage image.
+  twitter: {
+    card: "summary_large_image",
+    title: "Get a free report on your last stream",
+    description: "Paste a Twitch VOD link and read a real coaching report on it. No account needed.",
+    images: ["/analyze/opengraph-image"],
+  },
 };
 
 /**

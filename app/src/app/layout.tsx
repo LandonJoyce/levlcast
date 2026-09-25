@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s | LevlCast",
   },
   description:
-    "LevlCast watches your Twitch VODs and tells you exactly what to fix  -  dead air, slow openings, weak engagement. Real coaching for streamers growing the honest way. Free to start.",
+    "LevlCast goes through your Twitch VODs and tells you what to fix: dead air, slow starts and the moments worth clipping. Every stream moves you up or down a ladder from Iron to Grandmaster. Free to start.",
   keywords: [
     "twitch stream manager",
     "personal streaming manager",
@@ -57,24 +57,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast  -  AI Stream Coach for Twitch Streamers",
+    title: "LevlCast: coaching and a rank for Twitch streamers",
     description:
-      "AI coach that reviews your Twitch VODs and tells you specifically what to fix  -  dead air, slow openings, weak engagement. Real feedback, real growth.",
+      "Paste a Twitch VOD and see what went wrong and when, what to clip, and where you rank from Iron to Grandmaster. Free to try, no account needed.",
     siteName: "LevlCast",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "LevlCast  -  Your Personal Stream Manager",
+        alt: "LevlCast: you streamed four hours, did you rank up?",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "LevlCast  -  AI Stream Coach for Twitch Streamers",
+    title: "LevlCast: coaching and a rank for Twitch streamers",
     description:
-      "AI coach that reviews your Twitch VODs and tells you specifically what to fix. Real feedback, real growth.",
+      "Paste a Twitch VOD and see what went wrong and when, what to clip, and where you rank from Iron to Grandmaster.",
     site: "@levlcast",
     images: ["/opengraph-image"],
   },
@@ -87,7 +87,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#7C3AED",
+  // The page background, so the browser bar on phones blends into the
+  // site. Was the old purple brand colour.
+  themeColor: "#100D0E",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -101,7 +103,7 @@ const structuredData = {
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Web, iOS",
   description:
-    "AI stream coach that reviews your Twitch VODs, scores every moment, and tells you specifically what to fix. Auto-generate clips from your best moments and post to YouTube Shorts.",
+    "Coaching for Twitch streamers. LevlCast goes through your VODs, tells you what to fix with timestamps, clips your best moments and ranks every stream on a ladder from Iron to Grandmaster.",
   url: "https://www.levlcast.com",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
@@ -117,7 +119,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        {/* PWA  -  iOS splash screens & icons */}
+        {/* PWA: iOS splash screens and icons */}
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta

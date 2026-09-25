@@ -1,11 +1,11 @@
 {
   "name": "LevlCast",
   "short_name": "LevlCast",
-  "description": "Your personal streaming manager — AI coaching, burnout detection, content strategy, and a weekly game plan.",
+  "description": "Coaching and a rank ladder for every Twitch stream.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#080c14",
-  "theme_color": "#7C3AED",
+  "background_color": "#100D0E",
+  "theme_color": "#100D0E",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
