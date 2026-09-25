@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { APP_STORE_URL } from "./site-links";
+import { APP_STORE_URL, AppleIcon } from "./site-links";
 
 /**
  * A real person made this, so the footer says who. An anonymous, polished
@@ -20,6 +20,10 @@ export default function SiteFooter() {
           . Questions or ideas:{" "}
           <a href="mailto:Landon@LevlCast.com">Landon@LevlCast.com</a>
         </p>
+        <a className="v3-foot-app" href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+          <AppleIcon size={18} />
+          LevlCast for iPhone
+        </a>
       </div>
       <nav className="v3-foot-cols" aria-label="Footer">
         <div>

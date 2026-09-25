@@ -6,6 +6,8 @@ import UrlPasteHero from "@/components/landing/UrlPasteHero";
 import ReferralLine from "@/components/landing/ReferralLine";
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
+import ProPlan from "@/components/landing/ProPlan";
+import { Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS, rankFromPoints } from "@/lib/rank";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -140,6 +142,38 @@ const STATS = [
   { k: "Dead air", v: "17 min", note: "mostly in the third hour" },
   { k: "Clips", v: "6", note: "ready to post" },
 ] as const;
+
+/**
+ * The kinds of stream the coaching adapts to. Each line is what the game
+ * module in lib/analyze.ts actually tells the coach to look for, so this
+ * stays true as long as those do.
+ */
+const KINDS: Array<{ k: string; v: string; games: string; icon: LucideIcon }> = [
+  {
+    k: "Competitive",
+    v: "Rounds, respawns and drafts leave dead time. It coaches you to fill it and to make the ranked climb the story.",
+    games: "VALORANT · CS2 · League · Fortnite · Marvel Rivals",
+    icon: Crosshair,
+  },
+  {
+    k: "Cozy and life sims",
+    v: "Nothing's at stake on screen, so you're the show. It coaches the story, the build and the hangout.",
+    games: "The Sims · inZOI · Stardew · Animal Crossing · Minecraft",
+    icon: Sprout,
+  },
+  {
+    k: "Horror",
+    v: "Your real reactions are the content. It flags the stretches where you go quiet or play it too cool.",
+    games: "Phasmophobia · Dead by Daylight",
+    icon: Ghost,
+  },
+  {
+    k: "Everything else",
+    v: "Just Chatting, variety, anything. Every stream gets notes on your talking, pacing, dead air and chat.",
+    games: "Any category",
+    icon: MessagesSquare,
+  },
+];
 
 const MATCHES = [
   { r: "win", delta: "+34", tier: "Gold", rank: "Gold IV", title: "Hollow Knight Pantheon attempts", meta: "Sep 22 · 4h 11m", tag: "Promoted" },
@@ -296,6 +330,27 @@ export default async function HomePage() {
         </p>
       </section>
 
+      {/* ── Coaching per kind of stream ── */}
+      <section className="v3-sec" id="games">
+        <p className="v3-label">Every kind of stream</p>
+        <h2 className="v3-h2">It knows what you&rsquo;re playing.</h2>
+        <ul className="v3-kinds">
+          {KINDS.map((kind) => {
+            const Icon = kind.icon;
+            return (
+              <li key={kind.k} className="v3-kind">
+                <span className="v3-kind-ico" aria-hidden="true">
+                  <Icon size={18} strokeWidth={1.8} />
+                </span>
+                <p className="v3-kind-k">{kind.k}</p>
+                <p className="v3-kind-v">{kind.v}</p>
+                <p className="v3-kind-g">{kind.games}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
       {/* ── Match history + league ── */}
       <section className="v3-sec v3-split" id="ranked">
         <div className="v3-col">
@@ -430,23 +485,19 @@ export default async function HomePage() {
             </p>
             <Link href="/analyze" className="v3-btn v3-btn-ghost">Try it free</Link>
           </div>
-          <div className="v3-plan v3-plan-lead">
-            <p className="v3-plan-n">Pro</p>
-            <p className="v3-plan-p">
-              $14.99<span>/mo</span>
-            </p>
-            <p className="v3-plan-b">
-              For streamers going live more than twice a week. Fifteen streams a month, twenty clips, and posting straight
-              to YouTube.
-            </p>
-            <Link href="/auth/login?plan=monthly" className="v3-btn">Go Pro</Link>
-          </div>
+          <ProPlan />
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section className="v3-sec" id="faq">
-        <p className="v3-label">Questions</p>
+      <section className="v3-sec v3-faq" id="faq">
+        <div>
+          <p className="v3-label">Questions</p>
+          <h2 className="v3-h2">The things people ask first.</h2>
+          <p className="v3-faq-ask">
+            Can&apos;t find yours? Email <a href="mailto:Landon@LevlCast.com">Landon@LevlCast.com</a>.
+          </p>
+        </div>
         <FaqAccordion items={FAQ} />
         <script
           type="application/ld+json"
