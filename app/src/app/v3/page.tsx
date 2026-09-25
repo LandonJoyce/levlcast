@@ -27,7 +27,7 @@ import "./v3.css";
  *
  * Every number on the page is one consistent sample stream: Silver I at
  * 1176 points, +34 to Gold IV at 1210, the same stream the timeline, the
- * stats, the coach's notes and the top match history row describe.
+ * stats and the top match history row describe.
  */
 
 const shoulders = Big_Shoulders({
@@ -49,16 +49,19 @@ export const metadata: Metadata = {
 /** Marks on the match timeline. Percentages are positions across the stream. */
 const MARKS = [
   { at: 4, label: "Slow start", tone: "warn" },
-  { at: 41, label: "Best bit", tone: "good" },
-  { at: 58, label: "Quiet", tone: "bad" },
-  { at: 86, label: "Ending", tone: "warn" },
+  { at: 41, label: "Best moment", tone: "good" },
+  { at: 58, label: "Quiet stretch", tone: "bad" },
+  { at: 86, label: "Energy dropped", tone: "warn" },
 ] as const;
 
+// Plain statements, the way a friend would say them. The first draft's
+// notes ("and you never clipped it", "cut and ready to post") had the
+// neat, slightly dramatic rhythm that reads as generated.
 const STATS = [
-  { k: "Slow start", v: "8:12", note: "before anything happened", tone: "warn" },
-  { k: "Best bit", v: "1:42:10", note: "and you never clipped it", tone: "good" },
-  { k: "Dead air", v: "17 min", note: "most of it in hour three", tone: "bad" },
-  { k: "Clips found", v: "6", note: "cut and ready to post", tone: "plain" },
+  { k: "Slow start", v: "8:12", note: "before things picked up", tone: "warn" },
+  { k: "Best moment", v: "1:42:10", note: "you didn't clip this one", tone: "good" },
+  { k: "Dead air", v: "17 min", note: "mostly in the third hour", tone: "bad" },
+  { k: "Clips", v: "6", note: "ready to post", tone: "plain" },
 ] as const;
 
 const MATCHES = [
@@ -98,6 +101,17 @@ export default function PostMatchHomePage() {
         <Link href="/v3" className="v3-mark">LevlCast</Link>
         <nav className="v3-nav" aria-label="Main">
           <Link href="/leaderboard">Leaderboard</Link>
+          <a
+            className="v3-ios"
+            href="https://apps.apple.com/us/app/levlcast/id6761281566"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+            </svg>
+            iOS
+          </a>
           <Link href="/auth/login" className="v3-signin">Sign in</Link>
         </nav>
       </header>
@@ -120,7 +134,7 @@ export default function PostMatchHomePage() {
           <div className="v3-paste">
             <UrlPasteHero hint={null} />
           </div>
-          <p className="v3-fine">No account. No card. Works on anyone&apos;s stream.</p>
+          <p className="v3-fine">Free to try, and you don&apos;t need an account.</p>
         </div>
 
         {/* The promotion plays once on load: the old emblem steps back, the
@@ -154,7 +168,7 @@ export default function PostMatchHomePage() {
       <section className="v3-sec" id="breakdown">
         <p className="v3-label">The breakdown</p>
         <h2 className="v3-h2">
-          The whole stream, <span className="v3-soft">read back like a replay.</span>
+          Here&apos;s what we found <span className="v3-soft">in one four hour stream.</span>
         </h2>
 
         <div className="v3-tl" aria-label="Where things happened across the stream">
@@ -193,41 +207,15 @@ export default function PostMatchHomePage() {
             </div>
           ))}
         </dl>
-      </section>
 
-      {/* ── Coach's notes: the report itself ── */}
-      <section className="v3-sec" id="report">
-        <p className="v3-label">Coach&apos;s notes</p>
-        <h2 className="v3-h2">
-          Written like a person. <span className="v3-soft">Quoting you, to the minute.</span>
-        </h2>
-
-        <div className="v3-notes">
-          <figure className="v3-quote">
-            <span className="v3-ts">1:12:40</span>
-            <blockquote>&ldquo;okay, I&apos;m just gonna farm for a bit&rdquo;</blockquote>
-            <figcaption>
-              Then seventeen minutes of near silence. Say what you&apos;re farming for, or let chat pick the next goal.
-            </figcaption>
-          </figure>
-          <dl className="v3-note-list">
-            <div>
-              <dt>The story</dt>
-              <dd>
-                Strong first hour. You found your voice in the boss fights and chat came with you. Then hour three went
-                quiet and the stream lost its thread.
-              </dd>
-            </div>
-            <div>
-              <dt>Best bit · 1:42:10</dt>
-              <dd>You finally beat the boss that had been beating you all night and yelled for a full minute. That&apos;s your clip.</dd>
-            </div>
-            <div className="v3-note-fix">
-              <dt>The fix</dt>
-              <dd>Talk through the quiet parts. Tell chat what you&apos;re doing next.</dd>
-            </div>
-          </dl>
-        </div>
+        {/* The coach's advice, in one line. This was a whole section of
+            quotes and notes, which was more reading than the page needed;
+            the stats above already show what happened, so all that's left
+            to say is what to do about it. */}
+        <p className="v3-fix">
+          <span className="v3-fix-k">Your fix for next stream</span>
+          Talk through the quiet parts and tell chat what you&apos;re doing next.
+        </p>
       </section>
 
       {/* ── Match history + league ── */}
@@ -326,9 +314,8 @@ export default function PostMatchHomePage() {
       {/* ── Clips ── */}
       <section className="v3-sec" id="clips">
         <p className="v3-label">Clips</p>
-        <h2 className="v3-h2">
-          Your best bits, cut. <span className="v3-soft">Captions fixed, straight to YouTube.</span>
-        </h2>
+        <h2 className="v3-h2">We clip your best moments for you.</h2>
+        <p className="v3-shot-cap">Trim it, fix the captions, and post it to YouTube without leaving.</p>
         <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -385,7 +372,7 @@ export default function PostMatchHomePage() {
         <div className="v3-paste">
           <UrlPasteHero hint={null} />
         </div>
-        <p className="v3-fine">No account. No card. Works on anyone&apos;s stream.</p>
+        <p className="v3-fine">Free to try, and you don&apos;t need an account.</p>
       </section>
 
       <footer className="v3-foot">

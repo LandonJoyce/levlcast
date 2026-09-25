@@ -106,8 +106,11 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 }
 .v3 .v3-nav a { color: var(--ll-fg-dim); text-decoration: none; transition: color 140ms ease, border-color 140ms ease; }
 .v3 .v3-nav a:hover { color: var(--ll-fg); }
-.v3 .v3-signin { padding: 8px 13px; border: 1px solid var(--ll-line-soft); border-radius: 7px; }
-.v3 .v3-signin:hover { border-color: var(--ll-line-med); }
+.v3 .v3-signin,
+.v3 .v3-ios { padding: 8px 13px; border: 1px solid var(--ll-line-soft); border-radius: 7px; }
+.v3 .v3-ios { display: inline-flex; align-items: center; gap: 6px; }
+.v3 .v3-signin:hover,
+.v3 .v3-ios:hover { border-color: var(--ll-line-med); }
 
 /* Partner line (same component as the homepage, same look). */
 .v3 .lv2-ref {
@@ -389,40 +392,29 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 }
 .v3 .v3-stat-n { font-size: 14px; line-height: 1.4; color: var(--ll-fg-mute); }
 
-/* ── Coach's notes ── */
-.v3 .v3-notes {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: clamp(28px, 4vw, 56px);
-  align-items: start;
-}
-.v3 .v3-quote { margin: 0; padding: 4px 0 4px 22px; border-left: 2px solid var(--v3-bad); }
-.v3 .v3-ts { font-family: var(--ll-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--v3-bad); }
-.v3 .v3-quote blockquote {
-  margin: 10px 0 14px;
+/* ── The fix, one line under the scoreboard ── */
+.v3 .v3-fix {
+  margin: 26px 0 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--v3-gold);
+  max-width: 60ch;
   font-family: var(--ll-display);
+  font-size: clamp(18px, 2vw, 22px);
   font-weight: 700;
-  font-size: clamp(24px, 2.8vw, 34px);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
   color: var(--ll-fg);
-  text-wrap: balance;
 }
-.v3 .v3-quote figcaption { font-size: 16px; line-height: 1.55; color: var(--ll-fg-mute); max-width: 44ch; }
-.v3 .v3-note-list { margin: 0; display: grid; }
-.v3 .v3-note-list > div { padding: 16px 0; border-top: 1px solid var(--ll-line-soft); }
-.v3 .v3-note-list > div:last-child { border-bottom: 1px solid var(--ll-line-soft); }
-.v3 .v3-note-list dt {
+.v3 .v3-fix-k {
+  display: block;
+  margin-bottom: 6px;
   font-family: var(--ll-mono);
   font-size: 11px;
+  font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ll-fg-faint);
-  margin-bottom: 6px;
+  color: var(--v3-gold);
 }
-.v3 .v3-note-list dd { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ll-fg-mute); }
-.v3 .v3-note-fix dt { color: var(--v3-gold); }
-.v3 .v3-note-fix dd { color: var(--ll-fg); font-weight: 600; }
 
 /* ── Match history + league ── */
 .v3 .v3-split {
@@ -616,6 +608,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-rules a { color: var(--ll-fg); text-underline-offset: 3px; }
 
 /* ── Clips ── */
+.v3 .v3-shot-cap { margin: -18px 0 24px; max-width: 52ch; font-size: 16px; line-height: 1.55; color: var(--ll-fg-mute); }
 .v3 .v3-shot {
   margin: 0;
   border: 1px solid var(--ll-line-soft);
@@ -719,7 +712,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 @media (max-width: 900px) {
   .v3 .v3-hero { grid-template-columns: minmax(0, 1fr); }
   .v3 .v3-split { grid-template-columns: minmax(0, 1fr); }
-  .v3 .v3-notes { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
   .v3 .v3-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -760,6 +752,10 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-match-tag { display: none; }
 }
 @media (max-width: 480px) {
+  /* Logo, Leaderboard, iOS and Sign in all have to fit on one line. */
+  .v3 .v3-nav { gap: 10px; }
+  .v3 .v3-signin,
+  .v3 .v3-ios { padding: 8px 10px; }
   .v3 .v3-lg-rank { display: none; }
   .v3 .v3-lg-row { grid-template-columns: 16px 24px minmax(0, 1fr) 46px 30px; gap: 10px; }
   .v3 .v3-frame { padding: 20px 18px 24px; }
