@@ -11,7 +11,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PreviewReport, fmtDuration, type PreviewPayload } from "@/components/preview/preview-report";
-import ExampleReport from "@/components/landing/ExampleReport";
 
 /** How often we ask whether the report is done. */
 const POLL_MS = 4000;
@@ -264,10 +263,6 @@ export function AnalyzeClient({
           </div>
           <p className="v3-fine">Three free reports a day. Sign in with Twitch and we read the whole stream.</p>
         </div>
-
-        {/* What comes back, before anyone has to paste anything. Someone
-            arriving from a DM wants to know what this is first. */}
-        <ExampleReport />
       </section>
     </main>
   );

@@ -7,12 +7,9 @@
 .v3 .az-main { padding-block: clamp(28px, 5vw, 72px) clamp(64px, 8vw, 112px); }
 
 /* ── Paste ── */
-.v3 .az-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
-  gap: clamp(32px, 5vw, 72px);
-  align-items: center;
-}
+/* One column: the form is the whole page. An example report used to sit
+   on the right; Landon took it out. */
+.v3 .az-hero { max-width: 680px; }
 .v3 .az-h1 {
   max-width: 15ch;
   margin: 0 0 20px;
@@ -226,9 +223,6 @@
   .v3 [data-state="now"] .az-stage-mark { animation: none; background: var(--ll-fg); }
 }
 
-@media (max-width: 900px) {
-  .v3 .az-hero { grid-template-columns: minmax(0, 1fr); }
-}
 @media (max-width: 640px) {
   .v3 .pr-head { flex-wrap: wrap; align-items: flex-start; }
   .v3 .pr-thumb { width: 100%; }
