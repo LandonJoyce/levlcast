@@ -7,6 +7,7 @@ import ReferralLine from "@/components/landing/ReferralLine";
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
 import ProPlan from "@/components/landing/ProPlan";
+import RankUp from "@/components/landing/RankUp";
 import { Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS, rankFromPoints } from "@/lib/rank";
@@ -210,7 +211,6 @@ export default async function HomePage() {
         <div className="v3-hero-copy">
           {/* Only renders for visitors who came through a partner link. */}
           <ReferralLine />
-          <p className="v3-label">Twitch VOD coaching</p>
           <h1 className="v3-h1">
             {/* The marks are set apart so they can be pulled in: at this weight
                 and tracking the face leaves a gap before "." and "?". */}
@@ -230,31 +230,8 @@ export default async function HomePage() {
           <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
         </div>
 
-        {/* The promotion plays once on load: the old emblem steps back, the
-            new one lands, the word and the points arrive, the bar fills.
-            Under reduced motion it simply shows the finished state. */}
-        <div className="v3-result" role="img" aria-label="Stream result: promoted from Silver I to Gold IV, plus 34 points">
-          <div className="v3-frame">
-            <div className="v3-result-top">
-              <span>Result</span>
-              <span>4h 11m</span>
-            </div>
-            <div className="v3-rankup">
-              <Emblem tier="silver" className="v3-from" size={256} />
-              <span className="v3-arrow" aria-hidden="true" />
-              <Emblem tier="gold" className="v3-to" size={256} />
-            </div>
-            <p className="v3-result-word">Promoted</p>
-            <p className="v3-result-line">
-              <span className="v3-result-rank">Gold IV</span>
-              <span className="v3-result-delta">+34</span>
-            </p>
-            <div className="v3-bar-track" aria-hidden="true">
-              <span className="v3-bar-fill" />
-            </div>
-            <p className="v3-result-sub">10% to Gold III</p>
-          </div>
-        </div>
+        {/* The promotion, played once on load with a replay button. */}
+        <RankUp />
       </section>
 
       {/* ── Proof: real numbers, live. Left out entirely if they can't load. ── */}
@@ -279,7 +256,6 @@ export default async function HomePage() {
 
       {/* ── The breakdown: timeline + scoreboard ── */}
       <section className="v3-sec" id="breakdown">
-        <p className="v3-label">The breakdown</p>
         <h2 className="v3-h2">
           Here&rsquo;s what we found in one four hour stream.
         </h2>
@@ -332,7 +308,6 @@ export default async function HomePage() {
 
       {/* ── Coaching per kind of stream ── */}
       <section className="v3-sec" id="games">
-        <p className="v3-label">Every kind of stream</p>
         <h2 className="v3-h2">It knows what you&rsquo;re playing.</h2>
         <ul className="v3-kinds">
           {KINDS.map((kind) => {
@@ -354,7 +329,6 @@ export default async function HomePage() {
       {/* ── Match history + league ── */}
       <section className="v3-sec v3-split" id="ranked">
         <div className="v3-col">
-          <p className="v3-label">Match history</p>
           <h2 className="v3-h2">
             Every stream is a win or a loss.
           </h2>
@@ -379,7 +353,6 @@ export default async function HomePage() {
 
         {/* Real streamers from the public leaderboard, not sample names. */}
         <div className="v3-col">
-          <p className="v3-label">Leaderboard</p>
           <h2 className="v3-h2">
             Who&rsquo;s on top right now.
           </h2>
@@ -413,7 +386,6 @@ export default async function HomePage() {
 
       {/* ── The ladder, drawn as a climb ── */}
       <section className="v3-sec" id="ladder">
-        <p className="v3-label">The ladder</p>
         <h2 className="v3-h2">
           Iron to Grandmaster, same shape as the ladders you already grind.
         </h2>
@@ -456,7 +428,6 @@ export default async function HomePage() {
 
       {/* ── Clips ── */}
       <section className="v3-sec" id="clips">
-        <p className="v3-label">Clips</p>
         <h2 className="v3-h2">We clip your best moments for you.</h2>
         <p className="v3-shot-cap">Trim it, fix the captions, and post it to YouTube without leaving.</p>
         <figure className="v3-shot">
@@ -474,7 +445,6 @@ export default async function HomePage() {
 
       {/* ── Price ── */}
       <section className="v3-sec" id="pricing">
-        <p className="v3-label">Price</p>
         <div className="v3-price">
           <div className="v3-plan">
             <p className="v3-plan-n">Free</p>
@@ -492,7 +462,6 @@ export default async function HomePage() {
       {/* ── FAQ ── */}
       <section className="v3-sec v3-faq" id="faq">
         <div>
-          <p className="v3-label">Questions</p>
           <h2 className="v3-h2">The things people ask first.</h2>
           <p className="v3-faq-ask">
             Can&apos;t find yours? Email <a href="mailto:Landon@LevlCast.com">Landon@LevlCast.com</a>.

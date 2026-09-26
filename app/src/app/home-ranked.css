@@ -322,16 +322,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
     linear-gradient(var(--c), var(--c)) bottom right / 1px 22px no-repeat,
     rgba(255, 238, 230, 0.02);
 }
-/* One pass of light across the screen as the promotion lands. */
-.v3 .v3-frame::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 38%, rgba(255, 238, 230, 0.07) 50%, transparent 62%);
-  transform: translateX(-110%);
-  animation: v3-sweep 1100ms ease 1300ms both;
-  pointer-events: none;
-}
 .v3 .v3-result-top {
   display: flex;
   justify-content: space-between;
@@ -341,121 +331,256 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   text-transform: uppercase;
   color: var(--ll-fg-faint);
 }
-.v3 .v3-rankup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  height: 172px;
-  margin: 18px 0 6px;
-}
-/* Base styles are the FINAL state, so reduced motion (animation: none)
-   shows the finished screen rather than the first frame. */
-.v3 .v3-from {
-  width: 84px;
-  height: 84px;
-  opacity: 0.45;
-  filter: grayscale(0.6);
-  animation: v3-from 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 450ms both;
-}
-.v3 .v3-arrow {
+/* ── The promotion (RankUp.tsx) ──
+   One slot where Silver turns into Gold, instead of two emblems and an
+   arrow. Every rule's base state is the finished screen, so reduced
+   motion shows it still and the animations only describe how it gets
+   there. Timeline: bar fills 0 to 1.15s, impact at 1.15s, word at 1.3s,
+   new bar at 1.9s, idle from 2.6s. */
+.v3 .ru-stage {
   position: relative;
-  width: 38px;
-  height: 1px;
-  background: var(--ll-line-med);
-  animation: v3-fade 400ms ease 700ms both;
+  display: grid;
+  /* One cell the size of the stage. Left to size itself, the row grew to
+     fit the rays (the largest layer) and pushed the emblem down into the
+     word; bigger layers now overflow the cell evenly on every side. */
+  grid-template: 100% / 100%;
+  place-items: center;
+  height: 196px;
+  margin: 12px 0 2px;
 }
-.v3 .v3-arrow::after {
-  content: "";
+/* Everything in the stage stacks on the same centre point. */
+.v3 .ru-stage > * { grid-area: 1 / 1; }
+.v3 .ru-emb { width: 172px; height: 172px; object-fit: contain; }
+
+.v3 .ru-from { opacity: 0; animation: ru-from 1250ms cubic-bezier(0.3, 0, 0.2, 1) both; }
+@keyframes ru-from {
+  0% { opacity: 0; transform: scale(0.9); filter: brightness(0.85); }
+  10% { opacity: 1; transform: scale(1); filter: brightness(0.9); }
+  68% { opacity: 1; transform: scale(1.02); filter: brightness(1); }
+  84% { opacity: 1; transform: scale(1.06) translateX(-1.5px); filter: brightness(1.45); }
+  88% { opacity: 1; transform: scale(1.07) translateX(1.5px); filter: brightness(1.8); }
+  92% { opacity: 1; transform: scale(1.08) translateX(-1px); filter: brightness(2.3); }
+  100% { opacity: 0; transform: scale(1.14); filter: brightness(3.2); }
+}
+
+.v3 .ru-to {
+  animation:
+    ru-to 950ms cubic-bezier(0.16, 1, 0.3, 1) 1150ms both,
+    ru-float 5s ease-in-out 2600ms infinite;
+}
+@keyframes ru-to {
+  0% { opacity: 0; transform: scale(1.5); filter: brightness(2.8) blur(6px); }
+  16% { opacity: 1; }
+  55% { transform: scale(0.965); filter: brightness(1.12) blur(0); }
+  100% { opacity: 1; transform: scale(1); filter: none; }
+}
+@keyframes ru-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Light behind the new emblem: a bloom at the impact that settles into a
+   slow breath, and faint rays turning. */
+.v3 .ru-glow {
+  width: 270px;
+  height: 270px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(227, 179, 65, 0.38) 0%, rgba(227, 179, 65, 0.12) 40%, transparent 68%);
+  opacity: 0.75;
+  animation:
+    ru-glow 1400ms cubic-bezier(0.2, 0.8, 0.2, 1) 1150ms both,
+    ru-breathe 5s ease-in-out 2600ms infinite;
+}
+@keyframes ru-glow {
+  0% { opacity: 0; transform: scale(0.55); }
+  25% { opacity: 1; transform: scale(1.18); }
+  100% { opacity: 0.75; transform: scale(1); }
+}
+@keyframes ru-breathe {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.95); }
+}
+.v3 .ru-rays {
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 226, 160, 0.14) 0deg 4deg, transparent 4deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 66%);
+  mask: radial-gradient(circle, #000 18%, transparent 66%);
+  opacity: 0.45;
+  animation:
+    ru-in 1000ms ease-out 1250ms both,
+    ru-spin 48s linear infinite;
+}
+@keyframes ru-in { from { opacity: 0; } }
+@keyframes ru-spin { to { transform: rotate(360deg); } }
+
+/* The impact: a flash, two shockwave rings and sparks. */
+.v3 .ru-flash {
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 251, 238, 0.95) 0%, rgba(255, 236, 196, 0.32) 30%, transparent 62%);
+  opacity: 0;
+  animation: ru-flash 560ms ease-out 1110ms both;
+}
+@keyframes ru-flash {
+  0% { opacity: 0; transform: scale(0.35); }
+  20% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+.v3 .ru-ring {
+  width: 150px;
+  height: 150px;
+  border: 2px solid rgba(255, 231, 176, 0.9);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ru-ring 820ms cubic-bezier(0.2, 0.7, 0.2, 1) 1150ms forwards;
+}
+.v3 .ru-ring-late { border-width: 1px; animation-delay: 1290ms; animation-duration: 1050ms; }
+@keyframes ru-ring {
+  0% { opacity: 0.95; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(2.35); }
+}
+/* A zero-size point at the centre that every spark flies out from. */
+.v3 .ru-sparks { position: relative; width: 0; height: 0; }
+.v3 .ru-sparks i {
   position: absolute;
-  right: -1px;
-  top: -4px;
-  border-left: 7px solid var(--ll-line-med);
-  border-top: 4.5px solid transparent;
-  border-bottom: 4.5px solid transparent;
+  top: -1px;
+  left: 0;
+  width: var(--w);
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(255, 231, 176);
+  transform-origin: 0 50%;
+  opacity: 0;
+  animation: ru-spark 850ms cubic-bezier(0.1, 0.75, 0.2, 1) calc(1150ms + var(--t)) forwards;
 }
-.v3 .v3-to {
-  width: 152px;
-  height: 152px;
-  filter: drop-shadow(0 0 18px rgba(227, 179, 65, 0.42));
-  animation: v3-land 900ms cubic-bezier(0.2, 1.35, 0.35, 1) 850ms both;
+@keyframes ru-spark {
+  0% { opacity: 1; transform: rotate(var(--a)) translateX(16px) scaleX(0.2); }
+  65% { opacity: 0.9; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scaleX(1); }
 }
-.v3 .v3-result-word {
+
+/* PROMOTED rises into view one letter at a time, clipped by its line so
+   the letters come up out of nothing. */
+.v3 .ru-word {
+  display: flex;
+  justify-content: center;
+  /* Clipped top and bottom only, so the letters rise out of the line
+     without the ends being cut off where the word nears the frame. */
+  clip-path: inset(0 -1000px);
+  margin: 2px 0 6px;
+  padding-top: 6px;
   font-family: var(--v3-display);
   font-weight: 900;
-  font-size: clamp(58px, 7vw, 86px);
-  line-height: 0.88;
+  font-size: clamp(56px, 6.4vw, 80px);
+  line-height: 0.9;
   letter-spacing: 0.01em;
-  text-transform: uppercase;
   color: var(--v3-gold);
-  margin: 6px 0 8px;
-  animation: v3-rise 600ms cubic-bezier(0.2, 0.8, 0.2, 1) 1250ms both;
 }
-.v3 .v3-result-line {
+.v3 .ru-word span {
+  display: inline-block;
+  animation: ru-letter 560ms cubic-bezier(0.2, 0.9, 0.25, 1) calc(1300ms + var(--i) * 38ms) both;
+}
+@keyframes ru-letter {
+  from { opacity: 0; transform: translateY(75%); }
+  to { opacity: 1; transform: none; }
+}
+.v3 .ru-line {
   display: flex;
   justify-content: center;
   align-items: baseline;
   gap: 14px;
   margin: 0 0 18px;
-  animation: v3-fade 500ms ease 1450ms both;
 }
-.v3 .v3-result-rank { font-family: var(--ll-display); font-weight: 700; font-size: 18px; color: var(--ll-fg); }
-.v3 .v3-result-delta {
+.v3 .ru-rank {
+  font-family: var(--ll-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--ll-fg);
+  animation: ru-up 500ms ease 1750ms both;
+}
+.v3 .ru-delta {
   font-family: var(--v3-display);
   font-weight: 900;
   font-size: 32px;
   line-height: 1;
   color: var(--v3-good);
+  animation: ru-pop 620ms cubic-bezier(0.3, 1.6, 0.4, 1) 1850ms both;
 }
-.v3 .v3-bar-track {
+@keyframes ru-up { from { opacity: 0; transform: translateY(6px); } }
+@keyframes ru-pop { from { opacity: 0; transform: scale(0.5); } }
+
+/* The old division's bar fills to the top, flashes and clears; the new
+   one starts from nothing. */
+.v3 .ru-bar {
+  position: relative;
   height: 6px;
+  overflow: hidden;
   border-radius: 3px;
   background: rgba(255, 238, 230, 0.08);
-  overflow: hidden;
 }
-.v3 .v3-bar-fill {
-  display: block;
-  height: 100%;
+.v3 .ru-bar span { position: absolute; inset: 0 auto 0 0; border-radius: 3px; transform-origin: left center; }
+.v3 .ru-bar-old {
+  width: 100%;
+  background: rgb(198, 206, 216);
+  opacity: 0;
+  animation: ru-old 1320ms cubic-bezier(0.55, 0, 0.75, 0.4) both;
+}
+@keyframes ru-old {
+  0% { opacity: 1; transform: scaleX(0.76); }
+  80% { opacity: 1; transform: scaleX(1); background: rgb(198, 206, 216); }
+  87% { background: #ffffff; }
+  100% { opacity: 0; transform: scaleX(1); background: #ffffff; }
+}
+.v3 .ru-bar-new {
   width: 10%;
-  border-radius: 3px;
   background: var(--v3-gold);
-  animation: v3-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 1600ms both;
+  animation: ru-grow 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 1900ms both;
 }
-.v3 .v3-result-sub {
+@keyframes ru-grow { from { transform: scaleX(0); } }
+.v3 .ru-sub {
+  position: relative;
+  height: 14px;
+  margin: 10px 0 0;
   font-family: var(--ll-mono);
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ll-fg-faint);
-  margin: 10px 0 0;
 }
+.v3 .ru-sub span { position: absolute; inset: 0; }
+.v3 .ru-sub-old { opacity: 0; animation: ru-sub-old 1500ms ease both; }
+@keyframes ru-sub-old {
+  0%, 75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.v3 .ru-sub-new { animation: ru-up 500ms ease 2000ms both; }
 
-@keyframes v3-from {
-  from { opacity: 1; transform: scale(1.3); filter: none; }
-  to { opacity: 0.45; transform: scale(1); filter: grayscale(0.6); }
+.v3 .ru-replay {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 8px;
+  background: none;
+  color: var(--ll-fg-faint);
+  cursor: pointer;
+  animation: ru-in 400ms ease 2600ms both;
+  transition: color 140ms ease, border-color 140ms ease;
 }
-@keyframes v3-land {
-  0% { opacity: 0; transform: translateY(14px) scale(0.55); }
-  60% { opacity: 1; transform: translateY(0) scale(1.08); }
-  100% { opacity: 1; transform: none; }
-}
-@keyframes v3-rise {
-  from { opacity: 0; transform: translateY(14px); letter-spacing: 0.12em; }
-  to { opacity: 1; transform: none; letter-spacing: 0.01em; }
-}
-@keyframes v3-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes v3-fill { from { width: 0; } to { width: 10%; } }
-@keyframes v3-sweep { to { transform: translateX(110%); } }
+.v3 .ru-replay:hover { color: var(--ll-fg); border-color: var(--ll-line-med); }
 
 @media (prefers-reduced-motion: reduce) {
-  .v3 .v3-from,
-  .v3 .v3-arrow,
-  .v3 .v3-to,
-  .v3 .v3-result-word,
-  .v3 .v3-result-line,
-  .v3 .v3-bar-fill,
-  .v3 .v3-frame::after { animation: none; }
-  .v3 .v3-frame::after { display: none; }
+  .v3 .ru,
+  .v3 .ru * { animation: none !important; }
+  /* Nothing to replay when nothing moves. */
+  .v3 .ru-replay { display: none; }
 }
 
 /* ── Sections ── */
@@ -920,7 +1045,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 
 /* ── Sample report (ExampleReport.tsx): the VOD analyzer page ── */
 .v3 .xr { text-align: left; }
-.v3 .xr::after { display: none; }
 .v3 .xr-score {
   display: flex;
   align-items: baseline;
@@ -1126,7 +1250,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-ios { padding: 8px 10px; }
   .v3 .v3-lg-row { grid-template-columns: 16px 26px minmax(0, 1fr) 22px auto; gap: 10px; }
   .v3 .v3-frame { padding: 20px 18px 24px; }
-  .v3 .v3-to { width: 128px; height: 128px; }
-  .v3 .v3-from { width: 70px; height: 70px; }
-  .v3 .v3-rankup { height: 150px; }
+  .v3 .ru-stage { height: 160px; }
+  .v3 .ru-emb { width: 140px; height: 140px; }
 }
