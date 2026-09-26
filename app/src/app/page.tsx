@@ -330,7 +330,7 @@ export default async function HomePage() {
       <section className="v3-sec v3-split" id="ranked">
         <div className="v3-col">
           <h2 className="v3-h2">
-            Every stream is a win or a loss.
+            Did you win or learn<span className="v3-punct">?</span>
           </h2>
           <ol className="v3-matches">
             {MATCHES.map((m) => (
