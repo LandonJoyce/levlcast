@@ -18,6 +18,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { audibleParts, describeMuted, mutedMinutes, overlapSeconds, type TimeRange } from "./muted-audio";
 import { TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
 import { detectSustainedSilence, formatSustainedSilence, type ChatBucket } from "./chat-pulse";
@@ -1232,12 +1233,18 @@ function buildEnergyMap(segments: TranscriptSegment[], vodDuration: number): { m
 function findMomentumCrash(
   energyMap: { minute: number; wpm: number }[],
   segments: TranscriptSegment[],
-  lowThreshold = 60
+  lowThreshold = 60,
+  muted: Set<number> = new Set()
 ): { startMin: number; endMin: number; excerpt: string } | null {
   if (energyMap.length < 3) return null;
 
   let bestStart = -1, bestLen = 0, curStart = -1, curLen = 0;
   for (const { minute, wpm } of energyMap) {
+    // A minute Twitch muted has no words because of the mute, not the streamer.
+    if (muted.has(minute)) {
+      curStart = -1; curLen = 0;
+      continue;
+    }
     if (wpm < lowThreshold) {
       if (curStart === -1) curStart = minute;
       curLen++;
@@ -1258,10 +1265,11 @@ function findMomentumCrash(
 }
 
 /** Render energy map as a compact ASCII sparkline for the prompt. */
-function renderEnergySparkline(energyMap: { minute: number; wpm: number }[]): string {
+function renderEnergySparkline(energyMap: { minute: number; wpm: number }[], muted: Set<number> = new Set()): string {
   const blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
   const maxWpm = Math.max(...energyMap.map((e) => e.wpm), 1);
-  const line = energyMap.map(({ wpm }) => {
+  const line = energyMap.map(({ minute, wpm }) => {
+    if (muted.has(minute)) return "·";
     const idx = Math.min(7, Math.floor((wpm / maxWpm) * 8));
     return blocks[idx];
   }).join("");
@@ -1421,7 +1429,9 @@ export async function generateCoachReport(
   priorReports?: PriorCoachSummary[],
   chatPulse?: string,
   chatBuckets?: ChatBucket[],
-  excerpt?: ExcerptContext
+  excerpt?: ExcerptContext,
+  /** Stretches Twitch muted for copyrighted music. Silent, not dead air. */
+  mutedRanges: TimeRange[] = []
 ): Promise<CoachReport | null> {
   const anthropic = new Anthropic();
 
@@ -1448,7 +1458,8 @@ export async function generateCoachReport(
 
   // ── Full energy map (minute-by-minute WPM) — built first so sampling can use it ──
   const energyMap = buildEnergyMap(segments, vodDuration);
-  const sparkline = renderEnergySparkline(energyMap);
+  const mutedMins = mutedMinutes(mutedRanges, energyMap.length);
+  const sparkline = renderEnergySparkline(energyMap, mutedMins);
   const sparklineLabel = energyMap
     .filter((e) => e.minute % 5 === 0)
     .map((e) => `${e.minute}m`)
@@ -1485,21 +1496,25 @@ export async function generateCoachReport(
   let totalDeadAirSeconds = 0;
   let chatSuppressedGaps = 0;
   for (let i = 1; i < segments.length; i++) {
-    const gap = segments[i].start - segments[i - 1].end;
-    if (gap < 15) continue;
-    const gapStart = segments[i - 1].end;
-    const gapEnd = segments[i].start;
-    if (gapHasActiveChat(gapStart, gapEnd)) {
-      chatSuppressedGaps++;
-      continue;
+    if (segments[i].start - segments[i - 1].end < 15) continue;
+    for (const part of audibleParts(segments[i - 1].end, segments[i].start, mutedRanges)) {
+      const gap = part.end - part.start;
+      if (gap < 15) continue;
+      if (gapHasActiveChat(part.start, part.end)) {
+        chatSuppressedGaps++;
+        continue;
+      }
+      deadAirGaps.push({ start: part.start, end: part.end, duration: Math.round(gap) });
+      totalDeadAirSeconds += gap;
     }
-    deadAirGaps.push({ start: gapStart, end: gapEnd, duration: Math.round(gap) });
-    totalDeadAirSeconds += gap;
   }
   if (chatSuppressedGaps > 0) {
     console.log(`[coach] Dead-air filter: suppressed ${chatSuppressedGaps} gaps where chat was active (likely quiet/mumbled speech, not silence)`);
   }
-  const deadAirPct = vodDuration > 0 ? Math.round((totalDeadAirSeconds / vodDuration) * 100) : 0;
+  // Share of the time that could be heard, so muted minutes don't dilute it either.
+  const audibleDuration = Math.max(1, vodDuration - overlapSeconds(0, vodDuration, mutedRanges));
+  const deadAirPct = vodDuration > 0 ? Math.round((totalDeadAirSeconds / audibleDuration) * 100) : 0;
+  const mutedNote = describeMuted(mutedRanges);
   const worstGaps = [...deadAirGaps].sort((a, b) => b.duration - a.duration).slice(0, 5);
 
   const deadAirSummary = deadAirGaps.length > 0
@@ -1518,7 +1533,7 @@ export async function generateCoachReport(
   const sustainedSilenceBlock = formatSustainedSilence(sustainedSilence);
 
   // ── Momentum crash — worst energy valley ──
-  const crash = findMomentumCrash(energyMap, segments);
+  const crash = findMomentumCrash(energyMap, segments, 60, mutedMins);
   const crashBlock = crash
     ? `MOMENTUM CRASH — worst dead zone (${crash.startMin}:00–${crash.endMin}:00, ${crash.endMin - crash.startMin} min at near-zero energy):
 ${crash.excerpt}`
@@ -1745,7 +1760,8 @@ WPM TARGETS BY STREAMER TYPE — apply the range matching what you identify in S
 (Commentary WPM measures active speech only — silence during gameplay or watchalongs does not count against this.)
 - Overall stream pace (incl. gaps): ~${overallWPM} wpm
 - Dead air: ${deadAirSummary}
-
+${mutedNote ? `- Muted by Twitch: ${mutedNote}. Twitch silenced these stretches because it detected copyrighted music, so they are missing from the transcript and show as · in the energy curve. They are not the streamer going quiet: never count them as dead air, an energy dip, a momentum crash or a moment to rewatch.
+` : ""}
 ENERGY CURVE (minute-by-minute — each bar = 1 min, height = speaking energy):
 ${sparkline}
 ${sparklineLabel}

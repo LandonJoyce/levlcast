@@ -862,7 +862,18 @@ export interface VodSegmentList {
    * step state (Inngest serializes step return values as JSON).
    */
   initSegmentBase64?: string | null;
+  /**
+   * Parallel to urls: true where Twitch muted the segment. Twitch mutes VOD
+   * audio in blocks when it detects copyrighted music and serves those
+   * segments as "<n>-muted.ts" / "<n>-muted.mp4", which are digital silence
+   * (about -91 dB). Nearly every VOD has some. Optional because step state
+   * saved by older deploys doesn't carry it.
+   */
+  muted?: boolean[];
 }
+
+/** "<n>-muted.ts" / "<n>-muted.mp4", with or without a query string. */
+const MUTED_SEGMENT = /-muted\.(ts|mp4|m4s)(\?|$)/;
 
 /**
  * Fetch the full segment list from a Twitch VOD's audio-only HLS playlist.
@@ -955,6 +966,7 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
 
   const urls: string[] = [];
   const startTimes: number[] = [];
+  const muted: boolean[] = [];
   let cursor = 0;
 
   for (let i = 0; i < subLines.length; i++) {
@@ -962,9 +974,13 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
     if (line.startsWith("#EXTINF:")) {
       const dur = parseFloat(line.slice(8));
       for (let j = i + 1; j < subLines.length; j++) {
-        const seg = subLines[j].trim();
+        let seg = subLines[j].trim();
         if (!seg || seg.startsWith("#")) continue;
+        // Some playlists name a muted segment "-unmuted", which 403s. The
+        // playable file is the "-muted" one.
+        seg = seg.replace(/-unmuted\.(ts|mp4|m4s)/, "-muted.$1");
         urls.push(seg.startsWith("http") ? seg : baseUrl + seg);
+        muted.push(MUTED_SEGMENT.test(seg));
         startTimes.push(cursor);
         cursor += isNaN(dur) ? 0 : dur;
         i = j;
@@ -998,8 +1014,12 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
     console.log(`[twitch] init segment loaded: ${initBuf.length} bytes (fMP4 VOD)`);
   }
 
-  console.log(`[twitch] segment list: ${urls.length} segments, ~${Math.round(cursor)}s for VOD ${vodId}${initSegmentBase64 ? " (fMP4)" : " (MPEG-TS)"}`);
-  return { urls, startTimes, initSegmentBase64 };
+  const mutedCount = muted.filter(Boolean).length;
+  console.log(
+    `[twitch] segment list: ${urls.length} segments, ~${Math.round(cursor)}s for VOD ${vodId}${initSegmentBase64 ? " (fMP4)" : " (MPEG-TS)"}` +
+      (mutedCount ? `, ${mutedCount} muted by Twitch` : "")
+  );
+  return { urls, startTimes, initSegmentBase64, muted };
 }
 
 /**

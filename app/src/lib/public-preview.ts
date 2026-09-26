@@ -25,6 +25,7 @@
  */
 
 import { getTwitchVodSegmentList, streamSegmentsToPassThrough, getAppAccessToken } from "@/lib/twitch";
+import { mutedRanges, overlapSeconds, type TimeRange } from "@/lib/muted-audio";
 import { transcribePassThrough, type TranscriptSegment } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { detectGame, keywordsForGame } from "@/lib/game-keywords";
@@ -181,7 +182,7 @@ function parseHelixDuration(dur: string): number {
 export async function transcribePreviewWindow(
   twitchVodId: string,
   title: string
-): Promise<{ segments: TranscriptSegment[]; gameCategory: string; analyzedSeconds: number }> {
+): Promise<{ segments: TranscriptSegment[]; gameCategory: string; analyzedSeconds: number; muted: TimeRange[] }> {
   const detection = detectGame(title);
   const keywords = keywordsForGame(detection);
 
@@ -216,17 +217,28 @@ export async function transcribePreviewWindow(
     ? Buffer.from(list.initSegmentBase64, "base64")
     : null;
 
+  // Muted segments stay in (dropping them would shift every timestamp in
+  // this single request); the coach is told where they are instead.
+  const muted = mutedRanges(list.startTimes.slice(0, urls.length), (list.muted ?? []).slice(0, urls.length));
+  const window = analyzedSeconds || PREVIEW_SECONDS;
+
   const stream = streamSegmentsToPassThrough(urls, initSegment);
   const { segments } = await transcribePassThrough(stream, keywords);
 
   if (segments.length === 0) {
+    if (overlapSeconds(0, window, muted) > window * 0.5) {
+      throw new Error(
+        "Twitch muted the start of this stream for copyrighted music, so the part the free preview reads is silent. Try a different stream."
+      );
+    }
     throw new Error("No speech detected in the opening of this stream. It may be muted, music-only, or starting-soon screen.");
   }
 
   return {
     segments,
     gameCategory: detection.category,
-    analyzedSeconds: analyzedSeconds || PREVIEW_SECONDS,
+    analyzedSeconds: window,
+    muted,
   };
 }
 
@@ -239,11 +251,12 @@ export async function transcribePreviewWindow(
 export async function buildPreviewReport(
   segments: TranscriptSegment[],
   title: string,
-  excerpt?: { analyzedSeconds: number; totalSeconds: number }
+  excerpt?: { analyzedSeconds: number; totalSeconds: number },
+  muted: TimeRange[] = []
 ): Promise<{ coachReport: CoachReport | null; peaks: Peak[] }> {
   const peaks = await detectPeaks(segments, title);
   // `excerpt` is what stops the model from judging a five-hour stream by
   // its first twelve minutes and calling the result a stream score.
-  const coachReport = await generateCoachReport(segments, title, peaks, undefined, undefined, undefined, excerpt);
+  const coachReport = await generateCoachReport(segments, title, peaks, undefined, undefined, undefined, excerpt, muted);
   return { coachReport, peaks };
 }

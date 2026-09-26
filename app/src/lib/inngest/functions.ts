@@ -14,6 +14,7 @@
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
 import { getTwitchVodSegmentList, streamSegmentsToPassThrough, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
+import { audibleStats, buildAudibleChunks, isMostlyMuted, mutedRanges, MOSTLY_MUTED_MESSAGE, type TimeRange } from "@/lib/muted-audio";
 import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
@@ -115,6 +116,8 @@ export const analyzeVod = inngest.createFunction(
           // prepend it to its own Deepgram POST. Step state is JSON, so
           // we keep it base64-encoded.
           initSegmentBase64: list.initSegmentBase64 ?? null,
+          // Which segments Twitch muted (copyrighted music). Silent audio.
+          muted: list.muted ?? null,
           keywords,
           gameCategory: detection.category,
           duration_seconds: vod.duration_seconds as number | null,
@@ -130,24 +133,29 @@ export const analyzeVod = inngest.createFunction(
       // after a 2h 55m Storm VOD failed with "Could not find step" — Inngest's
       // hint that a step ran too long and its state got lost.
       const CHUNK_SECONDS = 720;
-      const chunks: Array<{ urls: string[]; timeOffset: number }> = [];
-      {
-        let chunkUrls: string[] = [];
-        let chunkStartIdx = 0;
-        for (let i = 0; i < segmentSetup.urls.length; i++) {
-          chunkUrls.push(segmentSetup.urls[i]);
-          const nextStart = i + 1 < segmentSetup.startTimes.length
-            ? segmentSetup.startTimes[i + 1]
-            : segmentSetup.startTimes[i] + 10;
-          const chunkDuration = nextStart - segmentSetup.startTimes[chunkStartIdx];
-          if (chunkDuration >= CHUNK_SECONDS || i === segmentSetup.urls.length - 1) {
-            chunks.push({ urls: [...chunkUrls], timeOffset: segmentSetup.startTimes[chunkStartIdx] });
-            chunkStartIdx = i + 1;
-            chunkUrls = [];
-          }
-        }
+
+      // Twitch mutes VOD audio in blocks when it hears copyrighted music, and
+      // the muted segments are silence. Nearly every VOD has a few minutes of
+      // it; a stream with music on the whole time is muted almost end to end.
+      // Muted segments are left out of transcription (no point paying to
+      // transcribe silence), chunks never span them so timestamps stay exact,
+      // and the coach is told which stretches were muted so it doesn't call
+      // them dead air. Step state from before this existed has no flags.
+      const mutedFlags: boolean[] = segmentSetup.muted ?? segmentSetup.urls.map(() => false);
+      const muted = mutedRanges(segmentSetup.startTimes, mutedFlags);
+      const muteStats = audibleStats(segmentSetup.startTimes, mutedFlags, segmentSetup.duration_seconds);
+      if (muted.length > 0) {
+        console.log(
+          `[analyze] Twitch muted ${Math.round(muteStats.mutedSeconds / 60)} of ${Math.round(muteStats.totalSeconds / 60)} min in ${muted.length} blocks`
+        );
       }
-      console.log(`[analyze] ${chunks.length} transcription chunks for ${segmentSetup.urls.length} segments`);
+      // Too little left to coach. Stop before transcribing hours of silence.
+      if (isMostlyMuted(muteStats)) {
+        throw new NonRetriableError(MOSTLY_MUTED_MESSAGE);
+      }
+
+      const chunks = buildAudibleChunks(segmentSetup.urls, segmentSetup.startTimes, mutedFlags, CHUNK_SECONDS);
+      console.log(`[analyze] ${chunks.length} transcription chunks for ${segmentSetup.urls.length} segments (${mutedFlags.filter(Boolean).length} muted, skipped)`);
 
       // Step 1b+: Transcribe chunks in parallel batches. Each chunk is its
       // own Inngest step so Inngest persists results across retries.
@@ -179,7 +187,7 @@ export const analyzeVod = inngest.createFunction(
 
         const results = await Promise.all(
           batch.map(({ chunk, index }) =>
-            step.run(`transcribe-chunk-${index}`, async () => {
+            step.run(`transcribe-part-${index}`, async () => {
               console.log(`[analyze] Chunk ${index + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s${initSegment ? " (fMP4)" : ""}`);
               const stream = streamSegmentsToPassThrough(chunk.urls, initSegment);
               const { segments, words } = await transcribePassThrough(stream, segmentSetup.keywords);
@@ -204,22 +212,28 @@ export const analyzeVod = inngest.createFunction(
       const segments = ((): TranscriptSegment[] => {
         const merged = allChunkSegments.flat();
         console.log(`[analyze] Transcription complete: ${merged.length} segments, ${allWords.length} words across ${chunks.length} chunks`);
-        if (merged.length === 0) throw new Error("No speech detected in VOD. The video may be muted or silent.");
+        if (merged.length === 0) {
+          throw new Error("We couldn't hear any talking in this stream. If your mic was muted, that's why.");
+        }
 
-        // Validate coverage — if the last word ends suspiciously early the audio
-        // stream was likely truncated, which would shift all subsequent caption timestamps.
+        // Coverage: if the talking stops early in the audio we could hear,
+        // either the mic went off or Twitch sent the audio short. Measured
+        // against the end of the last unmuted audio, not the VOD length, so
+        // a stream whose last hour Twitch muted isn't mistaken for this.
         const vodDuration = segmentSetup.duration_seconds ?? 0;
+        const audibleEnd = muteStats.audibleEnd > 0 ? Math.min(muteStats.audibleEnd, vodDuration || muteStats.audibleEnd) : vodDuration;
         const lastWordEnd = allWords.length > 0 ? allWords[allWords.length - 1].end : 0;
-        if (vodDuration > 120 && lastWordEnd > 0 && lastWordEnd < vodDuration * 0.5) {
+        if (audibleEnd > 120 && lastWordEnd > 0 && lastWordEnd < audibleEnd * 0.5) {
+          const heard = Math.max(1, Math.round(lastWordEnd / 60));
           throw new Error(
-            `Transcript covers only ${Math.round(lastWordEnd)}s of a ${Math.round(vodDuration)}s VOD — ` +
-            `audio stream may have been truncated. Please retry; if it persists, the VOD source is incomplete.`
+            `We could only hear you talking in the first ${heard} ${heard === 1 ? "minute" : "minutes"} of this stream. ` +
+            `If your mic was off after that, that's why. If it wasn't, try again in a few minutes.`
           );
         }
-        if (vodDuration > 0 && lastWordEnd > 0 && lastWordEnd < vodDuration * 0.85) {
+        if (audibleEnd > 0 && lastWordEnd > 0 && lastWordEnd < audibleEnd * 0.85) {
           console.warn(
-            `[analyze] Transcript ends at ${Math.round(lastWordEnd)}s but VOD is ${Math.round(vodDuration)}s ` +
-            `(${Math.round((lastWordEnd / vodDuration) * 100)}% coverage). Captions for late moments may be absent`
+            `[analyze] Transcript ends at ${Math.round(lastWordEnd)}s but audible audio runs to ${Math.round(audibleEnd)}s ` +
+            `(${Math.round((lastWordEnd / audibleEnd) * 100)}% coverage). Captions for late moments may be absent`
           );
         }
         return merged;
@@ -337,7 +351,7 @@ export const analyzeVod = inngest.createFunction(
           });
 
         console.log(`[analyze] Stage 3/4: generating coach report (${peaks.length} peaks, ${priorReports.length} prior reports)`);
-        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets);
+        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets, undefined, muted);
         if (!report) {
           throw new Error("Failed to generate coaching report. AI returned invalid response.");
         }
@@ -2029,10 +2043,16 @@ export const analyzePublicPreview = inngest.createFunction(
           .update({ status: "analyzing", game_category: transcribed.gameCategory })
           .eq("id", previewId);
 
-        return await buildPreviewReport(transcribed.segments, title, {
-          analyzedSeconds: transcribed.analyzedSeconds,
-          totalSeconds: (existing.duration_seconds as number | null) ?? transcribed.analyzedSeconds,
-        });
+        return await buildPreviewReport(
+          transcribed.segments,
+          title,
+          {
+            analyzedSeconds: transcribed.analyzedSeconds,
+            totalSeconds: (existing.duration_seconds as number | null) ?? transcribed.analyzedSeconds,
+          },
+          // Absent in step state saved before this existed.
+          (transcribed as { muted?: TimeRange[] }).muted ?? []
+        );
       });
 
       await step.run("preview-save", async () => {
