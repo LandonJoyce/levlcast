@@ -387,7 +387,7 @@ export default async function HomePage() {
       {/* ── The ladder, drawn as a climb ── */}
       <section className="v3-sec" id="ladder">
         <h2 className="v3-h2">
-          Iron to Grandmaster, same shape as the ladders you already grind.
+          Climb the Ranks<span className="v3-punct">!</span>
         </h2>
         <ol className="v3-ladder">
           {TIERS.map((t, i) => (
