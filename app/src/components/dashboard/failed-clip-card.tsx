@@ -12,30 +12,24 @@ interface Props {
   timestamp: string;
 }
 
+/** A clip that didn't render, on the Clips page. Retrying hides the card. */
 export function FailedClipCard({ clipId, vodId, startSeconds, title, category, timestamp }: Props) {
   const [hidden, setHidden] = useState(false);
 
   if (hidden) return null;
 
   return (
-    <div className="clip-card">
-      <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--danger) 8%, var(--surface))" }}>
-        <span className="ts">{timestamp}</span>
-        <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-          <span className="mono" style={{ fontSize: 11, color: "var(--danger)", letterSpacing: ".06em" }}>failed</span>
-        </span>
+    <div className="cl-card" data-failed="yes">
+      <div className="cl-thumb">
+        <span className="cl-making">Didn&apos;t render</span>
+        <span className="cl-len">{timestamp}</span>
       </div>
-      <div className="clip-meta">
-        <b>{title}</b>
-        <span>{category}</span>
-      </div>
-      <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <RegenerateClip
-          clipId={clipId}
-          vodId={vodId}
-          startSeconds={startSeconds}
-          onRegenerated={() => setHidden(true)}
-        />
+      <div className="cl-body">
+        <p className="cl-title">{title}</p>
+        <p className="cl-from">{category}</p>
+        <div className="cl-retry">
+          <RegenerateClip clipId={clipId} vodId={vodId} startSeconds={startSeconds} onRegenerated={() => setHidden(true)} />
+        </div>
       </div>
     </div>
   );

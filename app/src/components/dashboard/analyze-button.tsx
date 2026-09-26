@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
 import { AnalyzeModal } from "./analyze-modal";
 import { UpgradeModal } from "./upgrade-modal";
 
@@ -29,7 +28,7 @@ export function AnalyzeButton({
 
   if (isDone) {
     return (
-      <span className="text-xs text-green-400 font-medium">Analyzed</span>
+      <span className="gen-wait">Analyzed</span>
     );
   }
 
@@ -40,10 +39,7 @@ export function AnalyzeButton({
   // Another VOD is already being analyzed — block this one
   if (hasProcessing) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted cursor-not-allowed opacity-60">
-        <Loader2 size={13} className="animate-spin" />
-        Wait for current analysis to finish
-      </span>
+      <span className="gen-wait">One at a time</span>
     );
   }
 
@@ -51,10 +47,10 @@ export function AnalyzeButton({
     <>
       <button
         onClick={() => setModalOpen(true)}
-        className="inline-flex items-center gap-1.5 bg-accent/10 hover:bg-accent/20 text-accent-light text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+        type="button"
+        className="btn btn-blue gen-clip"
       >
-        <Sparkles size={13} />
-        {status === "failed" ? "Retry Analysis" : "Analyze"}
+        {status === "failed" ? "Try again" : "Analyze"}
       </button>
 
       <AnalyzeModal

@@ -42,46 +42,41 @@ export function DeleteAccountSection() {
   }
 
   return (
-    <div className="mt-4 bg-surface border border-red-500/20 rounded-2xl p-6">
-      <h2 className="text-sm font-bold uppercase tracking-wide text-muted mb-1">
-        Account Management
-      </h2>
-      <p className="text-sm text-muted mb-4">
-        Permanently delete your account and all associated data. This cannot be undone.
-      </p>
-
-      {!confirming ? (
-        <button
-          onClick={() => setConfirming(true)}
-          className="text-sm font-semibold text-red-400 hover:text-red-300 transition-colors border border-red-500/30 hover:border-red-400/50 px-4 py-2 rounded-lg"
-        >
-          Delete Account
-        </button>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-red-400 font-medium">
-            Are you sure? This will permanently delete your account and all your data.
+    <section className="hm-sec ac-delete">
+      <div className="ac-row">
+        <div>
+          <p className="ac-row-main">Delete your account</p>
+          <p className="ac-row-sub">
+            {confirming
+              ? "This deletes your reports, clips, rank and everything else, for good. There's no undo."
+              : "Removes your account and everything in it. This can't be undone."}
           </p>
-          {error && <p className="text-xs text-red-400">{error}</p>}
-          <div className="flex gap-3">
+          {error && <p className="ac-err">{error}</p>}
+        </div>
+        {!confirming ? (
+          <button type="button" className="btn btn-ghost ac-danger" onClick={() => setConfirming(true)}>
+            Delete account
+          </button>
+        ) : (
+          <div className="ac-delete-act">
             <button
-              onClick={handleDelete}
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setConfirming(false);
+                setError(null);
+              }}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 text-red-400 text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading && <Loader2 size={13} className="animate-spin" />}
-              {loading ? "Deleting..." : "Yes, delete my account"}
-            </button>
-            <button
-              onClick={() => { setConfirming(false); setError(null); }}
-              disabled={loading}
-              className="text-sm text-muted hover:text-foreground transition-colors px-4 py-2 rounded-lg border border-border"
             >
               Cancel
             </button>
+            <button type="button" className="btn ac-danger-solid" onClick={handleDelete} disabled={loading}>
+              {loading && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}
+              {loading ? "Deleting..." : "Yes, delete it"}
+            </button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </section>
   );
 }

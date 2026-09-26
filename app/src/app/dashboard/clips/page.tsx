@@ -1,11 +1,21 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ArrowUpRight, Loader2 } from "lucide-react";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { scoreColorVar } from "@/lib/score-utils";
-import { getUserUsage } from "@/lib/limits";
+
+/*
+ * Clips you've made, and the moments you haven't clipped yet.
+ *
+ * Every detected moment from every stream used to get a tall empty tile
+ * with a plus in it, five to a row, so a streamer with eight analyzed
+ * streams scrolled past twenty-eight blank boxes to see anything. The
+ * clips that exist are still cards, since they're videos. The moments
+ * are a list under the stream they came from, the newest few streams
+ * open and the rest folded away.
+ */
 
 interface Peak {
   title: string;
@@ -13,372 +23,306 @@ interface Peak {
   end: number;
   score: number;
   category: string;
-  reason: string;
-  caption: string;
+  reason?: string;
 }
 
-function formatTimestamp(seconds: number | null): string {
-  if (!seconds) return "0:00";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
+function clock(seconds: number | null | undefined): string {
+  const t = Math.max(0, Math.floor(seconds ?? 0));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function categoryLabel(c: string): string {
-  if (c === "funny") return "COMEDY";
-  return c.toUpperCase();
+function categoryLabel(c: string | null | undefined): string {
+  if (!c) return "";
+  return c === "funny" ? "Comedy" : c.charAt(0).toUpperCase() + c.slice(1);
 }
 
-function categoryChipClass(c: string): string {
-  switch (c) {
-    case "hype":        return "m"; // magenta
-    case "funny":       return "w"; // warn (yellow)
-    case "emotional":   return "r"; // danger (red)
-    case "educational": return "b"; // purple
-    case "clutch":      return "g"; // green
-    default:            return "";
-  }
+function vodLinkAt(twitchVodId: string | null | undefined, secs: number): string | null {
+  if (!twitchVodId) return null;
+  const t = Math.max(0, Math.floor(secs));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  return `https://www.twitch.tv/videos/${twitchVodId}?t=${h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`}`;
 }
 
-const Icons = {
-  Plus: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  ),
-  Play: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <path d="M7 5l12 7-12 7V5z" fill="currentColor"/>
-    </svg>
-  ),
-  YT: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
-      <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M10 9l5 3-5 3V9z" fill="currentColor"/>
-    </svg>
-  ),
-  Arrow: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-};
+function shortDate(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
-export default async function ClipsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const params = await searchParams;
-  const tab = params.tab && ["all", "ready", "posted", "pending"].includes(params.tab) ? params.tab : "all";
+/** How many streams keep their moments open before the rest fold away. */
+const OPEN_STREAMS = 3;
 
+export default async function ClipsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: allClips } = await supabase
-    .from("clips")
-    .select("*")
-    .eq("user_id", user.id)
-    .in("status", ["ready", "processing", "failed", "deleted"])
-    .order("created_at", { ascending: false });
+  const [{ data: allClips }, { data: vods }] = await Promise.all([
+    supabase
+      .from("clips")
+      .select("*")
+      .eq("user_id", user.id)
+      .in("status", ["ready", "processing", "failed"])
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("vods")
+      .select("id, title, peak_data, stream_date, twitch_vod_id")
+      .eq("user_id", user.id)
+      .eq("status", "ready")
+      .not("peak_data", "is", null)
+      .order("stream_date", { ascending: false }),
+  ]);
 
-  const clips = (allClips ?? []).filter((c) => c.status === "ready");
-  const processingClips = (allClips ?? []).filter((c) => c.status === "processing");
-  const failedClips = (allClips ?? []).filter((c) => c.status === "failed");
-  const hasProcessing = processingClips.length > 0;
+  const clips = allClips ?? [];
+  const ready = clips.filter((c) => c.status === "ready");
+  const making = clips.filter((c) => c.status === "processing");
+  const failed = clips.filter((c) => c.status === "failed");
+  const hasProcessing = making.length > 0;
 
-  const [{ data: connections }, usage] = await Promise.all([
+  const readyIds = ready.map((c) => c.id);
+  const [{ data: connections }, { data: posts }] = await Promise.all([
     supabase.from("social_connections").select("platform").eq("user_id", user.id),
-    getUserUsage(user.id, supabase),
+    readyIds.length > 0
+      ? supabase
+          .from("social_posts")
+          .select("clip_id, platform, platform_url")
+          .eq("user_id", user.id)
+          .eq("platform", "youtube")
+          .in("clip_id", readyIds)
+      : Promise.resolve({ data: [] as Array<{ clip_id: string; platform_url: string | null }> }),
   ]);
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
-  const isTikTokConnected = connections?.some((c) => c.platform === "tiktok") ?? false;
-  const isPro = usage.plan === "pro";
+  const postedUrl = new Map((posts ?? []).map((p) => [p.clip_id, p.platform_url as string | null]));
 
-  const clipIds = clips.map((c) => c.id);
-  const { data: socialPosts } = clipIds.length > 0
-    ? await supabase.from("social_posts").select("clip_id, platform, platform_url, platform_video_id").eq("user_id", user.id).in("clip_id", clipIds)
-    : { data: [] };
+  const vodTitle = new Map((vods ?? []).map((v) => [v.id, v.title as string]));
+  const toPost = ready.filter((c) => !postedUrl.has(c.id));
+  const posted = ready.filter((c) => postedUrl.has(c.id));
 
-  const ytPostMap = new Map(
-    (socialPosts ?? []).filter((p) => p.platform === "youtube").map((p) => [p.clip_id, p.platform_url])
+  // Moments without a clip, per stream. A clip trimmed in the editor can
+  // start a good way after its moment, so anything from a minute before
+  // the moment to its end counts as that moment's clip.
+  const groups = (vods ?? [])
+    .map((v) => {
+      const peaks = ((v.peak_data as Peak[] | null) ?? []).map((p, index) => ({ ...p, index }));
+      const open = peaks.filter(
+        (p) =>
+          !clips.some(
+            (c) =>
+              c.vod_id === v.id &&
+              !c.is_highlight_reel &&
+              (c.status === "ready" || c.status === "processing") &&
+              (c.start_time_seconds as number) >= Math.round(p.start) - 60 &&
+              (c.start_time_seconds as number) <= Math.round(p.end) + 5
+          )
+      );
+      return { id: v.id as string, title: v.title as string, date: v.stream_date as string | null, twitchVodId: v.twitch_vod_id as string | null, moments: open };
+    })
+    .filter((g) => g.moments.length > 0);
+  const momentCount = groups.reduce((n, g) => n + g.moments.length, 0);
+  const openGroups = groups.slice(0, OPEN_STREAMS);
+  const foldedGroups = groups.slice(OPEN_STREAMS);
+
+  const nothing = ready.length === 0 && making.length === 0 && failed.length === 0 && momentCount === 0;
+
+  const renderGroup = (g: (typeof groups)[number]) => (
+    <div key={g.id} className="cm-group">
+      <p className="cm-stream">
+        <Link href={`/dashboard/vods/${g.id}`}>{g.title}</Link>
+        <span>{shortDate(g.date)}</span>
+      </p>
+      <ol className="sp-moments">
+        {g.moments.map((m) => {
+          const href = vodLinkAt(g.twitchVodId, m.start);
+          return (
+            <li key={m.index} className="sp-moment">
+              {href ? (
+                <a className="sp-moment-time" href={href} target="_blank" rel="noopener noreferrer" title="Open this moment on Twitch">
+                  {clock(m.start)}
+                </a>
+              ) : (
+                <span className="sp-moment-time">{clock(m.start)}</span>
+              )}
+              <div className="sp-moment-main">
+                <p className="sp-moment-title">
+                  {m.title}
+                  {m.category && <span className="sp-moment-cat">{categoryLabel(m.category)}</span>}
+                </p>
+                {m.reason && <p className="sp-moment-why">{m.reason}</p>}
+              </div>
+              <div className="sp-moment-act">
+                <GenerateClipButton vodId={g.id} peakIndex={m.index} hasProcessing={hasProcessing} clipTitle={m.title} />
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
-  const ttPostedSet = new Set(
-    (socialPosts ?? []).filter((p) => p.platform === "tiktok").map((p) => p.clip_id)
-  );
-  const totalPosted = ytPostMap.size;
 
-  // Ungenerated peaks (moments detected but no clip yet)
-  const { data: vods } = await supabase
-    .from("vods")
-    .select("id, title, peak_data, duration_seconds")
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .not("peak_data", "is", null)
-    .order("stream_date", { ascending: false });
-
-  const generatedKeys = new Set(
-    (allClips ?? [])
-      .filter((c) => c.status === "ready" || c.status === "processing")
-      .map((c) => `${c.vod_id}-${c.start_time_seconds}`)
-  );
-  const ungeneratedPeaks: (Peak & { vodTitle: string; vodId: string; peakIndex: number })[] = [];
-  for (const vod of vods ?? []) {
-    const peaks = (vod.peak_data as Peak[]) ?? [];
-    for (let pi = 0; pi < peaks.length; pi++) {
-      const key = `${vod.id}-${Math.round(peaks[pi].start)}`;
-      if (!generatedKeys.has(key)) {
-        ungeneratedPeaks.push({ ...peaks[pi], vodTitle: vod.title, vodId: vod.id, peakIndex: pi });
-      }
-    }
-  }
-  ungeneratedPeaks.sort((a, b) => b.score - a.score);
-
-  // Filter
-  let filteredReady = clips;
-  let showPending = false;
-  if (tab === "ready") {
-    filteredReady = clips.filter((c) => !ytPostMap.has(c.id));
-  } else if (tab === "posted") {
-    filteredReady = clips.filter((c) => ytPostMap.has(c.id));
-  } else if (tab === "pending") {
-    filteredReady = [];
-    showPending = true;
-  }
-  const showReadyAndPending = tab === "all";
-
-  const totalCounts = {
-    all: clips.length + processingClips.length + failedClips.length + ungeneratedPeaks.length,
-    ready: clips.filter((c) => !ytPostMap.has(c.id)).length,
-    posted: totalPosted,
-    pending: ungeneratedPeaks.length,
+  const card = (c: (typeof ready)[number]) => {
+    const url = postedUrl.get(c.id);
+    const length =
+      typeof c.end_time_seconds === "number" && typeof c.start_time_seconds === "number"
+        ? clock((c.end_time_seconds as number) - (c.start_time_seconds as number))
+        : null;
+    return (
+      <div key={c.id} className="cl-card" data-posted={postedUrl.has(c.id) ? "yes" : undefined}>
+        <Link href={`/dashboard/clips/${c.id}/edit`} className="cl-thumb" aria-label={`Open ${(c.title as string) || "clip"}`}>
+          {c.video_url ? (
+            <video
+              src={c.thumbnail_url ? (c.video_url as string) : `${c.video_url as string}#t=0.5`}
+              poster={(c.thumbnail_url as string | null) ?? undefined}
+              preload="metadata"
+              muted
+              playsInline
+            />
+          ) : c.thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.thumbnail_url as string} alt="" loading="lazy" />
+          ) : null}
+          {length && <span className="cl-len">{length}</span>}
+          {c.is_highlight_reel && <span className="cl-reel">Reel</span>}
+        </Link>
+        <div className="cl-body">
+          <Link href={`/dashboard/clips/${c.id}/edit`} className="cl-title">
+            {(c.title as string) || (c.is_highlight_reel ? "Highlight reel" : "Untitled clip")}
+          </Link>
+          <p className="cl-from">
+            {categoryLabel(c.peak_category as string | null)}
+            {c.peak_category && vodTitle.get(c.vod_id as string) ? " · " : ""}
+            {vodTitle.get(c.vod_id as string) ?? ""}
+          </p>
+          {url ? (
+            <a className="cl-posted" href={url} target="_blank" rel="noopener noreferrer">
+              On YouTube <ArrowUpRight size={12} aria-hidden="true" />
+            </a>
+          ) : postedUrl.has(c.id) ? (
+            <span className="cl-posted">Posted</span>
+          ) : null}
+        </div>
+      </div>
+    );
   };
-
-  const TAB_ITEMS: Array<[string, string, number]> = [
-    ["all", "All", totalCounts.all],
-    ["ready", "Ready", totalCounts.ready],
-    ["posted", "Posted", totalCounts.posted],
-    ["pending", "Pending", totalCounts.pending],
-  ];
-
-  const hasAnything = clips.length > 0 || processingClips.length > 0 || failedClips.length > 0 || ungeneratedPeaks.length > 0;
 
   return (
     <>
       <VodStatusPoller hasProcessing={hasProcessing} />
 
-      {/* Header */}
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div className="page-head">
-          <span className="page-eyebrow">Highlights</span>
+      <div className="hm-hello">
+        <div>
           <h1 className="page-title">Clips</h1>
-          <p className="page-sub">Auto-detected moments, ready to clip and post.</p>
-        </div>
-        <div className="row gap-md">
-          {totalPosted > 0 && (
-            <span className="rank-chip rising"><Icons.YT /> {totalPosted} posted to YouTube</span>
+          {!nothing && (
+            <p className="sl-sum">
+              {toPost.length} ready to post · {momentCount} {momentCount === 1 ? "moment" : "moments"} not clipped yet
+            </p>
           )}
         </div>
       </div>
 
-      {/* Connect YouTube nudge */}
-      {hasAnything && !isYouTubeConnected && (
-        <div className="card" style={{ borderColor: "color-mix(in oklab, var(--blue) 30%, var(--line))" }}>
-          <div className="row card-pad-sm" style={{ justifyContent: "space-between", gap: 16 }}>
-            <div className="row gap-sm">
-              <span className="mono-label" style={{ color: "var(--blue)" }}>Connect YouTube</span>
-              <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>to post Shorts directly from your clips.</span>
-            </div>
-            <Link href="/dashboard/connections" className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }}>
-              Connect <Icons.Arrow />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {!hasAnything ? (
-        <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>
-            No clip moments yet. Analyze a stream from <Link href="/dashboard/vods" style={{ color: "var(--blue)" }}>VODs</Link> and your best moments will appear here.
-          </p>
-        </div>
+      {nothing ? (
+        <section className="sl-empty">
+          <p className="sl-empty-title">No clips yet.</p>
+          <p className="cl-empty-sub">Every stream you analyze comes back with the moments worth clipping. They show up here.</p>
+          <Link href="/dashboard/vods" className="btn btn-blue">
+            Analyze a stream
+          </Link>
+        </section>
       ) : (
         <>
-          {/* Filter tabs */}
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <div className="tabs">
-              {TAB_ITEMS.map(([k, l, c]) => (
-                <Link key={k} href={`/dashboard/clips${k === "all" ? "" : `?tab=${k}`}`} className={`tab ${tab === k ? "active" : ""}`}>
-                  {l} · {c}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Generating clips */}
-          {(tab === "all" || tab === "ready") && processingClips.length > 0 && (
-            <>
-              {filteredReady.length > 0 && (
-                <div className="row" style={{ alignItems: "center", gap: 14 }}>
-                  <span className="mono-label" style={{ color: "var(--blue)" }}>Generating now</span>
-                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-                </div>
+          {(toPost.length > 0 || making.length > 0) && (
+            <section className="hm-sec">
+              <div className="hm-head">
+                <h2>Ready to post</h2>
+                {toPost.length > 0 && <span className="hm-record">{toPost.length} waiting</span>}
+              </div>
+              {!isYouTubeConnected && toPost.length > 0 && (
+                <p className="uc-connect">
+                  Download them from the editor, or connect YouTube and post them as Shorts in one click.{" "}
+                  <Link href="/dashboard/settings#connections">Connect YouTube</Link>
+                </p>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
-                {processingClips.map((c) => (
-                  <div key={c.id} className="clip-card">
-                    <div className="clip-thumb" style={{ background: "color-mix(in oklab, var(--blue) 8%, var(--surface))" }}>
-                      <span className="ts">starts {formatTimestamp(c.start_time_seconds as number | null)}</span>
-                      <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-                        <span className="mono" style={{ fontSize: 11, color: "var(--blue)", letterSpacing: ".06em" }}>generating...</span>
+              <div className="cl-grid">
+                {making.map((c) => (
+                  <div key={c.id} className="cl-card" data-making="yes">
+                    <div className="cl-thumb">
+                      <span className="cl-making">
+                        <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                        Making it
                       </span>
                     </div>
-                    <div className="clip-meta">
-                      <b>{(c.title as string) || "Clip"}</b>
-                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
-                    </div>
-                    <div style={{ padding: "0 12px 12px" }}>
-                      <span className="chip" style={{ width: "100%", justifyContent: "center", color: "var(--blue)" }}>Processing...</span>
+                    <div className="cl-body">
+                      <p className="cl-title">{(c.title as string) || "Clip"}</p>
+                      <p className="cl-from">Takes a minute or two</p>
                     </div>
                   </div>
                 ))}
+                {toPost.map(card)}
               </div>
-            </>
+            </section>
           )}
 
-          {/* Ready clips grid */}
-          {filteredReady.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
-              {filteredReady.map((c) => {
-                const ytUrl = ytPostMap.get(c.id);
-                const score = Math.round(((c.score as number | null) ?? 0) * 100);
-                return (
-                  /* Posted clips recede. A wall of thumbnails where the ones
-                     you have already shipped look exactly like the ones still
-                     waiting gives you no way to find your remaining work, so
-                     the page makes you re-read every card every visit. Done
-                     work should get quieter, not disappear. */
-                  <div key={c.id} className={ytUrl ? "clip-card clip-card-done" : "clip-card"}>
-                    <div className="clip-thumb">
-                      {c.video_url && (
-                        <video
-                          src={c.video_url as string}
-                          preload="metadata"
-                          muted
-                          playsInline
-                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      )}
-                      <span className="ts">starts {formatTimestamp(c.start_time_seconds as number | null)}</span>
-                      <a href={c.video_url as string | undefined} target="_blank" rel="noopener noreferrer" className="play"><Icons.Play /></a>
-                      <span className="score" style={{ color: scoreColorVar(score) }}>
-                        {score}<span style={{ opacity: 0.6, fontSize: 9 }}>/100</span>
-                      </span>
-                    </div>
-                    <div className="clip-meta">
-                      <b>{(c.title as string) || "Clip"}</b>
-                      <span>{(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}</span>
-                    </div>
-                    <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                      {/* One button per clip card now. Everything (trim,
-                          captions, hook frame, vertical export, post to
-                          YouTube) lives inside the editor as a single
-                          save-and-ship flow. Older reels without segment
-                          metadata still need a regenerate first — handled
-                          on the editor page itself. */}
-                      {/* Quiet, not gradient. This grid renders fifteen of
-                          these at once, and fifteen gradient bars on one
-                          screen means the accent stops marking anything as
-                          important. The card's own thumbnail is the draw. */}
-                      <Link
-                        href={`/dashboard/clips/${c.id}/edit`}
-                        className="btn btn-quiet"
-                        style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "9px 0" }}
-                      >
-                        {c.is_highlight_reel ? "Open reel" : "Open clip"}
-                      </Link>
-                      {/* Surface where this clip already landed so the user
-                          knows they've already shipped it. */}
-                      {ytUrl && (
-                        <a
-                          href={ytUrl as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mono"
-                          style={{ fontSize: 10.5, color: "var(--ink-3)", textAlign: "center", textDecoration: "none" }}
-                        >
-                          Posted to YouTube ↗
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Failed clips */}
-          {(tab === "all" || tab === "ready") && failedClips.length > 0 && (
-            <>
-              <div className="row" style={{ alignItems: "center", gap: 14 }}>
-                <span className="mono-label" style={{ color: "var(--danger)" }}>Failed  -  tap to retry</span>
-                <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+          {failed.length > 0 && (
+            <section className="hm-sec">
+              <div className="hm-head">
+                <h2>Didn&apos;t render</h2>
+                <span className="hm-record">Try again, it usually works</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
-                {failedClips.map((c) => (
+              <div className="cl-grid">
+                {failed.map((c) => (
                   <FailedClipCard
                     key={c.id}
                     clipId={c.id}
                     vodId={c.vod_id as string}
                     startSeconds={c.start_time_seconds as number}
                     title={(c.title as string) || "Clip"}
-                    category={(c.category as string) ? categoryLabel(c.category as string) : "MOMENT"}
-                    timestamp={formatTimestamp(c.start_time_seconds as number | null)}
+                    category={categoryLabel(c.peak_category as string | null) || "Moment"}
+                    timestamp={clock(c.start_time_seconds as number | null)}
                   />
                 ))}
               </div>
-            </>
+            </section>
           )}
 
-          {/* Ungenerated peaks (Pending) */}
-          {(showPending || (showReadyAndPending && ungeneratedPeaks.length > 0)) && (
-            <>
-              {showReadyAndPending && filteredReady.length > 0 && (
-                <div className="row" style={{ alignItems: "center", gap: 14, marginTop: 8 }}>
-                  <span className="mono-label">Pending  -  moments to clip</span>
-                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-                </div>
+          {momentCount > 0 && (
+            <section className="hm-sec">
+              <div className="hm-head">
+                <h2>Moments to clip</h2>
+                <span className="hm-record">
+                  {momentCount} from {groups.length} {groups.length === 1 ? "stream" : "streams"}
+                </span>
+              </div>
+              {hasProcessing && (
+                <p className="uc-connect">Making one clip right now. The buttons come back when it&apos;s done.</p>
               )}
-              {ungeneratedPeaks.length === 0 && showPending ? (
-                <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-                  <p style={{ color: "var(--ink-3)", fontSize: 14, margin: 0 }}>No pending moments  -  all detected clips have been generated.</p>
-                </div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
-                  {ungeneratedPeaks.map((p, idx) => (
-                    <div key={`${p.vodId}-${p.peakIndex}-${idx}`} className="clip-card">
-                      <div className="clip-thumb">
-                        <span className="ts">starts {formatTimestamp(p.start)}</span>
-                        <span className="play"><Icons.Plus /></span>
-                      </div>
-                      <div className="clip-meta">
-                        <b>{p.title}</b>
-                        <span>{categoryLabel(p.category)} · {p.vodTitle}</span>
-                      </div>
-                      <div style={{ padding: "0 12px 12px" }}>
-                        <GenerateClipButton vodId={p.vodId} peakIndex={p.peakIndex} hasProcessing={hasProcessing} clipTitle={p.title} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {openGroups.map(renderGroup)}
+              {foldedGroups.length > 0 && (
+                <details className="cm-more">
+                  <summary>
+                    {foldedGroups.reduce((n, g) => n + g.moments.length, 0)} more from {foldedGroups.length} older{" "}
+                    {foldedGroups.length === 1 ? "stream" : "streams"}
+                  </summary>
+                  {foldedGroups.map(renderGroup)}
+                </details>
               )}
-            </>
+            </section>
+          )}
+
+          {posted.length > 0 && (
+            <section className="hm-sec">
+              <details className="cm-more">
+                <summary>Posted · {posted.length}</summary>
+                <div className="cl-grid">{posted.map(card)}</div>
+              </details>
+            </section>
           )}
         </>
       )}
     </>
   );
 }
-

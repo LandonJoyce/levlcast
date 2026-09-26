@@ -121,20 +121,20 @@ export function FeedbackModal({
       >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
           <div>
-            <div style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.2em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--ink-4)", marginBottom: 8 }}>
               Send Feedback
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 600, color: "#ECF1FA", margin: 0, lineHeight: 1.25 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", margin: 0, lineHeight: 1.25 }}>
               Tell Landon what happened
             </h2>
-            <p style={{ fontSize: 13, color: "#6F7C95", marginTop: 6, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "var(--ink-4)", marginTop: 6, lineHeight: 1.5 }}>
               Goes straight to me. I read every message.
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            style={{ background: "none", border: "none", color: "#6F7C95", fontSize: 20, cursor: "pointer", padding: "0 0 0 16px", lineHeight: 1, flexShrink: 0 }}
+            style={{ background: "none", border: "none", color: "var(--ink-4)", fontSize: 20, cursor: "pointer", padding: "0 0 0 16px", lineHeight: 1, flexShrink: 0 }}
           >
             ✕
           </button>
@@ -144,8 +144,8 @@ export function FeedbackModal({
 
         {done ? (
           <div style={{ padding: "20px 0 8px" }}>
-            <div style={{ fontSize: 15, color: "#ECF1FA", marginBottom: 8, fontWeight: 600 }}>Sent. Thanks.</div>
-            <p style={{ fontSize: 13, color: "#6F7C95", margin: 0, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 15, color: "var(--ink)", marginBottom: 8, fontWeight: 600 }}>Sent. Thanks.</div>
+            <p style={{ fontSize: 13, color: "var(--ink-4)", margin: 0, lineHeight: 1.5 }}>
               I&apos;ll read it and follow up if I can fix it.
             </p>
             <button
@@ -156,7 +156,7 @@ export function FeedbackModal({
                 padding: "12px 18px",
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.1)",
-                color: "#ECF1FA",
+                color: "var(--ink)",
                 borderRadius: 10,
                 fontSize: 14,
                 fontWeight: 600,
@@ -168,7 +168,7 @@ export function FeedbackModal({
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#ECF1FA", marginBottom: 10 }}>Category</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", marginBottom: 10 }}>Category</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 18 }}>
               {CATEGORIES.map((c) => {
                 const active = category === c.value;
@@ -179,9 +179,9 @@ export function FeedbackModal({
                     onClick={() => setCategory(c.value)}
                     style={{
                       padding: "10px 14px",
-                      background: active ? "rgba(155,106,255,0.12)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${active ? "rgba(155,106,255,0.5)" : "rgba(255,255,255,0.08)"}`,
-                      color: active ? "#ECF1FA" : "#A6B3C9",
+                      background: active ? "rgba(255, 238, 230, 0.08)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${active ? "var(--ink-3)" : "rgba(255,255,255,0.08)"}`,
+                      color: active ? "var(--ink)" : "var(--ink-3)",
                       borderRadius: 10,
                       fontSize: 13,
                       fontWeight: 600,
@@ -197,8 +197,8 @@ export function FeedbackModal({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#ECF1FA" }}>Message</div>
-              <div style={{ fontSize: 11, fontFamily: "monospace", color: overlong ? "#F87171" : "#6F7C95" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>Message</div>
+              <div style={{ fontSize: 11, fontFamily: "monospace", color: overlong ? "#F87171" : "var(--ink-4)" }}>
                 {charCount}/{MAX_LEN}
               </div>
             </div>
@@ -212,10 +212,10 @@ export function FeedbackModal({
               style={{
                 width: "100%",
                 padding: "12px 14px",
-                background: "#070B14",
+                background: "rgb(12, 10, 11)",
                 border: `1px solid ${overlong ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.08)"}`,
                 borderRadius: 10,
-                color: "#ECF1FA",
+                color: "var(--ink)",
                 fontSize: 14,
                 lineHeight: 1.5,
                 fontFamily: "inherit",
@@ -239,7 +239,7 @@ export function FeedbackModal({
                   padding: "12px 18px",
                   background: "transparent",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  color: "#A6B3C9",
+                  color: "var(--ink-3)",
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 600,
@@ -255,10 +255,10 @@ export function FeedbackModal({
                   flex: 1,
                   padding: "12px 18px",
                   background: submitting || charCount < MIN_LEN || overlong
-                    ? "rgba(155,106,255,0.25)"
-                    : "linear-gradient(135deg, #FF5800, #F26179)",
+                    ? "rgba(255, 238, 230, 0.1)"
+                    : "var(--ink)",
                   border: "none",
-                  color: "#fff",
+                  color: submitting || charCount < MIN_LEN || overlong ? "var(--ink-3)" : "rgb(16, 13, 14)",
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 700,

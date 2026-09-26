@@ -57,16 +57,19 @@ export function GenerateClipButton({
     return (
       <Link
         href={`/dashboard/clips/${doneClipId}/edit`}
-        className="btn btn-blue"
-        style={{ width: "100%", justifyContent: "center", fontSize: 12, textDecoration: "none" }}
+        className="btn btn-ghost gen-clip"
       >
-        Open in editor →
+        Open in editor
       </Link>
     );
   }
 
   if (hasProcessing && !generating) {
-    return <span className="chip" style={{ width: "100%", justifyContent: "center", opacity: 0.5 }}>Wait for current clip</span>;
+    return (
+      <button type="button" className="btn btn-ghost gen-clip" disabled title="One clip at a time. This comes back when the current one is done.">
+        Make clip
+      </button>
+    );
   }
 
   return (
@@ -74,10 +77,10 @@ export function GenerateClipButton({
       <button
         onClick={handleGenerate}
         disabled={generating}
-        className="btn btn-blue"
-        style={{ width: "100%", justifyContent: "center", fontSize: 12, opacity: generating ? 0.6 : 1 }}
+        className="btn btn-ghost gen-clip"
+        style={{ opacity: generating ? 0.6 : 1 }}
       >
-        {generating ? "Queuing…" : "Generate Clip"}
+        {generating ? "Starting..." : "Make clip"}
       </button>
 
       {error && <span className="mono" style={{ fontSize: 11, color: "var(--danger)", marginTop: 4, display: "block" }}>{error}</span>}

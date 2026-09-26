@@ -236,7 +236,7 @@ export function PostToYouTube({
   if (!isConnected) {
     return (
       <a
-        href="/dashboard/connections"
+        href="/dashboard/settings#connections"
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
       >
         <Youtube size={12} />
@@ -462,7 +462,7 @@ export function PostToTikTok({
   if (!isConnected) {
     return (
       <a
-        href="/dashboard/connections"
+        href="/dashboard/settings#connections"
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
       >
         <Music size={12} />

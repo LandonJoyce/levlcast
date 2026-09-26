@@ -64,8 +64,7 @@ export function HighlightReelButton({
     return (
       <a
         href="/dashboard/clips"
-        className="btn btn-ghost"
-        style={{ fontSize: 12, padding: "8px 14px", whiteSpace: "nowrap" }}
+        className="btn btn-ghost gen-clip"
       >
         View highlight reel
       </a>
@@ -74,12 +73,7 @@ export function HighlightReelButton({
 
   if (reelProcessing) {
     return (
-      <span
-        className="chip"
-        style={{ fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap", opacity: 0.85 }}
-      >
-        Building reel…
-      </span>
+      <span className="gen-wait">Building the reel...</span>
     );
   }
 
@@ -92,15 +86,10 @@ export function HighlightReelButton({
       <button
         onClick={handleGenerate}
         disabled={generating}
-        className="btn btn-blue"
-        style={{
-          fontSize: 12,
-          padding: "8px 14px",
-          whiteSpace: "nowrap",
-          opacity: generating ? 0.6 : 1,
-        }}
+        className="btn btn-ghost gen-clip"
+        style={{ opacity: generating ? 0.6 : 1 }}
       >
-        {generating ? "Queuing…" : "Generate highlight reel"}
+        {generating ? "Starting..." : "Make a highlight reel"}
       </button>
       {error && (
         <span className="mono" style={{ fontSize: 11, color: "var(--danger)", display: "block", marginTop: 4 }}>

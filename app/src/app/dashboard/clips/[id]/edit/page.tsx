@@ -117,17 +117,15 @@ export default async function ClipEditPage({
 
   return (
     <>
-      <div>
-        <Link href="/dashboard/clips" className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, marginBottom: 8 }}>
-          ← Back to clips
+      <header className="sp-head">
+        <Link href="/dashboard/clips" className="sp-back">
+          ← Clips
         </Link>
-      </div>
-      <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2, margin: "0 0 6px", color: "var(--ink)" }}>
-        Edit clip
-      </h1>
-      <p className="page-sub" style={{ marginBottom: 24 }}>
-        Trim the moment, fix any caption typos, and pick a hook frame. Re-edits don't cost a clip from your quota.
-      </p>
+        <div>
+          <h1 className="page-title sp-title">{(clip.title as string) || "Edit clip"}</h1>
+          <p className="page-sub mh-sub">Trim it, fix caption typos, pick a hook frame. Edits don&apos;t use up a clip.</p>
+        </div>
+      </header>
 
       <ClipEditor
         clipId={clip.id as string}

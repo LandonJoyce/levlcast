@@ -1,75 +1,39 @@
 "use client";
 
 /**
- * The detailed report, collapsed by default.
+ * The detailed report, folded at the bottom of the stream page.
  *
- * Everything inside this is worth keeping — the stream story, what
- * worked, the opening and closing notes, the timeline, the trajectory,
- * the growth-killer flags. The problem was never that it existed, it was
- * that all of it loaded at once, above the fold, in paragraphs, so the
- * page asked to be read before it would tell you anything.
+ * Everything inside is worth keeping: the stream story, what worked, the
+ * opening and closing notes, the timeline, the trend, the habits that
+ * cost viewers. The problem was never that it existed, it was that all of
+ * it loaded at once, above the fold, so the page asked to be read before
+ * it would tell you anything. The top of the page answers what people
+ * open it for: did I go up, what cost me, what do I do next.
  *
- * The post-match summary above answers the three questions someone
- * actually opens this for: did I go up, what cost me, what do I do next.
- * This is where you go when the answer was not enough, and it stays shut
- * until you ask for it.
- *
- * Rendered with the children always mounted and hidden rather than
- * conditionally rendered, so the charts inside do not re-run their
- * entrance animations every time it is toggled, and so in-page anchors
- * and browser find still reach the content.
+ * The children stay mounted and hidden rather than conditionally
+ * rendered, so the charts inside don't replay their entrance every time
+ * it's toggled, and so in-page anchors and browser find still reach it.
  */
 
 import { useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 
 export function FullBreakdown({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          padding: "16px 20px",
-          borderRadius: 14,
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          color: "#ECF1FA",
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 600,
-          textAlign: "left",
-        }}
-      >
+    <section className="fb">
+      <button type="button" className="fb-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span>
-          {open ? "Hide the full breakdown" : "Read the full breakdown"}
-          <span style={{ display: "block", fontSize: 12, fontWeight: 400, color: "#6F7C95", marginTop: 3 }}>
-            The whole story of this stream, what worked, your timeline and your trend.
-          </span>
+          <b>{open ? "Hide the full breakdown" : "Read the full breakdown"}</b>
+          <span>The whole stream start to finish, what worked, where it went quiet, and your trend.</span>
         </span>
-        <span
-          aria-hidden="true"
-          style={{
-            fontSize: 18,
-            color: "#6F7C95",
-            transform: open ? "rotate(180deg)" : "none",
-            transition: "transform 220ms ease",
-            flexShrink: 0,
-          }}
-        >
-          ⌄
-        </span>
+        <ChevronDown size={18} strokeWidth={2} aria-hidden="true" data-open={open ? "yes" : undefined} />
       </button>
 
-      <div hidden={!open} style={{ marginTop: 18 }}>
+      <div hidden={!open} className="fb-body">
         {children}
       </div>
-    </div>
+    </section>
   );
 }

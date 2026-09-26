@@ -71,8 +71,8 @@ export function AdminReplyCard() {
   return (
     <div
       style={{
-        background: "linear-gradient(135deg, rgba(155,106,255,0.08), rgba(242,97,121,0.04))",
-        border: "1px solid rgba(155,106,255,0.3)",
+        background: "transparent",
+        border: "1px solid var(--line-2)",
         borderRadius: 14,
         padding: 20,
         marginBottom: 20,
@@ -80,22 +80,22 @@ export function AdminReplyCard() {
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C9B3FF" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-3)", fontFamily: "var(--mono)" }}>
             Reply from Landon
           </span>
           {unread.length > 0 && (
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 4,
-              background: "rgba(242,97,121,0.15)",
-              border: "1px solid rgba(242,97,121,0.35)",
-              color: "#F26179",
+              background: "transparent",
+              border: "1px solid var(--line-2)",
+              color: "var(--ink)",
               borderRadius: 100,
               padding: "2px 8px",
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.06em",
             }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F26179" }} />
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--ink)" }} />
               {unread.length} new
             </span>
           )}
@@ -106,7 +106,7 @@ export function AdminReplyCard() {
             style={{
               background: "none",
               border: "none",
-              color: "#A6B3C9",
+              color: "var(--ink-3)",
               fontSize: 11,
               cursor: "pointer",
               textDecoration: "underline",
@@ -145,23 +145,23 @@ export function AdminReplyCard() {
                     margin: 0,
                     fontSize: 13,
                     lineHeight: 1.55,
-                    color: "#ECF1FA",
+                    color: "var(--ink)",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                     fontWeight: 500,
                   }}>
                     {r.admin_reply}
                   </p>
-                  <div style={{ fontSize: 10, color: "#6F7C95", marginTop: 8, fontFamily: "monospace", letterSpacing: "0.04em" }}>
+                  <div style={{ fontSize: 10, color: "var(--ink-4)", marginTop: 8, fontFamily: "monospace", letterSpacing: "0.04em" }}>
                     {timeAgo(r.admin_reply_at)} · view your original
                   </div>
                 </div>
                 {!r.user_seen_reply && (
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#F26179", flexShrink: 0, marginTop: 6 }} />
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink)", flexShrink: 0, marginTop: 6 }} />
                 )}
               </summary>
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: 10, color: "#6F7C95", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+                <div style={{ fontSize: 10, color: "var(--ink-4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
                   You wrote
                 </div>
                 <p style={{

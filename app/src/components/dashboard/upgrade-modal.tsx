@@ -261,22 +261,14 @@ export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro" }: U
             disabled={loading}
             style={{
               width: "100%",
-              background: loading
-                ? "var(--surface-3)"
-                : isProPlus
-                ? "linear-gradient(135deg, rgb(255,88,0), rgb(242,97,121))"
-                : "linear-gradient(135deg, var(--blue), var(--green))",
-              color: "#fff",
+              background: loading ? "var(--surface-3)" : "var(--ink)",
+              color: loading ? "var(--ink-3)" : "rgb(16, 13, 14)",
               fontSize: 14, fontWeight: 700,
               padding: "13px 20px",
               borderRadius: 12, border: "none", cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.7 : 1,
               transition: "opacity 150ms",
-              boxShadow: loading
-                ? "none"
-                : isProPlus
-                ? "0 6px 20px -6px rgba(255,88,0,0.5)"
-                : "0 6px 20px -6px color-mix(in oklab, var(--blue) 60%, transparent)",
+              boxShadow: "none",
             }}
           >
             {loading

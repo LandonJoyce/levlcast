@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -26,21 +26,21 @@ interface SubscriptionSectionProps {
 }
 
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const isPro = limit >= 999;
-  const pct = isPro ? 0 : Math.min(100, Math.round((used / limit) * 100));
-  const displayLimit = isPro ? "Unlimited" : limit;
+  const unlimited = limit >= 999;
+  const pct = unlimited ? 0 : Math.min(100, Math.round((used / limit) * 100));
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-sm">
-        <span className="text-muted">{label}</span>
-        <span className="font-semibold tabular-nums">
-          {used}<span className="text-muted font-normal"> / {displayLimit}</span>
-        </span>
+    <div className="ac-use" data-full={!unlimited && pct >= 100 ? "yes" : undefined}>
+      <div className="ac-use-line">
+        <span>{label}</span>
+        <b>
+          {used}
+          <span> / {unlimited ? "Unlimited" : limit}</span>
+        </b>
       </div>
-      {!isPro && (
-        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-          <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
+      {!unlimited && (
+        <div className="ac-use-bar" aria-hidden="true">
+          <span style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>
@@ -69,7 +69,6 @@ export function SubscriptionSection({
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   /** Which tier to preselect when opening the upgrade modal. */
   const [upgradeInitialTier, setUpgradeInitialTier] = useState<"pro" | "pro_plus">("pro");
-  const planLabel = plan === "pro" ? (proPlus ? "Pro Plus" : "Pro") : "Free";
 
   async function openPortal() {
     setPortalLoading(true);
@@ -91,104 +90,97 @@ export function SubscriptionSection({
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Subscription</h2>
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${plan === "pro" ? "bg-accent/20 text-accent-light" : "bg-white/5 text-muted"}`}>
-            {planLabel}
-          </span>
-        </div>
-
-        {/* Usage stats */}
-        <div className="space-y-4 mb-6">
-          <UsageBar label={`VOD analyses ${periodLabel}`} used={analysesUsed} limit={analysesLimit} />
-          <UsageBar label={`Clips generated ${periodLabel}`} used={clipsUsed} limit={clipsLimit} />
-          {/* Hours used — only show when the hour cap applies (Pro / Founding / Pro Plus). */}
+      <div className="ac-plan">
+        <div className="ac-uses">
+          <UsageBar label={`Reports ${periodLabel}`} used={analysesUsed} limit={analysesLimit} />
+          <UsageBar label={`Clips ${periodLabel}`} used={clipsUsed} limit={clipsLimit} />
+          {/* Hours only apply on the paid plans. */}
           {typeof hoursLimit === "number" && hoursLimit > 0 && typeof hoursUsed === "number" && (
-            <UsageBar label={`Analysis hours ${periodLabel}`} used={hoursUsed} limit={hoursLimit} />
+            <UsageBar label={`Hours analyzed ${periodLabel}`} used={hoursUsed} limit={hoursLimit} />
           )}
         </div>
 
-        {/* Actions */}
-        {plan === "free" ? (
-          <div className="space-y-3">
-            <p className="text-sm text-muted">
-              {onTrial
-                ? `Free gives you ${analysesLimit} analyses and ${clipsLimit} clips every week, resetting Monday. Pro is 15 analyses and 20 clips a month.`
-                : "Upgrade to Pro for 15 VOD analyses and 20 clips per month, plus streams up to 8 hours each."}
-            </p>
-            <button
-              onClick={() => { setUpgradeInitialTier("pro"); setUpgradeOpen(true); }}
-              className="bg-accent hover:opacity-85 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-opacity"
-            >
-              Upgrade to Pro $14.99/month
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {isCancelled ? (
-              <p className="text-sm text-muted">
-                Your subscription is cancelled.
-                {subscriptionExpiresAt && (
-                  <> Pro access continues until <strong className="text-foreground">{new Date(subscriptionExpiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>.</>
-                )}
+        <div className="ac-plan-act">
+          {plan === "free" ? (
+            <>
+              <p>
+                {onTrial
+                  ? `Free gives you ${analysesLimit} reports and ${clipsLimit} clips a week, reset every Monday. Pro is 15 reports and 20 clips a month.`
+                  : "Pro is 15 reports and 20 clips a month, on streams up to 8 hours long."}
               </p>
-            ) : (
-              <>
-                <p className="text-sm text-muted">
-                  You are on the {proPlus ? "Pro Plus" : "Pro"} plan. Thank you for your support.
-                </p>
+              <button
+                type="button"
+                className="btn btn-blue"
+                onClick={() => {
+                  setUpgradeInitialTier("pro");
+                  setUpgradeOpen(true);
+                }}
+              >
+                Go Pro · $14.99/month
+              </button>
+            </>
+          ) : isCancelled ? (
+            <p>
+              Your subscription is cancelled.
+              {subscriptionExpiresAt && (
+                <>
+                  {" "}
+                  Pro stays on until{" "}
+                  <b>
+                    {new Date(subscriptionExpiresAt).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </b>
+                  .
+                </>
+              )}
+            </p>
+          ) : (
+            <>
+              <p>You&apos;re on {proPlus ? "Pro Plus" : "Pro"}. Thanks for backing LevlCast.</p>
 
-                {/* Pro → Pro Plus upgrade CTA. Hide for users already on Pro Plus
-                    and for non-Stripe subscribers (RevenueCat/PayPal users have
-                    to switch tiers in their respective billing portals). */}
-                {!proPlus && hasStripeSubscription && (
-                  <button
-                    onClick={() => { setUpgradeInitialTier("pro_plus"); setUpgradeOpen(true); }}
-                    className="text-sm font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-85"
-                    style={{
-                      background: "linear-gradient(135deg, rgb(255,88,0), rgb(242,97,121))",
-                      color: "#fff",
-                    }}
-                  >
-                    Upgrade to Pro Plus · $29.99/month
+              {/* Pro to Pro Plus. Only for Stripe subscribers: App Store and
+                  PayPal plans change tier in their own billing. */}
+              {!proPlus && hasStripeSubscription && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setUpgradeInitialTier("pro_plus");
+                    setUpgradeOpen(true);
+                  }}
+                >
+                  Go Pro Plus · $29.99/month
+                </button>
+              )}
+
+              {hasStripeSubscription && (
+                <>
+                  {portalError && <p className="ac-err">{portalError}</p>}
+                  <button type="button" className="ac-link" onClick={openPortal} disabled={portalLoading}>
+                    {portalLoading && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}
+                    {portalLoading ? "Opening..." : "Manage subscription"}
                   </button>
-                )}
+                </>
+              )}
 
-                {/* Stripe subscribers Customer Portal */}
-                {hasStripeSubscription && (
-                  <>
-                    {portalError && <p className="text-xs text-red-400">{portalError}</p>}
-                    <button
-                      onClick={openPortal}
-                      disabled={portalLoading}
-                      className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground disabled:opacity-50 transition-colors underline underline-offset-2"
-                    >
-                      {portalLoading && <Loader2 size={13} className="animate-spin" />}
-                      {portalLoading ? "Opening..." : "Manage subscription"}
-                    </button>
-                  </>
-                )}
+              {hasPaypalSubscription && !hasStripeSubscription && (
+                <p>
+                  You subscribed with PayPal. To cancel, go to <b>paypal.com → Subscriptions → LevlCast</b>.
+                </p>
+              )}
 
-                {/* PayPal subscribers manual instructions */}
-                {hasPaypalSubscription && !hasStripeSubscription && (
-                  <p className="text-sm text-muted">
-                    You subscribed via PayPal. To cancel, go to{" "}
-                    <strong className="text-foreground">paypal.com → Subscriptions → LevlCast</strong>.
-                  </p>
-                )}
-
-                {/* Mobile (RevenueCat) subscribers */}
-                {!hasStripeSubscription && !hasPaypalSubscription && (
-                  <p className="text-sm text-muted">
-                    You subscribed via the iOS app. To cancel, go to{" "}
-                    <strong className="text-foreground">iOS Settings → Apple ID → Subscriptions → LevlCast</strong>.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        )}
+              {!hasStripeSubscription && !hasPaypalSubscription && (
+                <p>
+                  You subscribed in the iPhone app. To cancel, go to{" "}
+                  <b>Settings → your name → Subscriptions → LevlCast</b>.
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <UpgradeModal

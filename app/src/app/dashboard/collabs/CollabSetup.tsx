@@ -105,17 +105,6 @@ export function CollabSetup({
 
   return (
     <div className="card card-pad">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
-        <div className="col" style={{ gap: 4 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em", margin: 0, color: "var(--ink)" }}>
-            Collab Finder
-          </h3>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-3)", lineHeight: 1.5 }}>
-            Get discovered by other streamers on LevlCast. Both sides have to accept before any contact info is shared.
-          </p>
-        </div>
-      </div>
-
       <div style={{ display: "grid", gap: 18 }}>
         {/* Discord handle */}
         <div className="col" style={{ gap: 6 }}>

@@ -10,15 +10,11 @@ import WelcomeModal from "@/components/dashboard/welcome-modal";
 import PendingVodHandler from "@/components/dashboard/pending-vod-handler";
 import PendingCheckoutHandler from "@/components/dashboard/pending-checkout-handler";
 import { UnpostedClipsCard } from "@/components/dashboard/unposted-clips-card";
-import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
-import type { CoachingArcData } from "@/lib/coaching-arc";
-import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { OnboardingHero } from "@/components/dashboard/onboarding-hero";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
-import { PreStreamFocus } from "@/components/dashboard/pre-stream-focus";
 import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
-import { RankBadge } from "@/components/dashboard/rank-badge";
+import { RankPanel } from "@/components/dashboard/rank-panel";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -93,13 +89,9 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, plan, subscription_expires_at, coaching_arc, rank_points")
+    .select("twitch_display_name, rank_points")
     .eq("id", user.id)
     .single();
-
-  const isPro =
-    profile?.plan === "pro" &&
-    !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
 
   // Latest analyzed VODs — most recent first, up to 12 for trend
   const { data: recentVods } = await supabase
@@ -113,8 +105,6 @@ export default async function DashboardPage() {
 
   const totalAnalyzed = recentVods?.length ?? 0;
   const latest = recentVods?.[0];
-  const latestScore = (latest?.coach_report as { overall_score?: number } | null)?.overall_score ?? null;
-  const previousScore = (recentVods?.[1]?.coach_report as { overall_score?: number } | null)?.overall_score ?? null;
   const latestRecommendation = (latest?.coach_report as { recommendation?: string } | null)?.recommendation ?? null;
   const latestPeaks = Array.isArray(latest?.peak_data) ? latest.peak_data.length : 0;
 
@@ -142,53 +132,6 @@ export default async function DashboardPage() {
     .maybeSingle();
   const isYouTubeConnected = !!ytConnection;
 
-  // Clips this month
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
-  const { count: clipsThisMonth } = await supabase
-    .from("clips")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .gte("created_at", monthStart.toISOString());
-
-  // Clip performance data — aggregate views by category
-  const { data: perfClips } = await supabase
-    .from("clips")
-    .select("peak_category, views_count, follows_gained")
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .not("views_count", "is", null);
-
-  type PerfEntry = { views: number; follows: number; count: number };
-  const perfByCategory: Record<string, PerfEntry> = {};
-  for (const c of perfClips ?? []) {
-    const cat = (c.peak_category as string) || "other";
-    if (!perfByCategory[cat]) perfByCategory[cat] = { views: 0, follows: 0, count: 0 };
-    perfByCategory[cat].views += (c.views_count as number) ?? 0;
-    perfByCategory[cat].follows += (c.follows_gained as number) ?? 0;
-    perfByCategory[cat].count++;
-  }
-  const topPerfCategory = Object.entries(perfByCategory).sort((a, b) => b[1].views - a[1].views)[0] ?? null;
-  const totalTrackedViews = Object.values(perfByCategory).reduce((s, e) => s + e.views, 0);
-
-  // Follower snapshots — last 35 days for growth brief
-  const thirtyFiveDaysAgo = new Date();
-  thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
-  const { data: followerSnapshots } = await supabase
-    .from("follower_snapshots")
-    .select("follower_count, snapped_at")
-    .eq("user_id", user.id)
-    .eq("platform", "twitch")
-    .gte("snapped_at", thirtyFiveDaysAgo.toISOString())
-    .order("snapped_at", { ascending: true });
-
-  const streamDates = (recentVods ?? [])
-    .map((v) => (v.stream_date ?? "").slice(0, 10))
-    .filter(Boolean);
-
   const displayName = profile?.twitch_display_name || "Streamer";
 
   // ─── Empty state — no streams analyzed yet ─────────────
@@ -211,39 +154,17 @@ export default async function DashboardPage() {
         <PendingVodHandler />
         <VodStatusPoller hasProcessing={hasInProgressAnalysis} />
 
-        <div className="page-head">
-          <span className="page-eyebrow">Today&apos;s focus</span>
-          <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
-          <p className="page-sub">
-            {hasInProgressAnalysis
-              ? "Your first report is being made right now."
-              : "Let's analyze your first stream."}
-          </p>
+        <div className="hm-hello">
+          <h1 className="page-title">Hey, {displayName}.</h1>
         </div>
 
         <AdminReplyCard />
-        <OnboardingHero name={displayName} />
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-          {[
-            { n: "01", t: "Sync from Twitch", b: "One click. We pull your VOD library, read-only, no setup." },
-            { n: "02", t: "Every minute scored", b: "Stream rated on energy, engagement, consistency, and content." },
-            { n: "03", t: "Get your coach report", b: "Stream story, priority fix, 3 strengths, growth-killers flagged with quotes." },
-          ].map((s) => (
-            <div key={s.n} className="card card-pad">
-              <span className="mono-label">{s.n}</span>
-              <h3 style={{ fontSize: 14, marginTop: 8, marginBottom: 4, color: "var(--ink)" }}>{s.t}</h3>
-              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.55, margin: 0 }}>{s.b}</p>
-            </div>
-          ))}
-        </div>
+        <OnboardingHero />
       </>
     );
   }
 
   // ─── Populated state ───────────────────────────────────
-  const delta = latestScore !== null && previousScore !== null ? latestScore - previousScore : null;
-
   // Match history and this week's league. League tables are closed to the
   // browser, so they are read through the admin client; the helpers only
   // return public fields. Every read here fails soft: a league problem
@@ -257,8 +178,8 @@ export default async function DashboardPage() {
       .eq("status", "ready"),
     supabase.from("profiles").select("league_opt_out").eq("id", user.id).maybeSingle(),
     getLeagueView(admin, user.id).catch(() => null),
-    // Enough settled weeks that any payout inside the six rows shown below
-    // is there; the newest one doubles as "last week" on the league card.
+    // Enough settled weeks that any payout inside the rows shown below is
+    // there; the newest one doubles as "last week" on the league card.
     getLeagueResults(admin, user.id, { limit: 6 }).catch(() => []),
   ]);
 
@@ -267,199 +188,102 @@ export default async function DashboardPage() {
   const leagueOptOut = Boolean((leagueSettings as { league_opt_out?: boolean } | null)?.league_opt_out);
   const lastWeekResult =
     recentResults[0]?.weekStart === previousWeekStart(currentWeekStart()) ? recentResults[0] : null;
+  const latestDelta = (latest?.rank_delta as number | null) ?? null;
+  // A placement records the whole starting rating as its delta, which
+  // isn't a win or a loss.
+  const latestResult = latestDelta !== null && Math.abs(latestDelta) < 200 ? latestDelta : null;
+  // What a win usually pays this streamer, for "about 3 wins" under the bar.
+  const recentWins = (recentVods ?? [])
+    .map((v) => v.rank_delta as number | null)
+    .filter((d): d is number => d !== null && d > 0 && d < 200);
+  const avgWin = recentWins.length
+    ? Math.round(recentWins.reduce((a, b) => a + b, 0) / recentWins.length)
+    : null;
 
+  /* The dashboard used to stack about ten cards: a greeting, the rank and
+     goal, the league, unposted clips, the coaching arc, a follower brief, a
+     row of totals, a Pro pitch and the match history, with Pro-only extras
+     on top. Most of it was reference, and the page read as a column of
+     equally loud things. It's four now: where you stand and what to fix,
+     who you're racing, your last few matches, and clips waiting to go out.
+     The arc and the follower brief live on the Matches page; the plan and
+     the upgrade are the chip in the bar. */
   return (
     <>
-      <WelcomeModal name={displayName} />
       <PendingCheckoutHandler />
       <PendingVodHandler />
 
-      {/* Header strip */}
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div className="page-head">
-          <span className="page-eyebrow">Today&apos;s focus</span>
-          <h1 className="page-title">Hey, <span className="grad-text">{displayName}</span>.</h1>
-          <p className="page-sub">One thing to fix before you go live again.</p>
-        </div>
-        {/* The "Fresh Streamer" chip is gone. It was a second, older title
-            system derived straight from the last score, so a user could be
-            Bronze III on the ladder and "Fresh Streamer" in the header at
-            the same time. Two competing names for how someone is doing is
-            worse than either one alone, and the ladder is the one we mean. */}
-        <div className="row gap-md">
-          <Link href="/dashboard/vods" className="btn btn-blue"><Icons.Twitch /> Sync streams</Link>
-        </div>
+      <div className="hm-hello">
+        <h1 className="page-title">Hey, {displayName}.</h1>
+        <Link href="/dashboard/vods" className="btn btn-ghost">
+          <Icons.Twitch /> Analyze a stream
+        </Link>
       </div>
 
       <OnboardingChecklist />
       <AdminReplyCard />
-      {isPro && <PreStreamFocus arc={(profile?.coaching_arc as CoachingArcData | null) ?? null} />}
 
-      {/* Hero focus card */}
-      <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 32, padding: 28, alignItems: "center", position: "relative" }}>
-          {/* The radial glow that used to sit here is gone. It is the same
-              effect we pulled off the landing hero for the same reason: a
-              coloured haze behind a card adds atmosphere and no information,
-              and it is the first thing that reads as generated. */}
-          {/* The score ring used to sit here under the rank. It's gone.
-              A big red 14 directly beneath a rank is the exact verdict the
-              ladder exists to replace, and showing both meant the first
-              thing a streamer saw was their standing and the second was a
-              failing grade. The rank answers "how am I doing" and the
-              report answers "what do I fix", which left the ring saying
-              something neither of them needed. The score still drives
-              everything underneath; it just isn't the greeting. */}
-          <RankBadge
-            points={(profile?.rank_points as number | null) ?? null}
-            delta={(latest?.rank_delta as number | null) ?? null}
-            size="lg"
-          />
-          <div className="col gap-sm" style={{ position: "relative" }}>
-            <span className="mono-label">Next session goal</span>
-            <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: 0, color: "var(--ink)" }}>
-              {latestRecommendation || "Open your latest report to see what to fix."}
-            </h2>
-            <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
-              From your latest stream: <b style={{ color: "var(--ink)" }}>{latest?.title || "your most recent broadcast"}</b>.
-            </p>
-            <div className="row gap-sm" style={{ marginTop: 6, flexWrap: "wrap" }}>
-              {isPro && delta !== null && (
-                <span className={`chip ${delta >= 0 ? "g" : "r"}`}>
-                  <Icons.Trend /> {delta >= 0 ? "+" : ""}{delta} vs previous
-                </span>
-              )}
-              {latestPeaks > 0 && (
-                <span className="chip b">{latestPeaks} moments to clip</span>
-              )}
-            </div>
-          </div>
-          <div className="col gap-sm" style={{ position: "relative", minWidth: 200 }}>
-            <Link href={`/dashboard/vods/${latest?.id}`} className="btn btn-blue">Open full report <Icons.Arrow /></Link>
-            <Link href="/dashboard/clips" className="btn btn-ghost">See clips <Icons.Play /></Link>
-            <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", textAlign: "center", marginTop: 4, letterSpacing: ".04em" }}>
-              {formatDate(latest?.analyzed_at ?? latest?.created_at ?? null)} · {formatDuration(latest?.duration_seconds ?? null)}
+      <section className="hm-top">
+        <RankPanel points={(profile?.rank_points as number | null) ?? null} delta={latestDelta} avgWin={avgWin} />
+
+        <div className="hm-last">
+          <p className="hm-k">
+            Last stream
+            <span>
+              {formatDate(latest?.stream_date ?? latest?.analyzed_at ?? latest?.created_at ?? null)} ·{" "}
+              {formatDuration(latest?.duration_seconds ?? null)}
             </span>
+          </p>
+          <p className="hm-last-title">{latest?.title || "Your most recent broadcast"}</p>
+          {latestResult !== null && (
+            <p className="hm-result" data-r={latestResult >= 0 ? "win" : "loss"}>
+              <b>{latestResult >= 0 ? "Win" : "Loss"}</b>
+              <span>{latestResult >= 0 ? `+${latestResult}` : `−${Math.abs(latestResult)}`}</span>
+            </p>
+          )}
+          <p className="hm-k hm-k-fix">Your fix for next stream</p>
+          <p className="hm-fix">{latestRecommendation || "Open the report to see what to work on next."}</p>
+          <div className="hm-actions">
+            <Link href={`/dashboard/vods/${latest?.id}`} className="btn btn-blue">
+              Open the report <Icons.Arrow />
+            </Link>
+            {latestPeaks > 0 && (
+              <Link href="/dashboard/clips" className="btn btn-ghost">
+                {latestPeaks} {latestPeaks === 1 ? "moment" : "moments"} to clip
+              </Link>
+            )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* The league sits directly under the rank because it is the other
-          half of the same question: the badge says where you stand, the
-          league says who you are racing to get further. */}
-      {!leagueOptOut && <LeagueCard view={leagueView} lastResult={lastWeekResult} />}
+      {/* The league sits right under the rank: the rank says where you
+          stand, the league says who you're racing to get further. */}
+      {!leagueOptOut && (
+        <section className="hm-sec">
+          <LeagueCard view={leagueView} lastResult={lastWeekResult} />
+        </section>
+      )}
 
-      {/* Unposted clips nudge */}
+      <section className="hm-sec">
+        <div className="hm-head">
+          <h2>Recent matches</h2>
+          {matchSummary.games > 0 && (
+            <span className="hm-record">
+              {recordLabel(matchSummary)} · last {matchSummary.games}
+            </span>
+          )}
+          <Link href="/dashboard/history" className="hm-more">
+            All matches <Icons.Arrow />
+          </Link>
+        </div>
+        <MatchHistoryList matches={matches.slice(0, 4)} />
+      </section>
+
       {unpostedClips.length > 0 && (
-        <UnpostedClipsCard clips={unpostedClips} isYouTubeConnected={isYouTubeConnected} />
+        <section className="hm-sec">
+          <UnpostedClipsCard clips={unpostedClips} isYouTubeConnected={isYouTubeConnected} />
+        </section>
       )}
-
-      {/* Coaching Arc — Pro-only. The whole point of the arc is cross-stream
-          longitudinal coaching, which is the value we're selling on the paywall.
-          Free users see locked teasers inside their report instead. */}
-      {isPro && profile?.coaching_arc && (
-        <CoachingArcCard
-          arc={profile.coaching_arc as CoachingArcData}
-          // Live ladder data, keyed by VOD, so the arc can show the climb
-          // through tiers instead of a row of raw scores.
-          rankHistory={(recentVods ?? [])
-            .filter((v) => typeof v.rank_points_after === "number")
-            .map((v) => ({ vod_id: v.id as string, points: v.rank_points_after as number }))}
-        />
-      )}
-
-      {/* Reference row.
-          Follower trend and the three summary numbers used to be two more
-          full-width bands in a stack of nine, so the page read as a column
-          of equally important things, which means nothing looked important.
-          These are the two blocks you glance at rather than act on, so they
-          share one row and the page gets its first change of rhythm. On a
-          free account the upgrade card still needs the width, so the split
-          only applies to Pro. */}
-      <div className="dash-ref-row" data-two={isPro && (followerSnapshots?.length ?? 0) > 0 ? "yes" : "no"}>
-        {(followerSnapshots?.length ?? 0) > 0 && (
-          <FollowerBriefCard
-            snapshots={followerSnapshots ?? []}
-            streamDates={streamDates}
-          />
-        )}
-
-      <div style={{ display: "grid", gridTemplateColumns: isPro ? "1fr" : "1fr 1fr", gap: 20 }}>
-        {/* Stats */}
-        {/* Metric strip.
-            These three numbers used to be stacked vertically inside one
-            card, so each took a full-width band and the page grew a tall
-            sparse column of almost nothing. Three numbers read faster side
-            by side than they ever do stacked, and reclaiming two bands
-            pulls the recent-streams table up where it can be seen. */}
-        <div className="card card-pad dash-metrics">
-          <div className="dash-metric">
-            <span className="mono-label">Streams analyzed</span>
-            <span className="dash-metric-n">{totalAnalyzed}</span>
-            <span className="dash-metric-sub">all time</span>
-          </div>
-          <div className="dash-metric">
-            <span className="mono-label">Clips</span>
-            <span className="dash-metric-n" style={{ color: "var(--green)" }}>{clipsThisMonth ?? 0}</span>
-            <span className="dash-metric-sub">this month</span>
-          </div>
-          <div className="dash-metric">
-            <span className="mono-label">Best category</span>
-            {totalTrackedViews > 0 && topPerfCategory ? (
-              <>
-                <span className="dash-metric-n dash-metric-word">
-                  {topPerfCategory[0] === "funny" ? "Comedy" : topPerfCategory[0]}
-                </span>
-                <span className="dash-metric-sub">
-                  {topPerfCategory[1].views.toLocaleString()} views
-                  {topPerfCategory[1].follows > 0 && ` · +${topPerfCategory[1].follows} follows`}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="dash-metric-n dash-metric-word dash-metric-empty">&mdash;</span>
-                <span className="dash-metric-sub">post a clip to start tracking</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Upgrade card (only if Free) */}
-        {!isPro && (
-          <div className="upgrade" style={{ padding: 20 }}>
-            <div className="eb">Pro</div>
-            <h4 style={{ fontSize: 18 }}>Get a report on every stream.</h4>
-            <p>15 VOD analyses + 20 clips a month. $14.99/mo or $149/yr, cancel anytime.</p>
-            <Link href="/dashboard/settings" className="btn btn-blue" style={{ padding: "8px 14px", fontSize: 12.5 }}>
-              Upgrade to Pro <Icons.Arrow />
-            </Link>
-          </div>
-        )}
-      </div>
-      </div>
-
-      {/* Match history.
-          This was a "Recent streams" table with every stream's raw score in
-          a coloured pill, which put a red 31 beside each row on a page that
-          had otherwise stopped leading with the score. The rows now say
-          what each stream did to the ladder, win or loss and by how much;
-          the score is one click away in the report. */}
-      <div className="card">
-        <div className="card-head">
-          <h3>Match history</h3>
-          <div className="right">
-            {matchSummary.games > 0 && (
-              <span className="label-mono">
-                {recordLabel(matchSummary)} · last {matchSummary.games}
-              </span>
-            )}
-            <Link href="/dashboard/history" className="btn-link mono" style={{ fontSize: 11, letterSpacing: ".06em" }}>
-              SEE ALL <Icons.Arrow />
-            </Link>
-          </div>
-        </div>
-        <MatchHistoryList matches={matches.slice(0, 6)} />
-      </div>
     </>
   );
 }

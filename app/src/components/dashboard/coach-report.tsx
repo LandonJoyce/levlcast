@@ -30,13 +30,13 @@
 
 import type { CoachReport } from "@/lib/analyze";
 
-const INK = "#E9EDF3";
-const INK_2 = "#97A2B4";
-const INK_3 = "#667286";
-const LINE = "rgba(255,255,255,0.075)";
-const POS = "#86C97A";
-const NEG = "#E08078";
-const ACCENT = "#FF7A3D";
+const INK = "var(--ink)";
+const INK_2 = "rgb(200, 190, 188)";
+const INK_3 = "var(--ink-4)";
+const LINE = "var(--line)";
+const POS = "var(--green)";
+const NEG = "var(--danger)";
+const MONO = "var(--mono)";
 
 const PROSE: React.CSSProperties = {
   fontSize: 14.5,
@@ -50,9 +50,9 @@ function Label({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-        fontSize: 10,
-        letterSpacing: "0.18em",
+        fontFamily: MONO,
+        fontSize: 11,
+        letterSpacing: "0.14em",
         textTransform: "uppercase",
         color: INK_3,
         marginBottom: 14,
@@ -72,13 +72,15 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-/** A timestamp that opens the VOD at that moment. The only orange on the page. */
+/** A timestamp that opens the VOD at that moment. */
 function Stamp({ time, vodId }: { time: string; vodId?: string }) {
   const style: React.CSSProperties = {
-    fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+    fontFamily: MONO,
     fontSize: 12,
-    color: ACCENT,
-    textDecoration: "none",
+    color: INK,
+    textDecoration: "underline",
+    textDecorationColor: "var(--line-2)",
+    textUnderlineOffset: 3,
     whiteSpace: "nowrap",
   };
   if (!vodId) return <span style={style}>{time}</span>;
@@ -130,7 +132,7 @@ function Items({
   tone: "good" | "fix";
   vodId?: string;
 }) {
-  const dot = tone === "good" ? POS : "#D9A441";
+  const dot = tone === "good" ? POS : "var(--warn)";
   return (
     <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 18 }}>
       {items.map((raw, i) => {
@@ -299,7 +301,7 @@ export function CoachReport({
                 position: "relative",
                 height: 26,
                 borderRadius: 4,
-                background: "rgba(255,255,255,0.05)",
+                background: "rgba(255, 238, 230, 0.06)",
                 overflow: "hidden",
               }}
             >
@@ -318,7 +320,7 @@ export function CoachReport({
                       width: `${width}%`,
                       top: 0,
                       bottom: 0,
-                      background: "rgba(224,128,120,0.5)",
+                      background: "rgba(248, 113, 113, 0.5)",
                     }}
                   />
                 );
@@ -329,7 +331,7 @@ export function CoachReport({
                 display: "flex",
                 justifyContent: "space-between",
                 marginTop: 8,
-                fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+                fontFamily: MONO,
                 fontSize: 11,
                 color: INK_3,
               }}
@@ -357,7 +359,7 @@ export function CoachReport({
                   <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <span
                       style={{
-                        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+                        fontFamily: MONO,
                         fontSize: 11,
                         color: p.current ? INK : INK_3,
                         fontWeight: p.current ? 700 : 400,
@@ -369,7 +371,7 @@ export function CoachReport({
                       style={{
                         width: "100%",
                         height: `${h}%`,
-                        background: p.current ? INK : "rgba(255,255,255,0.14)",
+                        background: p.current ? INK : "rgba(255, 238, 230, 0.16)",
                         borderRadius: 3,
                       }}
                     />

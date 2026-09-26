@@ -66,7 +66,7 @@ function XIcon({ size = 13 }: { size?: number }) {
   );
 }
 
-export function ShareReportButton({ vodId, existingToken, score, recommendation, variant = "compact" }: Props) {
+export function ShareReportButton({ vodId, existingToken, score, recommendation }: Props) {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState<string | null>(
@@ -112,126 +112,36 @@ export function ShareReportButton({ vodId, existingToken, score, recommendation,
     }
   }
 
-  const isProminent = variant === "prominent";
-
-  // ── Initial state: no token yet ────────────────────────────────────
+  // ── No link yet ─────────────────────────────────────────────────
   if (!url) {
-    if (isProminent) {
-      return (
-        <button
-          onClick={generate}
-          disabled={loading}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "10px 18px", borderRadius: 10,
-            background: "linear-gradient(135deg, var(--blue), var(--green))",
-            color: "#fff", fontSize: 13, fontWeight: 700, letterSpacing: "0.01em",
-            border: "none", cursor: loading ? "wait" : "pointer",
-            opacity: loading ? 0.7 : 1,
-            boxShadow: "0 4px 16px -4px color-mix(in oklab, var(--blue) 50%, transparent)",
-          }}
-        >
-          <Share2 size={14} />
-          {loading ? "Generating link..." : "Share this report"}
-        </button>
-      );
-    }
     return (
-      <button
-        onClick={generate}
-        disabled={loading}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          padding: "10px 18px", borderRadius: 10,
-          background: "linear-gradient(135deg, rgb(255,88,0), rgb(242,97,121))",
-          color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: "0.01em",
-          border: "none", cursor: loading ? "wait" : "pointer",
-          opacity: loading ? 0.7 : 1,
-          boxShadow: "0 4px 16px -4px rgba(255,88,0,0.4)",
-          transition: "transform 120ms ease",
-        }}
-        onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-        onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      >
-        <Share2 size={15} />
-        {loading ? "Generating..." : "Share Report"}
+      <button type="button" className="btn btn-ghost" onClick={generate} disabled={loading}>
+        <Share2 size={14} aria-hidden="true" />
+        {loading ? "Making a link..." : "Share report"}
       </button>
     );
   }
 
-  // ── Active state: token exists ─────────────────────────────────────
-  if (isProminent) {
-    return (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-        <button
-          onClick={shareToX}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "9px 16px", borderRadius: 10,
-            background: "#000", color: "#fff",
-            fontSize: 13, fontWeight: 700,
-            border: "1px solid rgba(255,255,255,0.18)", cursor: "pointer",
-          }}
-        >
-          <XIcon size={13} /> Post to X
-        </button>
-        <button
-          onClick={copy}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "9px 14px", borderRadius: 10,
-            background: copied ? "color-mix(in oklab, var(--green) 18%, var(--surface-2))" : "var(--surface-2)",
-            color: copied ? "var(--green)" : "var(--ink)",
-            fontSize: 13, fontWeight: 600,
-            border: "1px solid var(--line)", cursor: "pointer",
-            transition: "all 150ms",
-          }}
-        >
-          {copied ? <Check size={13} /> : <LinkIcon size={13} />}
-          {copied ? "Copied" : "Copy link"}
-        </button>
-        <button
-          onClick={revoke}
-          disabled={revoking}
-          title="Revoke link"
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "9px 12px", borderRadius: 10,
-            background: "transparent", color: "var(--ink-3)",
-            fontSize: 12, border: "1px solid var(--line)", cursor: "pointer",
-            opacity: revoking ? 0.5 : 1,
-          }}
-        >
-          <Trash2 size={12} />
-        </button>
-      </div>
-    );
-  }
-
-  // Compact (used on /vods/[id]) — link already exists, copy on click
+  // ── Link exists: post it, copy it, or turn it off ─────────────────
   return (
-    <button
-      onClick={copy}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 8,
-        padding: "10px 18px", borderRadius: 10,
-        background: copied
-          ? "linear-gradient(135deg, #22c55e, #16a34a)"
-          : "linear-gradient(135deg, rgb(255,88,0), rgb(242,97,121))",
-        color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: "0.01em",
-        border: "none", cursor: "pointer",
-        boxShadow: copied
-          ? "0 4px 16px -4px rgba(34,197,94,0.4)"
-          : "0 4px 16px -4px rgba(255,88,0,0.4)",
-        transition: "transform 120ms ease, background 200ms",
-      }}
-      onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-      onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-    >
-      {copied ? <Check size={15} /> : <Share2 size={15} />}
-      {copied ? "Copied!" : "Share Report"}
-    </button>
+    <div className="share-row">
+      <button type="button" className="btn btn-ghost" onClick={shareToX}>
+        <XIcon size={12} /> Post to X
+      </button>
+      <button type="button" className="btn btn-ghost" data-done={copied ? "yes" : undefined} onClick={copy}>
+        {copied ? <Check size={13} aria-hidden="true" /> : <LinkIcon size={13} aria-hidden="true" />}
+        {copied ? "Copied" : "Copy link"}
+      </button>
+      <button
+        type="button"
+        className="btn btn-ghost share-off"
+        onClick={revoke}
+        disabled={revoking}
+        title="Turn off this link"
+        aria-label="Turn off this link"
+      >
+        <Trash2 size={13} aria-hidden="true" />
+      </button>
+    </div>
   );
 }

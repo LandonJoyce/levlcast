@@ -34,21 +34,21 @@ export function LeagueSection({ optedOut }: { optedOut: boolean }) {
   }
 
   return (
-    <div className="card">
-      <div className="card-head">
-        <h3>Weekly leagues</h3>
-        <span className={`chip ${inLeagues ? "g" : ""}`}>{inLeagues ? "on" : "off"}</span>
+    <section className="hm-sec">
+      <div className="hm-head">
+        <h2>Weekly leagues</h2>
+        <span className="hm-record">{inLeagues ? "On" : "Off"}</span>
       </div>
-      <div className="row" style={{ padding: "16px 22px 18px", gap: 18, alignItems: "flex-start" }}>
-        <div className="col" style={{ flex: 1, gap: 6 }}>
-          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--ink)" }}>
+      <div className="ac-row">
+        <div>
+          <p className="ac-row-main">
             Race the streamers nearest your rank each week. Top three on Monday earn bonus rank points.
           </p>
-          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: "var(--ink-3)" }}>
+          <p className="ac-row-sub">
             Your league sees your Twitch name, avatar, rank and points gained this week. Never your coach
-            score. Turning this off removes you from this week&apos;s league right away.
+            score. Turning this off takes you out of this week&apos;s league right away.
           </p>
-          {error && <p style={{ margin: 0, fontSize: 12.5, color: "var(--danger)" }}>{error}</p>}
+          {error && <p className="ac-err">{error}</p>}
         </div>
         <label className="lg-switch">
           <input
@@ -63,6 +63,6 @@ export function LeagueSection({ optedOut }: { optedOut: boolean }) {
           <span className="lg-switch-track" aria-hidden="true" />
         </label>
       </div>
-    </div>
+    </section>
   );
 }

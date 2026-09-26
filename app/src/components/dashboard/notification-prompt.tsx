@@ -55,36 +55,14 @@ export function NotificationPrompt() {
   if (!show) return null;
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      gap: 12, padding: "10px 16px",
-      background: "color-mix(in oklab, var(--blue-soft) 40%, var(--surface-2))",
-      border: "1px solid color-mix(in oklab, var(--blue) 25%, var(--line))",
-      borderRadius: 10, marginBottom: 16,
-      flexWrap: "wrap",
-    }}>
-      <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-        Get notified in your browser when your stream analysis is done.
-      </span>
-      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        <button
-          onClick={dismiss}
-          style={{ fontSize: 12, color: "var(--ink-3)", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
-        >
-          Not now
+    <div className="np">
+      <p>Want a ping in your browser when the report is done?</p>
+      <div className="np-actions">
+        <button type="button" className="np-no" onClick={dismiss}>
+          No thanks
         </button>
-        <button
-          onClick={enable}
-          disabled={loading}
-          style={{
-            fontSize: 12, fontWeight: 600, color: "var(--blue)",
-            background: "color-mix(in oklab, var(--blue) 12%, transparent)",
-            border: "1px solid color-mix(in oklab, var(--blue) 30%, var(--line))",
-            borderRadius: 6, cursor: "pointer", padding: "4px 12px",
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          {loading ? "Enabling…" : "Enable notifications"}
+        <button type="button" className="btn btn-ghost gen-clip" onClick={enable} disabled={loading}>
+          {loading ? "Turning on..." : "Turn on"}
         </button>
       </div>
     </div>

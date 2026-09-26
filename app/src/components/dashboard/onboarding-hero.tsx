@@ -1,70 +1,49 @@
 /**
- * OnboardingHero — the centerpiece a new user sees on the dashboard
- * before their first coach report exists.
+ * What a new streamer sees on the dashboard before their first report.
  *
- * Three states, picked by which best matches the user's data:
- *   1. "analyzing"  — auth callback's auto-analyze is in flight. Live
- *                     progress card + the parent page polls every 5s
- *                     and reloads when status flips to "ready".
- *   2. "no-streams" — Twitch returned zero VODs (new streamer or all
- *                     VODs aged out). Sample report link + a friendly
- *                     "after your next stream, hit Sync" message.
- *   3. "synced"     — VODs exist but none are running. Falls back to
- *                     the classic "Pick a stream" CTA so the user
- *                     can still kick analysis off manually.
+ * Left: the ladder they're about to land on, every tier's emblem, with
+ * "Unranked" where their rank will be. The first report is a placement,
+ * and showing where it could put them is the reason to run it.
  *
- * Stays a server component so it can read fresh state from Supabase
- * on every refresh. The polling on the parent page is what makes the
- * UI feel alive — no client websocket needed.
+ * Right, one of three:
+ *   analyzing   The first analysis is running (often queued at sign-in).
+ *               The page polls and swaps to the real dashboard when done.
+ *   no-streams  Twitch has no saved broadcasts. Usually VOD saving is off,
+ *               which is Twitch's default, so this says exactly where the
+ *               setting is instead of "come back later".
+ *   synced      Streams are in. The newest few are listed with Analyze
+ *               right there, so the first report is one click away.
  */
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { TIERS } from "@/lib/rank";
+import { getUserUsage } from "@/lib/limits";
+import { AnalyzeButton } from "./analyze-button";
 
-interface VodInProgress {
-  id: string;
-  title: string | null;
-  duration_seconds: number | null;
-  status: string;
-  created_at: string;
+function formatDate(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-interface Props {
-  /** Display name from profile. Used in the greeting. */
-  name: string;
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return "";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-const Icons = {
-  Twitch: () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
-      <path d="M4 5l2-3h14v12l-5 5h-4l-3 3H6v-3H2V8l2-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-      <path d="M11 8v5M16 8v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-    </svg>
-  ),
-  Arrow: () => (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none">
-      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-  Check: () => (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none">
-      <path d="M4 12l5 5L20 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-};
-
-export async function OnboardingHero({ name }: Props) {
+export async function OnboardingHero() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Two cheap queries: in-progress VOD (if any) and total VOD count.
-  // Total count drives the "no streams found" branch; the in-progress
-  // row drives the "analyzing" branch.
-  const [inProgressResult, countResult] = await Promise.all([
+  const [{ data: inProgress }, { data: waiting, count }, usage] = await Promise.all([
     supabase
       .from("vods")
-      .select("id, title, duration_seconds, status, created_at")
+      .select("id, title, duration_seconds, status")
       .eq("user_id", user.id)
       .in("status", ["transcribing", "analyzing"])
       .order("created_at", { ascending: false })
@@ -72,326 +51,119 @@ export async function OnboardingHero({ name }: Props) {
       .maybeSingle(),
     supabase
       .from("vods")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id),
+      .select("id, title, duration_seconds, status, stream_date, created_at", { count: "exact" })
+      .eq("user_id", user.id)
+      .in("status", ["pending", "failed"])
+      .order("stream_date", { ascending: false })
+      .limit(4),
+    getUserUsage(user.id, supabase),
   ]);
 
-  const inProgress = inProgressResult.data as VodInProgress | null;
-  const totalVods = countResult.count ?? 0;
-
-  if (inProgress) {
-    return <AnalyzingState vod={inProgress} name={name} />;
-  }
-
-  if (totalVods === 0) {
-    return <NoStreamsState name={name} />;
-  }
-
-  return <SyncedState name={name} />;
-}
-
-/**
- * Live progress card — shown while the auto-queued first analysis runs.
- * Parent page is responsible for polling; this component just renders the
- * current snapshot. Pulse animation telegraphs that something is happening
- * even between page refreshes.
- */
-function AnalyzingState({ vod, name }: { vod: VodInProgress; name: string }) {
-  const minutes = vod.duration_seconds ? Math.round(vod.duration_seconds / 60) : null;
-  const title = vod.title ?? "your last stream";
-  const isTranscribing = vod.status === "transcribing";
+  const streams = waiting ?? [];
+  const total = count ?? streams.length;
 
   return (
-    <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "radial-gradient(600px 280px at 50% 0%, color-mix(in oklab, var(--blue) 18%, transparent), transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
-
-      <div style={{ padding: "40px 32px 36px", position: "relative" }}>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "5px 12px",
-            borderRadius: 999,
-            background: "color-mix(in oklab, var(--blue-soft) 50%, transparent)",
-            border: "1px solid color-mix(in oklab, var(--blue) 35%, transparent)",
-            color: "var(--blue)",
-            fontFamily: "var(--font-geist-mono), monospace",
-            fontSize: 11,
-            letterSpacing: ".06em",
-            textTransform: "uppercase",
-            marginBottom: 18,
-          }}
-        >
-          <PulseDot />
-          Your first report is being made
-        </div>
-
-        <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: "0 0 8px", color: "var(--ink)" }}>
-          Hang tight, {name}. We&apos;re reading your last stream.
-        </h2>
-        <p style={{ margin: "0 0 24px", color: "var(--ink-2)", fontSize: 14, lineHeight: 1.55, maxWidth: "60ch" }}>
-          {title}
-          {minutes ? ` · ${minutes} min` : ""}
-        </p>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480 }}>
-          <Stage state="done" label="Pulled from Twitch" />
-          <Stage state={isTranscribing ? "active" : "done"} label="Transcribing the audio" />
-          <Stage state={isTranscribing ? "queued" : "active"} label="Writing your coach report" />
-        </div>
-
-        <p style={{ marginTop: 22, color: "var(--ink-3)", fontSize: 12.5, lineHeight: 1.5 }}>
-          Takes ~5 minutes for most streams. You can leave this tab open
-          or close it — we&apos;ll send a notification when it&apos;s ready.
-        </p>
+    <section className="hm-top ob">
+      <div className="rp rp-unranked ob-ladder">
+        <p className="rp-k">Your rank</p>
+        <p className="rp-tier">Unranked</p>
+        <ul className="ob-tiers" aria-label="The ladder, lowest to highest">
+          {TIERS.map((t, i) => (
+            <li key={t.name} style={{ ["--i" as string]: i }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/ranks/${t.name.toLowerCase()}.png`} alt={t.name} width={384} height={384} />
+            </li>
+          ))}
+        </ul>
+        <p className="rp-note">Your first analyzed stream places you somewhere on here.</p>
       </div>
-    </div>
-  );
-}
 
-/** "We didn't find anything on your Twitch yet." */
-function NoStreamsState({ name }: { name: string }) {
-  return (
-    <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "radial-gradient(600px 280px at 50% 0%, color-mix(in oklab, var(--blue) 14%, transparent), transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
-      <div style={{ padding: "40px 32px 36px", position: "relative", textAlign: "center" }}>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "5px 12px",
-            borderRadius: 999,
-            background: "var(--surface-2)",
-            border: "1px solid var(--line)",
-            color: "var(--ink-3)",
-            fontFamily: "var(--font-geist-mono), monospace",
-            fontSize: 11,
-            letterSpacing: ".06em",
-            textTransform: "uppercase",
-            marginBottom: 18,
-          }}
-        >
-          No recent VODs on Twitch
-        </div>
-
-        <h2 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.15, margin: "0 0 10px", color: "var(--ink)" }}>
-          Welcome, {name}. Stream once and we&apos;re off.
-        </h2>
-        {/* The real reason this screen appears, said out loud.
-            Three of ten September signups landed here and left. Telling
-            someone "stream once and come back" gives them nothing to do
-            today, and worse, it hides the actual cause: Twitch does not
-            save VODs unless the streamer has turned it on, and most small
-            streamers never have. Someone can stream every night and still
-            see this screen forever. Naming the setting turns a dead end
-            into a two-minute fix. */}
-        <p style={{ margin: "0 auto 16px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "56ch" }}>
-          Twitch has no saved broadcasts for your account. Usually that means VOD
-          saving is switched off, which is the Twitch default and catches almost
-          everybody.
-        </p>
-        <p style={{ margin: "0 auto 24px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "56ch" }}>
-          Turn on{" "}
-          <a
-            href="https://dashboard.twitch.tv/settings/stream"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--blue)", fontWeight: 600 }}
-          >
-            Store past broadcasts
-          </a>{" "}
-          in your Twitch settings and your next stream saves automatically. In
-          the meantime you can read a report on any stream right now, including
-          someone else&apos;s.
-        </p>
-
-        <div style={{ display: "inline-flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-          <Link href="/analyze" className="btn btn-blue" style={{ textDecoration: "none" }}>
-            Analyze any stream free <Icons.Arrow />
-          </Link>
-          <Link
-            href="/dashboard/vods"
-            className="btn"
-            style={{
-              padding: "9px 16px",
-              border: "1px solid var(--line)",
-              background: "var(--surface-2)",
-              color: "var(--ink)",
-              textDecoration: "none",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 8,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <Icons.Twitch /> Check Twitch again
-          </Link>
-        </div>
+      <div className="hm-last ob-main">
+        {inProgress ? (
+          <>
+            <p className="hm-k">Your first report</p>
+            <p className="ob-title">Being made right now.</p>
+            <p className="ob-sub">
+              {inProgress.title || "Your stream"}
+              {inProgress.duration_seconds ? ` · ${formatDuration(inProgress.duration_seconds)}` : ""}
+            </p>
+            <ol className="vp-steps">
+              {[
+                ["Pulled from Twitch", "done"],
+                ["Transcribing the audio", inProgress.status === "transcribing" ? "active" : "done"],
+                ["Writing your report", inProgress.status === "transcribing" ? "next" : "active"],
+              ].map(([label, state]) => (
+                <li key={label} className="vp-step" data-state={state}>
+                  <span className="vp-icon" aria-hidden="true">
+                    {state === "done" ? "✓" : state === "active" ? <span className="ob-dot" /> : null}
+                  </span>
+                  <div>
+                    <p className="vp-step-label">{label}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="ob-note">You can close this tab. It keeps going, and this page flips to your report when it&apos;s in.</p>
+          </>
+        ) : total === 0 ? (
+          <>
+            <p className="hm-k">No saved streams on Twitch</p>
+            <p className="ob-title">Turn on VOD saving and you&apos;re set.</p>
+            {/* Twitch doesn't save broadcasts unless the streamer turns it
+                on, and most small streamers never have. Naming the setting
+                turns a dead end into a two minute fix. */}
+            <p className="ob-sub">
+              Twitch doesn&apos;t keep your broadcasts unless{" "}
+              <a href="https://dashboard.twitch.tv/settings/stream" target="_blank" rel="noopener noreferrer">
+                Store past broadcasts
+              </a>{" "}
+              is on, and it&apos;s off by default. Switch it on and your next stream shows up here. Until then you can
+              run a report on any stream, even someone else&apos;s.
+            </p>
+            <div className="hm-actions">
+              <Link href="/analyze" className="btn btn-blue">
+                Analyze any stream
+              </Link>
+              <Link href="/dashboard/vods" className="btn btn-ghost">
+                Check Twitch again
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="hm-k">
+              Pick your first stream
+              <span>{total} synced</span>
+            </p>
+            <ul className="ob-list">
+              {streams.map((v) => (
+                <li key={v.id}>
+                  <div>
+                    <p className="ob-row-title">{v.title}</p>
+                    <p className="ob-row-meta">
+                      {formatDate(v.stream_date ?? v.created_at)}
+                      {v.duration_seconds ? ` · ${formatDuration(v.duration_seconds)}` : ""}
+                    </p>
+                  </div>
+                  <AnalyzeButton
+                    vodId={v.id}
+                    status={v.status}
+                    vodTitle={v.title}
+                    durationSeconds={v.duration_seconds ?? 0}
+                    hasProcessing={false}
+                    userPlan={usage.plan}
+                  />
+                </li>
+              ))}
+            </ul>
+            {total > streams.length && (
+              <Link href="/dashboard/vods" className="hm-more ob-all">
+                All {total} streams
+              </Link>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </section>
   );
 }
-
-/** Fallback for users who have VODs but nothing is auto-analyzing. */
-function SyncedState({ name }: { name: string }) {
-  return (
-    <div className="card bordered accent-blue" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: "48px 32px", textAlign: "center", position: "relative" }}>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "radial-gradient(600px 280px at 50% 0%, color-mix(in oklab, var(--blue) 18%, transparent), transparent 70%)",
-            pointerEvents: "none",
-          }}
-        />
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "5px 12px",
-              borderRadius: 999,
-              background: "color-mix(in oklab, var(--blue-soft) 50%, transparent)",
-              border: "1px solid color-mix(in oklab, var(--blue) 35%, transparent)",
-              color: "var(--blue)",
-              fontFamily: "var(--font-geist-mono), monospace",
-              fontSize: 11,
-              letterSpacing: ".06em",
-              textTransform: "uppercase",
-              marginBottom: 18,
-            }}
-          >
-            Pick a stream
-          </div>
-          <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", lineHeight: 1.1, margin: "0 0 10px", color: "var(--ink)" }}>
-            Welcome, {name}. Your streams are synced.
-          </h2>
-          <p style={{ margin: "0 auto 24px", color: "var(--ink-2)", fontSize: 14.5, lineHeight: 1.55, maxWidth: "52ch" }}>
-            Pick any stream from your VODs list and hit Analyze. The full read
-            takes about five minutes.
-          </p>
-          <Link href="/dashboard/vods" className="btn btn-blue" style={{ textDecoration: "none" }}>
-            <Icons.Twitch /> Pick a stream to analyze <Icons.Arrow />
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** One row of the progress checklist on the AnalyzingState card. */
-function Stage({ state, label }: { state: "done" | "active" | "queued"; label: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: state === "queued" ? "var(--ink-3)" : "var(--ink)" }}>
-      <span
-        aria-hidden
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 22,
-          height: 22,
-          borderRadius: "50%",
-          background: state === "done" ? "var(--green, #A3E635)" : state === "active" ? "color-mix(in oklab, var(--blue) 18%, var(--surface-2))" : "var(--surface-2)",
-          border: state === "done" ? "none" : state === "active" ? "2px solid var(--blue)" : "2px solid var(--line)",
-          color: state === "done" ? "#0A0A0F" : state === "active" ? "var(--blue)" : "var(--ink-3)",
-          fontSize: 11,
-          fontWeight: 800,
-          flexShrink: 0,
-        }}
-      >
-        {state === "done" ? <Icons.Check /> : state === "active" ? <SpinnerDot /> : ""}
-      </span>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-/** Pulsing dot for the "in progress" eyebrow chip. CSS-only so this stays
- * a server component. */
-function PulseDot() {
-  return (
-    <span
-      aria-hidden
-      style={{
-        position: "relative",
-        display: "inline-block",
-        width: 8,
-        height: 8,
-      }}
-    >
-      <style dangerouslySetInnerHTML={{ __html: PULSE_KEYFRAMES }} />
-      <span
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: "50%",
-          background: "var(--blue)",
-          animation: "ll-onb-pulse 1.8s ease-in-out infinite",
-        }}
-      />
-      <span
-        style={{
-          position: "absolute",
-          inset: -3,
-          borderRadius: "50%",
-          background: "var(--blue)",
-          opacity: 0.25,
-          animation: "ll-onb-pulse-ring 1.8s ease-in-out infinite",
-        }}
-      />
-    </span>
-  );
-}
-
-/** Small spinning indicator for the active progress stage. */
-function SpinnerDot() {
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: "inline-block",
-        width: 9,
-        height: 9,
-        borderRadius: "50%",
-        border: "2px solid currentColor",
-        borderTopColor: "transparent",
-        animation: "ll-onb-spin 0.9s linear infinite",
-      }}
-    />
-  );
-}
-
-const PULSE_KEYFRAMES = `
-@keyframes ll-onb-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.85); opacity: 0.6; }
-}
-@keyframes ll-onb-pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.35; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-@keyframes ll-onb-spin {
-  to { transform: rotate(360deg); }
-}
-`;

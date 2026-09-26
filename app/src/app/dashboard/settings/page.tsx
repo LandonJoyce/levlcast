@@ -1,181 +1,185 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getUserUsage } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
 import { LeagueSection } from "./league-section";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+
+/*
+ * Everything about the account on one page: who you are, your plan, what's
+ * connected, leagues, and deleting it all. Connections used to be a second
+ * page that repeated the YouTube row from here; it redirects here now.
+ */
 
 const Icons = {
   Twitch: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <path d="M4 5l2-3h14v12l-5 5h-4l-3 3H6v-3H2V8l2-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-      <path d="M11 8v5M16 8v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
+      <path d="M4 5l2-3h14v12l-5 5h-4l-3 3H6v-3H2V8l2-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M11 8v5M16 8v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
-  YT: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-      <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M10 9l5 3-5 3V9z" fill="currentColor"/>
+  YouTube: () => (
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
+      <rect x="2" y="6" width="20" height="12" rx="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
     </svg>
   ),
-  Spark: () => (
-    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
-      <path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+  TikTok: () => (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z" />
     </svg>
   ),
 };
 
-export default async function SettingsPage({
+const ERRORS: Record<string, string> = {
+  oauth_failed: "That connection didn't go through. Try again.",
+  invalid_state: "That connection expired before it finished. Try again.",
+  missing_params: "That connection didn't finish. Try again.",
+};
+
+export default async function AccountPage({
   searchParams,
 }: {
   searchParams: Promise<{ success?: string; error?: string }>;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
   const params = await searchParams;
 
-  const [{ data: profile }, { data: subscription }, { data: connections }] = await Promise.all([
+  const [{ data: profile }, { data: subscription }, { data: connections }, usage] = await Promise.all([
     supabase.from("profiles").select("*, stripe_customer_id, paypal_subscription_id").eq("id", user.id).single(),
     supabase.from("subscriptions").select("status, subscription_expires_at").eq("user_id", user.id).maybeSingle(),
     supabase.from("social_connections").select("platform").eq("user_id", user.id),
+    getUserUsage(user.id, supabase),
   ]);
 
-  const usage = await getUserUsage(user.id, supabase);
-  const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
+  const has = (p: string) => connections?.some((c) => c.platform === p) ?? false;
+  const planLabel = usage.plan === "pro" ? (usage.pro_plus ? "Pro Plus" : "Pro") : "Free";
+  const login = (profile?.twitch_login as string | null) ?? null;
 
   return (
     <>
-      {/* Header */}
-      <div className="page-head">
-        <span className="page-eyebrow">Account</span>
+      <div className="hm-hello">
         <h1 className="page-title">Account</h1>
-        <p className="page-sub">Profile, plan, and connected services.</p>
       </div>
 
-      {/* Success / error banners */}
-      {params.success === "youtube" && (
-        <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--green) 40%, var(--line))", background: "color-mix(in oklab, var(--green-soft) 30%, var(--surface))" }}>
-          <p style={{ margin: 0, fontSize: 13.5, color: "var(--green)" }}>YouTube connected successfully.</p>
-        </div>
+      {(params.success === "youtube" || params.success === "tiktok") && (
+        <p className="ac-note" data-tone="good">
+          {params.success === "tiktok" ? "TikTok is connected." : "YouTube is connected. Your clips can go out as Shorts now."}
+        </p>
       )}
       {params.error && (
-        <div className="card card-pad-sm" style={{ borderColor: "color-mix(in oklab, var(--danger) 40%, var(--line))", background: "color-mix(in oklab, var(--danger-soft) 30%, var(--surface))" }}>
-          <p style={{ margin: 0, fontSize: 13.5, color: "var(--danger)" }}>
-            {params.error === "oauth_failed" ? "Connection failed. Please try again." : "Something went wrong."}
-          </p>
-        </div>
+        <p className="ac-note" data-tone="bad">
+          {ERRORS[params.error] ?? "Something went wrong. Try again."}
+        </p>
       )}
 
-      {/* Profile card */}
-      <div className="card card-pad">
-        <div className="row gap-lg" style={{ alignItems: "flex-start" }}>
-          {profile?.twitch_avatar_url ? (
-            <img
-              src={profile.twitch_avatar_url}
-              alt={profile.twitch_display_name}
-              style={{ width: 72, height: 72, borderRadius: "50%", flexShrink: 0, border: "1px solid var(--line)", objectFit: "cover" }}
-            />
-          ) : (
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--grad)", flexShrink: 0 }} />
-          )}
-          <div className="col" style={{ flex: 1, gap: 6 }}>
-            <div className="row gap-sm">
-              <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", margin: 0, color: "var(--ink)" }}>
-                {profile?.twitch_display_name || "Streamer"}
-              </h2>
-              <span className={`chip ${usage.plan === "pro" ? "b" : ""}`} style={{ fontFamily: "var(--font-geist-mono), monospace", textTransform: "uppercase", letterSpacing: ".06em", fontSize: 11 }}>
-                {usage.plan === "pro" ? "Pro" : "Free"}
-              </span>
-            </div>
-            <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-              @{profile?.twitch_login || "?"}{profile?.twitch_login && ` · twitch.tv/${profile.twitch_login}`}
+      <section className="ac-me">
+        {profile?.twitch_avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={profile.twitch_avatar_url} alt="" width={64} height={64} />
+        ) : (
+          <span className="ac-me-blank">{(profile?.twitch_display_name as string | null)?.slice(0, 1) ?? "?"}</span>
+        )}
+        <div>
+          <p className="ac-me-name">
+            {profile?.twitch_display_name || "Streamer"}
+            <span className="ac-tag" data-pro={usage.plan === "pro" ? "yes" : undefined}>
+              {planLabel}
             </span>
-          </div>
+          </p>
+          {login && <p className="ac-me-sub">twitch.tv/{login}</p>}
         </div>
-      </div>
+      </section>
 
-      {/* Plan + Connections grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        {/* Plan card — wraps existing SubscriptionSection */}
-        <div className="card bordered accent-blue">
-          <div className="card-head">
-            <h3>Plan</h3>
-            <span className={`chip ${usage.plan === "pro" ? "b" : ""}`} style={{ fontFamily: "var(--font-geist-mono), monospace", textTransform: "uppercase", letterSpacing: ".06em", fontSize: 11 }}>
-              {usage.plan === "pro" ? "PRO" : "FREE"}
+      <section className="hm-sec">
+        <div className="hm-head">
+          <h2>Plan</h2>
+        </div>
+        <SubscriptionSection
+          plan={usage.plan}
+          proPlus={usage.pro_plus}
+          analysesUsed={usage.analyses_used}
+          analysesLimit={usage.analyses_limit}
+          clipsUsed={usage.clips_used}
+          clipsLimit={usage.clips_limit}
+          hoursUsed={usage.hours_used}
+          hoursLimit={usage.hours_limit}
+          periodLabel={usage.period_label}
+          onTrial={usage.on_trial}
+          hasStripeSubscription={!!profile?.stripe_customer_id}
+          hasPaypalSubscription={!!profile?.paypal_subscription_id}
+          subscriptionExpiresAt={subscription?.subscription_expires_at ?? profile?.subscription_expires_at ?? null}
+          subscriptionStatus={subscription?.status ?? null}
+        />
+      </section>
+
+      <section className="hm-sec" id="connections">
+        <div className="hm-head">
+          <h2>Connections</h2>
+        </div>
+        <ul className="ac-conn">
+          <li>
+            <span className="ac-conn-icon">
+              <Icons.Twitch />
             </span>
-          </div>
-          <div style={{ padding: "18px 22px 22px" }}>
-            <SubscriptionSection
-              plan={usage.plan}
-              proPlus={usage.pro_plus}
-              analysesUsed={usage.analyses_used}
-              analysesLimit={usage.analyses_limit}
-              clipsUsed={usage.clips_used}
-              clipsLimit={usage.clips_limit}
-              hoursUsed={usage.hours_used}
-              hoursLimit={usage.hours_limit}
-              periodLabel={usage.period_label}
-              onTrial={usage.on_trial}
-              hasStripeSubscription={!!profile?.stripe_customer_id}
-              hasPaypalSubscription={!!profile?.paypal_subscription_id}
-              subscriptionExpiresAt={subscription?.subscription_expires_at ?? profile?.subscription_expires_at ?? null}
-              subscriptionStatus={subscription?.status ?? null}
-            />
-          </div>
-        </div>
-
-        {/* Connections card — Twitch + YouTube only */}
-        <div className="card">
-          <div className="card-head">
-            <h3>Connections</h3>
-            <span className="label-mono">{1 + (isYouTubeConnected ? 1 : 0)} of 2</span>
-          </div>
-          <div>
-            {/* Twitch — always connected if user logged in */}
-            <div className="row" style={{ padding: "14px 22px", borderBottom: "1px solid var(--line)", gap: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", color: "var(--magenta)" }}>
-                <Icons.Twitch />
-              </div>
-              <div className="col" style={{ flex: 1, gap: 2 }}>
-                <b style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>Twitch</b>
-                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  twitch.tv/{profile?.twitch_login || "?"} · auto-import on
-                </span>
-              </div>
-              <span className="chip g"><span className="d" /> connected</span>
+            <div>
+              <p className="ac-conn-name">Twitch</p>
+              <p className="ac-conn-sub">{login ? `twitch.tv/${login} · ` : ""}your streams sync from here</p>
             </div>
-
-            {/* YouTube — connect/connected */}
-            <div className="row" style={{ padding: "14px 22px", gap: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", color: "var(--danger)" }}>
-                <Icons.YT />
-              </div>
-              <div className="col" style={{ flex: 1, gap: 2 }}>
-                <b style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>YouTube</b>
-                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  {isYouTubeConnected ? "Publishing Shorts directly from clips" : "Post Smart Clips directly to Shorts"}
-                </span>
-              </div>
-              {isYouTubeConnected ? (
-                <span className="chip g"><span className="d" /> connected</span>
-              ) : (
-                <Link href="/dashboard/connections" className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }}>
-                  Connect
-                </Link>
-              )}
+            <span className="ac-on">Connected</span>
+          </li>
+          <li>
+            <span className="ac-conn-icon">
+              <Icons.YouTube />
+            </span>
+            <div>
+              <p className="ac-conn-name">YouTube</p>
+              <p className="ac-conn-sub">Post your clips as Shorts in one click</p>
             </div>
-          </div>
-        </div>
-      </div>
+            {has("youtube") ? (
+              <div className="ac-conn-act">
+                <span className="ac-on">Connected</span>
+                <a href="/api/auth/youtube" className="ac-link">
+                  Reconnect
+                </a>
+              </div>
+            ) : (
+              <a href="/api/auth/youtube" className="btn btn-blue gen-clip">
+                Connect
+              </a>
+            )}
+          </li>
+          <li>
+            <span className="ac-conn-icon">
+              <Icons.TikTok />
+            </span>
+            <div>
+              <p className="ac-conn-name">TikTok</p>
+              <p className="ac-conn-sub">Posting to TikTok is waiting on TikTok&apos;s approval</p>
+            </div>
+            {has("tiktok") ? (
+              <div className="ac-conn-act">
+                <span className="ac-on">Connected</span>
+                <a href="/api/auth/tiktok" className="ac-link">
+                  Reconnect
+                </a>
+              </div>
+            ) : (
+              <a href="/api/auth/tiktok" className="btn btn-ghost gen-clip">
+                Connect
+              </a>
+            )}
+          </li>
+        </ul>
+      </section>
 
       <LeagueSection optedOut={Boolean(profile?.league_opt_out)} />
 
-      {/* Delete account — bare, no danger-zone framing */}
-      <div style={{ marginTop: 12 }}>
-        <DeleteAccountSection />
-      </div>
+      <DeleteAccountSection />
     </>
   );
 }

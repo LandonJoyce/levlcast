@@ -4,7 +4,7 @@ import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export function SyncButton() {
+export function SyncButton({ primary = false }: { primary?: boolean }) {
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const router = useRouter();
@@ -42,7 +42,7 @@ export function SyncButton() {
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="btn btn-blue"
+        className={primary ? "btn btn-blue" : "btn btn-ghost"}
         style={{ opacity: syncing ? 0.6 : 1 }}
       >
         <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
