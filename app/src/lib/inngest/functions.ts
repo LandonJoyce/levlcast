@@ -227,7 +227,8 @@ export const analyzeVod = inngest.createFunction(
           const heard = Math.max(1, Math.round(lastWordEnd / 60));
           throw new Error(
             `We could only hear you talking in the first ${heard} ${heard === 1 ? "minute" : "minutes"} of this stream. ` +
-            `If your mic was off after that, that's why. If it wasn't, try again in a few minutes.`
+            `If you were AFK or your sound was off after that, there's nothing to coach in this one, so pick another stream. ` +
+            `If you were talking the whole time, try again in a few minutes.`
           );
         }
         if (audibleEnd > 0 && lastWordEnd > 0 && lastWordEnd < audibleEnd * 0.85) {
