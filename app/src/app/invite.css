@@ -1,0 +1,21 @@
+/* Duel and friend-league invite pages (app/duel, app/join). Sits on the
+   homepage styles (home-ranked.css, .ll-page.v3). */
+
+.v3 .iv { display: grid; place-items: center; min-height: calc(100vh - 220px); padding: 56px var(--v3-pad, 20px) 80px; }
+.v3 .iv-card { width: min(560px, 100%); }
+.v3 .iv-who { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+.v3 .iv-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 1px solid var(--ll-line-soft); }
+.v3 .iv-avatar-blank { display: grid; place-items: center; background: rgb(29, 24, 25); font-weight: 800; font-size: 26px; color: var(--ll-fg); }
+.v3 .iv-rank { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-shoulders), var(--v3-display, inherit); font-weight: 900; font-size: 26px; letter-spacing: 0.01em; text-transform: uppercase; }
+.v3 .iv-rank img { width: 40px; height: 40px; object-fit: contain; }
+.v3 .iv-faces { display: flex; flex-wrap: wrap; list-style: none; margin: 0 0 22px; padding: 0; }
+.v3 .iv-faces li + li { margin-left: -10px; }
+.v3 .iv-face { display: block; width: 44px; height: 44px; border: 2px solid rgb(16, 13, 14); border-radius: 50%; object-fit: cover; }
+.v3 .iv-k { margin: 0; font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--v3-gold, #e3b341); }
+.v3 .iv-title { margin: 10px 0 0; font-weight: 800; font-size: clamp(32px, 5vw, 46px); line-height: 1.05; letter-spacing: -0.03em; color: var(--ll-fg); }
+.v3 .iv-sub { margin: 14px 0 0; font-size: 16px; line-height: 1.6; color: var(--ll-fg-mute); }
+.v3 .iv-card .v3-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; border: 0; font-family: inherit; cursor: pointer; }
+.v3 .iv-card .v3-btn:disabled { opacity: 0.6; cursor: default; }
+.v3 .iv-action { display: flex; flex-direction: column; align-items: flex-start; }
+.v3 .iv-error { margin: 12px 0 0; font-size: 14px; color: var(--v3-bad, #f87171); }
+.v3 .iv-how { margin: 32px 0 0; padding: 18px 0 0 18px; border-top: 1px solid var(--ll-line-soft); font-size: 14px; line-height: 1.9; color: var(--ll-fg-mute); }

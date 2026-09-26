@@ -17,6 +17,7 @@
 
 import { rankFromPoints, tierFloor, type Rank } from "@/lib/rank";
 import type { LeagueResult } from "@/lib/league";
+import { callOutcome, isSealed, type CallOutcome } from "@/lib/sealed";
 
 export type MatchResult = "win" | "loss" | "held" | "placement" | "unranked";
 export type MatchTag = "promoted" | "demoted" | "division_up" | "division_down" | "shield";
@@ -32,6 +33,13 @@ export interface StreamMatch {
   delta: number | null;
   rank: Rank | null;
   tag: MatchTag | null;
+  /**
+   * Analyzed but not opened. The row shows "Sealed" and none of the
+   * result, and the record above the list leaves it out.
+   */
+  sealed: boolean;
+  /** Whether the streamer's call before opening was right. */
+  call: CallOutcome;
 }
 
 export interface LeagueMatch {
@@ -58,6 +66,8 @@ export interface MatchVodRow {
   duration_seconds: number | null;
   rank_delta: number | null;
   rank_points_after: number | null;
+  result_opened_at?: string | null;
+  result_call?: string | null;
 }
 
 /**
@@ -79,7 +89,15 @@ export function buildMatchHistory(vods: MatchVodRow[], leagueResults: LeagueResu
   let lastWasLoss = false;
 
   for (const { v, at } of chronological) {
-    const base = { kind: "stream" as const, id: v.id, title: v.title, at, durationSeconds: v.duration_seconds };
+    const base = {
+      kind: "stream" as const,
+      id: v.id,
+      title: v.title,
+      at,
+      durationSeconds: v.duration_seconds,
+      sealed: isSealed({ ...v, status: "ready" }),
+      call: callOutcome(v),
+    };
 
     if (v.rank_points_after === null) {
       matches.push({ ...base, result: "unranked", delta: null, rank: null, tag: null });
@@ -157,7 +175,10 @@ export interface MatchSummary {
 /** Record over the last `window` ranked streams. League payouts are not games. */
 export function summarizeMatches(matches: Match[], window = 20): MatchSummary {
   const games = matches
-    .filter((m): m is StreamMatch => m.kind === "stream" && (m.result === "win" || m.result === "loss" || m.result === "held"))
+    .filter(
+      (m): m is StreamMatch =>
+        m.kind === "stream" && !m.sealed && (m.result === "win" || m.result === "loss" || m.result === "held")
+    )
     .slice(0, window);
 
   const wins = games.filter((g) => g.result === "win").length;

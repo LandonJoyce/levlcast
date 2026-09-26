@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { rankFromPoints, TIERS, TIER_HEX, DIVISION_SIZE, type Rank } from "@/lib/rank";
 
 /**
@@ -42,7 +42,6 @@ export function RankPanel({
 }) {
   const [shown, setShown] = useState<number | null>(null);
   const [fill, setFill] = useState<number | null>(null);
-  const started = useRef(false);
 
   const rank = points === null ? null : rankFromPoints(points);
   // Placements record the whole starting rating as their delta; don't
@@ -53,9 +52,11 @@ export function RankPanel({
   const promoted = !!(rank && before && gain > 0 && before.label !== rank.label);
   const demoted = !!(rank && before && gain < 0 && before.label !== rank.label);
 
+  // Runs when the points change (the panel is also keyed on them, so
+  // opening a sealed result remounts it). The cleanup cancels the frame
+  // loop, so running twice (React does in development) just restarts it.
   useEffect(() => {
-    if (!rank || started.current) return;
-    started.current = true;
+    if (!rank) return;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (still || gain === 0 || points === null) {
       setShown(points);

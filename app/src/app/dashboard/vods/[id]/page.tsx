@@ -18,6 +18,8 @@ import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/componen
 import { getLeagueView, passedByStream } from "@/lib/league";
 import { currentWeekStart } from "@/lib/limits";
 import { isPlacementDelta } from "@/lib/rank";
+import { callOutcome, isLocked, isSealed, lockOpensAt } from "@/lib/sealed";
+import { SealedResult } from "@/components/dashboard/sealed-result";
 
 /*
  * One page per stream. There used to be two: a summary (score, best clip,
@@ -144,7 +146,7 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   const { data: vod } = await supabase
     .from("vods")
     .select(
-      "id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data, rank_delta, rank_points_after"
+      "id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week"
     )
     .eq("id", id)
     .eq("user_id", user!.id)
@@ -212,7 +214,11 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   const currentScore = typeof report?.overall_score === "number" ? (report.overall_score as number) : undefined;
   const previousScore = previous?.coach_report?.overall_score as number | undefined;
   const scoreDelta = currentScore !== undefined && typeof previousScore === "number" ? currentScore - previousScore : null;
-  const isFirstScore = isReady && currentScore !== undefined && prior.length === 0;
+  // Analyzed but not opened yet: the page is just the call and the reveal.
+  const sealed = isReady && isSealed(vod);
+  const locked = sealed && isLocked(vod, isPro);
+  const called = callOutcome(vod) === "called";
+  const isFirstScore = isReady && !sealed && currentScore !== undefined && prior.length === 0;
 
   const trajectory =
     currentScore !== undefined && (vod.stream_date || vod.analyzed_at)
@@ -278,7 +284,7 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
               {vod.duration_seconds ? ` · ${formatDuration(vod.duration_seconds)}` : ""}
             </p>
           </div>
-          {isReady && (
+          {isReady && !sealed && (
             <ShareReportButton
               vodId={vod.id}
               existingToken={vod.share_token}
@@ -342,13 +348,25 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
         )
+      ) : sealed ? (
+        <div className="sp-sealed">
+          <SealedResult
+            vodId={vod.id}
+            placement={placement}
+            locked={locked && vod.sealed_extra_week ? { opensAt: lockOpensAt(vod.sealed_extra_week as string) } : null}
+            variant="page"
+          />
+        </div>
       ) : (
         <>
           {/* The result: what the ladder did, and the coach's one-line read. */}
           <section className="hm-top sp-top">
             <div className="hm-last sp-result">
               <p className="hm-k">
-                Result
+                <span className="sp-k-left">
+                  Result
+                  {called && <span className="mh-called">Called it</span>}
+                </span>
                 {currentScore !== undefined && (
                   <span>
                     Score {currentScore}

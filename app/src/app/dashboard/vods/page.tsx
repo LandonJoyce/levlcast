@@ -9,6 +9,7 @@ import { NotificationPrompt } from "@/components/dashboard/notification-prompt";
 import { FeedbackButton } from "@/components/dashboard/feedback-button";
 import { getUserUsage } from "@/lib/limits";
 import { isPlacementDelta } from "@/lib/rank";
+import { isLocked, isSealed } from "@/lib/sealed";
 
 /*
  * Every stream synced from Twitch, newest first, one row each. This was a
@@ -73,7 +74,7 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
   const [{ data: vods }, { data: clips }, usage] = await Promise.all([
     supabase
       .from("vods")
-      .select("id, title, duration_seconds, status, stream_date, created_at, coach_report, thumbnail_url, failed_reason, rank_delta")
+      .select("id, title, duration_seconds, status, stream_date, created_at, coach_report, thumbnail_url, failed_reason, rank_delta, rank_points_after, result_opened_at, sealed_extra_week")
       .eq("user_id", user.id)
       .order("stream_date", { ascending: false }),
     supabase.from("clips").select("vod_id").eq("user_id", user.id).eq("status", "ready"),
@@ -144,9 +145,12 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
             <ul className="sl">
               {shown.map((v) => {
                 const ready = v.status === "ready";
+                const sealed = ready && isSealed(v);
+                const locked = sealed && isLocked(v, usage.plan === "pro");
                 const processing = isProcessing(v.status);
                 const failed = v.status === "failed";
-                const line = ready ? streamLine(v.coach_report as Record<string, unknown> | null) : null;
+                // A sealed report's one-liner can hint at how it went.
+                const line = ready && !sealed ? streamLine(v.coach_report as Record<string, unknown> | null) : null;
                 const delta = (v.rank_delta as number | null) ?? null;
                 const placed = delta !== null && isPlacementDelta(delta);
                 const made = clipCount.get(v.id) ?? 0;
@@ -194,7 +198,12 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
                     </div>
 
                     <div className="sl-end">
-                      {ready ? (
+                      {sealed ? (
+                        <Link href={href} className="sl-res" data-r="sealed">
+                          <b>{locked ? "Sealed until Monday" : "Sealed"}</b>
+                          <ChevronRight size={16} aria-hidden="true" />
+                        </Link>
+                      ) : ready ? (
                         <Link href={href} className="sl-res" data-r={placed ? "placed" : delta === null ? "none" : delta >= 0 ? "win" : "loss"}>
                           {placed ? (
                             <b>Placed</b>

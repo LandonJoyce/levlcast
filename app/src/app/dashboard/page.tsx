@@ -2,7 +2,12 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { buildMatchHistory, summarizeMatches, type MatchVodRow } from "@/lib/match-history";
-import { getLeagueResults, getLeagueView, previousWeekStart } from "@/lib/league";
+import { getLeagueResults, getLeagueView, previousWeekStart, withoutSealed } from "@/lib/league";
+import { isLocked, isPlacementResult, isSealed, lockOpensAt, pointsBeforeSealed, sealedLeaguePoints } from "@/lib/sealed";
+import { SealedResult } from "@/components/dashboard/sealed-result";
+import { FriendsSection } from "@/components/dashboard/friends-section";
+import { getDuelsForUser } from "@/lib/duels";
+import { getFriendLeagues } from "@/lib/friend-leagues";
 import { currentWeekStart } from "@/lib/limits";
 import { MatchHistoryList, recordLabel } from "@/components/dashboard/match-history";
 import { LeagueCard } from "@/components/dashboard/league-card";
@@ -89,7 +94,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, rank_points")
+    .select("twitch_display_name, rank_points, plan, subscription_expires_at")
     .eq("id", user.id)
     .single();
 
@@ -146,6 +151,14 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .in("status", ["transcribing", "analyzing"]);
     const hasInProgressAnalysis = (inProgressCount ?? 0) > 0;
+    // Someone who arrived through a duel or friend-league invite should
+    // see it here before their first report, not only after.
+    const newAdmin = createAdminClient();
+    const [newDuels, newLeagues] = await Promise.all([
+      getDuelsForUser(newAdmin, user.id).catch(() => ({ active: [], recent: [], openCode: null })),
+      getFriendLeagues(newAdmin, user.id).catch(() => []),
+    ]);
+    const hasSocial = newDuels.active.length > 0 || newDuels.openCode !== null || newLeagues.length > 0;
 
     return (
       <>
@@ -160,6 +173,7 @@ export default async function DashboardPage() {
 
         <AdminReplyCard />
         <OnboardingHero />
+        {hasSocial && <FriendsSection duels={newDuels} leagues={newLeagues} />}
       </>
     );
   }
@@ -170,10 +184,10 @@ export default async function DashboardPage() {
   // return public fields. Every read here fails soft: a league problem
   // must never take the dashboard down with it.
   const admin = createAdminClient();
-  const [{ data: rankedVods }, { data: leagueSettings }, leagueView, recentResults] = await Promise.all([
+  const [{ data: rankedVods }, { data: leagueSettings }, leagueView, recentResults, duels, friendLeagues] = await Promise.all([
     supabase
       .from("vods")
-      .select("id, title, analyzed_at, stream_date, created_at, duration_seconds, rank_delta, rank_points_after")
+      .select("id, title, analyzed_at, stream_date, created_at, duration_seconds, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week")
       .eq("user_id", user.id)
       .eq("status", "ready"),
     supabase.from("profiles").select("league_opt_out").eq("id", user.id).maybeSingle(),
@@ -181,6 +195,8 @@ export default async function DashboardPage() {
     // Enough settled weeks that any payout inside the rows shown below is
     // there; the newest one doubles as "last week" on the league card.
     getLeagueResults(admin, user.id, { limit: 6 }).catch(() => []),
+    getDuelsForUser(admin, user.id).catch(() => ({ active: [], recent: [], openCode: null })),
+    getFriendLeagues(admin, user.id).catch(() => []),
   ]);
 
   const matches = buildMatchHistory((rankedVods ?? []) as MatchVodRow[], recentResults);
@@ -192,8 +208,31 @@ export default async function DashboardPage() {
   // A placement records the whole starting rating as its delta, which
   // isn't a win or a loss.
   const latestResult = latestDelta !== null && Math.abs(latestDelta) < 200 ? latestDelta : null;
+  // Sealed results: analyzed, not opened. Until they're opened nothing on
+  // this page gives them away: the rank shows as it stood before them, the
+  // league leaves them out, and the newest one takes the last-stream spot.
+  const isPro =
+    profile?.plan === "pro" &&
+    !(profile.subscription_expires_at && new Date(profile.subscription_expires_at as string) < new Date());
+  const byAnalyzed = [...(rankedVods ?? [])].sort((a, b) =>
+    String(b.analyzed_at ?? "").localeCompare(String(a.analyzed_at ?? ""))
+  );
+  const sealedVods = byAnalyzed.filter((v) => isSealed({ ...v, status: "ready" }));
+  const sealedTop = sealedVods[0] ?? null;
+  const opened = byAnalyzed.filter((v) => !isSealed({ ...v, status: "ready" }));
+  const rankPoints = (profile?.rank_points as number | null) ?? null;
+  const shownPoints = sealedVods.length ? pointsBeforeSealed(rankPoints, sealedVods) : rankPoints;
+  const shownDelta = sealedVods.length ? null : ((opened[0]?.rank_delta as number | null) ?? null);
+  const weekStartIso = `${currentWeekStart()}T00:00:00.000Z`;
+  const sealedThisWeek = sealedVods.filter((v) => String(v.analyzed_at ?? "") >= weekStartIso);
+  const league =
+    leagueView && sealedVods.length
+      ? withoutSealed(leagueView, sealedLeaguePoints(sealedThisWeek), sealedThisWeek.length, shownPoints)
+      : leagueView;
+
   // What a win usually pays this streamer, for "about 3 wins" under the bar.
-  const recentWins = (recentVods ?? [])
+  const recentWins = opened
+    .slice(0, 12)
     .map((v) => v.rank_delta as number | null)
     .filter((d): d is number => d !== null && d > 0 && d < 200);
   const avgWin = recentWins.length
@@ -224,8 +263,25 @@ export default async function DashboardPage() {
       <AdminReplyCard />
 
       <section className="hm-top">
-        <RankPanel points={(profile?.rank_points as number | null) ?? null} delta={latestDelta} avgWin={avgWin} />
+        {/* Keyed on the points so opening a result remounts it and the
+            count-up plays from the old rank to the new one. */}
+        <RankPanel key={String(shownPoints)} points={shownPoints} delta={shownDelta} avgWin={avgWin} />
 
+        {sealedTop ? (
+          <div className="hm-last">
+            <SealedResult
+              vodId={sealedTop.id as string}
+              title={(sealedTop.title as string | null) ?? null}
+              placement={isPlacementResult(sealedTop)}
+              locked={
+                isLocked({ ...sealedTop, status: "ready" }, isPro) && sealedTop.sealed_extra_week
+                  ? { opensAt: lockOpensAt(sealedTop.sealed_extra_week as string) }
+                  : null
+              }
+              variant="home"
+            />
+          </div>
+        ) : (
         <div className="hm-last">
           <p className="hm-k">
             Last stream
@@ -254,15 +310,30 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+        )}
       </section>
 
       {/* The league sits right under the rank: the rank says where you
           stand, the league says who you're racing to get further. */}
       {!leagueOptOut && (
         <section className="hm-sec">
-          <LeagueCard view={leagueView} lastResult={lastWeekResult} />
+          <LeagueCard view={league} lastResult={lastWeekResult} sealedStreams={sealedThisWeek.length} />
         </section>
       )}
+
+      {/* Duels and friend leagues: the social side, both run on invite links. */}
+      <FriendsSection
+        duels={duels}
+        leagues={
+          sealedVods.length
+            ? friendLeagues.map((l) => ({
+                ...l,
+                standings: l.standings.map((s) => (s.isYou ? { ...s, rankPoints: shownPoints } : s)),
+                you: l.you ? { ...l.you, rankPoints: shownPoints } : null,
+              }))
+            : friendLeagues
+        }
+      />
 
       <section className="hm-sec">
         <div className="hm-head">

@@ -63,6 +63,7 @@ export function MatchHistoryList({ matches }: { matches: Match[] }) {
 }
 
 function MatchRow({ match }: { match: Match }) {
+  if (match.kind === "stream" && match.sealed) return <SealedRow match={match} />;
   const result = match.kind === "league" ? "league" : match.result;
   const tierColor = match.rank ? TIER_HEX[match.rank.tier] : undefined;
 
@@ -107,6 +108,7 @@ function MatchRow({ match }: { match: Match }) {
       </div>
 
       <div className="mh-tag-cell">
+        {match.kind === "stream" && match.call === "called" && <span className="mh-called">Called it</span>}
         {match.tag && (
           <span className="mh-tag" data-tag={match.tag}>
             {TAG_LABEL[match.tag]}
@@ -126,6 +128,35 @@ function MatchRow({ match }: { match: Match }) {
     <div className="mh-row" data-result={result}>
       {body}
     </div>
+  );
+}
+
+/**
+ * A stream that's analyzed but not opened. Nothing about the result is on
+ * the row, not even the rank it ended on, since that alone can give a
+ * promotion away.
+ */
+function SealedRow({ match }: { match: Extract<Match, { kind: "stream" }> }) {
+  return (
+    <Link href={`/dashboard/vods/${match.id}`} className="mh-row" data-result="sealed">
+      <div className="mh-result">
+        <span className="mh-result-label">Sealed</span>
+        <span className="mh-delta">?</span>
+      </div>
+      <div className="mh-rank">
+        <span className="mh-rank-none">Open it</span>
+      </div>
+      <div className="mh-main">
+        <div className="mh-title">{match.title || "Untitled stream"}</div>
+        <div className="mh-meta">
+          {formatDate(match.at)} · {formatDuration(match.durationSeconds)}
+        </div>
+      </div>
+      <div className="mh-tag-cell" />
+      <span className="mh-chev">
+        <Chev />
+      </span>
+    </Link>
   );
 }
 

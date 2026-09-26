@@ -5,6 +5,7 @@ import { buildMatchHistory, summarizeMatches, type MatchVodRow } from "@/lib/mat
 import { getLeagueResults } from "@/lib/league";
 import type { CoachingArcData } from "@/lib/coaching-arc";
 import { RankPanel } from "@/components/dashboard/rank-panel";
+import { isSealed, pointsBeforeSealed } from "@/lib/sealed";
 import { MatchHistoryList, MatchSummaryStrip } from "@/components/dashboard/match-history";
 import { CoachingArcCard } from "@/components/dashboard/coaching-arc-card";
 import { FollowerBriefCard } from "@/components/dashboard/follower-brief-card";
@@ -34,7 +35,7 @@ export default async function MatchesPage() {
     // backfilled deltas are worked out from the whole chain.
     supabase
       .from("vods")
-      .select("id, title, analyzed_at, stream_date, created_at, duration_seconds, rank_delta, rank_points_after")
+      .select("id, title, analyzed_at, stream_date, created_at, duration_seconds, rank_delta, rank_points_after, result_opened_at, result_call")
       .eq("user_id", user.id)
       .eq("status", "ready"),
     getLeagueResults(createAdminClient(), user.id, { onlyPaid: true }).catch(() => []),
@@ -58,8 +59,16 @@ export default async function MatchesPage() {
   const byDate = [...(vods ?? [])].sort((a, b) =>
     String(b.stream_date ?? b.analyzed_at ?? "").localeCompare(String(a.stream_date ?? a.analyzed_at ?? ""))
   );
-  const latestDelta = (byDate[0]?.rank_delta as number | null) ?? null;
-  const wins = byDate
+  // Sealed results stay sealed here too: the rank shows as it stood before
+  // them, and the record leaves them out (see summarizeMatches).
+  const sealedVods = (vods ?? []).filter((v) => isSealed({ ...v, status: "ready" }));
+  const openedByAnalyzed = (vods ?? [])
+    .filter((v) => !isSealed({ ...v, status: "ready" }))
+    .sort((a, b) => String(b.analyzed_at ?? "").localeCompare(String(a.analyzed_at ?? "")));
+  const rankPoints = (profile?.rank_points as number | null) ?? null;
+  const shownPoints = sealedVods.length ? pointsBeforeSealed(rankPoints, sealedVods) : rankPoints;
+  const latestDelta = sealedVods.length ? null : ((openedByAnalyzed[0]?.rank_delta as number | null) ?? null);
+  const wins = openedByAnalyzed
     .slice(0, 12)
     .map((v) => v.rank_delta as number | null)
     .filter((d): d is number => d !== null && d > 0 && d < 200);
@@ -86,7 +95,7 @@ export default async function MatchesPage() {
       ) : (
         <>
           <section className="hm-top">
-            <RankPanel points={(profile?.rank_points as number | null) ?? null} delta={latestDelta} avgWin={avgWin} />
+            <RankPanel key={String(shownPoints)} points={shownPoints} delta={latestDelta} avgWin={avgWin} />
             <div className="hm-last mh-side">
               {summary.games > 0 ? (
                 <MatchSummaryStrip summary={summary} />

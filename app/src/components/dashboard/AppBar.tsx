@@ -31,7 +31,7 @@ export interface AppBarProps {
   user: { display_name: string; avatar_url: string; login: string };
   isPro: boolean;
   /** Present on the free plan: what's left of this week's allowance. */
-  trial: { analysesLeft: number; clipsLeft: number } | null;
+  trial: { analysesLeft: number; clipsLeft: number; sealedExtraLeft?: boolean } | null;
   upgradeReason: string | null;
   collabPendingCount: number;
 }
@@ -98,7 +98,9 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
     ? "Pro"
     : trial
       ? left === 0
-        ? "Free · none left, resets Monday"
+        ? trial.sealedExtraLeft
+          ? "Free · 1 sealed stream left"
+          : "Free · none left, resets Monday"
         : `Free · ${left} ${left === 1 ? "report" : "reports"} left`
       : "Free";
 
@@ -147,7 +149,8 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
             <button
               type="button"
               className="ab-plan"
-              data-empty={trial && left === 0 ? "yes" : undefined}
+              data-empty={trial && left === 0 && !trial.sealedExtraLeft ? "yes" : undefined}
+              data-sealed={trial && left === 0 && trial.sealedExtraLeft ? "yes" : undefined}
               onClick={() => setUpgradeOpen(true)}
             >
               {planLabel}

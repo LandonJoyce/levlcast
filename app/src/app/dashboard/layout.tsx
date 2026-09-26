@@ -1,7 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppBar from "@/components/dashboard/AppBar";
-import { getUserUsage } from "@/lib/limits";
+import { PendingInviteHandler } from "@/components/dashboard/pending-invite-handler";
+import { currentWeekStart, getUserUsage } from "@/lib/limits";
 import { buildUpgradePitch } from "@/lib/upgrade-pitch";
 import { shoulders } from "../fonts";
 import "./app.css";
@@ -53,10 +54,24 @@ export default async function DashboardLayout({
   // Only matters on the free plan — Pro users never see the upgrade chip.
   const upgradePitch = usage.on_trial ? await buildUpgradePitch(user.id, supabase) : null;
 
+  // Once the free reports are used, one more stream can still be analyzed
+  // sealed until Monday. The chip says so instead of "none left".
+  let sealedExtraLeft = false;
+  if (usage.on_trial && !usage.can_analyze) {
+    const { count } = await createAdminClient()
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("sealed_extra_week", currentWeekStart())
+      .in("status", ["transcribing", "analyzing", "ready"]);
+    sealedExtraLeft = (count ?? 0) === 0;
+  }
+
   const trial = usage.on_trial
     ? {
         analysesLeft: Math.max(0, usage.analyses_limit - usage.analyses_used),
         clipsLeft: Math.max(0, usage.clips_limit - usage.clips_used),
+        sealedExtraLeft,
       }
     : null;
 
@@ -69,6 +84,7 @@ export default async function DashboardLayout({
         upgradeReason={upgradePitch?.reason ?? null}
         collabPendingCount={collabPendingCount ?? 0}
       />
+      <PendingInviteHandler />
       <main className="main">
         <div className="content">{children}</div>
       </main>

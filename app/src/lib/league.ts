@@ -483,6 +483,41 @@ export function passedByStream(view: LeagueView, leagueDelta: number): string[] 
     .map((s) => s.name);
 }
 
+/**
+ * The table with your sealed streams taken back out of your row, so the
+ * league card doesn't give away a result you haven't opened. Positions,
+ * prizes and the rival are worked out again from the adjusted table, and
+ * your emblem shows the rank you had before those streams.
+ */
+export function withoutSealed(
+  view: LeagueView,
+  sealedPoints: number,
+  sealedStreams: number,
+  /** Your rank before every sealed stream, this week's or older. */
+  rankPointsBefore: number | null
+): LeagueView {
+  const adjusted = view.standings.map((s) =>
+    s.isYou
+      ? {
+          ...s,
+          points_gained: s.points_gained - sealedPoints,
+          streams_played: Math.max(0, s.streams_played - sealedStreams),
+          rankPoints: rankPointsBefore,
+        }
+      : s
+  );
+  const ordered = orderStandings(adjusted);
+  const playerCount = ordered.filter((m) => m.streams_played > 0).length;
+  const standings = ordered.map((s, i) => ({
+    ...s,
+    position: i + 1,
+    prize: prizeFor(i + 1, s.streams_played > 0, playerCount),
+  }));
+  const you = standings.find((s) => s.isYou) ?? view.you;
+  const rival = you.position === 1 ? standings[1] ?? null : standings[you.position - 2] ?? null;
+  return { ...view, standings, you, rival, playerCount };
+}
+
 export interface LeagueResult {
   leagueId: string;
   leagueName: string;

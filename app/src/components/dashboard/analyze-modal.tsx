@@ -1,8 +1,19 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Lock, X } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+
+/**
+ * The window between pressing Analyze and the analysis starting: what to
+ * analyze (the whole stream, an hour, or a range) and roughly how long it
+ * takes.
+ *
+ * A free streamer who has used both weekly reports gets one more option
+ * here instead of a dead end: analyze it anyway, and it comes back sealed
+ * until Monday. Pro opens it straight away.
+ */
 
 interface AnalyzeModalProps {
   isOpen: boolean;
@@ -37,33 +48,33 @@ function toTimeString(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+/** Transcription takes about a minute per 15 minutes of audio, then the report. */
 function estimateMinutes(durationSecs: number, rangeSecs: number): number {
-  // Transcription runs in 15-min chunks — roughly 1 min of processing per 15 min of audio
   const transcribeMin = Math.max(3, Math.ceil(durationSecs / 900));
   const analyzeMin = Math.max(2, Math.ceil(rangeSecs / 1800));
   return transcribeMin + analyzeMin;
 }
 
-export function AnalyzeModal({
-  isOpen,
-  onClose,
-  vodId,
-  vodTitle,
-  durationSeconds,
-  userPlan,
-  onUpgrade,
-}: AnalyzeModalProps) {
+export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds, userPlan, onUpgrade }: AnalyzeModalProps) {
   const [preset, setPreset] = useState<Preset>("full");
   const [customStart, setCustomStart] = useState("0:00");
   const [customEnd, setCustomEnd] = useState(toTimeString(durationSeconds));
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the free allowance is used up but the sealed extra isn't.
+  const [sealedOffer, setSealedOffer] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const hasHour = durationSeconds >= 3600;
-
   let startSeconds = 0;
   let endSeconds = durationSeconds;
   if (preset === "first_hour") endSeconds = Math.min(3600, durationSeconds);
@@ -85,13 +96,13 @@ export function AnalyzeModal({
   if (preset === "custom") {
     const s = parseTime(customStart);
     const e = parseTime(customEnd);
-    if (s === null) validationError = "Invalid start time format. Use MM:SS or H:MM:SS.";
-    else if (e === null) validationError = "Invalid end time format. Use MM:SS or H:MM:SS.";
-    else if (e <= s) validationError = "End time must be after start time.";
-    else if (e - s < 60) validationError = "Range must be at least 1 minute.";
+    if (s === null) validationError = "Start time should look like 12:30 or 1:05:00.";
+    else if (e === null) validationError = "End time should look like 12:30 or 1:05:00.";
+    else if (e <= s) validationError = "End has to be after the start.";
+    else if (e - s < 60) validationError = "Pick at least a minute.";
   }
 
-  async function handleAnalyze() {
+  async function start(sealedExtra = false) {
     if (validationError) return;
     setAnalyzing(true);
     setError(null);
@@ -101,270 +112,160 @@ export function AnalyzeModal({
         body.startSeconds = startSeconds;
         body.endSeconds = endSeconds;
       }
+      if (sealedExtra) body.sealedExtra = true;
       const res = await fetch("/api/vods/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 403 && json.sealed_extra_available && !sealedExtra) {
+        setSealedOffer(json.message ?? "You've used both free reports this week.");
+        return;
+      }
       if (res.status === 403 && json.upgrade) {
         onClose();
-        onUpgrade(json.message ?? "Upgrade to Pro to continue.");
+        onUpgrade(json.message ?? "Go Pro to keep going.");
         return;
       }
       if (!res.ok) {
-        setError(json.error || "Analysis failed");
+        setError(json.message || json.error || "That didn't start. Try again.");
         return;
       }
       onClose();
       router.refresh();
     } catch {
-      setError("Network error");
+      setError("Couldn't reach LevlCast. Check your connection and try again.");
     } finally {
       setAnalyzing(false);
     }
   }
 
   const estimateLabel =
-    estimatedMin < 60
-      ? `~${estimatedMin} min`
-      : `~${Math.floor(estimatedMin / 60)}h ${estimatedMin % 60}m`;
+    estimatedMin < 60 ? `about ${estimatedMin} min` : `about ${Math.floor(estimatedMin / 60)}h ${estimatedMin % 60}m`;
 
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 24,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        style={{
-          background: "var(--surface, #181311)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 16,
-          padding: "28px 28px 24px",
-          width: "100%",
-          maxWidth: 540,
-          maxHeight: "90vh",
-          overflowY: "auto",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
-          <div style={{ minWidth: 0, paddingRight: 16 }}>
-            <div style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.2em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 8 }}>
-              Analyze Stream
-            </div>
-            <h2 style={{ fontSize: 20, fontWeight: 600, color: "#ECF1FA", margin: 0, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    <div className="am" role="dialog" aria-modal="true" aria-labelledby="am-title">
+      <div className="fs-scrim" onClick={onClose} />
+      <div className="am-card">
+        <div className="am-head">
+          <div className="am-head-main">
+            <p className="hm-k">Analyze</p>
+            <h2 id="am-title" className="am-title">
               {vodTitle}
             </h2>
-            <div style={{ fontSize: 12, color: "#6F7C95", marginTop: 6, fontFamily: "monospace" }}>
-              {formatDuration(durationSeconds)} stream
-            </div>
+            <p className="am-meta">{formatDuration(durationSeconds)}</p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ background: "none", border: "none", color: "#6F7C95", fontSize: 20, cursor: "pointer", padding: "0 0 0 16px", lineHeight: 1, flexShrink: 0 }}
-          >
-            ✕
+          <button type="button" className="fs-close am-close" onClick={onClose} aria-label="Close">
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
 
-        <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "20px 0 22px" }} />
-
-        {/* Preset section */}
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#ECF1FA", marginBottom: 10 }}>
-          What to analyze
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: hasHour ? "1fr 1fr" : "1fr 1fr", gap: 8, marginBottom: 14, opacity: tooLongForFree ? 0.35 : 1, pointerEvents: tooLongForFree ? "none" : "auto" }}>
-          <PresetCard
-            label="Full Stream"
-            sub={formatDuration(durationSeconds)}
-            active={preset === "full"}
-            onClick={() => setPreset("full")}
-          />
-          {hasHour && (
-            <PresetCard
-              label="First Hour"
-              sub={formatDuration(Math.min(3600, durationSeconds))}
-              active={preset === "first_hour"}
-              onClick={() => setPreset("first_hour")}
-            />
-          )}
-          {hasHour && (
-            <PresetCard
-              label="Last Hour"
-              sub={formatDuration(Math.min(3600, durationSeconds))}
-              active={preset === "last_hour"}
-              onClick={() => setPreset("last_hour")}
-            />
-          )}
-          <PresetCard
-            label="Custom Range"
-            sub="Pick a section"
-            active={preset === "custom"}
-            onClick={() => setPreset("custom")}
-          />
-        </div>
-
-        {preset === "custom" && (
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 18 }}>
-            <TimeField label="Start" value={customStart} onChange={setCustomStart} placeholder="0:00" />
-            <span style={{ fontSize: 12, color: "#6F7C95", paddingBottom: 11 }}>to</span>
-            <TimeField label="End" value={customEnd} onChange={setCustomEnd} placeholder={toTimeString(durationSeconds)} />
+        {sealedOffer ? (
+          <div className="am-sealed">
+            <p className="am-sealed-k">
+              <Lock size={12} strokeWidth={2.2} aria-hidden="true" /> Sealed until Monday
+            </p>
+            <p className="am-sealed-title">You&apos;ve used both free reports this week.</p>
+            <p className="am-sealed-sub">
+              We can still analyze this one. It comes back sealed and unlocks Monday when your free reports reset.
+              Pro opens it the moment it&apos;s done.
+            </p>
+            {error && <p className="am-error">{error}</p>}
+            <div className="am-actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  onClose();
+                  onUpgrade("Pro opens every report the moment it's done, with 15 reports a month.");
+                }}
+              >
+                Go Pro
+              </button>
+              <button type="button" className="btn btn-blue" disabled={analyzing} onClick={() => start(true)}>
+                {analyzing ? "Starting..." : "Analyze it sealed"}
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            <p className="am-label">What to analyze</p>
+            <div className="am-presets" data-disabled={tooLongForFree ? "yes" : undefined}>
+              <Preset label="Full stream" sub={formatDuration(durationSeconds)} active={preset === "full"} onClick={() => setPreset("full")} />
+              {hasHour && (
+                <Preset label="First hour" sub={formatDuration(Math.min(3600, durationSeconds))} active={preset === "first_hour"} onClick={() => setPreset("first_hour")} />
+              )}
+              {hasHour && (
+                <Preset label="Last hour" sub={formatDuration(Math.min(3600, durationSeconds))} active={preset === "last_hour"} onClick={() => setPreset("last_hour")} />
+              )}
+              <Preset label="Custom range" sub="Pick a section" active={preset === "custom"} onClick={() => setPreset("custom")} />
+            </div>
+
+            {preset === "custom" && (
+              <div className="am-range">
+                <TimeField label="Start" value={customStart} onChange={setCustomStart} placeholder="0:00" />
+                <span>to</span>
+                <TimeField label="End" value={customEnd} onChange={setCustomEnd} placeholder={toTimeString(durationSeconds)} />
+              </div>
+            )}
+
+            <div className="am-summary">
+              <div>
+                <p className="hm-k">Range</p>
+                <p className="am-summary-v">
+                  {isFull ? "Full stream" : `${toTimeString(startSeconds)} to ${toTimeString(endSeconds)}`}
+                  {!isFull && <span> ({formatDuration(rangeSeconds)})</span>}
+                </p>
+              </div>
+              <div className="am-summary-r">
+                <p className="hm-k">Takes</p>
+                <p className="am-summary-v">{estimateLabel}</p>
+              </div>
+            </div>
+            {!isFull && durationSeconds > 3600 && (
+              <p className="am-note">We transcribe the whole stream, then coach only the part you picked.</p>
+            )}
+            {isFull && durationSeconds >= 14400 && !tooLongForFree && (
+              <p className="am-note">Long stream, so it runs in the background. You can close this page.</p>
+            )}
+            {tooLongForFree && <p className="am-note am-note-bad">Free analyzes streams up to 4 hours. Pro goes up to 8.</p>}
+
+            {(validationError || error) && <p className="am-error">{validationError || error}</p>}
+
+            <div className="am-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>
+                Cancel
+              </button>
+              {tooLongForFree ? (
+                <button
+                  type="button"
+                  className="btn btn-blue"
+                  onClick={() => {
+                    onClose();
+                    onUpgrade("Pro analyzes streams up to 8 hours long.");
+                  }}
+                >
+                  Go Pro
+                </button>
+              ) : (
+                <button type="button" className="btn btn-blue" onClick={() => start()} disabled={analyzing || !!validationError}>
+                  {analyzing ? "Starting..." : "Analyze"}
+                </button>
+              )}
+            </div>
+          </>
         )}
-
-        {/* Summary card */}
-        <div style={{
-          padding: "14px 16px",
-          borderRadius: 10,
-          background: "rgba(34,211,238,0.04)",
-          border: "1px solid rgba(34,211,238,0.18)",
-          marginBottom: 14,
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 4 }}>
-                Range
-              </div>
-              <div style={{ fontSize: 13, color: "#ECF1FA", fontFamily: "monospace" }}>
-                {isFull
-                  ? "Full stream"
-                  : `${toTimeString(startSeconds)} → ${toTimeString(endSeconds)}`}
-                {!isFull && (
-                  <span style={{ color: "#6F7C95", marginLeft: 8 }}>
-                    ({formatDuration(rangeSeconds)})
-                  </span>
-                )}
-              </div>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 4 }}>
-                Time
-              </div>
-              <div style={{ fontSize: 13, color: "#22D3EE", fontFamily: "monospace", fontWeight: 700 }}>
-                {estimateLabel}
-              </div>
-            </div>
-          </div>
-          {!isFull && durationSeconds > 3600 && (
-            <div style={{ fontSize: 11, color: "#6F7C95", marginTop: 8, lineHeight: 1.5 }}>
-              We transcribe the full stream first, then run coaching analysis on your selected section only.
-            </div>
-          )}
-          {isFull && durationSeconds >= 14400 && !tooLongForFree && (
-            <div style={{ fontSize: 11, color: "#F59E0B", marginTop: 8, lineHeight: 1.5 }}>
-              Long stream detected. analysis runs in the background. You can close this page and come back when it's done.
-            </div>
-          )}
-          {tooLongForFree && (
-            <div style={{ fontSize: 11, color: "#F87171", marginTop: 8, lineHeight: 1.5 }}>
-              This stream is over 2 hours. Upgrade to Pro to analyze it.
-            </div>
-          )}
-        </div>
-
-        {/* What you'll get — anchors the Analyze CTA */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
-          {["Coach Report", "Score / 100", "Clip Moments", "Word-Synced Captions"].map((tag) => (
-            <span key={tag} style={{
-              fontSize: 11, padding: "3px 9px", borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.12)", color: "#A6B3C9",
-            }}>
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {(validationError || error) && (
-          <div style={{
-            padding: "10px 14px", borderRadius: 8,
-            background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)",
-            marginBottom: 14, fontSize: 12, color: "#F87171",
-          }}>
-            {validationError || error}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "10px 18px", borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.12)", background: "transparent",
-              color: "#A6B3C9", fontSize: 13, cursor: "pointer",
-            }}
-          >
-            Cancel
-          </button>
-          {tooLongForFree ? (
-            <button
-              onClick={() => { onClose(); onUpgrade("Upgrade to Pro to analyze streams longer than 2 hours."); }}
-              style={{
-                padding: "10px 22px", borderRadius: 8, border: "none",
-                background: "#22D3EE", color: "#001318", fontSize: 13, fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Upgrade to Pro
-            </button>
-          ) : (
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzing || !!validationError}
-              style={{
-                padding: "10px 22px", borderRadius: 8, border: "none",
-                background: "#22D3EE", color: "#001318", fontSize: 13, fontWeight: 700,
-                cursor: analyzing || validationError ? "not-allowed" : "pointer",
-                opacity: analyzing || validationError ? 0.6 : 1,
-                transition: "opacity 150ms",
-              }}
-            >
-              {analyzing ? "Starting…" : "Analyze Stream"}
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
-function PresetCard({
-  label,
-  sub,
-  active,
-  onClick,
-}: {
-  label: string;
-  sub: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function Preset({ label, sub, active, onClick }: { label: string; sub: string; active: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        textAlign: "left",
-        padding: "12px 14px",
-        borderRadius: 10,
-        border: active ? "1px solid rgba(34,211,238,0.55)" : "1px solid rgba(255,255,255,0.1)",
-        background: active ? "rgba(34,211,238,0.08)" : "rgba(255,255,255,0.02)",
-        cursor: "pointer",
-        transition: "border-color 150ms, background 150ms",
-      }}
-    >
-      <div style={{ fontSize: 13, fontWeight: 600, color: active ? "#22D3EE" : "#ECF1FA", marginBottom: 3 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 11, color: "#6F7C95", fontFamily: "monospace" }}>
-        {sub}
-      </div>
+    <button type="button" className="am-preset" data-active={active ? "yes" : undefined} onClick={onClick}>
+      <b>{label}</b>
+      <span>{sub}</span>
     </button>
   );
 }
@@ -381,27 +282,9 @@ function TimeField({
   placeholder: string;
 }) {
   return (
-    <div style={{ flex: 1 }}>
-      <label style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.16em", textTransform: "uppercase", color: "#6F7C95", marginBottom: 6, display: "block" }}>
-        {label}
-      </label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: "100%",
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 8,
-          padding: "9px 12px",
-          fontSize: 13,
-          fontFamily: "monospace",
-          color: "#ECF1FA",
-          outline: "none",
-        }}
-      />
-    </div>
+    <label className="am-time">
+      <span>{label}</span>
+      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    </label>
   );
 }

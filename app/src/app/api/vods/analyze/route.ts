@@ -16,8 +16,8 @@
  *   409 { error: "already_analyzed" }             — VOD already done
  */
 
-import { createClientFromRequest } from "@/lib/supabase/server";
-import { getUserUsage } from "@/lib/limits";
+import { createAdminClient, createClientFromRequest } from "@/lib/supabase/server";
+import { currentWeekStart, getUserUsage } from "@/lib/limits";
 import { inngest } from "@/lib/inngest/client";
 import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
@@ -35,8 +35,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 
+  const payload = await request.json().catch(() => ({}));
   const usage = await getUserUsage(user.id, supabase);
-  if (!usage.can_analyze) {
+  const admin = createAdminClient();
+  const weekStart = currentWeekStart();
+
+  // A free streamer who has used this week's reports can still analyze one
+  // more stream, sealed until Monday (or until they go Pro). It doesn't
+  // use a report, so it's limited to one a week.
+  let sealedExtra = false;
+  if (!usage.can_analyze && usage.on_trial) {
+    const { count: extrasThisWeek } = await admin
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("sealed_extra_week", weekStart)
+      .in("status", ["transcribing", "analyzing", "ready"]);
+    const available = (extrasThisWeek ?? 0) === 0;
+    if (available && payload?.sealedExtra === true) {
+      sealedExtra = true;
+    } else {
+      return NextResponse.json(
+        {
+          error: "limit_reached",
+          message: available
+            ? "You've used both free reports this week. You can still analyze one more, sealed until Monday."
+            : "You've used both free reports and this week's sealed extra. They reset Monday, or Pro gives you 15 a month.",
+          upgrade: true,
+          on_trial: true,
+          sealed_extra_available: available,
+        },
+        { status: 403 }
+      );
+    }
+  }
+  if (!usage.can_analyze && !sealedExtra) {
     let message: string;
     if (usage.on_trial) {
       message = `You've used both free analyses this week. They reset Monday, or Pro gives you 15 a month.`;
@@ -60,7 +93,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { vodId, startSeconds, endSeconds } = await request.json();
+  const { vodId, startSeconds, endSeconds } = payload ?? {};
   if (!vodId || typeof vodId !== "string") {
     return NextResponse.json({ error: "Missing or invalid vodId" }, { status: 400 });
   }
@@ -159,6 +192,14 @@ export async function POST(request: Request) {
     if (existing.status === "ready") return NextResponse.json({ error: "VOD already analyzed" }, { status: 409 });
     return NextResponse.json({ error: "Analysis already in progress" }, { status: 409 });
   }
+
+  // Mark (or clear) the sealed extra before the pipeline can read it. The
+  // browser can't write this column, hence the admin client.
+  await admin
+    .from("vods")
+    .update({ sealed_extra_week: sealedExtra ? weekStart : null })
+    .eq("id", vodId)
+    .eq("user_id", user.id);
 
   // Fire Inngest event — analysis runs in background, no timeout risk.
   // Idempotency key dedupes double-click / retry storms within 24h so the

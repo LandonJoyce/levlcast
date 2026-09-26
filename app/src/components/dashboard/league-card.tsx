@@ -30,8 +30,11 @@ function signed(n: number): string {
   return n > 0 ? `+${n}` : String(n);
 }
 
-function rivalLine(view: LeagueView): string {
+function rivalLine(view: LeagueView, sealedStreams = 0): string {
   const { you, rival } = view;
+  if (you.streams_played === 0 && sealedStreams > 0) {
+    return "Your stream this week is still sealed. Open it and it goes on the board.";
+  }
   if (you.streams_played === 0) {
     return "Analyze a stream this week to get on the board. Anyone who plays ranks above everyone who doesn't.";
   }
@@ -64,9 +67,12 @@ const Arrow = () => (
 export function LeagueCard({
   view,
   lastResult,
+  sealedStreams = 0,
 }: {
   view: LeagueView | null;
   lastResult: LeagueResult | null;
+  /** Your streams left out of the table until you open them. */
+  sealedStreams?: number;
 }) {
   // Not seated this week: nothing analysed in the last four weeks, or new.
   // The card becomes the invitation rather than disappearing, because the
@@ -90,7 +96,7 @@ export function LeagueCard({
     );
   }
 
-  const line = rivalLine(view);
+  const line = rivalLine(view, sealedStreams);
 
   return (
     <div className="card lg-card">
@@ -158,6 +164,13 @@ export function LeagueCard({
           );
         })}
       </ol>
+
+      {sealedStreams > 0 && (
+        <p className="lg-sealed-note">
+          Your sealed {sealedStreams === 1 ? "stream isn't" : "streams aren't"} in these numbers yet. Open{" "}
+          {sealedStreams === 1 ? "it" : "them"} to see where you really stand.
+        </p>
+      )}
 
       <div className="lg-foot">
         <span>

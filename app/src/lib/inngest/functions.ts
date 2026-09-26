@@ -31,10 +31,24 @@ import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, currentWeekStart, touchStreak } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
-import { computeDelta } from "@/lib/rank";
+import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
 import { fillOutreachQueue } from "@/lib/outreach";
 import { redditSendMessage } from "@/lib/reddit";
+
+/**
+ * Which "your report is ready" message fits: a placement, a free
+ * streamer's locked extra stream, or an ordinary sealed result.
+ */
+async function readyKind(
+  supabase: ReturnType<typeof createAdminClient>,
+  vodId: string
+): Promise<"result" | "placement" | "locked"> {
+  const { data } = await supabase.from("vods").select("rank_delta, sealed_extra_week").eq("id", vodId).maybeSingle();
+  if (data?.rank_delta != null && isPlacementDelta(data.rank_delta as number)) return "placement";
+  if (data?.sealed_extra_week) return "locked";
+  return "result";
+}
 
 export const analyzeVod = inngest.createFunction(
   {
@@ -384,6 +398,10 @@ export const analyzeVod = inngest.createFunction(
         // user-facing limits.ts uses.
         if (plan === "free") {
           const twitchId = profile?.twitch_id as string | undefined;
+          // A sealed extra stream (analyzed after the week's reports ran
+          // out) goes through without using a report; it's locked instead.
+          const { data: extraRow } = await supabase.from("vods").select("sealed_extra_week").eq("id", vodId).maybeSingle();
+          const isSealedExtra = !!extraRow?.sealed_extra_week;
           let analysesUsed = 0;
           if (twitchId) {
             const { data: trial } = await supabase
@@ -398,7 +416,7 @@ export const analyzeVod = inngest.createFunction(
             const sameWeek = ((trial?.week_start as string | null) ?? null) === currentWeekStart();
             analysesUsed = sameWeek ? trial?.analyses_this_week ?? 0 : 0;
           }
-          if (analysesUsed >= FREE_WEEKLY_LIMITS.analyses_per_week) {
+          if (!isSealedExtra && analysesUsed >= FREE_WEEKLY_LIMITS.analyses_per_week) {
             await supabase.from("vods").update({
               status: "failed",
               failed_reason: `You've used both free analyses this week. They reset Monday, or go Pro for 15 a month.`,
@@ -433,7 +451,7 @@ export const analyzeVod = inngest.createFunction(
               : {}),
           }).eq("id", vodId);
 
-          if (twitchId) {
+          if (twitchId && !isSealedExtra) {
             await incrementTrialAnalysis(twitchId);
           }
           await touchStreak(userId);
@@ -634,47 +652,15 @@ export const analyzeVod = inngest.createFunction(
           .eq("id", userId)
           .single();
 
-        const report = coachReport as { overall_score?: number; recommendation?: string };
-        const score = report.overall_score;
-        const priority = report.recommendation ?? "";
-        const snippet = priority.length > 80 ? priority.slice(0, 77) + "..." : priority;
-
-        // Look up the most recent prior ready stream (excluding this one) so
-        // we can compute a delta. Null-safe — first-ever stream just uses the
-        // default title.
-        let priorScore: number | null = null;
-        if (score !== undefined) {
-          const { data: prior } = await supabase
-            .from("vods")
-            .select("coach_report")
-            .eq("user_id", userId)
-            .eq("status", "ready")
-            .neq("id", vodId)
-            .not("coach_report", "is", null)
-            .order("analyzed_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          const priorReport = prior?.coach_report as { overall_score?: number } | null;
-          priorScore = priorReport?.overall_score ?? null;
-        }
-
-        let title: string;
-        if (score !== undefined && priorScore !== null && score > priorScore) {
-          const delta = score - priorScore;
-          title = `Your score climbed ${delta > 0 ? "+" : ""}${delta}, now ${score}/100`;
-        } else if (score !== undefined && priorScore !== null && score < priorScore) {
-          title = `New stream graded: ${score}/100`;
-        } else if (score !== undefined) {
-          title = `Stream graded: ${score}/100`;
-        } else {
-          title = "Your stream report is ready";
-        }
-
-        const pushPayload = {
-          title,
-          body: snippet || "Open LevlCast to see your coach report.",
-          data: { vodId },
-        };
+        // Results arrive sealed, so the push never says how it went: it's
+        // the tap on the shoulder, and the reveal happens in the app.
+        const kind = await readyKind(supabase, vodId);
+        const pushPayload =
+          kind === "placement"
+            ? { title: "Your placement is in", body: "Open it to see where you landed on the ladder.", data: { vodId } }
+            : kind === "locked"
+              ? { title: "Your extra stream is in", body: "It's sealed until Monday. Pro opens it now.", data: { vodId } }
+              : { title: "Your result is in", body: "Call it before you open it: win or loss?", data: { vodId } };
 
         await sendPush(profile?.expo_push_token, pushPayload);
 
@@ -699,17 +685,9 @@ export const analyzeVod = inngest.createFunction(
 
         const { data: vod } = await supabase.from("vods").select("title").eq("id", vodId).single();
         const { data: profile } = await supabase.from("profiles").select("twitch_display_name").eq("id", userId).single();
-        const report = coachReport as { overall_score?: number; recommendation?: string };
         const name = profile?.twitch_display_name ?? user.email.split("@")[0];
 
-        await sendVodReadyEmail(
-          user.email,
-          name,
-          vodId,
-          vod?.title ?? "Stream",
-          report.overall_score,
-          report.recommendation ?? "",
-        );
+        await sendVodReadyEmail(user.email, name, vodId, vod?.title ?? "Stream", await readyKind(supabase, vodId));
       });
 
       // Coaching arc — generates after every analysis, cached by vod ID so it
