@@ -337,6 +337,10 @@ body:has(.v3) { background: rgb(16, 13, 14); }
    motion shows it still and the animations only describe how it gets
    there. Timeline: bar fills 0 to 1.15s, impact at 1.15s, word at 1.3s,
    new bar at 1.9s, idle from 2.6s. */
+.v3 .ru { position: relative; text-align: center; }
+/* The loop fades the finished screen out before playing again. */
+.v3 .ru-body { transition: opacity 450ms ease; }
+.v3 .ru[data-leaving] .ru-body { opacity: 0; }
 .v3 .ru-stage {
   position: relative;
   display: grid;
@@ -377,6 +381,35 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 @keyframes ru-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
+}
+
+/* Charging: a cool glow builds behind Silver, and just before the impact
+   a ring closes in on it. Both are gone by the flash. */
+.v3 .ru-cool {
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(196, 220, 255, 0.34) 0%, rgba(196, 220, 255, 0.1) 42%, transparent 68%);
+  opacity: 0;
+  animation: ru-cool 1200ms ease-in forwards;
+}
+@keyframes ru-cool {
+  0%, 40% { opacity: 0; transform: scale(0.8); }
+  90% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+.v3 .ru-charge {
+  width: 170px;
+  height: 170px;
+  border: 1.5px solid rgba(225, 235, 250, 0.85);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ru-charge 330ms cubic-bezier(0.5, 0, 0.9, 0.5) 820ms forwards;
+}
+@keyframes ru-charge {
+  0% { opacity: 0; transform: scale(2.2); }
+  60% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(0.72); }
 }
 
 /* Light behind the new emblem: a bloom at the impact that settles into a
@@ -460,6 +493,27 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   0% { opacity: 1; transform: rotate(var(--a)) translateX(16px) scaleX(0.2); }
   65% { opacity: 0.9; }
   100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scaleX(1); }
+}
+
+/* Embers: a few specks of light drifting up off the emblem while it
+   idles, each on its own clock so they never line up. */
+.v3 .ru-embers { position: relative; width: 0; height: 0; }
+.v3 .ru-embers i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgb(255, 228, 160);
+  box-shadow: 0 0 6px 1px rgba(255, 200, 90, 0.6);
+  opacity: 0;
+  animation: ru-ember var(--dur) ease-out var(--t) infinite;
+}
+@keyframes ru-ember {
+  0% { opacity: 0; transform: translate(var(--x), 40px) scale(0.6); }
+  18% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(calc(var(--x) + var(--dx)), -96px) scale(1); }
 }
 
 /* PROMOTED rises into view one letter at a time, clipped by its line so
@@ -558,29 +612,11 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 }
 .v3 .ru-sub-new { animation: ru-up 500ms ease 2000ms both; }
 
-.v3 .ru-replay {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--ll-line-soft);
-  border-radius: 8px;
-  background: none;
-  color: var(--ll-fg-faint);
-  cursor: pointer;
-  animation: ru-in 400ms ease 2600ms both;
-  transition: color 140ms ease, border-color 140ms ease;
-}
-.v3 .ru-replay:hover { color: var(--ll-fg); border-color: var(--ll-line-med); }
 
 @media (prefers-reduced-motion: reduce) {
   .v3 .ru,
   .v3 .ru * { animation: none !important; }
-  /* Nothing to replay when nothing moves. */
-  .v3 .ru-replay { display: none; }
+  .v3 .ru-embers { display: none; }
 }
 
 /* ── Sections ── */
@@ -831,6 +867,16 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   opacity: 0.55;
 }
 .v3 .v3-rung-emb { width: 100%; max-width: 96px; height: auto; display: block; }
+/* Hover a rank and its emblem bobs, the way a game's rank screen does when
+   you point at one. */
+.v3 .v3-rung:hover .v3-rung-emb { animation: v3-bob 1.6s ease-in-out infinite; }
+@keyframes v3-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v3 .v3-rung:hover .v3-rung-emb { animation: none; }
+}
 .v3 .v3-rung-name {
   font-family: var(--v3-display);
   font-weight: 800;
