@@ -12,7 +12,7 @@
  *
  * MODELS USED:
  *   - Peak detection: claude-sonnet-4-6 (high quality — this is the MVP feature)
- *   - Coaching report: claude-sonnet-4-6 (flagship feature)
+ *   - Coaching report: claude-sonnet-5 at medium effort (flagship feature)
  *
  * See src/types/index.ts for the Peak and CoachReport type definitions.
  */
@@ -1702,9 +1702,15 @@ If you write a strength, you name the exact moment that showed it and tell them 
 CATEGORY COACHING STANDARDS — apply the section matching the streamer type you identify:
 ${categoryGuideBlock}${gameModuleBlock}`;
 
+  const coachStartedAt = Date.now();
   const response = await withRetry(() => anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 3500,
+    model: "claude-sonnet-5",
+    // Sonnet 5 thinks before it writes (adaptive thinking is its default),
+    // and max_tokens caps the thinking and the report together. The report
+    // alone had 3500 on Sonnet 4.6, and Sonnet 5's tokenizer counts the same
+    // text as roughly 30% more tokens. 12000 leaves room for both while
+    // keeping the call well inside the 300 seconds Vercel gives this step.
+    max_tokens: 12000,
     system: [
       {
         type: "text" as const,
@@ -1983,12 +1989,35 @@ Respond with ONLY a JSON object (no markdown, no code fences):
 Omit the progress_on_prior_fix field entirely when no prior report history exists. When it IS included, prior_priority and status and evidence are required; metric is optional (include it only when you can ground both before and after in real data, never invent numbers).`,
       },
     ],
+    // "medium" rather than the default "high". Anthropic puts Sonnet 5 at
+    // medium on par with Sonnet 4.6 at high effort, and this call used to run
+    // 4.6 with no thinking at all, so it's still a step up. "high" can think
+    // long enough to crowd the 300-second limit and the token ceiling above,
+    // and every thinking token is billed as output. `output_config`
+    // postdates the installed SDK's types (0.39); the SDK sends the body as
+    // given and the API reads it.
+    ...({ output_config: { effort: "medium" } } as object),
   }), 3, 1000);
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  // The thinking comes back as its own block ahead of the report, so the
+  // report is the text block wherever it sits. content[0] is now the
+  // thinking, and reading it would parse an empty string on every stream.
+  const textBlock = response.content.find((b) => b.type === "text");
+  const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
+  const usage = response.usage;
+  console.log(
+    `[coach] ${response.model} took ${Math.round((Date.now() - coachStartedAt) / 1000)}s: ` +
+      `in ${usage.input_tokens} (cache write ${usage.cache_creation_input_tokens ?? 0}, read ${usage.cache_read_input_tokens ?? 0}), ` +
+      `out ${usage.output_tokens}, stop ${response.stop_reason}`
+  );
 
   try {
-    const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    // The report is the outermost object. A stray line around it shouldn't
+    // cost the streamer the whole report.
+    const stripped = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const first = stripped.indexOf("{");
+    const last = stripped.lastIndexOf("}");
+    const cleaned = first >= 0 && last > first ? stripped.slice(first, last + 1) : stripped;
     const report = stripEmDashes(JSON.parse(cleaned)) as CoachReport;
     // Attach computed metrics directly — no need to re-derive from AI text
     report.commentary_density = commentaryDensity;
