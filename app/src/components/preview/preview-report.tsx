@@ -15,7 +15,8 @@
  * not stacked cards.
  */
 
-import Link from "next/link";
+import { TIERS } from "@/lib/rank";
+import { FullReportButton } from "./full-report-button";
 
 export interface PreviewPayload {
   twitch_vod_id: string;
@@ -120,6 +121,23 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
         ) : null}
       </header>
 
+      {/* Sign-up where people actually are. The report below is long and
+          most readers stop after the fix; the only button used to be at
+          the very bottom. */}
+      <section className="pr-cta">
+        <div>
+          <p className="pr-k">{partial ? `That's the first ${fmtDuration(analyzed)}` : "That's the free preview"}</p>
+          <p className="pr-cta-line">
+            Sign in with Twitch and get {partial ? `the whole ${fmtDuration(total)}` : "the whole stream"} coached, your
+            clips cut, and your rank on the ladder.
+          </p>
+        </div>
+        <div className="pr-cta-act">
+          <FullReportButton vodId={preview.twitch_vod_id} />
+          <p className="v3-fine">Free. Two full reports a week, no card.</p>
+        </div>
+      </section>
+
       {r.stream_story ? (
         <section className="pr-sec">
           <h2 className="pr-k">Summary</h2>
@@ -209,16 +227,22 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
             : `That was the first ${fmtDuration(analyzed)}`}
         </p>
         <div>
-          <h2 className="pr-more-h">The full report reads the whole stream, and every stream after it.</h2>
-          <ul className="pr-more-list">
-            <li>Every minute, not just the opening, including where your energy dropped</li>
-            <li>Dead air marked with timestamps you can jump straight to</li>
-            <li>Your best moments cut into clips with captions, ready to post</li>
-            <li>Your rank on the ladder, and whether you fixed last stream&apos;s problem</li>
+          <ul className="pr-ladder" aria-label="The ladder, Iron to Grandmaster">
+            {TIERS.map((t) => (
+              <li key={t.name}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/ranks/${t.name.toLowerCase()}.png`} alt={t.name} width={384} height={384} />
+              </li>
+            ))}
           </ul>
-          <Link href="/auth/login" className="v3-btn">
-            Get the full report free
-          </Link>
+          <h2 className="pr-more-h">Your first full report puts you on the ladder.</h2>
+          <ul className="pr-more-list">
+            <li>Every stream after it is a ranked game: beat your recent form and you climb</li>
+            <li>Every minute coached, not just the opening, with the dead air timestamped</li>
+            <li>Your best moments cut into clips with captions, ready to post</li>
+            <li>A weekly league against the streamers nearest your rank</li>
+          </ul>
+          <FullReportButton vodId={preview.twitch_vod_id} />
           <p className="v3-fine">Sign in with Twitch. Two full reports a week are free, no card.</p>
         </div>
       </section>

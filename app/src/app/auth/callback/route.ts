@@ -100,13 +100,20 @@ export async function GET(request: NextRequest) {
   // Twitch API hiccup never breaks signup.
   if (isNewUser) {
     const twitchId = meta.provider_id || meta.sub;
+    // A stream they previewed for free before signing up (set by the
+    // preview's "Get my full report" button). If it's theirs, it's the one
+    // to analyze first, since that's the report they asked for.
+    const pendingVod = request.cookies.get("levlcast_pending_vod")?.value;
+    const preferredVodId = pendingVod && /^\d{6,}$/.test(pendingVod) ? pendingVod : null;
     if (twitchId) {
-      autoAnalyzeFirstVod(user.id, twitchId).catch((err) => {
+      autoAnalyzeFirstVod(user.id, twitchId, preferredVodId).catch((err) => {
         console.error("[auth/callback] Auto-analyze failed:", err instanceof Error ? err.message : err);
       });
     }
   }
 
+  // One use only.
+  response.cookies.set("levlcast_pending_vod", "", { maxAge: 0, path: "/" });
   return response;
 }
 
@@ -116,7 +123,7 @@ export async function GET(request: NextRequest) {
  * it into the vods table, and queues the analyze job. Best-effort — failures
  * are logged but never thrown.
  */
-async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<void> {
+async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVodId: string | null = null): Promise<void> {
   const admin = createAdminClient();
 
   let appToken: string;
@@ -167,9 +174,12 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string): Promise<vo
     .map((v) => ({ vod: v, dur: parseTwitchDuration(v.duration) }))
     .filter((x) => x.dur >= MIN_DURATION);
 
+  // The stream they previewed before signing up comes first, if it's
+  // one of theirs; otherwise the newest one in the comfortable range.
+  const wanted = preferredVodId ? withDuration.find((x) => x.vod.id === preferredVodId) : undefined;
   const preferred = withDuration.find((x) => x.dur <= PREFERRED_MAX);
   const fallback = withDuration.sort((a, b) => a.dur - b.dur)[0];
-  const eligible = (preferred ?? fallback)?.vod;
+  const eligible = (wanted ?? preferred ?? fallback)?.vod;
 
   if (!eligible) {
     console.log(

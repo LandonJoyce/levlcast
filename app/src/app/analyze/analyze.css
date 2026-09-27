@@ -219,6 +219,30 @@
 }
 .v3 .pr-more .v3-btn { margin-top: 24px; }
 
+/* Sign-up right under the score, where readers still are. */
+.v3 .pr-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 32px;
+  margin: 8px 0 12px;
+  padding: 20px 22px;
+  border: 1px solid var(--ll-line-med);
+  border-radius: 14px;
+}
+.v3 .pr-cta > div:first-child { flex: 1 1 380px; min-width: 0; }
+.v3 .pr-cta .pr-k { padding-top: 0; color: var(--v3-gold); }
+.v3 .pr-cta-line { max-width: 52ch; margin: 6px 0 0; font-size: 16px; font-weight: 600; line-height: 1.5; color: var(--ll-fg); }
+.v3 .pr-cta-act { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.v3 .pr-cta-act .v3-btn { margin-top: 0; }
+.v3 .pr-cta-act .v3-fine { margin: 0; }
+
+/* The ladder, above the closing pitch. */
+.v3 .pr-ladder { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 16px; padding: 0; list-style: none; }
+.v3 .pr-ladder li { width: 46px; height: 46px; }
+.v3 .pr-ladder img { width: 100%; height: 100%; object-fit: contain; }
+
 @media (prefers-reduced-motion: reduce) {
   .v3 [data-state="now"] .az-stage-mark { animation: none; background: var(--ll-fg); }
 }
