@@ -316,12 +316,19 @@ export async function draftMessage(input: DraftInput, angle: Angle): Promise<Dra
 
   const res = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    // Headroom for the thinking this model does before it writes. At 400,
-    // and later 1500, the budget could run out mid-thought and leave no
-    // message at all; a ceiling only costs what's actually used.
-    max_tokens: 8000,
+    // Sonnet 5 thinks before it answers unless told otherwise, at "high"
+    // effort by default, and the thinking bills as output. At that setting
+    // it could spend more than 1,500 tokens thinking about a 60-word DM
+    // (the reason this ceiling once had to go from 1500 to 8000). "low"
+    // keeps the model and its voice and lets it think only as much as a
+    // short message needs. The ceiling is headroom, not a target: a reply
+    // that hits it is a failed draft, and the lead is tried again next run.
+    max_tokens: 3000,
     system: systemPrompt(angle),
     messages: [{ role: "user", content: lines.join("\n") }],
+    // `output_config` postdates the installed SDK's types, like "refusal"
+    // below, but the SDK sends the body as given and the API reads it.
+    ...({ output_config: { effort: "low" } } as object),
   });
 
   // A cut-off or refused reply is a failed draft, not a judgement about the

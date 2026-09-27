@@ -611,7 +611,7 @@ export default function OutreachPage() {
         </div>
       </div>
 
-      {/* The queue. Written unattended by the six-hourly harvest, so this
+      {/* The queue. Written unattended by the four-hourly harvest, so this
           is usually full before you open the page. Everything here is
           already drafted; Send opens Reddit with it filled in. */}
       {queue.length > 0 && (

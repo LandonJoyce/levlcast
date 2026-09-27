@@ -2256,16 +2256,18 @@ export const rescueUnactivatedSignups = inngest.createFunction(
 /**
  * Outreach harvest — fills the queue, sends nothing.
  *
- * Hourly. Ten streamer subs do not turn over fast enough for most runs to
- * find anything new, and that is fine: the dedup table means a repeat pass
- * over the same posts costs one mirror request and stops there, before any
- * Claude call. Only genuinely new people reach the drafting step, so the
- * cost of running often is close to zero and the queue is never stale when
- * the page is opened.
+ * Every four hours, with at most three Claude calls a run, so the harvest
+ * writes at most 18 drafts a day however the runs go. It used to run
+ * hourly on the theory that a repeat pass costs nothing, which only holds
+ * while the queue is full. Whenever there was room (after a few sends, or
+ * after a run where the model skipped what it read, since skips don't fill
+ * the queue) it made its full four calls every hour, all day. Drafts wait
+ * in the queue until someone sends them, so finding a post a few hours
+ * sooner gained nothing for that spend.
  */
 export const outreachHarvest = inngest.createFunction(
   { id: "outreach-harvest", retries: 1 },
-  { cron: "0 * * * *" },
+  { cron: "0 */4 * * *" },
   async ({ step }) => {
     return await step.run("harvest", async () => {
       // There is deliberately no env gate here any more. This function
@@ -2275,10 +2277,10 @@ export const outreachHarvest = inngest.createFunction(
       // Gating the draft step as well only ever produced a silent no-op
       // that looked identical to a working feature with no leads.
       //
-      // The real cost of running hourly is Claude calls, so that is what
-      // is bounded: stop drafting once enough messages are waiting. At a
-      // send rate of a handful a day there is no point paying to write
-      // the hundredth draft nobody will reach.
+      // Claude calls are the cost, so that is what is bounded: stop
+      // drafting once enough messages are waiting. At a send rate of a
+      // handful a day there is no point paying to write the hundredth
+      // draft nobody will reach.
       const QUEUE_CEILING = 12;
 
       try {
@@ -2297,7 +2299,7 @@ export const outreachHarvest = inngest.createFunction(
         // model skips every lead kept drafting and cost three times a
         // successful pass while queueing nothing.
         const room = QUEUE_CEILING - (waiting ?? 0);
-        const result = await fillOutreachQueue(Math.min(3, room), 4);
+        const result = await fillOutreachQueue(Math.min(2, room), 3);
         console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped} claude_calls=${result.attempts}`);
         return result;
       } catch (err) {
