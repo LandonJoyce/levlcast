@@ -257,6 +257,8 @@ export async function buildPreviewReport(
   const peaks = await detectPeaks(segments, title);
   // `excerpt` is what stops the model from judging a five-hour stream by
   // its first twelve minutes and calling the result a stream score.
-  const coachReport = await generateCoachReport(segments, title, peaks, undefined, undefined, undefined, excerpt, muted);
+  // Medium effort: this runs in the same Inngest step as detectPeaks, so it
+  // has less of Vercel's 300 seconds to spare than a full report does.
+  const coachReport = await generateCoachReport(segments, title, peaks, undefined, undefined, undefined, excerpt, muted, "medium");
   return { coachReport, peaks };
 }

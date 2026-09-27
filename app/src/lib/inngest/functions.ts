@@ -61,7 +61,7 @@ export const analyzeVod = inngest.createFunction(
     },
   },
   { event: "vod/analyze" },
-  async ({ event, step }) => {
+  async ({ event, step, attempt }) => {
     const { vodId, userId, startSeconds, endSeconds } = event.data as {
       vodId: string;
       userId: string;
@@ -366,7 +366,10 @@ export const analyzeVod = inngest.createFunction(
           });
 
         console.log(`[analyze] Stage 3/4: generating coach report (${peaks.length} peaks, ${priorReports.length} prior reports)`);
-        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets, undefined, muted);
+        // High effort first. If that attempt fails, most likely by thinking
+        // past generateCoachReport's 240-second cutoff, the step's retry
+        // drops to medium, which finishes well inside it.
+        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets, undefined, muted, attempt === 0 ? "high" : "medium");
         if (!report) {
           throw new Error("Failed to generate coaching report. AI returned invalid response.");
         }
