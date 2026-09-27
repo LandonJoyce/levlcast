@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { redditGet, isRedditConfigured, OUTREACH_SUBS } from "@/lib/reddit";
+import { redditGet, isRedditConfigured, OUTREACH_SUBS, arcticShiftGet, MIRROR_DOWN_MESSAGE } from "@/lib/reddit";
 
 export const runtime = "edge";
 
@@ -63,15 +63,7 @@ export async function GET(req: NextRequest) {
    * window below is generous rather than tight. Slightly stale leads beat
    * no leads.
    */
-  const fetchFromMirror = async (sub: string): Promise<any[]> => {
-    const r = await fetch(
-      `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&limit=100`,
-      { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
-    );
-    if (!r.ok) throw new Error(`Mirror returned ${r.status}`);
-    const j = await r.json();
-    return (j?.data ?? []) as any[];
-  };
+  const fetchFromMirror = (sub: string) => arcticShiftGet("posts", sub);
 
   let children: any[] = [];
   try {
@@ -89,7 +81,7 @@ export async function GET(req: NextRequest) {
       children = results.flat().map((d) => ({ data: d }));
       if (children.length === 0) {
         return NextResponse.json(
-          { error: "Could not load any subreddits from the mirror. Try again shortly.", posts: [] },
+          { error: MIRROR_DOWN_MESSAGE, posts: [] },
           { status: 502 }
         );
       }

@@ -26,6 +26,42 @@ export const REDDIT_UA = "web:levlcast-outreach:1.1 (by /u/BMWDouche)";
 // which is enough to avoid re-authing on every request in a burst.
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
+/**
+ * Read from Arctic Shift, the free Reddit mirror the outreach pages fall
+ * back to without API keys. It has outages (every request returns 500 for
+ * a while) and the odd slow or failed request, so each call gets a
+ * 10-second timeout and one retry. A real outage still fails; the fix for
+ * that is Reddit API keys (see the setup notes above).
+ */
+export async function arcticShiftGet(kind: "posts" | "comments", sub: string): Promise<any[]> {
+  const url = `https://arctic-shift.photon-reddit.com/api/${kind}/search?subreddit=${encodeURIComponent(sub)}&limit=100`;
+  let lastError = "no response";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10_000);
+    try {
+      const r = await fetch(url, { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" }, signal: ctrl.signal });
+      if (r.ok) {
+        const j = await r.json();
+        return (j?.data ?? []) as any[];
+      }
+      lastError = `HTTP ${r.status}`;
+      if (r.status < 500 && r.status !== 429) break;
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error(`Arctic Shift: ${lastError}`);
+}
+
+/** What the outreach pages say when the mirror gives them nothing. */
+export const MIRROR_DOWN_MESSAGE =
+  "Arctic Shift, the free Reddit mirror this page reads from, isn't answering right now. That's their outage, not LevlCast. " +
+  "Paste a post below in the meantime. Adding Reddit API keys makes this read Reddit directly and stops it depending on the mirror.";
+
 export function isRedditConfigured(): boolean {
   return !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET);
 }

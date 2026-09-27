@@ -33,7 +33,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { OUTREACH_SUBS } from "@/lib/reddit";
+import { OUTREACH_SUBS, arcticShiftGet } from "@/lib/reddit";
 import { createAdminClient } from "@/lib/supabase/server";
 
 /** Help-seeking language. Mirrors the manual leads route. */
@@ -176,13 +176,7 @@ export async function harvestLeads(limit = 25): Promise<HarvestedLead[]> {
   const rows = await Promise.all(
     OUTREACH_SUBS.map(async (sub) => {
       try {
-        const res = await fetch(
-          `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=${encodeURIComponent(sub)}&limit=100`,
-          { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } }
-        );
-        if (!res.ok) return [] as Array<Record<string, unknown>>;
-        const json = await res.json();
-        return (json?.data ?? []) as Array<Record<string, unknown>>;
+        return (await arcticShiftGet("posts", sub)) as Array<Record<string, unknown>>;
       } catch {
         // One dead subreddit must not take the whole harvest with it.
         return [] as Array<Record<string, unknown>>;
