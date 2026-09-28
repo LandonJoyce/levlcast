@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { sendWelcomeEmail } from "@/lib/email";
 import { fetchTwitchVods, getAppAccessToken, mapVodToRow, parseTwitchDuration } from "@/lib/twitch";
 import { inngest } from "@/lib/inngest/client";
+import { REF_COOKIE, REF_PATTERN, VISITOR_COOKIE } from "@/lib/funnel";
 
 /**
  * OAuth callback — exchanges the auth code for a session,
@@ -109,6 +110,24 @@ export async function GET(request: NextRequest) {
       autoAnalyzeFirstVod(user.id, twitchId, preferredVodId).catch((err) => {
         console.error("[auth/callback] Auto-analyze failed:", err instanceof Error ? err.message : err);
       });
+    }
+  }
+
+  // Funnel: the last step. Only when the sign-in came back to the browser
+  // that started it; on a phone Twitch can finish it somewhere else, and
+  // those show up as a "Continue with Twitch" with no signup after it.
+  if (isNewUser) {
+    const visitor = request.cookies.get(VISITOR_COOKIE)?.value ?? `user-${user.id}`;
+    const rawRef = (request.cookies.get(REF_COOKIE)?.value ?? "").toLowerCase();
+    try {
+      await admin.from("funnel_events").insert({
+        visitor: visitor.slice(0, 64),
+        ref: REF_PATTERN.test(rawRef) ? rawRef : null,
+        event: "signup",
+        detail: user.id,
+      });
+    } catch {
+      // Before migration 033 the table doesn't exist.
     }
   }
 

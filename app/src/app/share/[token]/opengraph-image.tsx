@@ -102,8 +102,8 @@ export default async function OgImage({
             </div>
             {report?.strengths?.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <span style={{ fontSize: 14, color: "#22c55e", fontWeight: 700 }}>✓ {report.strengths[0]}</span>
-                {report.strengths[1] && <span style={{ fontSize: 14, color: "#22c55e", fontWeight: 700 }}>✓ {report.strengths[1]}</span>}
+                <span style={{ fontSize: 14, color: "#22c55e", fontWeight: 700 }}>✓ {String(report.strengths[0]).replace(/\*\*/g, "")}</span>
+                {report.strengths[1] && <span style={{ fontSize: 14, color: "#22c55e", fontWeight: 700 }}>✓ {String(report.strengths[1]).replace(/\*\*/g, "")}</span>}
               </div>
             )}
           </div>

@@ -40,12 +40,12 @@ export default async function AnalyzePage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { url } = await searchParams;
+  const { url, ref } = await searchParams;
 
   return (
     <div className={`ll-page v3 az ${shoulders.variable}`}>
       <SiteHeader />
-      <AnalyzeClient initialUrl={typeof url === "string" ? url : undefined} />
+      <AnalyzeClient initialUrl={typeof url === "string" ? url : undefined} refParam={typeof ref === "string" ? ref : undefined} />
       <SiteFooter />
     </div>
   );

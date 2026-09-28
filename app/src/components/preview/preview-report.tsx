@@ -176,7 +176,7 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
           <h2 className="pr-k">Working</h2>
           <ul className="pr-list" data-tone="good">
             {strengths.map((s, i) => (
-              <li key={i}>{s}</li>
+              <ReportItem key={i} text={s} />
             ))}
           </ul>
         </section>
@@ -187,7 +187,7 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
           <h2 className="pr-k">Costing you viewers</h2>
           <ul className="pr-list" data-tone="bad">
             {improvements.map((s, i) => (
-              <li key={i}>{s}</li>
+              <ReportItem key={i} text={s} />
             ))}
           </ul>
         </section>
@@ -247,5 +247,21 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
         </div>
       </section>
     </article>
+  );
+}
+
+/**
+ * One line of the report. The coach writes these as "**Label**. body" and
+ * the markdown was going straight onto the page, asterisks and all, which
+ * made the first report a stranger ever reads look broken. The label is
+ * bold text at the start of the line, the way the dashboard shows it.
+ */
+function ReportItem({ text }: { text: string }) {
+  const bold = text.match(/^\s*\*\*([\s\S]+?)\*\*\s*[—–.:-]?\s*([\s\S]*)$/);
+  if (!bold) return <li>{text.replace(/\*\*/g, "")}</li>;
+  return (
+    <li>
+      <b>{bold[1].trim()}.</b> {bold[2].replace(/\*\*/g, "").trim()}
+    </li>
   );
 }

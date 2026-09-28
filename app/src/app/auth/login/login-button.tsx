@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { APP_STORE_URL } from "@/components/landing/site-links";
+import { track } from "@/components/funnel/track";
 
 /**
  * The interactive part of the sign-in page: the Twitch button, the error
@@ -31,6 +32,7 @@ export default function LoginButton({ error, plan }: { error: string | null; pla
   async function signIn() {
     setLoading(true);
     setErrorMsg(null);
+    track("signin_start");
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "twitch",

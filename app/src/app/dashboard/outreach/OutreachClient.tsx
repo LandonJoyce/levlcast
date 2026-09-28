@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { withDmRef } from "@/lib/funnel";
+import { FunnelCard } from "./FunnelCard";
 
 // Subreddit picker for sub-scoped browsing. Removed dead/low-volume subs
 // (letsplay, TwitchFollowers, StreamersCommunity) and kept the active ones.
@@ -174,13 +176,37 @@ export default function OutreachPage() {
       .catch(() => setCanSendDirect(false));
   }, []);
 
-  /** Reddit's compose screen, prefilled. */
+  /**
+   * Reddit's compose screen, prefilled. The analyzer link gets the
+   * recipient's code on the way in, so their click shows up in the funnel.
+   */
   function composeUrl(to: string, subject: string, body: string): string {
     return (
       `https://www.reddit.com/message/compose/?to=${encodeURIComponent(to)}` +
       `&subject=${encodeURIComponent(subject)}` +
-      `&message=${encodeURIComponent(body)}`
+      `&message=${encodeURIComponent(withDmRef(body, to))}`
     );
+  }
+
+  /**
+   * A lead messaged through Reddit's compose screen only used to be
+   * remembered in this browser. Record it on the server too, for dedup
+   * and so the funnel knows who the link went to.
+   */
+  function recordSent(lead: Lead, subject: string, body: string) {
+    void fetch("/api/outreach/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: lead.author,
+        subject,
+        body,
+        subreddit: lead.subreddit,
+        permalink: lead.url,
+        postTitle: lead.title ?? "",
+        recordOnly: true,
+      }),
+    }).catch(() => {});
   }
 
   /**
@@ -534,6 +560,8 @@ export default function OutreachPage() {
         <h1 className="page-title">Reddit Outreach</h1>
         <p className="page-sub">Find streamers asking for help. AI writes a personal message. One click sends it.</p>
       </div>
+
+      <FunnelCard />
 
       {/* Reddit's refusals are shown verbatim, because the text almost
           always says what to do: how many minutes a rate limit has left,
@@ -896,7 +924,10 @@ export default function OutreachPage() {
                       <a
                         href={composeUrl(lead.author, messages[lead.id].subject, messages[lead.id].body)}
                         target="_blank" rel="noopener noreferrer"
-                        onClick={() => markSent(lead.id, lead.author)}
+                        onClick={() => {
+                          markSent(lead.id, lead.author);
+                          recordSent(lead, messages[lead.id].subject, messages[lead.id].body);
+                        }}
                         style={{ fontSize: 12, padding: "7px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.3)", color: "#ff6314", borderRadius: 8, textDecoration: "none", fontWeight: 600 }}>
                         Send this
                       </a>

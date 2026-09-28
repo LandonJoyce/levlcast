@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PreviewReport, fmtDuration, type PreviewPayload } from "@/components/preview/preview-report";
+import { rememberRef, track } from "@/components/funnel/track";
 
 /** How often we ask whether the report is done. */
 const POLL_MS = 4000;
@@ -27,9 +28,12 @@ const STAGES = [
 export function AnalyzeClient({
   initialPreview,
   initialUrl,
+  refParam,
 }: {
   initialPreview?: PreviewPayload;
   initialUrl?: string;
+  /** ?ref= on the link that brought them here, e.g. an outreach DM's code. */
+  refParam?: string;
 }) {
   const [url, setUrl] = useState(initialUrl ?? "");
   const [preview, setPreview] = useState<PreviewPayload | null>(initialPreview ?? null);
@@ -39,6 +43,26 @@ export function AnalyzeClient({
   // Kept in a ref so the polling effect can stop itself without being
   // re-created on every tick.
   const startedAt = useRef<number>(0);
+
+  // Funnel: they got here. A shared preview link is a landing too.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current) return;
+    landed.current = true;
+    rememberRef(refParam);
+    track("land", initialPreview ? "shared-preview" : "analyze");
+  }, [refParam, initialPreview]);
+
+  // Funnel: how each preview they started ended.
+  const reported = useRef<string | null>(null);
+  useEffect(() => {
+    if (!preview || (preview.status !== "ready" && preview.status !== "failed")) return;
+    const key = `${preview.twitch_vod_id}:${preview.status}`;
+    if (reported.current === key || initialPreview?.twitch_vod_id === preview.twitch_vod_id) return;
+    reported.current = key;
+    if (preview.status === "ready") track("preview_ready", preview.twitch_vod_id);
+    else track("preview_failed", `${preview.twitch_vod_id}: ${preview.failed_reason ?? ""}`);
+  }, [preview, initialPreview]);
 
   const working =
     preview != null &&
@@ -65,12 +89,14 @@ export function AnalyzeClient({
 
         if (!res.ok) {
           setError(data?.error ?? "Something went wrong. Try again.");
+          track("preview_refused", data?.error ?? `HTTP ${res.status}`);
           setBusy(false);
           return;
         }
 
         startedAt.current = Date.now();
         setPreview(data as PreviewPayload);
+        track("preview_start", (data as PreviewPayload).twitch_vod_id);
       } catch {
         setError("Couldn't reach the server. Check your connection and try again.");
       } finally {
@@ -174,7 +200,7 @@ export function AnalyzeClient({
               </li>
             ))}
           </ol>
-          <p className="v3-fine">This usually takes about a minute. Keep the tab open and the report shows up here.</p>
+          <p className="v3-fine">This takes a minute or two. Keep the tab open and the report shows up here.</p>
         </section>
       </main>
     );

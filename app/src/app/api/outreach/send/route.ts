@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redditSendMessage } from "@/lib/reddit";
+import { withDmRef } from "@/lib/funnel";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 
@@ -72,6 +73,12 @@ export async function POST(req: NextRequest) {
     subreddit?: string;
     permalink?: string;
     postTitle?: string;
+    /**
+     * The message went out through Reddit's own compose screen (no API
+     * keys): skip the send, just record it, so the contact is in the
+     * database for dedup and the funnel instead of only in one browser.
+     */
+    recordOnly?: boolean;
   };
   try {
     payload = await req.json();
@@ -81,13 +88,15 @@ export async function POST(req: NextRequest) {
 
   const to = payload.to?.trim();
   const subject = payload.subject?.trim();
-  const body = payload.body?.trim();
+  // The analyzer link carries the recipient's code, so a click from this
+  // DM can be told apart in the funnel. See lib/funnel.ts.
+  const body = to && payload.body ? withDmRef(payload.body.trim(), to) : payload.body?.trim();
 
   if (!to || !subject || !body) {
     return NextResponse.json({ error: "Need a recipient, a subject and a message" }, { status: 400 });
   }
 
-  const missing = missingCredentials();
+  const missing = payload.recordOnly ? [] : missingCredentials();
   if (missing.length > 0) {
     return NextResponse.json(
       {
@@ -99,7 +108,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await redditSendMessage(to, subject, body);
+    if (!payload.recordOnly) await redditSendMessage(to, subject, body);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Reddit refused the message";
     // Reddit answers a rate limit with a 429 and its own wording. Passing

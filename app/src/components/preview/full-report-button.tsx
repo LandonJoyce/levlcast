@@ -9,6 +9,8 @@
  * theirs. The auth callback reads it; see app/auth/callback/route.ts.
  */
 
+import { track } from "@/components/funnel/track";
+
 export const PENDING_VOD_COOKIE = "levlcast_pending_vod";
 
 export function FullReportButton({ vodId, label = "Get my full report" }: { vodId: string; label?: string }) {
@@ -17,6 +19,7 @@ export function FullReportButton({ vodId, label = "Get my full report" }: { vodI
       href="/auth/login"
       className="v3-btn"
       onClick={() => {
+        track("cta", vodId);
         if (/^\d{6,}$/.test(vodId)) {
           document.cookie = `${PENDING_VOD_COOKIE}=${vodId}; Max-Age=3600; Path=/; SameSite=Lax`;
         }
