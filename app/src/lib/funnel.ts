@@ -41,6 +41,14 @@ export function dmRef(username: string): string {
   return `dm-${h.toString(36).padStart(7, "0").slice(-7)}`;
 }
 
+/**
+ * When DM links started carrying a code (the deploy of 4eff648). DMs sent
+ * before this had the bare link, so a click from one can't be told apart
+ * from any other visitor, and counting them in the DM row would make it
+ * look like nobody clicks.
+ */
+export const DM_CODES_SINCE = "2026-09-28T15:15:00Z";
+
 /** The analyzer link every DM uses, before the per-person code. */
 export const OUTREACH_BASE_LINK = "https://www.levlcast.com/analyze";
 
@@ -50,6 +58,10 @@ export const OUTREACH_BASE_LINK = "https://www.levlcast.com/analyze";
  * drafts written before this existed get it too.
  */
 export function withDmRef(body: string, username: string): string {
-  const link = `${OUTREACH_BASE_LINK}?ref=${dmRef(username)}`;
-  return body.replace(/https:\/\/www\.levlcast\.com\/analyze(?:\?ref=[a-z0-9-]*)?(?![\w/?])/g, link);
+  const code = dmRef(username);
+  // The analyzer, or someone's own report at /analyze/<vodId>.
+  return body.replace(
+    /https:\/\/www\.levlcast\.com\/analyze(\/\d{6,})?(?:\?ref=[a-z0-9-]*)?(?![\w/?])/g,
+    (_m, report: string | undefined) => `${OUTREACH_BASE_LINK}${report ?? ""}?ref=${code}`
+  );
 }

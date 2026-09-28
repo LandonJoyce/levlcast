@@ -33,7 +33,7 @@ import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDIN
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
 import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
-import { fillOutreachQueue } from "@/lib/outreach";
+import { draftWaitingForReport, fillOutreachQueue } from "@/lib/outreach";
 import { redditSendMessage } from "@/lib/reddit";
 
 /**
@@ -2066,6 +2066,11 @@ export const analyzePublicPreview = inngest.createFunction(
           .eq("id", previewId);
       });
 
+      // An outreach DM waiting on this stream's report gets written now,
+      // around what the report found. (One whose report failed is picked
+      // up by the next harvest and sent the normal way.)
+      await step.run("outreach-drafts", async () => draftWaitingForReport({ vodId: twitchVodId }));
+
       return { previewId, ok: true };
     } catch (err) {
       // Always leave the row in a terminal state. A preview stuck on
@@ -2290,7 +2295,7 @@ export const outreachHarvest = inngest.createFunction(
         const { count: waiting } = await createAdminClient()
           .from("outreach_contacts")
           .select("id", { count: "exact", head: true })
-          .eq("status", "queued");
+          .in("status", ["queued", "waiting_report"]);
 
         if ((waiting ?? 0) >= QUEUE_CEILING) {
           console.log(`[outreach] harvest idle — ${waiting} already queued`);
@@ -2303,7 +2308,9 @@ export const outreachHarvest = inngest.createFunction(
         // successful pass while queueing nothing.
         const room = QUEUE_CEILING - (waiting ?? 0);
         const result = await fillOutreachQueue(Math.min(2, room), 3);
-        console.log(`[outreach] harvest queued=${result.queued} skipped=${result.skipped} claude_calls=${result.attempts}`);
+        console.log(
+          `[outreach] harvest queued=${result.queued} skipped=${result.skipped} waiting_on_report=${result.waiting} claude_calls=${result.attempts}`
+        );
         return result;
       } catch (err) {
         // Reddit refusing us is expected, not a fault. Without an OAuth app

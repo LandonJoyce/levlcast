@@ -226,12 +226,15 @@ export default function OutreachPage() {
     angle: string | null;
   };
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  // DMs still being written around the person's own report.
+  const [waitingOnReport, setWaitingOnReport] = useState(0);
 
   const loadQueue = useCallback(async () => {
     try {
       const res = await fetch("/api/outreach/queue");
       const data = await res.json();
       setQueue(data.queue ?? []);
+      setWaitingOnReport(Number(data.waiting) || 0);
     } catch {
       // Queue is an enhancement; a failure here must not break the page.
     }
@@ -647,7 +650,10 @@ export default function OutreachPage() {
           <div className="card-head">
             <h3>Ready to send</h3>
             <div className="right">
-              <span className="label-mono">{queue.length} drafted</span>
+              <span className="label-mono">
+                {queue.length} drafted
+                {waitingOnReport > 0 ? ` · ${waitingOnReport} being written with their own report` : ""}
+              </span>
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>

@@ -14,6 +14,7 @@ import { PreviewReport, type PreviewPayload } from "@/components/preview/preview
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
 import { AnalyzeClient } from "../analyze-client";
+import { LandingBeacon } from "@/components/funnel/landing-beacon";
 import { shoulders } from "../../fonts";
 import "../../home-ranked.css";
 import "../analyze.css";
@@ -55,10 +56,16 @@ export async function generateMetadata(
   };
 }
 
-export default async function PreviewPermalink(
-  { params }: { params: Promise<{ vodId: string }> }
-) {
+export default async function PreviewPermalink({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ vodId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { vodId } = await params;
+  const { ref } = await searchParams;
+  const refParam = typeof ref === "string" ? ref : undefined;
   const preview = await loadPreview(vodId);
 
   if (!preview) notFound();
@@ -69,9 +76,10 @@ export default async function PreviewPermalink(
       {preview.status !== "ready" || !preview.coach_report ? (
         // Still running, or it failed. Hand it to the client component,
         // which already knows how to poll, show progress, and offer a retry.
-        <AnalyzeClient initialPreview={preview} />
+        <AnalyzeClient initialPreview={preview} refParam={refParam} />
       ) : (
         <main className="az-main az-done">
+          <LandingBeacon refParam={refParam} vodId={vodId} />
           <PreviewReport preview={preview} />
           {/* Most people opening a shared report are streamers themselves. */}
           <Link href="/analyze" className="v3-btn v3-btn-ghost az-again">

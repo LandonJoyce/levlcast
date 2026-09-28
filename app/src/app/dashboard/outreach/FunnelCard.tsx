@@ -17,18 +17,29 @@ interface FunnelData {
   needsMigration?: boolean;
   error?: string | null;
   days: number;
+  dmsSince: string;
   dmsSent: number;
   dm: Counts;
   other: Counts;
   refused: Array<{ reason: string; count: number }>;
   failed: number;
   people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }>;
+  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "preview" | "direct" | "unknown"; dmUsername: string | null }>;
 }
+
+const SOURCE: Record<FunnelData["newAccounts"][number]["source"], string> = {
+  dm: "from your DM",
+  preview: "after a free report",
+  direct: "signed in directly",
+  unknown: "before tracking started",
+};
+
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 const LABEL: Record<Step, string> = {
   land: "Clicked the link",
-  preview_start: "Ran a preview",
-  preview_ready: "Saw their report",
+  preview_start: "Started a free report",
+  preview_ready: "Saw the report",
   cta: "Pressed Get my full report",
   signin_start: "Pressed Continue with Twitch",
   signup: "Signed up",
@@ -118,7 +129,7 @@ export function FunnelCard() {
         ) : (
           <>
             <p className="fn-k">From your DMs</p>
-            <Row first={data.dmsSent} firstLabel="DMs sent" counts={data.dm} />
+            <Row first={data.dmsSent} firstLabel={`DMs sent since ${shortDate(data.dmsSince)}`} counts={data.dm} />
             <p className="fn-k">Everyone else</p>
             <Row first={null} firstLabel={null} counts={data.other} landLabel="Opened the analyzer" />
 
@@ -138,6 +149,30 @@ export function FunnelCard() {
                       <b>{data.failed}</b>
                     </li>
                   )}
+                </ul>
+              </>
+            )}
+
+            {data.newAccounts.length > 0 && (
+              <>
+                <p className="fn-k">New accounts, worth a personal hello</p>
+                <ul className="fn-list">
+                  {data.newAccounts.map((a, i) => (
+                    <li key={`${a.login}-${i}`}>
+                      <span>
+                        {a.login ? (
+                          <a href={`https://www.twitch.tv/${a.login}`} target="_blank" rel="noopener noreferrer">
+                            {a.name}
+                          </a>
+                        ) : (
+                          a.name
+                        )}{" "}
+                        · {SOURCE[a.source]}
+                        {a.dmUsername ? ` to u/${a.dmUsername}` : ""}
+                      </span>
+                      <b>{ago(a.at)}</b>
+                    </li>
+                  ))}
                 </ul>
               </>
             )}
@@ -166,8 +201,9 @@ export function FunnelCard() {
               </>
             )}
             <p className="fn-fine">
-              Unique visitors in the last {data.days} days. Each step shows the share of the step before it. A sign-in
-              that Twitch finished in a different browser counts under Everyone else.
+              Unique visitors in the last {data.days} days. Each step shows the share of the step before it. DMs sent
+              before {shortDate(data.dmsSince)} had no tracking code, so clicks from them count under Everyone else, and
+              so does a sign-in that Twitch finished in a different browser.
             </p>
           </>
         )}

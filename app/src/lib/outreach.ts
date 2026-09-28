@@ -35,6 +35,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { OUTREACH_SUBS, arcticShiftGet } from "@/lib/reddit";
 import { createAdminClient } from "@/lib/supabase/server";
+import { inngest } from "@/lib/inngest/client";
+import { extractChannel } from "@/lib/twitch-input";
+import { fetchPreviewVodMeta, latestVodForChannel, MIN_PREVIEW_SECONDS, PREVIEW_SECONDS } from "@/lib/public-preview";
 
 /** Help-seeking language. Mirrors the manual leads route. */
 const HELP_PHRASES = [
@@ -239,6 +242,64 @@ export interface DraftInput {
   subreddit?: string | null;
   title?: string | null;
   body?: string | null;
+  /** Their own free report, when their post linked their channel. */
+  report?: ReportForDraft;
+}
+
+/**
+ * A streamer's own free report, run on their latest stream before the DM
+ * is written, so the message can say what it found and link to it.
+ */
+export interface ReportForDraft {
+  /** Their report's page. */
+  url: string;
+  /** The stream it read. */
+  streamTitle: string;
+  /** The one thing it said to fix first, in the coach's words. */
+  fix: string | null;
+  /** Something it said worked, in the coach's words. */
+  working: string | null;
+}
+
+const REPORT_BASE = "https://www.levlcast.com/analyze/";
+
+/**
+ * The Twitch channel a post links, if it links one. Only an explicit
+ * twitch.tv link counts: a Reddit name that happens to match a Twitch
+ * channel could be somebody else, and a DM about a stranger's stream is
+ * worse than no report at all.
+ */
+export function findTwitchChannel(text: string): string | null {
+  const links = text.match(/(?:https?:\/\/)?(?:www\.|m\.)?twitch\.tv\/[A-Za-z0-9_]{3,25}(?:\/[A-Za-z]+)?/gi) ?? [];
+  for (const link of links) {
+    const login = extractChannel(link);
+    if (login) return login;
+  }
+  return null;
+}
+
+/** "**Label**. body" as plain words. */
+function plainItem(s: unknown): string | null {
+  if (typeof s !== "string") return null;
+  const m = s.match(/^\s*\*\*([\s\S]+?)\*\*\s*[—–.:-]?\s*([\s\S]*)$/);
+  const text = (m ? `${m[1].trim()}: ${m[2].trim()}` : s).replace(/\*\*/g, "").trim();
+  return text || null;
+}
+
+function reportFromPreview(row: {
+  twitch_vod_id: string;
+  title?: string | null;
+  coach_report?: Record<string, unknown> | null;
+}): ReportForDraft | null {
+  const r = row.coach_report;
+  if (!r) return null;
+  const strengths = Array.isArray(r.strengths) ? (r.strengths as unknown[]) : [];
+  return {
+    url: `${REPORT_BASE}${row.twitch_vod_id}`,
+    streamTitle: String(row.title ?? "their last stream"),
+    fix: plainItem(r.recommendation),
+    working: plainItem(strengths[0]),
+  };
 }
 
 /**
@@ -260,11 +321,27 @@ export type DraftResult =
  * which is still tidier and more symmetrical than a person typing on a
  * phone. Shown the real thing, it writes closer to it.
  */
-function systemPrompt(angle: Angle): string {
+function systemPrompt(angle: Angle, report?: ReportForDraft): string {
+  const known = report
+    ? `You're sending a Reddit message to a streamer who posted asking for help. Their post linked their Twitch channel, so before messaging you ran their latest stream ("${report.streamTitle}") through LevlCast. You haven't watched it yourself. All you know about the stream is what their report found, below, so never claim more than that, and never make up numbers or details.
+
+WHAT THEIR REPORT FOUND
+${report.fix ? `- The one thing to fix first: ${report.fix}\n` : ""}${report.working ? `- Something that worked: ${report.working}\n` : ""}`
+    : `You're sending a Reddit message to a streamer who posted asking for help. You only know what's in their post. You haven't watched their stream or looked at their channel, so never say or imply you did, and never make up numbers or details they didn't write.
+`;
+  const steps = report
+    ? `1. React to what they actually said, in your own words, so it's obvious you read their post.
+2. Say plainly that you made a site that reads streams and ran their last one through it, then pass on ONE thing it found, in your own words, short and specific. Pick whichever fits what they asked about.
+3. The link to their report on its own line, exactly: ${report.url}
+4. That the whole report is already there, free, and they don't need an account.`
+    : `1. React to what they actually said, in your own words, so it's obvious you read their post.
+2. One real tip that helps with what they asked. It has to be useful even if they never click anything.
+3. Say plainly that you made a tool for this (for example "I actually made a free site for this" or "I built a thing that does this"), and what it would show them: ${angle.brief}
+4. The link on its own line, exactly: ${OUTREACH_LINK}
+5. That it's free to try and they don't need an account.`;
   return `You're Landon. You stream on Twitch and you built LevlCast, a site where you type your Twitch name and it goes through your last stream and tells you what happened: where people dropped off, how much dead air there was, which moments are worth clipping, and it ranks you from Iron to Grandmaster so you can see if you're getting better.
 
-You're sending a Reddit message to a streamer who posted asking for help. You only know what's in their post. You haven't watched their stream or looked at their channel, so never say or imply you did, and never make up numbers or details they didn't write.
-
+${known}
 HOW LANDON TYPES
 Like he's texting a friend on his phone. Casual, simple words, contractions, short sentences, a little run-on is fine, starting a sentence lowercase is fine. Real messages he's typed:
 "Awesome! Sorry for forgetting! I hope it proved useful to you."
@@ -273,11 +350,7 @@ Like he's texting a friend on his phone. Casual, simple words, contractions, sho
 It should read like one person typed it in a minute, not like something written and edited.
 
 WHAT TO WRITE, IN THIS ORDER
-1. React to what they actually said, in your own words, so it's obvious you read their post.
-2. One real tip that helps with what they asked. It has to be useful even if they never click anything.
-3. Say plainly that you made a tool for this (for example "I actually made a free site for this" or "I built a thing that does this"), and what it would show them: ${angle.brief}
-4. The link on its own line, exactly: ${OUTREACH_LINK}
-5. That it's free to try and they don't need an account.
+${steps}
 
 RULES
 - 45 to 90 words.
@@ -314,6 +387,7 @@ export async function draftMessage(input: DraftInput, angle: Angle): Promise<Dra
     input.body ? input.body : input.source === "post" ? "(no body text)" : null,
   ].filter(Boolean);
 
+  const link = input.report?.url ?? OUTREACH_LINK;
   const res = await anthropic.messages.create({
     model: "claude-sonnet-5",
     // Sonnet 5 thinks before it answers unless told otherwise, at "high"
@@ -324,7 +398,7 @@ export async function draftMessage(input: DraftInput, angle: Angle): Promise<Dra
     // short message needs. The ceiling is headroom, not a target: a reply
     // that hits it is a failed draft, and the lead is tried again next run.
     max_tokens: 3000,
-    system: systemPrompt(angle),
+    system: systemPrompt(angle, input.report),
     messages: [{ role: "user", content: lines.join("\n") }],
     // `output_config` postdates the installed SDK's types, like "refusal"
     // below, but the SDK sends the body as given and the API reads it.
@@ -353,7 +427,7 @@ export async function draftMessage(input: DraftInput, angle: Angle): Promise<Dra
   try {
     const parsed = JSON.parse(match[0]) as { subject?: string; body?: string };
     if (!parsed.body) return { kind: "failed", reason: "no message body" };
-    return { kind: "draft", ...finishDraft(parsed.subject ?? "", parsed.body) };
+    return { kind: "draft", ...finishDraft(parsed.subject ?? "", parsed.body, link) };
   } catch {
     return { kind: "failed", reason: "unreadable JSON" };
   }
@@ -369,7 +443,7 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  *  - the link appears exactly once, added on its own line if it's missing,
  *  - the subject stays a short label.
  */
-export function finishDraft(subject: string, body: string): { subject: string; body: string } {
+export function finishDraft(subject: string, body: string, link: string = OUTREACH_LINK): { subject: string; body: string } {
   const stripDashes = (s: string) =>
     s
       .replace(/\s+(?:—|–|--)\s+/g, ", ")
@@ -380,23 +454,23 @@ export function finishDraft(subject: string, body: string): { subject: string; b
   // levlcast.com, www.levlcast.com/analyze, http://levlcast.com/... all
   // become the one link. Trailing punctuation stays outside the match, and
   // the lookbehind leaves an email address like landon@levlcast.com alone.
-  text = text.replace(/(?<![@\w.])(?:https?:\/\/)?(?:www\.)?levlcast\.com(?:\/[^\s)]*[^\s).,!?])?/gi, OUTREACH_LINK);
+  text = text.replace(/(?<![@\w.])(?:https?:\/\/)?(?:www\.)?levlcast\.com(?:\/[^\s)]*[^\s).,!?])?/gi, link);
 
   // Keep the first link, drop any repeats.
   let seen = false;
-  text = text.replace(new RegExp(escapeRegExp(OUTREACH_LINK), "g"), (m) => {
+  text = text.replace(new RegExp(escapeRegExp(link), "g"), (m) => {
     if (seen) return "";
     seen = true;
     return m;
   });
-  if (!seen) text = `${text.trimEnd()}\n\n${OUTREACH_LINK}`;
+  if (!seen) text = `${text.trimEnd()}\n\n${link}`;
 
   // The link always sits on its own line, so it's the obvious thing to tap
   // and never runs into the next sentence. The model mostly drops it
   // mid-paragraph ("...why. https://... it's free to try"), prompt or not.
   text = text.replace(
-    new RegExp(`[ \\t]*${escapeRegExp(OUTREACH_LINK)}[.,!?;:]?[ \\t]*`),
-    `\n\n${OUTREACH_LINK}\n\n`
+    new RegExp(`[ \\t]*${escapeRegExp(link)}[.,!?;:]?[ \\t]*`),
+    `\n\n${link}\n\n`
   );
 
   text = text
@@ -412,9 +486,175 @@ export function finishDraft(subject: string, body: string): { subject: string; b
   return { subject: label || "saw your post", body: text };
 }
 
+/** Previews the harvest may start in one run. Each is about a nickel. */
+const MAX_REPORT_STARTS_PER_RUN = 2;
+/** The same daily ceiling the public analyzer holds; outreach counts toward it. */
+const PREVIEW_DAILY_CEILING = 200;
+
+type ReportPrep =
+  | { kind: "ready"; report: ReportForDraft; vodId: string }
+  | { kind: "waiting"; vodId: string; started: boolean }
+  | { kind: "none" };
+
+/** Whether migration 034 (report_vod_id) has been run. */
+async function reportsSupported(admin: ReturnType<typeof createAdminClient>): Promise<boolean> {
+  const { error } = await admin.from("outreach_contacts").select("report_vod_id").limit(1);
+  return !error;
+}
+
+/**
+ * Get a free report on this channel's latest stream: already done, being
+ * made (start it if allowed), or not possible. Any failure means "none",
+ * and the DM goes out the normal way.
+ */
+async function prepareReport(
+  admin: ReturnType<typeof createAdminClient>,
+  login: string,
+  mayStart: boolean
+): Promise<ReportPrep> {
+  try {
+    const found = await latestVodForChannel(login);
+    if (found.kind !== "vod") return { kind: "none" };
+    const vodId = found.vodId;
+
+    const { data: existing } = await admin
+      .from("public_previews")
+      .select("twitch_vod_id, status, title, coach_report, created_at")
+      .eq("twitch_vod_id", vodId)
+      .maybeSingle();
+    if (existing?.status === "ready") {
+      const report = reportFromPreview(existing);
+      return report ? { kind: "ready", report, vodId } : { kind: "none" };
+    }
+    const inFlight =
+      !!existing &&
+      ["pending", "transcribing", "analyzing"].includes(String(existing.status)) &&
+      Date.now() - Date.parse(String(existing.created_at)) < 15 * 60 * 1000;
+    if (inFlight) return { kind: "waiting", vodId, started: false };
+    if (!mayStart) return { kind: "none" };
+
+    const dayAgo = new Date(Date.now() - 86400000).toISOString();
+    const { count, error: countErr } = await admin
+      .from("public_previews")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", dayAgo);
+    if (countErr || (count ?? 0) >= PREVIEW_DAILY_CEILING) return { kind: "none" };
+
+    const meta = await fetchPreviewVodMeta(vodId);
+    if (!meta || (meta.durationSeconds > 0 && meta.durationSeconds < MIN_PREVIEW_SECONDS)) return { kind: "none" };
+
+    const { data: row, error } = await admin
+      .from("public_previews")
+      .upsert(
+        {
+          twitch_vod_id: vodId,
+          title: meta.title,
+          streamer_login: meta.streamerLogin,
+          streamer_display_name: meta.streamerDisplayName,
+          thumbnail_url: meta.thumbnailUrl,
+          duration_seconds: meta.durationSeconds,
+          analyzed_seconds: PREVIEW_SECONDS,
+          status: "pending",
+          failed_reason: null,
+          coach_report: null,
+          peak_data: null,
+          created_ip: "outreach",
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: "twitch_vod_id" }
+      )
+      .select("id")
+      .single();
+    if (error || !row) return { kind: "none" };
+
+    await inngest.send({
+      id: `outreach-preview-${row.id}-${Date.now()}`,
+      name: "public/preview",
+      data: { previewId: row.id, twitchVodId: vodId, title: meta.title },
+    });
+    return { kind: "waiting", vodId, started: true };
+  } catch (err) {
+    console.warn("[outreach] report prep failed:", err instanceof Error ? err.message : err);
+    return { kind: "none" };
+  }
+}
+
+/**
+ * Write DMs that were waiting on a streamer's report. Called when that
+ * preview finishes, and by the harvest for any that have waited too long
+ * (a report that failed, or never started). No report still gets the
+ * normal message; they're never left waiting forever.
+ */
+export async function draftWaitingForReport(opts: {
+  vodId?: string;
+  olderThanMinutes?: number;
+  limit?: number;
+}): Promise<{ drafted: number; skipped: number }> {
+  const admin = createAdminClient();
+  let q = admin
+    .from("outreach_contacts")
+    .select("id, reddit_username, source, subreddit, post_title, post_excerpt, angle, report_vod_id")
+    .eq("status", "waiting_report");
+  if (opts.vodId) q = q.eq("report_vod_id", opts.vodId);
+  if (opts.olderThanMinutes) q = q.lt("created_at", new Date(Date.now() - opts.olderThanMinutes * 60000).toISOString());
+  const { data: rows, error } = await q.limit(opts.limit ?? 5);
+  if (error || !rows) return { drafted: 0, skipped: 0 };
+
+  let drafted = 0;
+  let skipped = 0;
+  for (const row of rows as Array<Record<string, string | null>>) {
+    let report: ReportForDraft | undefined;
+    if (row.report_vod_id) {
+      const { data: p } = await admin
+        .from("public_previews")
+        .select("twitch_vod_id, status, title, coach_report")
+        .eq("twitch_vod_id", row.report_vod_id)
+        .maybeSingle();
+      if (p?.status === "ready") report = reportFromPreview(p) ?? undefined;
+    }
+    const username = String(row.reddit_username ?? "");
+    const angle = ANGLES.find((a) => a.id === row.angle) ?? angleFor(username);
+    let result: DraftResult;
+    try {
+      result = await draftMessage(
+        {
+          username,
+          source: row.source === "comment" ? "comment" : "post",
+          subreddit: row.subreddit,
+          title: row.post_title,
+          body: row.post_excerpt,
+          report,
+        },
+        angle
+      );
+    } catch (err) {
+      console.warn("[outreach] waiting draft failed:", err instanceof Error ? err.message : err);
+      continue;
+    }
+    if (result.kind === "failed") continue;
+    await admin
+      .from("outreach_contacts")
+      .update(
+        result.kind === "draft"
+          ? { status: "queued", message_subject: result.subject, message_body: result.body }
+          : { status: "skipped", skip_reason: `model: ${result.reason}`.slice(0, 200) }
+      )
+      .eq("id", String(row.id))
+      .eq("status", "waiting_report");
+    if (result.kind === "draft") drafted++;
+    else skipped++;
+  }
+  return { drafted, skipped };
+}
+
 /**
  * Harvest, draft and queue. Records skips as rows so the same person is
  * never evaluated twice.
+ *
+ * When a post links the person's Twitch channel, their latest stream gets
+ * a free report first and the DM waits for it (status waiting_report),
+ * then says what it found and links to it. A report already made is used
+ * straight away.
  */
 export async function fillOutreachQueue(
   max = 5,
@@ -431,13 +671,21 @@ export async function fillOutreachQueue(
    * Attempts are what cost money, so attempts are what is capped.
    */
   maxAttempts = max + 2
-): Promise<{ queued: number; skipped: number; attempts: number }> {
+): Promise<{ queued: number; skipped: number; attempts: number; waiting: number }> {
   const admin = createAdminClient();
-  const leads = await harvestLeads(maxAttempts);
 
-  let queued = 0;
-  let skipped = 0;
-  let attempts = 0;
+  // DMs that waited too long for a report go out without one.
+  const late = await draftWaitingForReport({ olderThanMinutes: 45, limit: 2 });
+
+  const leads = await harvestLeads(maxAttempts + MAX_REPORT_STARTS_PER_RUN);
+
+  let queued = late.drafted;
+  let skipped = late.skipped;
+  let attempts = late.drafted + late.skipped;
+  let waiting = 0;
+  let reportsStarted = 0;
+  let seen = 0;
+  const reportsOn = await reportsSupported(admin);
 
   const { count: contactedSoFar } = await admin
     .from("outreach_contacts")
@@ -446,17 +694,44 @@ export async function fillOutreachQueue(
 
   for (const lead of leads) {
     if (queued >= max || attempts >= maxAttempts) break;
-    attempts++;
 
     // Rotate the angle so a run of messages does not all make the same
     // argument. Counted once before the loop, not once per lead: this was
     // a full count query per candidate, and it never changed often enough
     // to be worth re-reading mid-run.
-    const angle = ANGLES[(angleSeed + attempts - 1) % ANGLES.length];
+    const angle = ANGLES[(angleSeed + seen) % ANGLES.length];
+    seen++;
 
+    const baseRow = {
+      reddit_username: lead.username.toLowerCase(),
+      source: lead.source,
+      subreddit: lead.subreddit,
+      permalink: lead.permalink,
+      post_title: lead.title,
+      post_excerpt: lead.body.slice(0, 600),
+      angle: angle.id,
+    };
+
+    // Their own report, when their post links their channel.
+    let report: ReportForDraft | undefined;
+    const channel = reportsOn ? findTwitchChannel(`${lead.title} ${lead.body}`) : null;
+    if (channel) {
+      const prep = await prepareReport(admin, channel, reportsStarted < MAX_REPORT_STARTS_PER_RUN);
+      if (prep.kind === "ready") report = prep.report;
+      if (prep.kind === "waiting") {
+        if (prep.started) reportsStarted++;
+        const { error } = await admin
+          .from("outreach_contacts")
+          .insert({ ...baseRow, status: "waiting_report", report_vod_id: prep.vodId });
+        if (!error) waiting++;
+        continue;
+      }
+    }
+
+    attempts++;
     let drafted: DraftResult;
     try {
-      drafted = await draftMessage(lead, angle);
+      drafted = await draftMessage({ ...lead, report }, angle);
     } catch (err) {
       console.warn("[outreach] draft failed:", err instanceof Error ? err.message : err);
       continue;
@@ -469,16 +744,11 @@ export async function fillOutreachQueue(
     }
 
     const row = {
-      reddit_username: lead.username.toLowerCase(),
-      source: lead.source,
-      subreddit: lead.subreddit,
-      permalink: lead.permalink,
-      post_title: lead.title,
-      post_excerpt: lead.body.slice(0, 600),
-      angle: angle.id,
+      ...baseRow,
       ...(drafted.kind === "draft"
         ? { status: "queued", message_subject: drafted.subject, message_body: drafted.body }
         : { status: "skipped", skip_reason: `model: ${drafted.reason}`.slice(0, 200) }),
+      ...(report && reportsOn ? { report_vod_id: report.url.slice(REPORT_BASE.length) } : {}),
     };
 
     // Unique index on reddit_username makes this safe against races: a
@@ -490,5 +760,5 @@ export async function fillOutreachQueue(
     else skipped++;
   }
 
-  return { queued, skipped, attempts };
+  return { queued, skipped, attempts, waiting };
 }

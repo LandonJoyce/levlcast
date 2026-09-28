@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/server";
-import { dmRef } from "@/lib/funnel";
+import { DM_CODES_SINCE, dmRef } from "@/lib/funnel";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 
@@ -49,11 +49,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ needsMigration: missing, error: missing ? null : error.message }, { status: missing ? 200 : 500 });
   }
 
+  // Only DMs whose link carried a code: the ones a click can be matched to.
+  const dmsSince = since > DM_CODES_SINCE ? since : DM_CODES_SINCE;
   const { count: dmsSent } = await admin
     .from("outreach_contacts")
     .select("id", { count: "exact", head: true })
     .eq("status", "sent")
-    .gte("sent_at", since);
+    .gte("sent_at", dmsSince);
 
   // Codes back to Reddit accounts, for everyone ever messaged: a click can
   // come days after the DM.
@@ -125,14 +127,43 @@ export async function GET(req: NextRequest) {
   }
   people.sort((a, b) => (a.lastSeen < b.lastSeen ? 1 : -1));
 
+  // Everyone who made an account in the window, newest first, with how
+  // they got here where the funnel saw it. Worth a personal hello each.
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, twitch_login, twitch_display_name, created_at")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  const signupBy = new Map<string, Row>();
+  for (const e of (events ?? []) as Row[]) if (e.event === "signup" && e.detail) signupBy.set(e.detail, e);
+  const newAccounts = ((profiles ?? []) as Array<{ id: string; twitch_login: string | null; twitch_display_name: string | null; created_at: string }>).map(
+    (p) => {
+      const s = signupBy.get(p.id);
+      const v = s ? visitors.get(s.visitor) : undefined;
+      const ref = s?.ref ?? v?.ref ?? null;
+      let source: "dm" | "preview" | "direct" | "unknown" = "unknown";
+      if (s) source = ref?.startsWith("dm-") ? "dm" : v?.steps.has("preview_start") ? "preview" : "direct";
+      return {
+        login: p.twitch_login,
+        name: p.twitch_display_name || p.twitch_login,
+        at: p.created_at,
+        source,
+        dmUsername: ref?.startsWith("dm-") ? whoByCode.get(ref)?.username ?? null : null,
+      };
+    }
+  );
+
   return NextResponse.json({
     since,
     days,
+    dmsSince,
     dmsSent: dmsSent ?? 0,
     dm,
     other,
     refused: [...refused.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([reason, count]) => ({ reason, count })),
     failed,
     people: people.slice(0, 60),
+    newAccounts,
   });
 }

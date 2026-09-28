@@ -47,7 +47,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message, queue: [] }, { status: 500 });
   }
 
-  return NextResponse.json({ queue: data ?? [] });
+  // DMs being written around the person's own report (migration 034).
+  const { count: waiting } = await admin
+    .from("outreach_contacts")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "waiting_report");
+
+  return NextResponse.json({ queue: data ?? [], waiting: waiting ?? 0 });
 }
 
 export async function POST(req: NextRequest) {
