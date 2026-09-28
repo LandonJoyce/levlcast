@@ -27,10 +27,13 @@ import { rateLimit } from "@/lib/rate-limit";
 import { inngest } from "@/lib/inngest/client";
 import {
   extractVodId,
-  describeBadUrl,
+  extractChannel,
+  describeBadInput,
   fetchPreviewVodMeta,
+  latestVodForChannel,
   MIN_PREVIEW_SECONDS,
   PREVIEW_SECONDS,
+  type ChannelLookup,
 } from "@/lib/public-preview";
 
 export const dynamic = "force-dynamic";
@@ -87,9 +90,53 @@ export async function POST(request: Request) {
   }
 
   const rawUrl = typeof body.url === "string" ? body.url : "";
-  const vodId = extractVodId(rawUrl);
+  let vodId = extractVodId(rawUrl);
+  // How they asked, for the funnel: a stream link, or their name.
+  let via: "link" | "name" = "link";
+
+  // A Twitch name instead of a link: their latest past broadcast.
   if (!vodId) {
-    return NextResponse.json({ error: describeBadUrl(rawUrl) }, { status: 400 });
+    const login = extractChannel(rawUrl);
+    if (!login) {
+      return NextResponse.json({ error: describeBadInput(rawUrl) }, { status: 400 });
+    }
+    // A lookup costs us nothing, but it shouldn't be a free way to list
+    // channels either.
+    if (!rateLimit(`public-preview-lookup:${ip}`, 30, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "That's a lot of lookups for one hour. Paste a link to one of your streams instead, or try again later." },
+        { status: 429 }
+      );
+    }
+    let found: ChannelLookup;
+    try {
+      found = await latestVodForChannel(login);
+    } catch (err) {
+      console.error("[public-preview] Channel lookup failed:", err instanceof Error ? err.message : err);
+      return NextResponse.json({ error: "Couldn't reach Twitch just now. Try again in a moment." }, { status: 503 });
+    }
+    if (found.kind === "no_channel") {
+      return NextResponse.json(
+        { error: `There's no Twitch channel called ${login}. Check the spelling, or paste a link to one of your streams.` },
+        { status: 404 }
+      );
+    }
+    if (found.kind === "no_vods") {
+      return NextResponse.json(
+        {
+          error: `${found.displayName} has no past broadcasts saved on Twitch, so there's nothing to read yet. In your Creator Dashboard go to Settings, then Stream, and turn on Store past broadcasts. Your next stream will work here.`,
+        },
+        { status: 404 }
+      );
+    }
+    if (found.kind === "too_short") {
+      return NextResponse.json(
+        { error: `${found.displayName}'s recent streams are all under 5 minutes, which isn't enough to coach. Stream a bit longer and come back.` },
+        { status: 400 }
+      );
+    }
+    vodId = found.vodId;
+    via = "name";
   }
 
   // ---- 1. Cache -----------------------------------------------------
@@ -109,12 +156,12 @@ export async function POST(request: Request) {
       cached.status === "analyzing";
 
     if (cached.status === "ready") {
-      return NextResponse.json({ ...previewPayload(cached), cached: true });
+      return NextResponse.json({ ...previewPayload(cached), cached: true, via });
     }
     // Still working and not stale — hand back the same row so two people
     // pasting the same link share one analysis instead of racing.
     if (inFlight && ageMinutes < STALE_MINUTES) {
-      return NextResponse.json(previewPayload(cached));
+      return NextResponse.json({ ...previewPayload(cached), via });
     }
     // Failed, or stale enough to be dead. Fall through and re-run it.
   }
@@ -245,7 +292,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Couldn't start that report. Try again." }, { status: 503 });
   }
 
-  return NextResponse.json(previewPayload(inserted));
+  return NextResponse.json({ ...previewPayload(inserted), via });
 }
 
 export async function GET(request: Request) {

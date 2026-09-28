@@ -39,6 +39,8 @@ export function AnalyzeClient({
   const [preview, setPreview] = useState<PreviewPayload | null>(initialPreview ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Whether they typed their name (so it's reading their latest stream) or pasted a link.
+  const [via, setVia] = useState<"link" | "name">("link");
 
   // Kept in a ref so the polling effect can stop itself without being
   // re-created on every tick.
@@ -73,7 +75,7 @@ export function AnalyzeClient({
       if (busy) return;
       setError(null);
       if (targetUrl.trim().length === 0) {
-        setError("Paste a link to a Twitch stream first. It looks like twitch.tv/videos/1234567890.");
+        setError("Type your Twitch name first. Or paste a link to one of your streams.");
         return;
       }
       setBusy(true);
@@ -96,7 +98,8 @@ export function AnalyzeClient({
 
         startedAt.current = Date.now();
         setPreview(data as PreviewPayload);
-        track("preview_start", (data as PreviewPayload).twitch_vod_id);
+        setVia(data?.via === "name" ? "name" : "link");
+        track("preview_start", `${(data as PreviewPayload).twitch_vod_id} ${data?.via === "name" ? "name" : "link"}`);
       } catch {
         setError("Couldn't reach the server. Check your connection and try again.");
       } finally {
@@ -187,7 +190,7 @@ export function AnalyzeClient({
     return (
       <main className="az-main">
         <section className="az-run" aria-live="polite">
-          <p className="v3-label">Working on it</p>
+          <p className="v3-label">{via === "name" ? "Reading your latest stream" : "Working on it"}</p>
           <h1 className="az-run-title">{preview.title || "Your stream"}</h1>
           {(streamer || length) && (
             <p className="az-run-meta">{[streamer, length].filter(Boolean).join(" · ")}</p>
@@ -227,8 +230,8 @@ export function AnalyzeClient({
           <p className="v3-label">Free, no account</p>
           <h1 className="az-h1">Get a free report on your last stream</h1>
           <p className="v3-sub">
-            Paste the link to a past broadcast. We go through the first 12 minutes and tell you what&apos;s working,
-            what&apos;s costing you viewers, and what&apos;s worth clipping.
+            Type your Twitch name. We go through the first 12 minutes of your latest stream and tell you what&apos;s
+            working, what&apos;s costing you viewers, and what&apos;s worth clipping.
           </p>
 
           <div className="v3-paste">
@@ -251,15 +254,17 @@ export function AnalyzeClient({
                     <path d="M16 6v6M11 6v6" />
                   </svg>
                   <input
-                    type="url"
-                    inputMode="url"
+                    type="text"
+                    inputMode="text"
                     autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     spellCheck={false}
-                    placeholder="twitch.tv/videos/1234567890"
+                    placeholder="Your Twitch name"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     disabled={busy}
-                    aria-label="Twitch VOD link"
+                    aria-label="Your Twitch name, or a link to one of your streams"
                     aria-invalid={!!error}
                     aria-describedby="az-helper"
                     className="ll-url-hero-input"
@@ -282,7 +287,7 @@ export function AnalyzeClient({
                 {error ? (
                   <span className="ll-url-hero-error" role="alert">{error}</span>
                 ) : (
-                  <span>On Twitch, open your channel&apos;s Videos tab and copy the link to a past broadcast.</span>
+                  <span>Or paste a link to any past broadcast, from a channel&apos;s Videos tab.</span>
                 )}
               </p>
             </form>

@@ -45,9 +45,6 @@ export const PREVIEW_SECONDS = 720;
  */
 export const MIN_PREVIEW_SECONDS = 5 * 60;
 
-/** Longest URL we'll even look at. Guards against absurd POST bodies. */
-const MAX_URL_LENGTH = 500;
-
 export interface PreviewVodMeta {
   twitchVodId: string;
   title: string;
@@ -64,61 +61,45 @@ export interface PreviewResult {
   analyzedSeconds: number;
 }
 
-/**
- * Pull the numeric VOD id out of anything a human might paste.
- *
- * Accepts the forms people actually use: a full twitch.tv/videos/<id> URL
- * with or without scheme, with or without www, with tracking query params
- * or a ?t= timestamp, and a bare id typed on its own. Returns null for
- * clip URLs and channel URLs, which are the two most common wrong pastes
- * and need a specific error message rather than a generic one.
- */
-export function extractVodId(input: string): string | null {
-  if (typeof input !== "string") return null;
-  const raw = input.trim();
-  if (!raw || raw.length > MAX_URL_LENGTH) return null;
+// What people type into the box is read in lib/twitch-input.ts, so the
+// homepage box can use the same rules without pulling in server code.
+export { extractVodId, extractChannel, describeBadInput } from "@/lib/twitch-input";
 
-  // Bare id, e.g. someone copies just the number out of the URL bar.
-  if (/^\d{6,}$/.test(raw)) return raw;
-
-  // Normalise to something URL can parse so we handle scheme-less pastes
-  // ("twitch.tv/videos/123") the same as full links.
-  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-
-  let parsed: URL;
-  try {
-    parsed = new URL(withScheme);
-  } catch {
-    return null;
-  }
-
-  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-  if (host !== "twitch.tv" && host !== "m.twitch.tv") return null;
-
-  // /videos/<id> is the only shape that is a VOD. Clips live at
-  // /<channel>/clip/<slug> and are not analyzable here.
-  const match = parsed.pathname.match(/^\/videos\/(\d{6,})\/?$/);
-  return match ? match[1] : null;
-}
+/** What a Twitch name turned out to point at. */
+export type ChannelLookup =
+  | { kind: "vod"; vodId: string; login: string; displayName: string }
+  | { kind: "no_channel" }
+  | { kind: "no_vods"; displayName: string }
+  | { kind: "too_short"; displayName: string };
 
 /**
- * Tell the visitor precisely what they pasted wrong. A generic "invalid
- * link" on the very first interaction is how you lose a first-time user,
- * so each wrong shape gets its own sentence.
+ * A channel's most recent past broadcast long enough to coach, for when
+ * someone types their Twitch name instead of pasting a link. App token,
+ * public data only, like fetchPreviewVodMeta.
  */
-export function describeBadUrl(input: string): string {
-  const raw = (input || "").trim();
-  if (!raw) return "Paste a Twitch VOD link to get started.";
-  if (/\/clip\//i.test(raw) || /clips\.twitch\.tv/i.test(raw)) {
-    return "That's a clip link. Open the full stream on Twitch and copy that link instead. It looks like twitch.tv/videos/1234567890.";
+export async function latestVodForChannel(login: string): Promise<ChannelLookup> {
+  const token = await getAppAccessToken();
+  const headers = { "Client-Id": process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${token}` };
+
+  const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, { headers });
+  if (!userRes.ok) {
+    if (userRes.status === 400) return { kind: "no_channel" };
+    throw new Error(`Twitch returned ${userRes.status} looking up ${login}`);
   }
-  if (/youtube\.com|youtu\.be/i.test(raw)) {
-    return "That's a YouTube link. LevlCast only reads Twitch streams for now, so paste a link like twitch.tv/videos/1234567890.";
-  }
-  if (/twitch\.tv/i.test(raw)) {
-    return "That looks like a Twitch channel rather than one stream. Open the stream you want under Videos and copy that link. It looks like twitch.tv/videos/1234567890.";
-  }
-  return "That doesn't look like a Twitch VOD link. Paste one that looks like twitch.tv/videos/1234567890.";
+  const user = ((await userRes.json()) as { data?: Array<{ id: string; login: string; display_name: string }> }).data?.[0];
+  if (!user) return { kind: "no_channel" };
+
+  // Past broadcasts only: highlights and uploads aren't what they streamed.
+  const vodRes = await fetch(`https://api.twitch.tv/helix/videos?user_id=${encodeURIComponent(user.id)}&type=archive&first=5`, {
+    headers,
+  });
+  if (!vodRes.ok) throw new Error(`Twitch returned ${vodRes.status} listing past broadcasts for ${login}`);
+  const vods = ((await vodRes.json()) as { data?: Array<{ id: string; duration: string }> }).data ?? [];
+  const name = user.display_name || user.login;
+  if (vods.length === 0) return { kind: "no_vods", displayName: name };
+  const usable = vods.find((v) => parseHelixDuration(String(v.duration ?? "")) >= MIN_PREVIEW_SECONDS);
+  if (!usable) return { kind: "too_short", displayName: name };
+  return { kind: "vod", vodId: String(usable.id), login: user.login, displayName: name };
 }
 
 /**

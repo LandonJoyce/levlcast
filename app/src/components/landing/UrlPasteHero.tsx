@@ -2,21 +2,10 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { extractChannel, extractVodId } from "@/lib/twitch-input";
 
 const PENDING_KEY = "levlcast_pending_vod_url";
 const MAX_URL_LENGTH = 500;
-
-/**
- * Validate a Twitch VOD URL on the client. Mirrors the server-side regex
- * in /api/twitch/vods/analyze-by-url so the user gets immediate feedback
- * for obvious typos before we round-trip to OAuth.
- */
-function isValidTwitchVodUrl(input: string): boolean {
-  const trimmed = input.trim();
-  if (trimmed.length === 0 || trimmed.length > MAX_URL_LENGTH) return false;
-  if (/^\d{6,}$/.test(trimmed)) return true;
-  return /twitch\.tv\/videos\/\d{6,}/i.test(trimmed);
-}
 
 /**
  * `hint` is the line under the box when there is no error. It used to say
@@ -26,7 +15,7 @@ function isValidTwitchVodUrl(input: string): boolean {
  * error.
  */
 export default function UrlPasteHero({
-  hint = "No sign-in, no card. Takes about a minute.",
+  hint = "No sign-in, no card. Takes a minute or two.",
 }: {
   hint?: string | null;
 } = {}) {
@@ -42,14 +31,20 @@ export default function UrlPasteHero({
     e.preventDefault();
     setError(null);
 
-    if (!isValidTwitchVodUrl(url)) {
-      setError("Paste a Twitch VOD link, e.g. https://www.twitch.tv/videos/1234567890");
+    // A Twitch name or a link to one stream. The analyzer turns a name
+    // into their latest past broadcast (lib/twitch-input.ts).
+    const isLink = !!extractVodId(url);
+    if (!isLink && !extractChannel(url)) {
+      setError("Type your Twitch name, or paste a link to one of your streams.");
       return;
     }
 
     setSubmitting(true);
     try {
-      localStorage.setItem(PENDING_KEY, url.trim());
+      // Only a stream link is kept for after sign-in: that step queues one
+      // stream by its link and can't read a name. The preview's own
+      // "Get my full report" carries a name's stream through instead.
+      if (isLink) localStorage.setItem(PENDING_KEY, url.trim());
     } catch {
       // Private mode / storage disabled — the URL is lost but OAuth still
       // works, they just won't get the specific VOD queued. Non-fatal.
@@ -83,16 +78,18 @@ export default function UrlPasteHero({
             <path d="M16 6v6M11 6v6" />
           </svg>
           <input
-            type="url"
-            inputMode="url"
+            type="text"
+            inputMode="text"
             autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
             spellCheck={false}
-            placeholder="Paste your Twitch VOD link…"
+            placeholder="Your Twitch name"
             value={url}
             onChange={(e) => setUrl(e.target.value.slice(0, MAX_URL_LENGTH))}
             maxLength={MAX_URL_LENGTH}
             disabled={submitting}
-            aria-label="Twitch VOD URL"
+            aria-label="Your Twitch name, or a link to one of your streams"
             aria-invalid={!!error}
             aria-describedby={error || hint ? helperId : undefined}
             className="ll-url-hero-input"

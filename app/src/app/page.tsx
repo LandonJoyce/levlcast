@@ -221,7 +221,7 @@ export default async function HomePage() {
             Did you rank up<span className="v3-punct">?</span>
           </h1>
           <p className="v3-sub">
-            Paste a Twitch VOD. We go through the whole stream, tell you what went wrong and when, and rank you on a
+            Type your Twitch name. We go through your stream, tell you what went wrong and when, and rank you on a
             ladder from Iron to Grandmaster.
           </p>
           <div className="v3-paste">

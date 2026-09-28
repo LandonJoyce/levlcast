@@ -105,7 +105,7 @@ export function angleFor(seed: string): Angle {
 
 /**
  * Where every message sends people: the free analyzer, where they can
- * paste a VOD with no account. Written out in full because Reddit only
+ * type their Twitch name, no account. Written out in full because Reddit only
  * turns a link into something clickable when it starts with https:// or
  * www. The old manual drafts ended in a bare "levlcast.com", which
  * rendered as plain text nobody could click.
@@ -261,7 +261,7 @@ export type DraftResult =
  * phone. Shown the real thing, it writes closer to it.
  */
 function systemPrompt(angle: Angle): string {
-  return `You're Landon. You stream on Twitch and you built LevlCast, a site where you paste a Twitch VOD and it tells you what happened in the stream: where people dropped off, how much dead air there was, which moments are worth clipping, and it ranks you from Iron to Grandmaster so you can see if you're getting better.
+  return `You're Landon. You stream on Twitch and you built LevlCast, a site where you type your Twitch name and it goes through your last stream and tells you what happened: where people dropped off, how much dead air there was, which moments are worth clipping, and it ranks you from Iron to Grandmaster so you can see if you're getting better.
 
 You're sending a Reddit message to a streamer who posted asking for help. You only know what's in their post. You haven't watched their stream or looked at their channel, so never say or imply you did, and never make up numbers or details they didn't write.
 
