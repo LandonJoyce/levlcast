@@ -530,6 +530,9 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .sp-mission-note { margin: 12px 0 0; font-size: 13px; color: var(--ink-3); }
 .dash .sp-post .sc { padding: 28px 0 32px 36px; border-left: 1px solid var(--line); }
 .dash .sp-post > .sc:only-child { padding-left: 0; border-left: 0; }
+/* The stream replay sits between the result and the post-match notes. */
+.dash .sp-replay { margin: 8px 0 40px; }
+.dash .sp-replay + .sp-post { margin-top: 0; border-top: 1px solid var(--line); }
 
 /* Where the points went (stream-scorecard.tsx). */
 .dash .sc-rows { list-style: none; display: grid; gap: 16px; margin: 4px 0 0; padding: 0; }

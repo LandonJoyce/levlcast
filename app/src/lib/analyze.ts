@@ -788,6 +788,17 @@ export interface CoachReport {
     evidence: string;
     metric?: { label: string; before: number; after: number; unit?: string };
   };
+  /**
+   * Computed, for the stream replay: words the streamer said in each minute
+   * of the VOD (index 0 is 0:00-0:59). Words per clock minute rather than
+   * speaking pace, so a quiet minute with one quick sentence reads as
+   * quiet. Absent on reports made before 2026-09-28.
+   */
+  words_by_minute?: number[];
+  /** Computed: minutes Twitch muted, where no words means the mute, not the streamer. */
+  muted_minutes?: number[];
+  /** Computed: where the stream really starts, after a starting-soon screen. Seconds. */
+  stream_start_seconds?: number;
 }
 
 /** Summary of a prior stream used for longitudinal coaching context. */
@@ -2040,6 +2051,15 @@ Omit the progress_on_prior_fix field entirely when no prior report history exist
     // reflects the magnitude of dead air, not just the worst-5-gaps cap.
     report.dead_air_seconds = Math.round(totalDeadAirSeconds);
     report.dead_air_pct = deadAirPct;
+    // The replay's raw material: words said in each minute of the VOD.
+    const words = new Array<number>(Math.max(1, Math.ceil(vodDuration / 60))).fill(0);
+    for (const s of segments) {
+      const minute = Math.floor(s.start / 60);
+      if (minute >= 0 && minute < words.length) words[minute] += s.text.split(/\s+/).filter(Boolean).length;
+    }
+    report.words_by_minute = words;
+    report.muted_minutes = Array.from(mutedMins).sort((a, b) => a - b);
+    if (streamStartOffset > 0) report.stream_start_seconds = Math.round(streamStartOffset);
     // Enforce the anti_patterns.quote verbatim rule. The prompt instructs
     // the model to pull exact phrases from the transcript, but Sonnet can
     // still drift toward paraphrase. We re-verify every quote against the

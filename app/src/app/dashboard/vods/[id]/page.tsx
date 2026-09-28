@@ -20,6 +20,8 @@ import { currentWeekStart } from "@/lib/limits";
 import { isPlacementDelta } from "@/lib/rank";
 import { callOutcome, isLocked, isSealed, lockOpensAt } from "@/lib/sealed";
 import { SealedResult } from "@/components/dashboard/sealed-result";
+import StreamReplay from "@/components/replay/StreamReplay";
+import { replayFromVod } from "@/components/replay/replay-data";
 
 /*
  * One page per stream. There used to be two: a summary (score, best clip,
@@ -146,7 +148,7 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   const { data: vod } = await supabase
     .from("vods")
     .select(
-      "id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week"
+      "id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week, chat_pulse"
     )
     .eq("id", id)
     .eq("user_id", user!.id)
@@ -252,6 +254,22 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   const bestMoment = report?.best_moment as { time?: string; description?: string } | undefined;
   const bestLink = bestMoment?.time ? vodLinkAt(vod.twitch_vod_id as string | null, parseClipTime(bestMoment.time)) : null;
   const missed = report?.missed_clip as { time?: string; note?: string } | undefined;
+
+  // The stream played back as a sculpture. Only once the result is open,
+  // since it ends on the rank change, and only for reports that saved
+  // words per minute (everything analysed from 2026-09-28 on).
+  const replay =
+    isReady && !sealed
+      ? replayFromVod({
+          title: vod.title as string | null,
+          stream_date: vod.stream_date as string | null,
+          coach_report: report,
+          peak_data: vod.peak_data,
+          chat_pulse: vod.chat_pulse,
+          rank_delta: rankDelta,
+          rank_points_after: (vod.rank_points_after as number | null) ?? null,
+        })
+      : null;
 
   const failureKind = vod.status === "failed" ? categorizeFailure(vod.failed_reason as string | null) : null;
   const twitchVodUrl = vod.twitch_vod_id ? `https://www.twitch.tv/videos/${vod.twitch_vod_id}` : null;
@@ -405,6 +423,12 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
               label="Rank after this stream"
             />
           </section>
+
+          {replay && (
+            <section className="sp-replay" aria-label="Stream replay">
+              <StreamReplay data={replay} embedded />
+            </section>
+          )}
 
           {/* What to do next time, and where this one's points went. */}
           {report && (

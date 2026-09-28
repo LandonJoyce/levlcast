@@ -1,0 +1,631 @@
+/* ═══ Stream replay (components/replay) ═══════════════════════════════════
+   A full-screen stage: the WebGL scene underneath, the words on top. The
+   caption card and the pinned cards are placed by replay-scene.ts next to
+   what they describe; this file styles them. Colour only where it means
+   something: gold for clips and the promotion, red for dead air and the
+   crash, green for points gained. */
+
+.rpl-page.v3 > .v3-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+}
+.v3 > .rpl-stage {
+  max-width: none;
+  margin: 0;
+  padding-inline: 0;
+}
+.rpl-stage {
+  /* Its own copies of the site's tokens, so it looks the same inside the
+     dashboard, which doesn't sit in the public pages' .ll-page .v3 shell. */
+  --ll-bg: rgb(16, 13, 14);
+  --ll-fg: rgb(255, 250, 247);
+  --ll-fg-mute: rgb(228, 218, 215);
+  --ll-fg-dim: rgb(166, 152, 151);
+  --ll-fg-faint: rgb(146, 134, 136);
+  --ll-line-soft: rgba(255, 238, 230, 0.1);
+  --ll-line-med: rgba(255, 238, 230, 0.2);
+  --ll-display: var(--font-plus-jakarta), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ll-mono: var(--font-geist-mono), "Menlo", monospace;
+  --v3-display: var(--font-shoulders), var(--ll-display);
+  --v3-gold: #e3b341;
+  --v3-bad: rgb(248, 113, 113);
+  --v3-good: rgb(163, 230, 53);
+  --rpl-pad: clamp(18px, 4vw, 56px);
+  position: relative;
+  height: 100svh;
+  min-height: 640px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--ll-bg);
+}
+.rpl-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.rpl-stage:not([data-phase="loading"]) .rpl-canvas { opacity: 1; }
+.rpl-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.rpl-hud button,
+.rpl-track { pointer-events: auto; }
+
+/* ── Top ── */
+.rpl-top {
+  position: absolute;
+  top: 100px;
+  left: var(--rpl-pad);
+  right: var(--rpl-pad);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+.rpl-meta {
+  max-width: 600px;
+  /* The scene's light passes behind the heading; keep the words on top of it. */
+  text-shadow: 0 1px 2px rgba(16, 13, 14, 0.9), 0 0 28px rgba(16, 13, 14, 0.95);
+}
+.rpl-tag {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 3px 9px;
+  border: 1px solid var(--ll-line-med);
+  border-radius: 999px;
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ll-fg-dim);
+}
+.rpl-title {
+  margin: 0 0 8px;
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: clamp(24px, 2.9vw, 40px);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  color: var(--ll-fg);
+  text-wrap: balance;
+}
+.rpl-sub {
+  margin: 0;
+  font-family: var(--ll-mono);
+  font-size: 12px;
+  color: var(--ll-fg-dim);
+}
+.rpl-clock {
+  text-shadow: 0 1px 2px rgba(16, 13, 14, 0.9), 0 0 28px rgba(16, 13, 14, 0.95);
+  display: grid;
+  gap: 6px;
+  text-align: right;
+  transition: opacity 0.5s ease;
+}
+.rpl-clock-t {
+  font-family: var(--v3-display);
+  font-weight: 800;
+  font-size: clamp(34px, 4vw, 58px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ll-fg);
+}
+.rpl-clock-s {
+  font-family: var(--ll-mono);
+  font-size: 12px;
+  color: var(--ll-fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.rpl-stage[data-phase="loading"] .rpl-clock,
+.rpl-stage[data-phase="result"] .rpl-clock { opacity: 0; }
+
+/* ── Words over the scene ─────────────────────────────────────────────
+   Set like annotations in a printed piece: no boxes, a hairline down to
+   the thing they describe, and a shadow the colour of the page so they
+   stay readable over the lit slabs. The scene places them and sets
+   --lx (where the line drops from) and --lead (how far it drops). */
+.rpl-now,
+.rpl-pin {
+  --tone: var(--ll-fg-mute);
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  will-change: transform, opacity;
+  text-shadow: 0 1px 2px rgba(16, 13, 14, 0.95), 0 0 18px rgba(16, 13, 14, 0.9);
+}
+.rpl-now[data-on="1"],
+.rpl-pin[data-on="1"] { opacity: 1; }
+.rpl-now[data-tone="gold"],
+.rpl-pin-clip { --tone: var(--v3-gold); }
+.rpl-now[data-tone="red"],
+.rpl-pin-dead,
+.rpl-pin-crash { --tone: var(--v3-bad); }
+.rpl-now[data-flip="1"],
+.rpl-pin[data-flip="1"] { text-align: right; }
+/* The hairline, and the point it lands on. */
+.rpl-now[data-docked="1"]::before,
+.rpl-now[data-docked="1"]::after { display: none; }
+/* Beside the point: the line runs across to it instead of down. */
+.rpl-now[data-side="r"]::after,
+.rpl-now[data-side="l"]::after {
+  top: var(--sy);
+  width: var(--sw);
+  height: 1px;
+}
+.rpl-now[data-side="r"]::after { left: calc(-1 * var(--sw)); }
+.rpl-now[data-side="l"]::after { left: 100%; }
+.rpl-now[data-side="r"]::before,
+.rpl-now[data-side="l"]::before { top: calc(var(--sy) - 2.5px); }
+.rpl-now[data-side="r"]::before { left: calc(-1 * var(--sw) - 8px); }
+.rpl-now[data-side="l"]::before { left: calc(100% + var(--sw) + 2px); }
+.rpl-now::after,
+.rpl-pin:not(.rpl-pin-time):not(.rpl-pin-row)::after {
+  content: "";
+  position: absolute;
+  left: var(--lx, 0);
+  top: calc(100% + 6px);
+  width: 1px;
+  height: max(0px, calc(var(--lead, 40px) - 6px));
+  background: var(--tone);
+  opacity: 0.55;
+}
+.rpl-now::before,
+.rpl-pin:not(.rpl-pin-time):not(.rpl-pin-row)::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--lx, 0) - 2.5px);
+  top: calc(100% + var(--lead, 40px) - 2.5px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+/* What's happening now. */
+.rpl-now {
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  max-width: 340px;
+}
+.rpl-now-time {
+  font-family: var(--v3-display);
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tone);
+}
+.rpl-now-text {
+  margin: 0;
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--ll-fg);
+  text-wrap: balance;
+  animation: rpl-now-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes rpl-now-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* Notes pinned to moments. */
+.rpl-pins { position: absolute; inset: 0; }
+.rpl-pin {
+  display: grid;
+  gap: 3px;
+  white-space: nowrap;
+}
+.rpl-pin-k {
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tone);
+}
+.rpl-pin-t {
+  font-family: var(--ll-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  color: var(--ll-fg);
+}
+.rpl-pin-s {
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  color: var(--ll-fg-dim);
+}
+.rpl-pin-time {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  color: var(--ll-fg-faint);
+}
+.rpl-pin-row { text-align: right; }
+.rpl-pin-row .rpl-pin-k { color: var(--ll-fg); }
+
+/* ── Bottom: controls while it plays, the result once it's done ── */
+.rpl-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 118px;
+  padding: 16px var(--rpl-pad) 18px;
+  border-top: 1px solid var(--ll-line-soft);
+  background: rgba(16, 13, 14, 0.86);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+.rpl-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  min-width: 0;
+}
+.rpl-stage[data-phase="result"] .rpl-controls { display: none; }
+.rpl-play,
+.rpl-again {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 1px solid var(--ll-line-med);
+  border-radius: 50%;
+  background: none;
+  color: var(--ll-fg);
+  cursor: pointer;
+}
+.rpl-play:hover,
+.rpl-again:hover { border-color: var(--ll-fg-dim); }
+.rpl-play:disabled { opacity: 0.35; cursor: default; }
+.rpl-again { display: none; margin-left: auto; }
+.rpl-stage[data-phase="result"] .rpl-again { display: grid; }
+.rpl-scrub { flex: 1; min-width: 0; }
+.rpl-track {
+  position: relative;
+  height: 40px;
+  border-bottom: 1px solid var(--ll-line-med);
+  container-type: inline-size;
+  cursor: ew-resize;
+  touch-action: none;
+  outline: none;
+}
+.rpl-track:focus-visible { box-shadow: 0 6px 0 -4px var(--ll-fg-dim); }
+.rpl-spark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.rpl-bar { fill: rgba(232, 224, 217, 0.55); }
+.rpl-bar-gold { fill: var(--v3-gold); }
+.rpl-bar-dead { fill: var(--v3-bad); }
+.rpl-scrub-head {
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 1px;
+  height: calc(100% + 8px);
+  background: var(--ll-fg);
+  will-change: transform;
+}
+.rpl-scrub-head::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ll-fg);
+}
+.rpl-scrub-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  color: var(--ll-fg-faint);
+}
+
+/* Chat: a few lines ticking by, contained. */
+.rpl-chatbox {
+  flex: none;
+  display: grid;
+  align-content: end;
+  gap: 4px;
+  width: 220px;
+  padding-left: 20px;
+  border-left: 1px solid var(--ll-line-soft);
+  overflow: hidden;
+}
+.rpl-chatbox-k {
+  font-family: var(--ll-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.rpl-chatline {
+  min-height: 1.25em;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--ll-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ll-fg-mute);
+  opacity: 0.4;
+}
+.rpl-chatline:nth-of-type(3) { opacity: 0.65; }
+.rpl-chatline:nth-of-type(4) { opacity: 1; }
+.rpl-chatline[data-tone="gold"] { color: var(--v3-gold); }
+.rpl-chatline[data-tone="red"] { color: var(--v3-bad); }
+.rpl-chatline:not(:empty)::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 9px 2px 0;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  vertical-align: middle;
+}
+.rpl-chatline[data-fresh="1"] { animation: rpl-chat-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes rpl-chat-in {
+  from { opacity: 0; transform: translateY(9px); }
+}
+
+/* ── The result ── */
+.rpl-res {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex: 1;
+  min-width: 0;
+  animation: rpl-cap 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.rpl-res-emblem {
+  position: relative;
+  flex: none;
+  width: 104px;
+  height: 104px;
+  animation: rpl-emblem 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+}
+.rpl-res-emblem::before {
+  content: "";
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background: var(--v3-gold);
+  filter: blur(30px);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.rpl-res[data-promoted="1"] .rpl-res-emblem::before { opacity: 0.38; }
+.rpl-res-emblem img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+@keyframes rpl-emblem {
+  from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+}
+.rpl-res-rank {
+  display: grid;
+  gap: 3px;
+  flex: none;
+  min-width: 180px;
+}
+.rpl-res-k {
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--v3-gold);
+  transition: opacity 0.3s ease;
+}
+.rpl-res-k[data-show="0"] { opacity: 0; }
+.rpl-res-name {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: clamp(36px, 3.8vw, 54px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ll-fg);
+}
+.rpl-res[data-flash="1"] .rpl-res-name { color: var(--v3-gold); }
+.rpl-res-from {
+  font-family: var(--ll-mono);
+  font-size: 12px;
+  color: var(--ll-fg-dim);
+}
+.rpl-res-bar {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+.rpl-res-bar-top {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.rpl-res-delta {
+  font-family: var(--v3-display);
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--v3-good);
+}
+.rpl-res-delta[data-sign="down"] { color: var(--v3-bad); }
+.rpl-res-reason {
+  font-family: var(--ll-mono);
+  font-size: 12px;
+  color: var(--ll-fg-mute);
+}
+.rpl-res-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 250, 247, 0.08);
+  overflow: hidden;
+}
+.rpl-res-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--tier);
+  box-shadow: 0 0 14px var(--tier);
+}
+.rpl-res[data-flash="1"] .rpl-res-track { box-shadow: 0 0 0 1px var(--v3-gold), 0 0 22px rgba(227, 179, 65, 0.45); }
+.rpl-res-summary {
+  margin: 0;
+  font-family: var(--ll-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ll-fg-mute);
+}
+.rpl-res-stats {
+  display: flex;
+  gap: 22px;
+  margin: 0;
+  flex: none;
+}
+.rpl-res-stats div { display: grid; gap: 3px; }
+.rpl-res-stats dt {
+  font-family: var(--ll-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ll-fg-faint);
+}
+.rpl-res-stats dd {
+  margin: 0;
+  font-family: var(--v3-display);
+  font-weight: 800;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ll-fg);
+}
+.rpl-none {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  font-family: var(--ll-mono);
+  color: var(--ll-fg-dim);
+}
+
+/* ── Smaller screens ── */
+@media (max-width: 1000px) {
+  .rpl-res-stats { display: none; }
+  .rpl-chatbox { width: 170px; }
+}
+@media (max-width: 760px) {
+  .rpl-stage { min-height: 700px; }
+  .rpl-top { top: 84px; flex-direction: column; gap: 10px; }
+  .rpl-clock { text-align: left; grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 12px; }
+  .rpl-clock-t { font-size: 30px; }
+  /* The caption docks above the controls instead of riding the replay. */
+  .rpl-now {
+    top: auto;
+    left: var(--rpl-pad);
+    right: var(--rpl-pad);
+    bottom: 190px;
+    max-width: none;
+    transform: none !important;
+  }
+  .rpl-now-text { font-size: 19px; }
+  .rpl-now { width: auto; }
+  .rpl-now::before,
+  .rpl-now::after { display: none; }
+  .rpl-bottom { flex-wrap: wrap; min-height: 176px; gap: 12px; }
+  .rpl-controls { flex-wrap: wrap; gap: 12px 16px; }
+  .rpl-scrub { flex-basis: calc(100% - 66px); }
+  .rpl-chatbox { flex-basis: 100%; width: auto; height: 42px; padding: 0; border-left: 0; }
+  .rpl-chatbox-k,
+  .rpl-chatline:nth-of-type(1),
+  .rpl-chatline:nth-of-type(2) { display: none; }
+  .rpl-pin-t { font-size: 13px; }
+  .rpl-pin-s { display: none; }
+  .rpl-res { flex-wrap: wrap; gap: 12px 16px; padding-right: 58px; }
+  .rpl-res-emblem { width: 72px; height: 72px; }
+  .rpl-res-rank { min-width: 0; }
+  .rpl-res-name { font-size: 36px; }
+  .rpl-res-bar { flex-basis: 100%; }
+  .rpl-res-summary { display: none; }
+  .rpl-again { position: absolute; right: var(--rpl-pad); top: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rpl-now-text,
+  .rpl-res,
+  .rpl-res-emblem { animation: none; }
+}
+
+/* ── Inside a stream's report page ── */
+.rpl-stage[data-embedded="1"] {
+  height: clamp(520px, 74vh, 860px);
+  min-height: 0;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 14px;
+}
+.rpl-stage[data-embedded="1"] .rpl-top { top: 22px; }
+.rpl-kicker {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ll-fg);
+  text-shadow: 0 1px 2px rgba(16, 13, 14, 0.9), 0 0 24px rgba(16, 13, 14, 0.95);
+}
+.rpl-kicker span {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 12px;
+  color: var(--ll-fg-dim);
+}
+.rpl-endline {
+  flex: 1;
+  margin: 0;
+  font-family: var(--ll-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--ll-fg-mute);
+}
+@media (max-width: 760px) {
+  .rpl-stage[data-embedded="1"] { height: clamp(560px, 82vh, 760px); }
+  .rpl-stage[data-embedded="1"] .rpl-top { top: 16px; }
+}
