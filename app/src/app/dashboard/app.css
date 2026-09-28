@@ -669,6 +669,50 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .vp-step-label span { font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--ink-3); }
 .dash .vp-step-desc { margin: 3px 0 0; font-size: 13.5px; color: var(--ink-3); }
 
+/* The free report, shown while the full one is made (waiting-preview.tsx). */
+.dash .wp { padding: 4px 0 28px; border-bottom: 1px solid var(--line); }
+.dash .wp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.dash .wp-title { margin: 0; font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.02em; color: var(--ink); }
+.dash .wp-score {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-4);
+}
+.dash .wp-score span { font-family: var(--numbers); font-weight: 900; font-size: 44px; line-height: 0.9; letter-spacing: 0; color: var(--ink); }
+.dash .wp-story { max-width: 64ch; margin: 14px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+.dash .wp-block { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
+.dash .wp-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 24px; border-top: 1px solid var(--line); }
+.dash .wp-cols > div { padding: 22px 32px 0 0; }
+.dash .wp-cols > div + div { padding: 22px 0 0 32px; border-left: 1px solid var(--line); }
+.dash .wp-list { list-style: none; display: grid; gap: 12px; margin: 0; padding: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.dash .wp-list li { position: relative; padding-left: 16px; }
+.dash .wp-list li::before { content: ""; position: absolute; top: 0.6em; left: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); }
+.dash .wp-list[data-tone="good"] li::before { background: var(--green); }
+.dash .wp-list[data-tone="bad"] li::before { background: var(--danger); }
+.dash .wp-list b { font-weight: 600; color: var(--ink); }
+.dash .wp-block .sp-moments { border-top: 0; }
+.dash .wp-block .sp-moment:first-child { padding-top: 4px; }
+.dash .wp-block .sp-moment:last-child { padding-bottom: 0; border-bottom: 0; }
+.dash .wp-foot { margin: 24px 0 0; font-size: 13px; color: var(--ink-3); }
+.dash .wp-wait { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 14.5px; color: var(--ink-2); }
+@media (max-width: 860px) {
+  .dash .wp-cols { grid-template-columns: minmax(0, 1fr); }
+  .dash .wp-cols > div,
+  .dash .wp-cols > div + div { padding: 22px 0 0; border-left: 0; }
+  .dash .wp-cols > div + div { margin-top: 22px; border-top: 1px solid var(--line); }
+}
+@media (max-width: 560px) {
+  .dash .wp-title { font-size: 19px; }
+  .dash .wp-score span { font-size: 36px; }
+}
+
 /* The long read (full-breakdown.tsx). */
 .dash .fb { border-top: 1px solid var(--line); }
 .dash .fb-toggle {

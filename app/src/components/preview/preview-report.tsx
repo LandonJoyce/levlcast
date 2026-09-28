@@ -255,8 +255,10 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
  * the markdown was going straight onto the page, asterisks and all, which
  * made the first report a stranger ever reads look broken. The label is
  * bold text at the start of the line, the way the dashboard shows it.
+ * The stream page uses it too, for the free report shown while a full
+ * one is made.
  */
-function ReportItem({ text }: { text: string }) {
+export function ReportItem({ text }: { text: string }) {
   const bold = text.match(/^\s*\*\*([\s\S]+?)\*\*\s*[—–.:-]?\s*([\s\S]*)$/);
   if (!bold) return <li>{text.replace(/\*\*/g, "")}</li>;
   return (

@@ -37,7 +37,13 @@ import { OUTREACH_SUBS, arcticShiftGet } from "@/lib/reddit";
 import { createAdminClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
 import { extractChannel } from "@/lib/twitch-input";
-import { fetchPreviewVodMeta, latestVodForChannel, MIN_PREVIEW_SECONDS, PREVIEW_SECONDS } from "@/lib/public-preview";
+import {
+  fetchPreviewVodMeta,
+  latestVodForChannel,
+  MIN_PREVIEW_SECONDS,
+  PREVIEW_SECONDS,
+  PREVIEWS_PER_DAY,
+} from "@/lib/public-preview";
 
 /** Help-seeking language. Mirrors the manual leads route. */
 const HELP_PHRASES = [
@@ -489,7 +495,7 @@ export function finishDraft(subject: string, body: string, link: string = OUTREA
 /** Previews the harvest may start in one run. Each is about a nickel. */
 const MAX_REPORT_STARTS_PER_RUN = 2;
 /** The same daily ceiling the public analyzer holds; outreach counts toward it. */
-const PREVIEW_DAILY_CEILING = 200;
+const PREVIEW_DAILY_CEILING = PREVIEWS_PER_DAY;
 
 type ReportPrep =
   | { kind: "ready"; report: ReportForDraft; vodId: string }

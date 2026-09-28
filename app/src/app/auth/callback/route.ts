@@ -1,10 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { sendWelcomeEmail } from "@/lib/email";
 import { fetchTwitchVods, getAppAccessToken, mapVodToRow, parseTwitchDuration } from "@/lib/twitch";
 import { inngest } from "@/lib/inngest/client";
 import { REF_COOKIE, REF_PATTERN, VISITOR_COOKIE } from "@/lib/funnel";
+import { startWaitingPreview } from "@/lib/waiting-preview";
+
+/**
+ * How long a new sign-up's redirect waits for their streams to sync and
+ * their first report to be queued. It's a few Twitch and database calls,
+ * normally a second or two; past this the redirect goes out anyway and the
+ * rest finishes in the background.
+ */
+const FIRST_REPORT_WAIT_MS = 6000;
 
 /**
  * OAuth callback — exchanges the auth code for a session,
@@ -87,18 +96,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
   }
 
-  // Fire welcome email for new users — don't await so it doesn't block the redirect
+  // Welcome email for new users. In after() so it doesn't hold up the
+  // redirect but still gets to finish: a promise nobody awaits isn't
+  // guaranteed to run once the response has gone out.
   if (isNewUser && user.email) {
+    const email = user.email;
     const displayName = meta.nickname || meta.full_name || meta.name || meta.preferred_username || "there";
-    sendWelcomeEmail(user.email, displayName).catch((err) => {
-      console.error("[auth/callback] Welcome email failed:", err instanceof Error ? err.message : err);
-    });
+    after(() =>
+      sendWelcomeEmail(email, displayName).catch((err) => {
+        console.error("[auth/callback] Welcome email failed:", err instanceof Error ? err.message : err);
+      })
+    );
   }
 
-  // Auto-sync VODs and queue the most recent one for analysis on new signups.
-  // This kills the activation gap: by the time the user lands on the dashboard,
-  // their first coach report is already being generated. Fire and forget so a
-  // Twitch API hiccup never breaks signup.
+  // Sync a new streamer's VODs and start their first report, then send them
+  // to the stream it's running on. That page shows the free report on the
+  // stream's opening while the full one is made, so the first thing they
+  // see after joining is their own stream.
+  //
+  // This used to be fire-and-forget with a redirect to the dashboard. The
+  // redirect usually won the race, so the dashboard rendered before any
+  // streams had synced and told them Twitch had no saved broadcasts. And
+  // on Vercel, work nobody awaits isn't guaranteed to finish at all.
   if (isNewUser) {
     const twitchId = meta.provider_id || meta.sub;
     // A stream they previewed for free before signing up (set by the
@@ -107,9 +126,32 @@ export async function GET(request: NextRequest) {
     const pendingVod = request.cookies.get("levlcast_pending_vod")?.value;
     const preferredVodId = pendingVod && /^\d{6,}$/.test(pendingVod) ? pendingVod : null;
     if (twitchId) {
-      autoAnalyzeFirstVod(user.id, twitchId, preferredVodId).catch((err) => {
+      const queuing = autoAnalyzeFirstVod(user.id, twitchId, preferredVodId).catch((err) => {
         console.error("[auth/callback] Auto-analyze failed:", err instanceof Error ? err.message : err);
+        return null;
       });
+      // Anyone who didn't run the free report on this stream before
+      // signing up gets it now, so there's something of theirs to read
+      // in a minute or two instead of ten.
+      after(async () => {
+        const first = await queuing;
+        if (first) await startWaitingPreview(first.twitchVodId);
+      });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const first = await Promise.race([
+        queuing,
+        new Promise<"timeout">((resolve) => {
+          timer = setTimeout(() => resolve("timeout"), FIRST_REPORT_WAIT_MS);
+        }),
+      ]);
+      clearTimeout(timer);
+      if (first === "timeout") {
+        // Still syncing: the dashboard says so and refreshes until the
+        // streams are in, instead of calling their Twitch empty.
+        response.headers.set("Location", `${origin}/dashboard?syncing=1`);
+      } else if (first) {
+        response.headers.set("Location", `${origin}/dashboard/vods/${first.vodId}?welcome=1`);
+      }
     }
   }
 
@@ -139,10 +181,15 @@ export async function GET(request: NextRequest) {
 /**
  * Pulls the user's recent Twitch VODs, picks the most recent eligible one
  * (between 10 min and 4 hours so it fits within free-tier rules), inserts
- * it into the vods table, and queues the analyze job. Best-effort — failures
- * are logged but never thrown.
+ * it into the vods table, and queues the analyze job. Returns the queued
+ * stream, or null when nothing was queued. Failures are logged by the
+ * caller.
  */
-async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVodId: string | null = null): Promise<void> {
+async function autoAnalyzeFirstVod(
+  userId: string,
+  twitchId: string,
+  preferredVodId: string | null = null
+): Promise<{ vodId: string; twitchVodId: string } | null> {
   const admin = createAdminClient();
 
   let appToken: string;
@@ -150,11 +197,11 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVo
     appToken = await getAppAccessToken();
   } catch (err) {
     console.warn("[auth/callback/auto-analyze] App token failed:", err instanceof Error ? err.message : err);
-    return;
+    return null;
   }
 
   const vods = await fetchTwitchVods(twitchId, appToken, 20);
-  if (vods.length === 0) return;
+  if (vods.length === 0) return null;
 
   // Bulk-insert all recent VODs as pending so the dashboard isn't empty when
   // the user lands. The chosen VOD is then claimed and queued separately.
@@ -162,13 +209,13 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVo
   const rows = vods
     .map((v) => mapVodToRow(v, userId))
     .filter((r): r is NonNullable<typeof r> => r !== null);
-  if (rows.length === 0) return;
+  if (rows.length === 0) return null;
   const { error: insertErr } = await admin
     .from("vods")
     .upsert(rows, { onConflict: "twitch_vod_id" });
   if (insertErr) {
     console.warn("[auth/callback/auto-analyze] Bulk VOD insert failed:", insertErr.message);
-    return;
+    return null;
   }
 
   // Pick the VOD to analyze on signup.
@@ -204,7 +251,7 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVo
     console.log(
       `[auth/callback/auto-analyze] user ${userId} has ${vods.length} VODs but none over ${MIN_DURATION}s — nothing queued`
     );
-    return;
+    return null;
   }
 
   // Atomic claim: only flip status to transcribing if it's still pending
@@ -217,7 +264,7 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVo
     .select("id")
     .single();
 
-  if (!claimed) return;
+  if (!claimed) return null;
 
   await inngest.send({
     // Idempotency key — if this same event fires twice (auth callback hit
@@ -229,4 +276,5 @@ async function autoAnalyzeFirstVod(userId: string, twitchId: string, preferredVo
   });
 
   console.log(`[auth/callback/auto-analyze] Queued first analysis for new user ${userId} (vod ${claimed.id})`);
+  return { vodId: claimed.id as string, twitchVodId: eligible.id };
 }

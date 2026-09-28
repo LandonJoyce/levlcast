@@ -33,6 +33,7 @@ import {
   latestVodForChannel,
   MIN_PREVIEW_SECONDS,
   PREVIEW_SECONDS,
+  PREVIEWS_PER_DAY,
   type ChannelLookup,
 } from "@/lib/public-preview";
 
@@ -41,12 +42,8 @@ export const dynamic = "force-dynamic";
 /** Previews per IP per day. Enough to try a few streams, not enough to farm. */
 const PER_IP_DAILY = 3;
 
-/**
- * Hard ceiling on previews started across all visitors in a day.
- * At roughly a nickel each this caps anonymous spend near $10/day. Raise
- * it when the funnel is proven, never remove it.
- */
-const GLOBAL_DAILY = 200;
+/** Hard ceiling on previews started in a day, shared with outreach and sign-ups. */
+const GLOBAL_DAILY = PREVIEWS_PER_DAY;
 
 /**
  * A preview that has been running longer than this is considered dead, so

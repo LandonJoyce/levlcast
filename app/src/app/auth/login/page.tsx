@@ -86,7 +86,7 @@ export default async function LoginPage({
             <li>
               <span className="au-n" aria-hidden="true">01</span>
               <p>
-                <b>Twitch asks if LevlCast can see your account.</b> Say yes and you land on your dashboard.
+                <b>Twitch asks if LevlCast can see your account.</b> Say yes and you&apos;re in.
               </p>
             </li>
             <li>
@@ -99,8 +99,8 @@ export default async function LoginPage({
             <li>
               <span className="au-n" aria-hidden="true">03</span>
               <p>
-                <b>We start on your latest stream right away.</b> The report is usually ready in under ten minutes,
-                and it places you on the ladder.
+                <b>We start your first report right away.</b> It&apos;s usually ready in about ten minutes, and it
+                places you on the ladder.
               </p>
             </li>
           </ol>

@@ -87,14 +87,19 @@ const Icons = {
 
 // ─── page ────────────────────────────────────────────────
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { syncing: syncingParam } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("twitch_display_name, rank_points, plan, subscription_expires_at")
+    .select("twitch_display_name, rank_points, plan, subscription_expires_at, created_at")
     .eq("id", user.id)
     .single();
 
@@ -151,6 +156,13 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .in("status", ["transcribing", "analyzing"]);
     const hasInProgressAnalysis = (inProgressCount ?? 0) > 0;
+    // Sign-in syncs a new streamer's VODs before sending them anywhere, but
+    // it stops waiting on Twitch after a few seconds and says so with
+    // ?syncing=1. Then an empty list means "not synced yet", not "no saved
+    // broadcasts", for the next couple of minutes.
+    const createdAt = Date.parse(String(profile?.created_at ?? ""));
+    const syncing =
+      syncingParam === "1" && Number.isFinite(createdAt) && Date.now() - createdAt < 2 * 60 * 1000;
     // Someone who arrived through a duel or friend-league invite should
     // see it here before their first report, not only after.
     const newAdmin = createAdminClient();
@@ -165,14 +177,14 @@ export default async function DashboardPage() {
         <WelcomeModal name={displayName} />
         <PendingCheckoutHandler />
         <PendingVodHandler />
-        <VodStatusPoller hasProcessing={hasInProgressAnalysis} />
+        <VodStatusPoller hasProcessing={hasInProgressAnalysis || syncing} />
 
         <div className="hm-hello">
           <h1 className="page-title">Hey, {displayName}.</h1>
         </div>
 
         <AdminReplyCard />
-        <OnboardingHero />
+        <OnboardingHero syncing={syncing} />
         {hasSocial && <FriendsSection duels={newDuels} leagues={newLeagues} />}
       </>
     );

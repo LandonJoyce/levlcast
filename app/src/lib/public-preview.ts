@@ -45,6 +45,14 @@ export const PREVIEW_SECONDS = 720;
  */
 export const MIN_PREVIEW_SECONDS = 5 * 60;
 
+/**
+ * Hard ceiling on previews started in a day, from everywhere at once: the
+ * analyzer, outreach and new sign-ups all count toward it. At roughly a
+ * nickel each this caps preview spend near $10/day. Raise it when the
+ * funnel is proven, never remove it.
+ */
+export const PREVIEWS_PER_DAY = 200;
+
 export interface PreviewVodMeta {
   twitchVodId: string;
   title: string;

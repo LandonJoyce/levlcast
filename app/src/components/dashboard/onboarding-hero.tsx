@@ -5,9 +5,12 @@
  * "Unranked" where their rank will be. The first report is a placement,
  * and showing where it could put them is the reason to run it.
  *
- * Right, one of three:
+ * Right, one of four:
  *   analyzing   The first analysis is running (often queued at sign-in).
  *               The page polls and swaps to the real dashboard when done.
+ *   syncing     Just signed up and nothing has synced yet: sign-in stopped
+ *               waiting on a slow Twitch and the sync is still finishing.
+ *               The page polls until the streams are in.
  *   no-streams  Twitch has no saved broadcasts. Usually VOD saving is off,
  *               which is Twitch's default, so this says exactly where the
  *               setting is instead of "come back later".
@@ -33,7 +36,7 @@ function formatDuration(seconds: number | null): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export async function OnboardingHero() {
+export async function OnboardingHero({ syncing = false }: { syncing?: boolean }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -103,7 +106,22 @@ export async function OnboardingHero() {
                 </li>
               ))}
             </ol>
+            {/* The stream's own page has the time left and, while this
+                runs, the free report on the stream's opening. */}
+            <div className="hm-actions">
+              <Link href={`/dashboard/vods/${inProgress.id}`} className="btn btn-ghost">
+                Open your stream
+              </Link>
+            </div>
             <p className="ob-note">You can close this tab. It keeps going, and this page flips to your report when it&apos;s in.</p>
+          </>
+        ) : total === 0 && syncing ? (
+          <>
+            <p className="hm-k">Your streams</p>
+            <p className="ob-title">Getting them from Twitch.</p>
+            <p className="ob-sub">
+              This takes a few seconds. Your first report starts as soon as they&apos;re in.
+            </p>
           </>
         ) : total === 0 ? (
           <>

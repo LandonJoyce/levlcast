@@ -22,6 +22,9 @@ import { callOutcome, isLocked, isSealed, lockOpensAt } from "@/lib/sealed";
 import { SealedResult } from "@/components/dashboard/sealed-result";
 import StreamReplay from "@/components/replay/StreamReplay";
 import { replayFromVod } from "@/components/replay/replay-data";
+import { WaitingPreview } from "@/components/dashboard/waiting-preview";
+import { ForgetPendingVod } from "@/components/dashboard/forget-pending-vod";
+import { loadWaitingPreview, type WaitingPreviewState } from "@/lib/waiting-preview";
 
 /*
  * One page per stream. There used to be two: a summary (score, best clip,
@@ -138,8 +141,17 @@ type ClipRow = {
 
 type PriorRow = { coach_report: Record<string, any> | null; stream_date: string | null; analyzed_at: string | null };
 
-export default async function StreamPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function StreamPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { id } = await params;
+  // Straight from sign-in, with their first report running on this stream
+  // (auth/callback).
+  const welcome = (await searchParams).welcome === "1";
   const supabase = await createClient();
   const {
     data: { user },
@@ -148,7 +160,7 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   const { data: vod } = await supabase
     .from("vods")
     .select(
-      "id, title, duration_seconds, status, stream_date, analyzed_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week, chat_pulse"
+      "id, title, duration_seconds, status, stream_date, analyzed_at, updated_at, coach_report, twitch_vod_id, share_token, failed_reason, peak_data, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week, chat_pulse"
     )
     .eq("id", id)
     .eq("user_id", user!.id)
@@ -185,6 +197,19 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   const isYouTubeConnected = connections?.some((c) => c.platform === "youtube") ?? false;
   const isReady = vod.status === "ready";
   const isVodProcessing = vod.status === "transcribing" || vod.status === "analyzing";
+
+  // While it runs: the free report on this stream's opening, when there is
+  // one, and whether this is their first report at all.
+  let waiting: WaitingPreviewState | null = null;
+  let firstReport = false;
+  if (isVodProcessing) {
+    const [preview, { count: readyCount }] = await Promise.all([
+      loadWaitingPreview(vod.twitch_vod_id as string | null),
+      supabase.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
+    ]);
+    waiting = preview;
+    firstReport = (readyCount ?? 0) === 0;
+  }
 
   const readyClips = clips.filter((c) => c.status === "ready" && !c.is_highlight_reel);
   const processingClips = clips.filter((c) => c.status === "processing" && !c.is_highlight_reel);
@@ -280,6 +305,7 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
   return (
     <>
       <VodStatusPoller hasProcessing={isVodProcessing || hasProcessingClip} />
+      {welcome && <ForgetPendingVod />}
       {isFirstScore && (
         <FirstScoreCelebration
           vodId={vod.id}
@@ -315,7 +341,17 @@ export default async function StreamPage({ params }: { params: Promise<{ id: str
 
       {!isReady ? (
         isVodProcessing ? (
-          <VodProgress status={vod.status} durationSeconds={vod.duration_seconds} />
+          <>
+            <VodProgress
+              status={vod.status}
+              durationSeconds={vod.duration_seconds}
+              stepStartedAt={(vod.updated_at as string | null) ?? null}
+              now={Date.now()}
+              first={firstReport}
+              emailed={!!user?.email}
+            />
+            {waiting && <WaitingPreview state={waiting} />}
+          </>
         ) : vod.status === "pending" ? (
           <div className="sp-state">
             <p className="sp-state-title">Not analyzed yet</p>
