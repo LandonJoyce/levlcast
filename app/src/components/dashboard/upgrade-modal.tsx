@@ -33,9 +33,9 @@ const PRICE: Record<Tier, Record<Cycle, { price: string; cycle: string; sub: str
 
 const FEATURES: Record<Tier, string[]> = {
   pro: [
-    "15 VOD analyses / month",
-    "20 hours of analysis / month",
-    "Streams up to 8 hours each",
+    "Whole streams coached, up to 8 hours each",
+    "20 VOD analyses / month",
+    "30 hours of analysis / month",
     "20 clips per month",
     "Post to YouTube Shorts",
   ],

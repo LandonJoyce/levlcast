@@ -4,11 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, X } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import { expectedMinutes, streamLength } from "@/lib/analysis-progress";
+import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
 
 /**
  * The window between pressing Analyze and the analysis starting: what to
  * analyze (the whole stream, an hour, or a range) and roughly how long it
  * takes.
+ *
+ * Free coaches the first 2 hours of a stream (or 2 hours from where you
+ * pick) and Pro the whole thing; on a longer stream the window says so in
+ * one line. It used to refuse free streams over 4 hours outright.
  *
  * A free streamer who has used both weekly reports gets one more option
  * here instead of a dead end: analyze it anyway, and it comes back sealed
@@ -24,8 +30,6 @@ interface AnalyzeModalProps {
   userPlan?: string;
   onUpgrade: (reason: string) => void;
 }
-
-const FREE_MAX_SECONDS = 14400; // 4 hours
 
 type Preset = "full" | "first_hour" | "last_hour" | "custom";
 
@@ -46,13 +50,6 @@ function toTimeString(seconds: number): string {
   const s = Math.floor(seconds % 60);
   if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-/** Transcription takes about a minute per 15 minutes of audio, then the report. */
-function estimateMinutes(durationSecs: number, rangeSecs: number): number {
-  const transcribeMin = Math.max(3, Math.ceil(durationSecs / 900));
-  const analyzeMin = Math.max(2, Math.ceil(rangeSecs / 1800));
-  return transcribeMin + analyzeMin;
 }
 
 export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds, userPlan, onUpgrade }: AnalyzeModalProps) {
@@ -88,9 +85,11 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
 
   const rangeSeconds = Math.max(0, endSeconds - startSeconds);
   const isFull = preset === "full";
-  const estimatedMin = estimateMinutes(durationSeconds, isFull ? durationSeconds : rangeSeconds);
   const isFree = userPlan !== "pro";
-  const tooLongForFree = isFree && durationSeconds > FREE_MAX_SECONDS;
+  // What actually gets coached: free stops 2 hours in.
+  const coachedSeconds = isFree ? Math.min(rangeSeconds, FREE_COACHED_SECONDS) : rangeSeconds;
+  const firstTwoHoursOnly = isFree && isFull && durationSeconds > FREE_COACHED_SECONDS;
+  const estimatedMin = expectedMinutes(coachedSeconds);
 
   let validationError: string | null = null;
   if (preset === "custom") {
@@ -100,6 +99,7 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
     else if (e === null) validationError = "End time should look like 12:30 or 1:05:00.";
     else if (e <= s) validationError = "End has to be after the start.";
     else if (e - s < 60) validationError = "Pick at least a minute.";
+    else if (isFree && e - s > FREE_COACHED_SECONDS) validationError = "Free coaches up to 2 hours. Pick a shorter range, or go Pro for the whole stream.";
   }
 
   async function start(sealedExtra = false) {
@@ -178,7 +178,7 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
                 className="btn btn-ghost"
                 onClick={() => {
                   onClose();
-                  onUpgrade("Pro opens every report the moment it's done, with 15 reports a month.");
+                  onUpgrade("Pro opens every report the moment it's done, and coaches whole streams, 20 a month.");
                 }}
               >
                 Go Pro
@@ -191,8 +191,17 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
         ) : (
           <>
             <p className="am-label">What to analyze</p>
-            <div className="am-presets" data-disabled={tooLongForFree ? "yes" : undefined}>
-              <Preset label="Full stream" sub={formatDuration(durationSeconds)} active={preset === "full"} onClick={() => setPreset("full")} />
+            <div className="am-presets">
+              {isFree && durationSeconds > FREE_COACHED_SECONDS ? (
+                <Preset
+                  label="First 2 hours"
+                  sub={`of ${streamLength(durationSeconds)}`}
+                  active={preset === "full"}
+                  onClick={() => setPreset("full")}
+                />
+              ) : (
+                <Preset label="Full stream" sub={formatDuration(durationSeconds)} active={preset === "full"} onClick={() => setPreset("full")} />
+              )}
               {hasHour && (
                 <Preset label="First hour" sub={formatDuration(Math.min(3600, durationSeconds))} active={preset === "first_hour"} onClick={() => setPreset("first_hour")} />
               )}
@@ -214,7 +223,11 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
               <div>
                 <p className="hm-k">Range</p>
                 <p className="am-summary-v">
-                  {isFull ? "Full stream" : `${toTimeString(startSeconds)} to ${toTimeString(endSeconds)}`}
+                  {firstTwoHoursOnly
+                    ? "First 2 hours"
+                    : isFull
+                      ? "Full stream"
+                      : `${toTimeString(startSeconds)} to ${toTimeString(endSeconds)}`}
                   {!isFull && <span> ({formatDuration(rangeSeconds)})</span>}
                 </p>
               </div>
@@ -223,13 +236,24 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
                 <p className="am-summary-v">{estimateLabel}</p>
               </div>
             </div>
-            {!isFull && durationSeconds > 3600 && (
-              <p className="am-note">We transcribe the whole stream, then coach only the part you picked.</p>
+            {firstTwoHoursOnly && (
+              <p className="am-note">
+                Free coaches the first 2 hours.{" "}
+                <button
+                  type="button"
+                  className="am-link"
+                  onClick={() => {
+                    onClose();
+                    onUpgrade(`Pro coaches the whole stream, all ${streamLength(durationSeconds)} of it.`);
+                  }}
+                >
+                  Pro coaches all {streamLength(durationSeconds)}.
+                </button>
+              </p>
             )}
-            {isFull && durationSeconds >= 14400 && !tooLongForFree && (
+            {coachedSeconds >= 14400 && (
               <p className="am-note">Long stream, so it runs in the background. You can close this page.</p>
             )}
-            {tooLongForFree && <p className="am-note am-note-bad">Free analyzes streams up to 4 hours. Pro goes up to 8.</p>}
 
             {(validationError || error) && <p className="am-error">{validationError || error}</p>}
 
@@ -237,22 +261,9 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
               <button type="button" className="btn btn-ghost" onClick={onClose}>
                 Cancel
               </button>
-              {tooLongForFree ? (
-                <button
-                  type="button"
-                  className="btn btn-blue"
-                  onClick={() => {
-                    onClose();
-                    onUpgrade("Pro analyzes streams up to 8 hours long.");
-                  }}
-                >
-                  Go Pro
-                </button>
-              ) : (
-                <button type="button" className="btn btn-blue" onClick={() => start()} disabled={analyzing || !!validationError}>
-                  {analyzing ? "Starting..." : "Analyze"}
-                </button>
-              )}
+              <button type="button" className="btn btn-blue" onClick={() => start()} disabled={analyzing || !!validationError}>
+                {analyzing ? "Starting..." : "Analyze"}
+              </button>
             </div>
           </>
         )}

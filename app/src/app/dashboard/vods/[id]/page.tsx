@@ -26,6 +26,8 @@ import { WaitingPreview } from "@/components/dashboard/waiting-preview";
 import { ForgetPendingVod } from "@/components/dashboard/forget-pending-vod";
 import { loadWaitingPreview, type WaitingPreviewState } from "@/lib/waiting-preview";
 import { loadAnalysisProgress, type AnalysisProgress } from "@/lib/analysis-progress";
+import { FREE_COACHED_SECONDS } from "@/lib/limits";
+import { CoachedPartNote } from "@/components/dashboard/coached-part-note";
 
 /*
  * One page per stream. There used to be two: a summary (score, best clip,
@@ -348,7 +350,11 @@ export default async function StreamPage({
           <>
             <VodProgress
               status={vod.status}
-              durationSeconds={vod.duration_seconds}
+              // A free report coaches the first 2 hours; that's what's being worked on.
+              durationSeconds={
+                isPro || !vod.duration_seconds ? vod.duration_seconds : Math.min(vod.duration_seconds, FREE_COACHED_SECONDS)
+              }
+              firstPartOnly={!isPro && (vod.duration_seconds ?? 0) > FREE_COACHED_SECONDS}
               updatedAt={(vod.updated_at as string | null) ?? null}
               progress={progress}
               now={Date.now()}
@@ -418,6 +424,11 @@ export default async function StreamPage({
         </div>
       ) : (
         <>
+          {/* A free report on a long stream covers its first 2 hours. */}
+          {!isPro && report?.coached_range && !report.coached_range.picked && (
+            <CoachedPartNote coachedSeconds={report.coached_range.end} totalSeconds={report.coached_range.total} />
+          )}
+
           {/* The result: what the ladder did, and the coach's one-line read. */}
           <section className="hm-top sp-top">
             <div className="hm-last sp-result">

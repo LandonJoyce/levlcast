@@ -95,7 +95,7 @@ export function SubscriptionSection({
           <UsageBar label={`Reports ${periodLabel}`} used={analysesUsed} limit={analysesLimit} />
           <UsageBar label={`Clips ${periodLabel}`} used={clipsUsed} limit={clipsLimit} />
           {/* Hours only apply on the paid plans. */}
-          {typeof hoursLimit === "number" && hoursLimit > 0 && typeof hoursUsed === "number" && (
+          {plan !== "free" && typeof hoursLimit === "number" && hoursLimit > 0 && typeof hoursUsed === "number" && (
             <UsageBar label={`Hours analyzed ${periodLabel}`} used={hoursUsed} limit={hoursLimit} />
           )}
         </div>
@@ -105,8 +105,8 @@ export function SubscriptionSection({
             <>
               <p>
                 {onTrial
-                  ? `Free gives you ${analysesLimit} reports and ${clipsLimit} clips a week, reset every Monday. Pro is 15 reports and 20 clips a month.`
-                  : "Pro is 15 reports and 20 clips a month, on streams up to 8 hours long."}
+                  ? `Free gives you ${analysesLimit} reports and ${clipsLimit} clips a week, reset every Monday, each report on the first 2 hours of a stream. Pro coaches whole streams: 20 reports and 20 clips a month.`
+                  : "Pro is 20 reports and 20 clips a month, on whole streams up to 8 hours long."}
               </p>
               <button
                 type="button"

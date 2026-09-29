@@ -104,7 +104,7 @@ export default async function LoginPage({
               </p>
             </li>
           </ol>
-          <p className="au-free">Free is two full reports and two clips a week. No card.</p>
+          <p className="au-free">Free is two reports and two clips a week, no card. Each free report coaches the first 2 hours of a stream.</p>
         </section>
       </main>
 

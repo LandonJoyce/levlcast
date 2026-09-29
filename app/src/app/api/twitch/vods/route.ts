@@ -178,7 +178,9 @@ export async function POST(request: Request) {
     });
   }
 
-  const { error: insertError } = await supabase.from("vods").insert(newVods);
+  // Through the admin client: the browser can't write streams (migration
+  // 036), and every row here is built from Twitch for this user.
+  const { error: insertError } = await admin.from("vods").insert(newVods);
 
   if (insertError) {
     console.error("VOD insert error:", insertError.message);

@@ -16,6 +16,7 @@
  */
 
 import { TIERS } from "@/lib/rank";
+import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
 import { FullReportButton } from "./full-report-button";
 
 export interface PreviewPayload {
@@ -127,14 +128,17 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
       <section className="pr-cta">
         <div>
           <p className="pr-k">{partial ? `That's the first ${fmtDuration(analyzed)}` : "That's the free preview"}</p>
+          {/* Only what a free account really gets: on a stream over 2 hours
+              that's the first 2 hours, and Pro is the rest. */}
           <p className="pr-cta-line">
-            Sign in with Twitch and get {partial ? `the whole ${fmtDuration(total)}` : "the whole stream"} coached, your
-            clips cut, and your rank on the ladder.
+            {total > FREE_COACHED_SECONDS
+              ? `Sign in with Twitch and get the first 2 hours coached free, your clips cut, and your rank on the ladder. Pro coaches all ${fmtDuration(total)}.`
+              : `Sign in with Twitch and get ${partial ? `the whole ${fmtDuration(total)}` : "the whole stream"} coached, your clips cut, and your rank on the ladder.`}
           </p>
         </div>
         <div className="pr-cta-act">
           <FullReportButton vodId={preview.twitch_vod_id} />
-          <p className="v3-fine">Free. Two full reports a week, no card.</p>
+          <p className="v3-fine">Free. Two reports a week, no card.</p>
         </div>
       </section>
 
@@ -238,12 +242,12 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
           <h2 className="pr-more-h">Your first full report puts you on the ladder.</h2>
           <ul className="pr-more-list">
             <li>Every stream after it is a ranked game: beat your recent form and you climb</li>
-            <li>Every minute coached, not just the opening, with the dead air timestamped</li>
+            <li>The first 2 hours coached free, the whole stream on Pro, with the dead air timestamped</li>
             <li>Your best moments cut into clips with captions, ready to post</li>
             <li>A weekly league against the streamers nearest your rank</li>
           </ul>
           <FullReportButton vodId={preview.twitch_vod_id} />
-          <p className="v3-fine">Sign in with Twitch. Two full reports a week are free, no card.</p>
+          <p className="v3-fine">Sign in with Twitch. Two reports a week are free, no card.</p>
         </div>
       </section>
     </article>

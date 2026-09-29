@@ -1158,7 +1158,12 @@ export interface ChatMessage {
  */
 export async function fetchTwitchVodChat(
   vodId: string,
-  options: { maxMessages?: number; signal?: AbortSignal } = {}
+  options: {
+    maxMessages?: number;
+    signal?: AbortSignal;
+    /** Stop once past this point of the VOD, for a report on its first part. */
+    untilSeconds?: number;
+  } = {}
 ): Promise<ChatMessage[]> {
   const maxMessages = options.maxMessages ?? 50_000;
   const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
@@ -1295,6 +1300,9 @@ export async function fetchTwitchVodChat(
       console.warn(`[twitch chat] Hit message cap ${maxMessages}, stopping`);
       break;
     }
+
+    // Pages come in stream order, so past the wanted part there's no more to read.
+    if (options.untilSeconds !== undefined && edges[edges.length - 1].node.contentOffsetSeconds >= options.untilSeconds) break;
 
     if (!hasNext) break;
     const nextCursor = edges[edges.length - 1].cursor;

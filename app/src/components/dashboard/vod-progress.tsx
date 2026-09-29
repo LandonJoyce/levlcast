@@ -13,6 +13,7 @@ import { streamLength, type AnalysisProgress } from "@/lib/analysis-progress";
 export function VodProgress({
   status,
   durationSeconds,
+  firstPartOnly = false,
   updatedAt = null,
   progress = null,
   now,
@@ -20,7 +21,10 @@ export function VodProgress({
   emailed = false,
 }: {
   status: string;
+  /** How much of the stream is being coached (a free report: the first 2 hours). */
   durationSeconds: number | null;
+  /** Only the first part of a longer stream is being coached. */
+  firstPartOnly?: boolean;
   /** The vods row's updated_at. */
   updatedAt?: string | null;
   /** Transcription parts done, when the pipeline has recorded them. */
@@ -38,8 +42,10 @@ export function VodProgress({
     estimate.phase === "writing"
       ? "Writing your report. Finding your best moments, scoring the stream and picking the one thing to fix."
       : estimate.streamSecondsDone && durationSeconds
-        ? `Transcribing the audio: ${streamLength(estimate.streamSecondsDone)} of ${streamLength(durationSeconds)} done.`
-        : "Transcribing the audio. Turning the whole stream into text.";
+        ? `Transcribing the audio: ${streamLength(estimate.streamSecondsDone)} of ${firstPartOnly ? "the first " : ""}${streamLength(durationSeconds)} done.`
+        : firstPartOnly
+          ? "Transcribing the audio. Turning the first 2 hours into text."
+          : "Transcribing the audio. Turning the whole stream into text.";
 
   return (
     <section className="vp">

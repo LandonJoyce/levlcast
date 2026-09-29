@@ -21,7 +21,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TIERS } from "@/lib/rank";
-import { getUserUsage } from "@/lib/limits";
+import { FREE_COACHED_SECONDS, getUserUsage } from "@/lib/limits";
 import { loadAnalysisProgress } from "@/lib/analysis-progress";
 import { AnalyzeButton } from "./analyze-button";
 import { AnalysisBar } from "./analysis-bar";
@@ -96,7 +96,11 @@ export async function OnboardingHero({ syncing = false }: { syncing?: boolean })
             <AnalysisBar
               input={{
                 status: inProgress.status,
-                durationSeconds: inProgress.duration_seconds,
+                // A free report coaches the first 2 hours.
+                durationSeconds:
+                  usage.plan === "pro" || !inProgress.duration_seconds
+                    ? inProgress.duration_seconds
+                    : Math.min(inProgress.duration_seconds, FREE_COACHED_SECONDS),
                 updatedAt: (inProgress.updated_at as string | null) ?? null,
                 progress,
               }}

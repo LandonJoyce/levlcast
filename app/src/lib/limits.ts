@@ -2,10 +2,18 @@
  * lib/limits.ts — subscription plan limits and usage enforcement.
  *
  * PLAN LIMITS:
- *   Free:           2 VOD analyses + 5 clips PER WEEK, 8h/week (per Twitch ID)
- *   Pro:            15 VOD analyses/month, 20 clips/month — $14.99/mo (was $9.99 founding through 2026-06-03)
- *   Founding (20/20): grandfathered users who subscribed before the limit drop;
+ *   Free:           2 VOD analyses + 2 clips PER WEEK (per Twitch ID), each
+ *                   report coaching the first 2 hours of a stream
+ *   Pro:            20 VOD analyses/month, 20 clips/month, 30 hours, whole
+ *                   streams — $14.99/mo (was $9.99 founding through 2026-06-03)
+ *   Founding:       grandfathered users who subscribed before the limit drop;
  *                    all $9.99 subscribers keep their original rate via Stripe.
+ *
+ * PAID ALWAYS GETS MORE: every paid limit is above the most a free streamer
+ * can get in the same month, on every count (reports, hours, clips, stream
+ * length). Free used to allow 8 hours a week, about 35 a month, while Pro
+ * allowed 20, so a free streamer with long streams got more than a paying
+ * one. Check the free worst case against Pro before changing either.
  *
  * FREE TIER — BYPASS-PROOF:
  *   Free users get a weekly allowance that resets Monday (UTC). Counters
@@ -45,6 +53,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/server";
+import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
 
 /**
  * Free tier — a weekly allowance, not a lifetime trial.
@@ -67,9 +76,10 @@ import { createAdminClient } from "@/lib/supabase/server";
  * learn whether you fixed anything, which is too slow to feel like cause
  * and effect.
  *
- * Cost is ~$0.53 per analysis (2.1h median VOD at ~$0.25/h blended). The
- * hours cap is the real backstop — two 8-hour VODs a week would cost far
- * more than the count alone implies, so hours are bounded directly.
+ * Cost: an hour of stream is about $0.35-0.45 to coach, and a free report
+ * coaches at most the first 2 hours (FREE_COACHED_SECONDS), so one costs at
+ * most about $0.90. Before that cap, two 4-hour streams plus a sealed extra
+ * could cost more in a week than Pro pays in a month.
  */
 export const FREE_WEEKLY_LIMITS = {
   analyses_per_week: 2,
@@ -78,8 +88,46 @@ export const FREE_WEEKLY_LIMITS = {
   // 5 a week is ~21 a month against Pro's 20, so free users were getting
   // more clips than paying ones. One per analysis is the honest number.
   clips_per_week: 2,
-  hours_per_week: 8,
+  // Two reports of at most FREE_COACHED_SECONDS each. It was 8, with free
+  // reports covering streams up to 4 hours, which let a free streamer get
+  // more hours coached than Pro's monthly allowance.
+  hours_per_week: 4,
 };
+
+/**
+ * FREE_COACHED_SECONDS (lib/free-plan.ts): a free report coaches the first
+ * 2 hours of a stream, Pro the whole stream. It's the difference between
+ * the plans that shows in every report, and it keeps Pro ahead: free is at
+ * most three reports a week (the two plus the sealed extra) of 2 hours
+ * each, about 26 hours a month, against Pro's 30.
+ */
+export { FREE_COACHED_SECONDS };
+
+/** A paid plan that hasn't lapsed. */
+export function hasPaidPlan(
+  profile: { plan?: string | null; subscription_expires_at?: string | null } | null | undefined
+): boolean {
+  if (profile?.plan !== "pro") return false;
+  const expires = profile.subscription_expires_at ? Date.parse(profile.subscription_expires_at) : NaN;
+  return !(Number.isFinite(expires) && expires < Date.now());
+}
+
+/**
+ * The part of a stream a report covers, in seconds from its start, or null
+ * for all of it. Paid plans get the whole stream, or the range they picked.
+ * Free gets 2 hours from where they picked, or from the start.
+ */
+export function coachedRange(
+  paid: boolean,
+  durationSeconds: number | null,
+  picked?: { start: number; end: number } | null
+): { start: number; end: number } | null {
+  if (paid) return picked ?? null;
+  const start = picked?.start ?? 0;
+  const end = Math.min(picked?.end ?? Number.POSITIVE_INFINITY, start + FREE_COACHED_SECONDS);
+  if (!picked && durationSeconds && durationSeconds > 0 && end >= durationSeconds) return null;
+  return { start, end };
+}
 
 /**
  * @deprecated Enforcement moved to FREE_WEEKLY_LIMITS. Lifetime counters
@@ -108,27 +156,30 @@ export function currentWeekStart(now: Date = new Date()): string {
 }
 
 export const PRO_LIMITS = {
-  analyses_per_month: 15,
+  // 15 until 2026-09-28, when a free streamer could get about 13 a month
+  // counting the sealed extra. Reports are cheap; hours are the cost, and
+  // the hour cap below bounds it.
+  analyses_per_month: 20,
   clips_per_month: 20,
-  // Hour cap added 2026-05-18 to protect margin on heavy 8h-stream users.
-  // Math at $14.99 price (post 2026-06-03): 20h × $0.25 blended (Deepgram +
-  // Claude, post chunking fix) = $5 analysis cost + ~$2 fixed = $7. Leaves
-  // ~$8 margin even at max usage. Average user (8-12h/mo) won't notice.
-  // Grandfathered $9.99 subs still net ~$1-3 margin at the cap.
-  hours_per_month: 20,
+  // Hour cap added 2026-05-18 to protect margin on heavy 8h-stream users;
+  // 20 until 2026-09-28, raised above free's ~26-hour monthly worst case.
+  // Math at $14.99 ($14.26 after Stripe): an hour of stream costs about
+  // $0.35-0.45 (Deepgram nova-3 multilingual, peaks on Sonnet 4.6, the
+  // report on Sonnet 5 at high effort), so a Pro streamer who uses all 30
+  // hours costs about $12. Most use well under half.
+  hours_per_month: 30,
 };
 
-// Founding members subscribed before the Pro limit was dropped to 15/20 and
-// keep the original 20/20 cap permanently as a thank-you for early support.
+// Founding members subscribed before the Pro limit was dropped and pay
+// $9.99. They get what Pro gets: a paid plan never gets less than free,
+// and standard Pro is now above what they had (20 reports, 25 hours).
 export const FOUNDING_LIMITS = {
   analyses_per_month: 20,
   clips_per_month: 20,
-  // Small thanks-bonus on hours too: 5 more than standard Pro. Slight loss
-  // at absolute max usage but founding LTV plays make up for it.
-  hours_per_month: 25,
+  hours_per_month: 30,
 };
 
-// Pro Plus tier — $29.99/mo. For power users who hit the Pro 20h cap.
+// Pro Plus tier — $29.99/mo. For power users who hit the Pro 30h cap.
 // Hour cap dropped from 60h → 50h on 2026-05-28 to guarantee at least
 // $5 margin per user even at worst-case blended cost ($0.50/hour).
 // Math at max usage: 50h × $0.30 blended (post-chunking-fix) = $15 +
@@ -264,9 +315,12 @@ export async function getUserUsage(
         .in("status", ["transcribing", "analyzing"]),
     ]);
 
+    // A free report covers at most FREE_COACHED_SECONDS of a stream, so
+    // that's what it counts.
+    const coached = (v: { duration_seconds: unknown }) =>
+      Math.min((v.duration_seconds as number | null) ?? 0, FREE_COACHED_SECONDS);
     const secondsUsed =
-      (weekVods ?? []).reduce((s, v) => s + ((v.duration_seconds as number | null) ?? 0), 0) +
-      (runningVods ?? []).reduce((s, v) => s + ((v.duration_seconds as number | null) ?? 0), 0);
+      (weekVods ?? []).reduce((s, v) => s + coached(v), 0) + (runningVods ?? []).reduce((s, v) => s + coached(v), 0);
     const hoursUsed = secondsUsed / 3600;
 
     const limit = FREE_WEEKLY_LIMITS;

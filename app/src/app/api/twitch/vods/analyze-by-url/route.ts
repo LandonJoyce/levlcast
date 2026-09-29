@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   if (!usage.can_analyze) {
     let message: string;
     if (usage.on_trial) {
-      message = `You've used both free analyses this week. They reset Monday, or Pro gives you 15 a month.`;
+      message = `You've used both free analyses this week. They reset Monday, or Pro gives you 20 a month.`;
     } else if (usage.block_reason === "hours_cap") {
       message = `You've used ${usage.hours_used}h of your ${usage.hours_limit}h monthly analysis budget. Resets at the start of next month.`;
     } else {
@@ -149,26 +149,20 @@ export async function POST(request: Request) {
     );
   }
 
-  // Per-plan duration cap. Free trial: 4h. Pro / Founding: 8h. Pro Plus: 10h
-  // (matches the chunked-transcription pipeline's tested ceiling). The cap
-  // exists because while chunking handles long streams, each additional hour
-  // adds Deepgram + Claude cost, and we want plan-aligned ceilings.
+  // Per-plan duration cap, for paid plans: Pro / Founding 8h, Pro Plus 10h
+  // (matches the chunked-transcription pipeline's tested ceiling). Free has
+  // no cap because a free report only coaches the first 2 hours of a
+  // stream (coachedRange in lib/limits.ts); each extra hour a paid plan
+  // coaches adds Deepgram + Claude cost, hence plan-aligned ceilings.
   const dur = parseTwitchDuration(vodMeta.duration);
-  const maxDuration = usage.on_trial
-    ? 4 * 60 * 60
-    : usage.pro_plus
-    ? 10 * 60 * 60
-    : 8 * 60 * 60;
-  if (dur > maxDuration) {
-    let message: string;
-    if (usage.on_trial) {
-      message = "That stream is over 4 hours. Free analysis is capped at 4 hours — go Pro to analyze longer streams.";
-    } else if (usage.pro_plus) {
-      message = "That stream is over 10 hours. We can't reliably transcribe streams longer than 10 hours yet.";
-    } else {
-      message = "That stream is over 8 hours. Pro caps per-stream at 8h. Upgrade to Pro Plus for streams up to 10 hours.";
+  if (!usage.on_trial) {
+    const maxDuration = usage.pro_plus ? 10 * 60 * 60 : 8 * 60 * 60;
+    if (dur > maxDuration) {
+      const message = usage.pro_plus
+        ? "That stream is over 10 hours. We can't reliably transcribe streams longer than 10 hours yet."
+        : "That stream is over 8 hours. Pro caps per-stream at 8h. Upgrade to Pro Plus for streams up to 10 hours.";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
-    return NextResponse.json({ error: message }, { status: 400 });
   }
   if (dur < 5 * 60) {
     return NextResponse.json(

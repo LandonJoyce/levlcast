@@ -60,7 +60,7 @@ export async function POST(request: Request) {
           error: "limit_reached",
           message: available
             ? "You've used both free reports this week. You can still analyze one more, sealed until Monday."
-            : "You've used both free reports and this week's sealed extra. They reset Monday, or Pro gives you 15 a month.",
+            : "You've used both free reports and this week's sealed extra. They reset Monday, or Pro gives you 20 a month.",
           upgrade: true,
           on_trial: true,
           sealed_extra_available: available,
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   if (!usage.can_analyze && !sealedExtra) {
     let message: string;
     if (usage.on_trial) {
-      message = `You've used both free analyses this week. They reset Monday, or Pro gives you 15 a month.`;
+      message = `You've used both free analyses this week. They reset Monday, or Pro gives you 20 a month.`;
     } else if (usage.block_reason === "hours_cap") {
       message = `You've used ${usage.hours_used}h of your ${usage.hours_limit}h monthly analysis budget. Resets at the start of next month.`;
     } else {
@@ -141,37 +141,31 @@ export async function POST(request: Request) {
     );
   }
 
-  // MAX duration — founding members exempt. Plan-aligned per-stream caps
-  // match the landing card's promise so a user who upgrades expecting 8h
-  // (Pro) or 10h (Pro Plus) gets exactly that everywhere. Used to allow
-  // Pro up to 10h here while analyze-by-url enforced 8h — caps now align
-  // across both routes.
-  if (!usage.founding_member) {
-    const isPro = usage.plan === "pro";
-    const maxSeconds = !isPro
-      ? 4 * 60 * 60   // free: 4h
-      : usage.pro_plus
-        ? 10 * 60 * 60 // pro plus: 10h
-        : 8 * 60 * 60; // pro: 8h
+  // MAX duration, for paid plans only; founding members exempt. Free has no
+  // cap: a free report coaches the first 2 hours of any stream (the
+  // pipeline cuts it, see coachedRange in lib/limits.ts). Pro coaches whole
+  // streams up to 8 hours and Pro Plus up to 10, the same caps
+  // analyze-by-url enforces.
+  if (usage.plan === "pro" && !usage.founding_member) {
+    const maxSeconds = usage.pro_plus ? 10 * 60 * 60 : 8 * 60 * 60;
     if (vodMeta?.duration_seconds && vodMeta.duration_seconds > maxSeconds) {
       return NextResponse.json(
         {
           error: "vod_too_long",
-          message: !isPro
-            ? "Free accounts can analyze streams up to 4 hours long. Upgrade to Pro for streams up to 8 hours, or Pro Plus for 10."
-            : usage.pro_plus
-              ? "Pro Plus accounts can analyze streams up to 10 hours long."
-              : "Pro caps per-stream at 8 hours. Upgrade to Pro Plus for streams up to 10.",
-          upgrade: !isPro,
+          message: usage.pro_plus
+            ? "Pro Plus accounts can analyze streams up to 10 hours long."
+            : "Pro caps per-stream at 8 hours. Upgrade to Pro Plus for streams up to 10.",
+          upgrade: false,
         },
         { status: 403 }
       );
     }
   }
 
-  // Atomic status claim — prevents duplicate jobs
+  // Atomic status claim — prevents duplicate jobs. Through the admin
+  // client: the browser can't write a stream's status (migration 036).
   const claimedAt = Date.now();
-  const { data: claimedVod, error: claimError } = await supabase
+  const { data: claimedVod, error: claimError } = await admin
     .from("vods")
     .update({ status: "transcribing", updated_at: new Date(claimedAt).toISOString() })
     .eq("id", vodId)

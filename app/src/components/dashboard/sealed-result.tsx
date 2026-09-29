@@ -149,7 +149,7 @@ export function SealedResult({ vodId, title, placement, locked, variant }: Props
         <UpgradeModal
           isOpen={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
-          reason="Pro opens sealed streams the moment they're in, and gives you 15 reports a month."
+          reason="Pro opens sealed streams the moment they're in, coaches whole streams, and gives you 20 reports a month."
         />
       </section>
     );

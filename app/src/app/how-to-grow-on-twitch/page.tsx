@@ -219,7 +219,7 @@ export default function HowToGrowPage() {
           <p>
             That&apos;s what LevlCast is for. It goes through your VODs, clips your best moments, gives you one thing
             to fix before your next stream, and ranks every stream on a ladder from Iron to Grandmaster so you can see
-            yourself improve. Free is two full reports and two clips every week, so you can try it on your real
+            yourself improve. Free is two reports and two clips every week, so you can try it on your real
             streams first.
           </p>
           <p className="gd-cta">

@@ -125,11 +125,18 @@ export function estimateAnalysis(input: AnalysisInput, now: number): AnalysisEst
   return { fraction: Math.min(0.99, Math.max(0, done / totalMinutes)), totalMinutes, slow, phase, streamSecondsDone };
 }
 
-/** "1h 36m" or "36m". */
+/** About how long an analysis of this much stream takes, start to finish, in minutes. */
+export function expectedMinutes(coachedSeconds: number): number {
+  const parts = Math.max(1, Math.ceil(coachedSeconds / PART_SECONDS));
+  return Math.ceil(Math.ceil(parts / PARTS_AT_ONCE) * MINUTES_PER_ROUND + WRITING_MINUTES);
+}
+
+/** "1h 36m", "3h" or "36m". */
 export function streamLength(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 /**

@@ -38,7 +38,7 @@ const FAQS = [
   },
   {
     q: "Is it free?",
-    a: "You can try it on the first 12 minutes of any stream without an account. Signed in, Free is two full reports and two clips every week with no card. Pro is $14.99 a month, or $149 a year, for 15 reports and 20 clips a month.",
+    a: "You can try it on the first 12 minutes of any stream without an account. Signed in, Free is two reports and two clips every week with no card, each on the first 2 hours of a stream. Pro is $14.99 a month, or $149 a year, for whole streams coached, 20 reports and 20 clips a month.",
   },
   {
     q: "How long does it take?",

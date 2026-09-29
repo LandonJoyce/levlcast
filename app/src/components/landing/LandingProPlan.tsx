@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 
 const FEATURES = [
-  "15 VOD analyses / month",
-  "20 hours of analysis / month",
-  "Streams up to 8 hours each",
+  "Whole streams coached, up to 8 hours each",
+  "20 VOD analyses / month",
+  "30 hours of analysis / month",
   "20 clips per month",
   "Post to YouTube Shorts",
   "Everything in Free",

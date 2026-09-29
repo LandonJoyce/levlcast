@@ -647,6 +647,10 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .sp-state-title { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.015em; color: var(--ink); }
 .dash .sp-state-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
+/* A free report on a long stream (coached-part-note.tsx). */
+.dash .sp-part { padding: 0 0 16px; }
+.dash .sp-part p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-3); }
+
 /* Analysis running (vod-progress.tsx), and the small bars elsewhere (analysis-bar.tsx). */
 .dash .vp { padding: 28px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .dash .vp-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
@@ -1337,7 +1341,6 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .am-close { position: static; flex-shrink: 0; }
 .dash .am-label { margin: 18px 0 10px; font-weight: 600; font-size: 13.5px; color: var(--ink); }
 .dash .am-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.dash .am-presets[data-disabled] { opacity: 0.35; pointer-events: none; }
 .dash .am-preset {
   display: grid;
   gap: 3px;
@@ -1374,7 +1377,18 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .am-summary-v { margin: 0; font-family: var(--mono); font-size: 13px; color: var(--ink); }
 .dash .am-summary-v span { color: var(--ink-3); }
 .dash .am-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
-.dash .am-note-bad { color: var(--warn); }
+.dash .am-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.dash .am-link:hover { text-decoration-color: var(--ink); }
 .dash .am-error { margin: 12px 0 0; font-size: 13px; color: var(--danger); }
 .dash .am-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .dash .am-sealed { padding-top: 18px; }

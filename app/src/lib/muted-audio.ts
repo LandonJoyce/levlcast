@@ -24,6 +24,28 @@ function segmentEnd(startTimes: number[], i: number): number {
   return i + 1 < startTimes.length ? startTimes[i + 1] : startTimes[i] + LAST_SEGMENT_SECONDS;
 }
 
+/**
+ * The segments that overlap `range`, with their real start times, so a
+ * report on part of a stream (a free report's first 2 hours, or a range
+ * someone picked) only transcribes that part.
+ */
+export function segmentsWithin(
+  urls: string[],
+  startTimes: number[],
+  muted: boolean[],
+  range: TimeRange
+): { urls: string[]; startTimes: number[]; muted: boolean[] } {
+  const keep: number[] = [];
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] < range.end && segmentEnd(startTimes, i) > range.start) keep.push(i);
+  }
+  return {
+    urls: keep.map((i) => urls[i]),
+    startTimes: keep.map((i) => startTimes[i]),
+    muted: keep.map((i) => muted[i] ?? false),
+  };
+}
+
 /** Consecutive muted segments merged into ranges, in VOD seconds. */
 export function mutedRanges(startTimes: number[], muted: boolean[]): TimeRange[] {
   const ranges: TimeRange[] = [];

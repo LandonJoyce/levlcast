@@ -14,7 +14,7 @@
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
 import { getTwitchVodSegmentList, streamSegmentsToPassThrough, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
-import { audibleStats, buildAudibleChunks, isMostlyMuted, mutedRanges, MOSTLY_MUTED_MESSAGE, type TimeRange } from "@/lib/muted-audio";
+import { audibleStats, buildAudibleChunks, isMostlyMuted, mutedRanges, segmentsWithin, MOSTLY_MUTED_MESSAGE, type TimeRange } from "@/lib/muted-audio";
 import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
@@ -29,7 +29,7 @@ import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
-import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, currentWeekStart, touchStreak } from "@/lib/limits";
+import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, PRO_PLUS_LIMITS, coachedRange, currentWeekStart, hasPaidPlan, touchStreak } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
 import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
@@ -139,8 +139,22 @@ export const analyzeVod = inngest.createFunction(
 
         await supabase.from("vods").update({ game_category: detection.category }).eq("id", vodId);
 
+        // Free coaches the first 2 hours of a stream, paid plans all of it
+        // (lib/limits.ts). Decided here, once, so every way an analysis
+        // starts (the Analyze button, sign-up, the rescue job, the iPhone
+        // app) gets the same answer, and a retry can't change it.
+        const { data: owner } = await supabase
+          .from("profiles")
+          .select("plan, subscription_expires_at")
+          .eq("id", userId)
+          .maybeSingle();
+        const picked = startSeconds !== undefined && endSeconds !== undefined ? { start: startSeconds, end: endSeconds } : null;
+        const range = coachedRange(hasPaidPlan(owner), vod.duration_seconds as number | null, picked);
+        if (range) console.log(`[analyze] coaching ${Math.round(range.start / 60)}-${Math.round(range.end / 60)} min of the stream`);
+
         const list = await getTwitchVodSegmentList(vod.twitch_vod_id);
         return {
+          range,
           urls: list.urls,
           startTimes: list.startTimes,
           // Init segment for fMP4 VODs. Null for legacy MPEG-TS streams.
@@ -166,6 +180,24 @@ export const analyzeVod = inngest.createFunction(
       // hint that a step ran too long and its state got lost.
       const CHUNK_SECONDS = 720;
 
+      // The part of the stream this report covers (a free report's first 2
+      // hours, or a range someone picked), null for all of it. Only that
+      // part is transcribed. Step state from runs started before this
+      // existed has no `range`; those transcribe everything as they did, so
+      // the parts they already saved still line up.
+      const coveredRange: TimeRange | null = "range" in segmentSetup ? (segmentSetup.range ?? null) : null;
+      // What the report is written on: the covered part, or for those older
+      // runs, the range picked (cut out of the full transcript afterwards).
+      const reportRange: TimeRange | null =
+        coveredRange ?? (startSeconds !== undefined && endSeconds !== undefined ? { start: startSeconds, end: endSeconds } : null);
+      const vodSeconds = segmentSetup.duration_seconds ?? 0;
+      const coveredStart = coveredRange?.start ?? 0;
+      const coveredEnd = coveredRange ? Math.min(coveredRange.end, vodSeconds || coveredRange.end) : vodSeconds;
+      const allMuted: boolean[] = segmentSetup.muted ?? segmentSetup.urls.map(() => false);
+      const audio = coveredRange
+        ? segmentsWithin(segmentSetup.urls, segmentSetup.startTimes, allMuted, coveredRange)
+        : { urls: segmentSetup.urls, startTimes: segmentSetup.startTimes, muted: allMuted };
+
       // Twitch mutes VOD audio in blocks when it hears copyrighted music, and
       // the muted segments are silence. Nearly every VOD has a few minutes of
       // it; a stream with music on the whole time is muted almost end to end.
@@ -173,9 +205,13 @@ export const analyzeVod = inngest.createFunction(
       // transcribe silence), chunks never span them so timestamps stay exact,
       // and the coach is told which stretches were muted so it doesn't call
       // them dead air. Step state from before this existed has no flags.
-      const mutedFlags: boolean[] = segmentSetup.muted ?? segmentSetup.urls.map(() => false);
-      const muted = mutedRanges(segmentSetup.startTimes, mutedFlags);
-      const muteStats = audibleStats(segmentSetup.startTimes, mutedFlags, segmentSetup.duration_seconds);
+      const mutedFlags: boolean[] = audio.muted;
+      const muted = mutedRanges(audio.startTimes, mutedFlags);
+      const muteStats = audibleStats(
+        audio.startTimes,
+        mutedFlags,
+        coveredRange ? coveredEnd - coveredStart : segmentSetup.duration_seconds
+      );
       if (muted.length > 0) {
         console.log(
           `[analyze] Twitch muted ${Math.round(muteStats.mutedSeconds / 60)} of ${Math.round(muteStats.totalSeconds / 60)} min in ${muted.length} blocks`
@@ -186,8 +222,8 @@ export const analyzeVod = inngest.createFunction(
         throw new NonRetriableError(MOSTLY_MUTED_MESSAGE);
       }
 
-      const chunks = buildAudibleChunks(segmentSetup.urls, segmentSetup.startTimes, mutedFlags, CHUNK_SECONDS);
-      console.log(`[analyze] ${chunks.length} transcription chunks for ${segmentSetup.urls.length} segments (${mutedFlags.filter(Boolean).length} muted, skipped)`);
+      const chunks = buildAudibleChunks(audio.urls, audio.startTimes, mutedFlags, CHUNK_SECONDS);
+      console.log(`[analyze] ${chunks.length} transcription chunks for ${audio.urls.length} segments (${mutedFlags.filter(Boolean).length} muted, skipped)`);
 
       // Step 1b+: Transcribe chunks in parallel batches. Each chunk is its
       // own Inngest step so Inngest persists results across retries.
@@ -259,22 +295,24 @@ export const analyzeVod = inngest.createFunction(
         // Coverage: if the talking stops early in the audio we could hear,
         // either the mic went off or Twitch sent the audio short. Measured
         // against the end of the last unmuted audio, not the VOD length, so
-        // a stream whose last hour Twitch muted isn't mistaken for this.
-        const vodDuration = segmentSetup.duration_seconds ?? 0;
-        const audibleEnd = muteStats.audibleEnd > 0 ? Math.min(muteStats.audibleEnd, vodDuration || muteStats.audibleEnd) : vodDuration;
+        // a stream whose last hour Twitch muted isn't mistaken for this; and
+        // within the part this report covers, not the whole stream.
+        const audibleEnd = muteStats.audibleEnd > 0 ? Math.min(muteStats.audibleEnd, coveredEnd || muteStats.audibleEnd) : coveredEnd;
         const lastWordEnd = allWords.length > 0 ? allWords[allWords.length - 1].end : 0;
-        if (audibleEnd > 120 && lastWordEnd > 0 && lastWordEnd < audibleEnd * 0.5) {
-          const heard = Math.max(1, Math.round(lastWordEnd / 60));
+        const heardFor = lastWordEnd - coveredStart;
+        const audibleFor = audibleEnd - coveredStart;
+        if (audibleFor > 120 && lastWordEnd > 0 && heardFor < audibleFor * 0.5) {
+          const heard = Math.max(1, Math.round(heardFor / 60));
           throw new Error(
             `We could only hear you talking in the first ${heard} ${heard === 1 ? "minute" : "minutes"} of this stream. ` +
             `If you were AFK or your sound was off after that, there's nothing to coach in this one, so pick another stream. ` +
             `If you were talking the whole time, try again in a few minutes.`
           );
         }
-        if (audibleEnd > 0 && lastWordEnd > 0 && lastWordEnd < audibleEnd * 0.85) {
+        if (audibleFor > 0 && lastWordEnd > 0 && heardFor < audibleFor * 0.85) {
           console.warn(
             `[analyze] Transcript ends at ${Math.round(lastWordEnd)}s but audible audio runs to ${Math.round(audibleEnd)}s ` +
-            `(${Math.round((lastWordEnd / audibleEnd) * 100)}% coverage). Captions for late moments may be absent`
+            `(${Math.round((heardFor / audibleFor) * 100)}% coverage). Captions for late moments may be absent`
           );
         }
         return merged;
@@ -302,12 +340,16 @@ export const analyzeVod = inngest.createFunction(
           const duration = (vodForChat.duration_seconds as number | null) ?? 0;
           if (duration < 60) return { skipped: "too_short" };
 
-          const messages = await fetchTwitchVodChat(vodForChat.twitch_vod_id);
+          // Only chat from the part this report covers, so the coach isn't
+          // told about chat in hours it can't hear, and the fetch stops there.
+          const upTo = coveredRange ? Math.min(coveredRange.end, duration) : duration;
+          const fetched = await fetchTwitchVodChat(vodForChat.twitch_vod_id, coveredRange ? { untilSeconds: upTo } : {});
+          const messages = coveredRange ? fetched.filter((m) => m.time >= coveredRange.start && m.time < upTo) : fetched;
           // Save buckets unconditionally — empty buckets (0 messages, e.g. on
           // very old VODs Twitch no longer serves chat replay for) let the UI
           // render the AudienceSnapshot card with \"Quiet stream\" copy
           // instead of falling through to nothing rendered at all.
-          const buckets = bucketChat(messages, duration, 30);
+          const buckets = bucketChat(messages, upTo, 30);
           await supabase.from("vods").update({ chat_pulse: buckets }).eq("id", vodId);
           console.log(`[analyze] Saved chat pulse: ${messages.length} messages → ${buckets.length} buckets`);
           return { messages: messages.length, buckets: buckets.length };
@@ -329,8 +371,8 @@ export const analyzeVod = inngest.createFunction(
       // Filter once — used by both steps. Closure capture is fine; the array
       // is small (utterance-level, not word-level) so cross-step state cost
       // is negligible.
-      const filtered = (startSeconds !== undefined && endSeconds !== undefined)
-        ? segments.filter(s => s.start < endSeconds && s.end > startSeconds)
+      const filtered = reportRange
+        ? segments.filter((s) => s.start < reportRange.end && s.end > reportRange.start)
         : segments;
       if (filtered.length === 0) {
         throw new Error("No speech found in the selected time range. Try a wider range.");
@@ -395,9 +437,26 @@ export const analyzeVod = inngest.createFunction(
         // High effort first. If that attempt fails, most likely by thinking
         // past generateCoachReport's 240-second cutoff, the step's retry
         // drops to medium, which finishes well inside it.
-        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets, undefined, muted, attempt === 0 ? "high" : "medium");
+        // A report on the first part of a longer stream (a free report's
+        // first 2 hours, or "First hour" picked) is told so, and scores the
+        // part it can see instead of judging the whole broadcast by it.
+        const excerpt =
+          coveredRange && coveredRange.start === 0 && vodSeconds > coveredEnd + 60
+            ? { analyzedSeconds: coveredEnd, totalSeconds: vodSeconds }
+            : undefined;
+        const report = await generateCoachReport(filtered, title, peaks, priorReports.length > 0 ? priorReports : undefined, pulseText || undefined, chatBuckets, excerpt, muted, attempt === 0 ? "high" : "medium");
         if (!report) {
           throw new Error("Failed to generate coaching report. AI returned invalid response.");
+        }
+        // The stream page says which part was coached, and on a free report
+        // that Pro coaches the whole thing.
+        if (excerpt) {
+          report.coached_range = {
+            start: 0,
+            end: excerpt.analyzedSeconds,
+            total: excerpt.totalSeconds,
+            picked: startSeconds !== undefined && endSeconds !== undefined,
+          };
         }
         console.log(`[analyze] Coach report generated: score=${report.overall_score}`);
         return report;
@@ -411,7 +470,7 @@ export const analyzeVod = inngest.createFunction(
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("plan, subscription_expires_at, founding_member, twitch_id")
+          .select("plan, subscription_expires_at, founding_member, pro_plus, twitch_id")
           .eq("id", userId)
           .single();
 
@@ -448,7 +507,7 @@ export const analyzeVod = inngest.createFunction(
           if (!isSealedExtra && analysesUsed >= FREE_WEEKLY_LIMITS.analyses_per_week) {
             await supabase.from("vods").update({
               status: "failed",
-              failed_reason: `You've used both free analyses this week. They reset Monday, or go Pro for 15 a month.`,
+              failed_reason: `You've used both free analyses this week. They reset Monday, or go Pro for 20 a month.`,
             }).eq("id", vodId);
             console.warn(`[inngest] analyze-vod blocked at save — user ${userId} free weekly cap ${analysesUsed}/${FREE_WEEKLY_LIMITS.analyses_per_week}`);
             return;
@@ -492,7 +551,15 @@ export const analyzeVod = inngest.createFunction(
             .eq("user_id", userId)
             .eq("month", month)
             .single();
-          const monthlyLimit = isFounding ? FOUNDING_LIMITS.analyses_per_month : PRO_LIMITS.analyses_per_month;
+          // Same order as getUserUsage: Pro Plus, then founding, then Pro.
+          // Pro Plus was missing here, so its 35 a month was cut off at
+          // Pro's limit when the report was saved.
+          const monthlyLimit =
+            profile?.pro_plus === true
+              ? PRO_PLUS_LIMITS.analyses_per_month
+              : isFounding
+                ? FOUNDING_LIMITS.analyses_per_month
+                : PRO_LIMITS.analyses_per_month;
           const alreadyUsed = usageLog?.analyses_count ?? 0;
           if (alreadyUsed >= monthlyLimit) {
             await supabase.from("vods").update({
@@ -550,7 +617,7 @@ export const analyzeVod = inngest.createFunction(
         // trial counter, Pro/founding use the monthly clips count.
         const { data: profile } = await supabase
           .from("profiles")
-          .select("plan, subscription_expires_at, founding_member, twitch_id")
+          .select("plan, subscription_expires_at, founding_member, pro_plus, twitch_id")
           .eq("id", userId)
           .single();
 
@@ -575,9 +642,12 @@ export const analyzeVod = inngest.createFunction(
             return null;
           }
         } else {
-          const clipLimit = profile?.founding_member === true
-            ? FOUNDING_LIMITS.clips_per_month
-            : PRO_LIMITS.clips_per_month;
+          // Pro Plus first, as in getUserUsage (it was missing here too).
+          const clipLimit = profile?.pro_plus === true
+            ? PRO_PLUS_LIMITS.clips_per_month
+            : profile?.founding_member === true
+              ? FOUNDING_LIMITS.clips_per_month
+              : PRO_LIMITS.clips_per_month;
           const { count: clipsThisMonth } = await supabase
             .from("clips")
             .select("id", { count: "exact", head: true })

@@ -11,6 +11,7 @@ import { getUserUsage } from "@/lib/limits";
 import { isPlacementDelta } from "@/lib/rank";
 import { isLocked, isSealed } from "@/lib/sealed";
 import { loadAnalysisProgress } from "@/lib/analysis-progress";
+import { FREE_COACHED_SECONDS } from "@/lib/limits";
 import { AnalysisBar } from "@/components/dashboard/analysis-bar";
 
 /*
@@ -228,7 +229,11 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
                         <AnalysisBar
                           input={{
                             status: v.status,
-                            durationSeconds: v.duration_seconds,
+                            // A free report coaches the first 2 hours.
+                            durationSeconds:
+                              usage.plan === "pro" || !v.duration_seconds
+                                ? v.duration_seconds
+                                : Math.min(v.duration_seconds, FREE_COACHED_SECONDS),
                             updatedAt: (v.updated_at as string | null) ?? null,
                             progress: progress.get(v.id) ?? null,
                           }}
