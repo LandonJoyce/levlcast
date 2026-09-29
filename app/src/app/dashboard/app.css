@@ -1314,6 +1314,13 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .mh-row[data-result="sealed"] .mh-result-label { color: var(--gold); }
 .dash .mh-called { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
 .dash .mh-tag-cell { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+/* A phone row has no column for the tags, so they go on a line under the
+   title. (This rule above used to undo the phone rule that hid them, and
+   they landed on top of the title.) */
+@media (max-width: 720px) {
+  .dash .mh-tag-cell { grid-column: 2; grid-row: 2; justify-content: flex-start; margin-top: -6px; }
+  .dash .mh-tag-cell:empty { display: none; }
+}
 .dash .sl-res[data-r="sealed"] { color: var(--gold); }
 .dash .lg-sealed-note { margin: 0; padding: 10px 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
 .dash .sp-sealed { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -1449,6 +1456,8 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .fr-pts { min-width: 44px; font-family: var(--numbers); font-weight: 900; font-size: 20px; text-align: right; color: var(--ink-3); }
 .dash .fr-pts[data-sign="up"] { color: var(--green); }
 .dash .fr-pts[data-sign="down"] { color: var(--danger); }
+/* Hasn't streamed this week: a quiet word, not a number or dots that read as loading. */
+.dash .fr-pts[data-idle] { font-family: var(--mono); font-weight: 400; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
 .dash .fr-league > .fr-quiet { margin-top: 10px; }
 .dash .fr-league-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; font-size: 13px; color: var(--ink-3); }
 

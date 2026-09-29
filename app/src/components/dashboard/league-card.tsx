@@ -157,7 +157,7 @@ export function LeagueCard({
                 {played ? `${s.streams_played} ${s.streams_played === 1 ? "stream" : "streams"}` : "not played"}
               </span>
               <span className="lg-points" data-sign={s.points_gained > 0 ? "up" : s.points_gained < 0 ? "down" : "flat"}>
-                {played ? signed(s.points_gained) : "..."}
+                {played ? signed(s.points_gained) : ""}
               </span>
               <span className="lg-prize">{s.prize > 0 ? `+${s.prize}` : ""}</span>
             </li>

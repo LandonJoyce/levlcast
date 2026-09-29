@@ -9,7 +9,7 @@
  */
 
 export const FAQ = [
-  { q: "Do I need an account?", a: "Not to try it. Paste any Twitch stream link and you get a real report on the start of it. You only sign in when you want the whole stream read instead of the start." },
+  { q: "Do I need an account?", a: "Not to try it. Type your Twitch name, or paste a link to any past broadcast, and you get a real report on the start of it. You only sign in when you want the whole stream read instead of the start." },
   { q: "Do you keep my streams?", a: "No. We listen to the audio while we work, then throw it away. We keep the report and any clips you make." },
   { q: "How long does it take?", a: "About a minute and a half for the free one. About ten minutes for a two hour stream, and you can close the tab while it runs." },
   { q: "Does it work on small channels?", a: "Any channel. It does not matter if you have three viewers." },

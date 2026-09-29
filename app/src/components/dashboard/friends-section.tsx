@@ -269,8 +269,12 @@ function League({ league }: { league: FriendLeagueView }) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img className="fr-emb" src={`/ranks/${rank.tier.toLowerCase()}.png`} alt={rank.label} title={rank.label} />
               )}
-              <span className="fr-pts" data-sign={s.points > 0 ? "up" : s.points < 0 ? "down" : undefined}>
-                {s.streams > 0 ? signed(s.points) : "..."}
+              <span
+                className="fr-pts"
+                data-sign={s.points > 0 ? "up" : s.points < 0 ? "down" : undefined}
+                data-idle={s.streams > 0 ? undefined : "yes"}
+              >
+                {s.streams > 0 ? signed(s.points) : "Not yet"}
               </span>
             </li>
           );
