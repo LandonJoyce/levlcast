@@ -107,7 +107,7 @@ const READY_COPY: Record<VodReadyKind, { subject: string; heading: string; body:
   locked: {
     subject: "Your extra stream is analyzed",
     heading: "Your extra stream is in.",
-    body: () => "You've used both free reports this week, so this one stays sealed until Monday. Pro opens it now.",
+    body: () => "You've used this week's free report, so this one stays sealed until Monday. Pro opens it now.",
     button: "See it",
   },
 };

@@ -33,7 +33,7 @@ export default function ProPlan() {
         <span>{c.per}</span>
       </p>
       <p className="v3-plan-b">
-        For streamers going live more than twice a week. Whole streams coached, twenty a month, twenty clips, and
+        For streamers going live more than once a week. Whole streams coached, twenty a month, twenty clips, and
         posting straight to YouTube.
         {c.note && <> {c.note}</>}
       </p>

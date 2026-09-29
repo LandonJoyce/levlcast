@@ -238,13 +238,13 @@ export default function PreviousHomePage() {
           <div className="lv2-plan">
             <p className="lv2-plan-n">Free</p>
             <p className="lv2-plan-p">$0</p>
-            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get two reports and two clips <em>every week</em>, forever, each on the first 2 hours of a stream. Nothing in the report is held back.</p>
+            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get a report <em>every week</em> and 6 clips a month, forever, each on the first 2 hours of a stream. Nothing in the report is held back.</p>
             <Link href="/analyze" className="lv2-cta lv2-cta-ghost">Try it free</Link>
           </div>
           <div className="lv2-plan lv2-plan-lead">
             <p className="lv2-plan-n">Pro</p>
             <p className="lv2-plan-p">$14.99<span>/mo</span></p>
-            <p className="lv2-plan-b">For streamers going live more than twice a week. Whole streams coached, twenty a month, twenty clips, and posting straight to YouTube.</p>
+            <p className="lv2-plan-b">For streamers going live more than once a week. Whole streams coached, twenty a month, twenty clips, and posting straight to YouTube.</p>
             {/* Said "Start free", but ?plan=monthly sends you through sign-in
                 straight into a $14.99 Stripe checkout. A button that says
                 free and opens a card form is the fastest way to lose trust

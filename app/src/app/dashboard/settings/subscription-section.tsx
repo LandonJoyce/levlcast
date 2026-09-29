@@ -15,8 +15,10 @@ interface SubscriptionSectionProps {
   /** Hours of analysis used / limit this period. 0/0 means no hour cap (free trial). */
   hoursUsed?: number;
   hoursLimit?: number;
-  /** "this month" for Pro, "ever" for free trial. */
+  /** Reports: "this month" for Pro, "this week" for free. */
   periodLabel: string;
+  /** Clips: "this month" on every plan. */
+  clipsPeriodLabel?: string;
   /** True when the user is on the lifetime free trial (vs paid free fallback). */
   onTrial: boolean;
   hasStripeSubscription: boolean;
@@ -57,6 +59,7 @@ export function SubscriptionSection({
   hoursUsed,
   hoursLimit,
   periodLabel,
+  clipsPeriodLabel = periodLabel,
   onTrial,
   hasStripeSubscription,
   hasPaypalSubscription,
@@ -93,7 +96,7 @@ export function SubscriptionSection({
       <div className="ac-plan">
         <div className="ac-uses">
           <UsageBar label={`Reports ${periodLabel}`} used={analysesUsed} limit={analysesLimit} />
-          <UsageBar label={`Clips ${periodLabel}`} used={clipsUsed} limit={clipsLimit} />
+          <UsageBar label={`Clips ${clipsPeriodLabel}`} used={clipsUsed} limit={clipsLimit} />
           {/* Hours only apply on the paid plans. */}
           {plan !== "free" && typeof hoursLimit === "number" && hoursLimit > 0 && typeof hoursUsed === "number" && (
             <UsageBar label={`Hours analyzed ${periodLabel}`} used={hoursUsed} limit={hoursLimit} />
@@ -105,7 +108,7 @@ export function SubscriptionSection({
             <>
               <p>
                 {onTrial
-                  ? `Free gives you ${analysesLimit} reports and ${clipsLimit} clips a week, reset every Monday, each report on the first 2 hours of a stream. Pro coaches whole streams: 20 reports and 20 clips a month.`
+                  ? `Free gives you ${analysesLimit} ${analysesLimit === 1 ? "report" : "reports"} a week (reset every Monday) and ${clipsLimit} clips a month, each report on the first 2 hours of a stream. Pro coaches whole streams: 20 reports and 20 clips a month.`
                   : "Pro is 20 reports and 20 clips a month, on whole streams up to 8 hours long."}
               </p>
               <button

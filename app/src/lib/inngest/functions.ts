@@ -29,7 +29,7 @@ import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
-import { incrementTrialAnalysis, incrementTrialClip, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, PRO_PLUS_LIMITS, coachedRange, currentWeekStart, hasPaidPlan, touchStreak } from "@/lib/limits";
+import { incrementTrialAnalysis, incrementTrialClip, FREE_CLIPS_PER_MONTH, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, PRO_PLUS_LIMITS, coachedRange, currentWeekStart, hasPaidPlan, touchStreak } from "@/lib/limits";
 import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
 import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
@@ -507,7 +507,7 @@ export const analyzeVod = inngest.createFunction(
           if (!isSealedExtra && analysesUsed >= FREE_WEEKLY_LIMITS.analyses_per_week) {
             await supabase.from("vods").update({
               status: "failed",
-              failed_reason: `You've used both free analyses this week. They reset Monday, or go Pro for 20 a month.`,
+              failed_reason: `You've used this week's free report. It resets Monday, or go Pro for 20 a month.`,
             }).eq("id", vodId);
             console.warn(`[inngest] analyze-vod blocked at save — user ${userId} free weekly cap ${analysesUsed}/${FREE_WEEKLY_LIMITS.analyses_per_week}`);
             return;
@@ -613,52 +613,32 @@ export const analyzeVod = inngest.createFunction(
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-        // Mirror getUserUsage clip quota check — free users use the lifetime
-        // trial counter, Pro/founding use the monthly clips count.
+        // Mirror getUserUsage's clip quota: every plan counts clips this
+        // calendar month, deleted ones included. Pro Plus first, then
+        // founding, then Pro (Pro Plus used to be missing here).
         const { data: profile } = await supabase
           .from("profiles")
-          .select("plan, subscription_expires_at, founding_member, pro_plus, twitch_id")
+          .select("plan, subscription_expires_at, founding_member, pro_plus")
           .eq("id", userId)
           .single();
 
-        const isExpired = profile?.plan === "pro" && profile?.subscription_expires_at &&
-          new Date(profile.subscription_expires_at) < new Date();
-        const plan = profile?.plan === "pro" && !isExpired ? "pro" : "free";
-
-        if (plan === "free") {
-          const twitchId = profile?.twitch_id as string | undefined;
-          let clipsUsed = 0;
-          if (twitchId) {
-            const { data: trial } = await supabase
-              .from("trial_records")
-              .select("clips_this_week, week_start")
-              .eq("twitch_id", twitchId)
-              .maybeSingle();
-            const sameWeek = ((trial?.week_start as string | null) ?? null) === currentWeekStart();
-            clipsUsed = sameWeek ? trial?.clips_this_week ?? 0 : 0;
-          }
-          if (clipsUsed >= FREE_WEEKLY_LIMITS.clips_per_week) {
-            console.log(`[analyze] Auto-generate skipped — free weekly clip cap (${clipsUsed}/${FREE_WEEKLY_LIMITS.clips_per_week})`);
-            return null;
-          }
-        } else {
-          // Pro Plus first, as in getUserUsage (it was missing here too).
-          const clipLimit = profile?.pro_plus === true
+        const clipLimit = !hasPaidPlan(profile)
+          ? FREE_CLIPS_PER_MONTH
+          : profile?.pro_plus === true
             ? PRO_PLUS_LIMITS.clips_per_month
             : profile?.founding_member === true
               ? FOUNDING_LIMITS.clips_per_month
               : PRO_LIMITS.clips_per_month;
-          const { count: clipsThisMonth } = await supabase
-            .from("clips")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .in("status", ["ready", "deleted"])
-            .gte("created_at", monthStart)
-            .lt("created_at", monthEnd);
-          if ((clipsThisMonth ?? 0) >= clipLimit) {
-            console.log(`[analyze] Auto-generate skipped — clip limit reached (${clipsThisMonth}/${clipLimit})`);
-            return null;
-          }
+        const { count: clipsThisMonth } = await supabase
+          .from("clips")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .in("status", ["ready", "deleted"])
+          .gte("created_at", monthStart)
+          .lt("created_at", monthEnd);
+        if ((clipsThisMonth ?? 0) >= clipLimit) {
+          console.log(`[analyze] Auto-generate skipped — clip limit reached (${clipsThisMonth}/${clipLimit})`);
+          return null;
         }
 
         const topPeak = peaks[0];

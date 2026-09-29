@@ -120,7 +120,7 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
       });
       const json = await res.json().catch(() => ({}));
       if (res.status === 403 && json.sealed_extra_available && !sealedExtra) {
-        setSealedOffer(json.message ?? "You've used both free reports this week.");
+        setSealedOffer(json.message ?? "You've used this week's free report.");
         return;
       }
       if (res.status === 403 && json.upgrade) {
@@ -166,9 +166,9 @@ export function AnalyzeModal({ isOpen, onClose, vodId, vodTitle, durationSeconds
             <p className="am-sealed-k">
               <Lock size={12} strokeWidth={2.2} aria-hidden="true" /> Sealed until Monday
             </p>
-            <p className="am-sealed-title">You&apos;ve used both free reports this week.</p>
+            <p className="am-sealed-title">You&apos;ve used this week&apos;s free report.</p>
             <p className="am-sealed-sub">
-              We can still analyze this one. It comes back sealed and unlocks Monday when your free reports reset.
+              We can still analyze this one. It comes back sealed and unlocks Monday when your free report resets.
               Pro opens it the moment it&apos;s done.
             </p>
             {error && <p className="am-error">{error}</p>}

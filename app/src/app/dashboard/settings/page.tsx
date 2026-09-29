@@ -109,6 +109,7 @@ export default async function AccountPage({
           hoursUsed={usage.hours_used}
           hoursLimit={usage.hours_limit}
           periodLabel={usage.period_label}
+          clipsPeriodLabel={usage.clips_period_label}
           onTrial={usage.on_trial}
           hasStripeSubscription={!!profile?.stripe_customer_id}
           hasPaypalSubscription={!!profile?.paypal_subscription_id}

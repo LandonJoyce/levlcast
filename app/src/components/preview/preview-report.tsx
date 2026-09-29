@@ -138,7 +138,7 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
         </div>
         <div className="pr-cta-act">
           <FullReportButton vodId={preview.twitch_vod_id} />
-          <p className="v3-fine">Free. Two reports a week, no card.</p>
+          <p className="v3-fine">Free. A report every week, no card.</p>
         </div>
       </section>
 
@@ -247,7 +247,7 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
             <li>A weekly league against the streamers nearest your rank</li>
           </ul>
           <FullReportButton vodId={preview.twitch_vod_id} />
-          <p className="v3-fine">Sign in with Twitch. Two reports a week are free, no card.</p>
+          <p className="v3-fine">Sign in with Twitch. A report every week is free, no card.</p>
         </div>
       </section>
     </article>

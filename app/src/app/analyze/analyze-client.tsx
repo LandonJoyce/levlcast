@@ -338,7 +338,7 @@ export function AnalyzeClient({
               </p>
             </form>
           </div>
-          <p className="v3-fine">Three free reports a day. Sign in with Twitch and we read the whole stream.</p>
+          <p className="v3-fine">Three free reports a day. Sign in with Twitch for full reports on your own streams.</p>
         </div>
       </section>
     </main>

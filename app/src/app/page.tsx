@@ -450,7 +450,7 @@ export default async function HomePage() {
             <p className="v3-plan-n">Free</p>
             <p className="v3-plan-p">$0</p>
             <p className="v3-plan-b">
-              Try it on any stream with no account. Sign in and you get two reports and two clips every week, forever.
+              Try it on any stream with no account. Sign in and you get a report every week and 6 clips a month, forever.
               Each one coaches the first 2 hours of a stream, and nothing in it is held back.
             </p>
             <Link href="/analyze" className="v3-btn v3-btn-ghost">Try it free</Link>

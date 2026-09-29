@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   if (!usage.can_analyze) {
     let message: string;
     if (usage.on_trial) {
-      message = `You've used both free analyses this week. They reset Monday, or Pro gives you 20 a month.`;
+      message = `You've used this week's free report. It resets Monday, or Pro gives you 20 a month.`;
     } else if (usage.block_reason === "hours_cap") {
       message = `You've used ${usage.hours_used}h of your ${usage.hours_limit}h monthly analysis budget. Resets at the start of next month.`;
     } else {

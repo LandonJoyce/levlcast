@@ -59,8 +59,8 @@ export async function POST(request: Request) {
         {
           error: "limit_reached",
           message: available
-            ? "You've used both free reports this week. You can still analyze one more, sealed until Monday."
-            : "You've used both free reports and this week's sealed extra. They reset Monday, or Pro gives you 20 a month.",
+            ? "You've used this week's free report. You can still analyze one more, sealed until Monday."
+            : "You've used this week's free report and sealed extra. They reset Monday, or Pro gives you 20 a month.",
           upgrade: true,
           on_trial: true,
           sealed_extra_available: available,
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   if (!usage.can_analyze && !sealedExtra) {
     let message: string;
     if (usage.on_trial) {
-      message = `You've used both free analyses this week. They reset Monday, or Pro gives you 20 a month.`;
+      message = `You've used this week's free report. It resets Monday, or Pro gives you 20 a month.`;
     } else if (usage.block_reason === "hours_cap") {
       message = `You've used ${usage.hours_used}h of your ${usage.hours_limit}h monthly analysis budget. Resets at the start of next month.`;
     } else {

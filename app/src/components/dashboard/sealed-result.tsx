@@ -139,7 +139,7 @@ export function SealedResult({ vodId, title, placement, locked, variant }: Props
         {title && variant === "home" && <p className="hm-last-title">{title}</p>}
         <p className="sr-title">Your extra stream is in.</p>
         <p className="sr-sub">
-          Free comes with 2 reports a week, so this one stays sealed until Monday. Pro opens it now.
+          Free comes with 1 report a week, so this one stays sealed until Monday. Pro opens it now.
         </p>
         <div className="sr-actions">
           <button type="button" className="btn btn-blue" onClick={() => setUpgradeOpen(true)}>

@@ -2,10 +2,12 @@
  * lib/limits.ts — subscription plan limits and usage enforcement.
  *
  * PLAN LIMITS:
- *   Free:           2 VOD analyses + 2 clips PER WEEK (per Twitch ID), each
- *                   report coaching the first 2 hours of a stream
+ *   Free:           1 VOD analysis a week (per Twitch ID) plus the sealed
+ *                   extra, 6 clips a month, each report coaching the first 2
+ *                   hours of a stream
  *   Pro:            20 VOD analyses/month, 20 clips/month, 30 hours, whole
- *                   streams — $14.99/mo (was $9.99 founding through 2026-06-03)
+ *                   streams — $20/mo or $199/yr (was $14.99 until 2026-09-28,
+ *                   and $9.99 founding through 2026-06-03)
  *   Founding:       grandfathered users who subscribed before the limit drop;
  *                    all $9.99 subscribers keep their original rate via Stripe.
  *
@@ -34,13 +36,17 @@
  *       check before either finishes.
  *     - Clips: rows with status = "ready" or "deleted" created this calendar
  *       month. Failed/processing clips do not count.
- *   Free (weekly):
- *     - Counts read from trial_records.{analyses_this_week, clips_this_week},
- *       treated as zero whenever week_start is not the current Monday.
+ *   Free (reports weekly, clips monthly):
+ *     - Reports read from trial_records.analyses_this_week, treated as zero
+ *       whenever week_start is not the current Monday.
  *     - Hours are summed from the user's own VODs analysed since Monday,
  *       plus anything still in progress.
+ *     - Clips counted like Pro's: rows "ready" or "deleted" created this
+ *       calendar month. The browser can't write clips (migration 036) and
+ *       deleting only marks a clip deleted, so neither hands one back.
  *     - Increment from incrementTrialAnalysis() / incrementTrialClip() —
- *       admin-client only. NEVER call from client code.
+ *       admin-client only. NEVER call from client code. The weekly clip
+ *       counter it keeps no longer gates anything.
  *
  * HOW PLAN IS DETERMINED:
  *   getUserUsage() reads the profile's plan field, then checks subscription_expires_at.
@@ -82,24 +88,29 @@ import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
  * could cost more in a week than Pro pays in a month.
  */
 export const FREE_WEEKLY_LIMITS = {
-  analyses_per_week: 2,
-  // Was 5, on the reasoning that clips are near-free on R2 so there was no
-  // point being stingy. That was true about cost and wrong about tiers:
-  // 5 a week is ~21 a month against Pro's 20, so free users were getting
-  // more clips than paying ones. One per analysis is the honest number.
-  clips_per_week: 2,
-  // Two reports of at most FREE_COACHED_SECONDS each. It was 8, with free
-  // reports covering streams up to 4 hours, which let a free streamer get
-  // more hours coached than Pro's monthly allowance.
-  hours_per_week: 4,
+  // One a week since 2026-09-28 (it was two), when Pro went to $20: free
+  // has to cost less to give away. The sealed extra still lets a second
+  // stream that week be analyzed, sealed until Monday, so the loop above
+  // still gets two points a week for anyone who waits for Monday.
+  analyses_per_week: 1,
+  // One report of at most FREE_COACHED_SECONDS. It was 8, with free reports
+  // covering streams up to 4 hours, which let a free streamer get more
+  // hours coached than Pro's monthly allowance.
+  hours_per_week: 2,
 };
+
+/**
+ * Free clips a month, counted like Pro's (see HOW USAGE IS COUNTED). It
+ * was 2 a week, about 9 a month; before that 5 a week, more than Pro's 20.
+ */
+export const FREE_CLIPS_PER_MONTH = 6;
 
 /**
  * FREE_COACHED_SECONDS (lib/free-plan.ts): a free report coaches the first
  * 2 hours of a stream, Pro the whole stream. It's the difference between
  * the plans that shows in every report, and it keeps Pro ahead: free is at
- * most three reports a week (the two plus the sealed extra) of 2 hours
- * each, about 26 hours a month, against Pro's 30.
+ * most two reports a week (the one plus the sealed extra) of 2 hours each,
+ * about 17 hours a month, against Pro's 30.
  */
 export { FREE_COACHED_SECONDS };
 
@@ -136,7 +147,7 @@ export function coachedRange(
  */
 export const FREE_TRIAL_LIMITS = {
   analyses_lifetime: FREE_WEEKLY_LIMITS.analyses_per_week,
-  clips_lifetime: FREE_WEEKLY_LIMITS.clips_per_week,
+  clips_lifetime: FREE_CLIPS_PER_MONTH,
 };
 
 /**
@@ -162,11 +173,12 @@ export const PRO_LIMITS = {
   analyses_per_month: 20,
   clips_per_month: 20,
   // Hour cap added 2026-05-18 to protect margin on heavy 8h-stream users;
-  // 20 until 2026-09-28, raised above free's ~26-hour monthly worst case.
-  // Math at $14.99 ($14.26 after Stripe): an hour of stream costs about
-  // $0.35-0.45 (Deepgram nova-3 multilingual, peaks on Sonnet 4.6, the
+  // 20 until 2026-09-28, raised above free's monthly worst case (26 hours
+  // then, 17 since free went to one report a week).
+  // Math at $20 ($19.12 after Stripe): an hour of stream costs roughly
+  // $0.35-0.55 (Deepgram nova-3 multilingual, peaks on Sonnet 4.6, the
   // report on Sonnet 5 at high effort), so a Pro streamer who uses all 30
-  // hours costs about $12. Most use well under half.
+  // hours costs about $11-16. Most use well under half.
   hours_per_month: 30,
 };
 
@@ -216,8 +228,10 @@ export interface UserUsage {
   clips_limit: number;
   can_analyze: boolean;
   can_generate_clip: boolean;
-  /** UI label for the period — "this month" (Pro) or "ever" (trial). */
+  /** UI label for the reports period — "this month" (Pro) or "this week" (free). */
   period_label: string;
+  /** UI label for the clips period — "this month" on every plan. */
+  clips_period_label: string;
 
   // BACKWARDS-COMPAT — same numeric value as analyses_used / clips_used.
   // Existing callers used these names; left in place to avoid a wide refactor.
@@ -276,13 +290,12 @@ export async function getUserUsage(
     const twitchId = profile?.twitch_id as string | undefined;
     const weekStart = currentWeekStart();
     let analysesUsed = 0;
-    let clipsUsed = 0;
 
     if (twitchId) {
       const admin = createAdminClient();
       const { data: trial } = await admin
         .from("trial_records")
-        .select("analyses_this_week, clips_this_week, week_start")
+        .select("analyses_this_week, week_start")
         .eq("twitch_id", twitchId)
         .maybeSingle();
 
@@ -293,8 +306,19 @@ export async function getUserUsage(
       const storedWeek = (trial?.week_start as string | null) ?? null;
       const sameWeek = storedWeek === weekStart;
       analysesUsed = sameWeek ? (trial?.analyses_this_week ?? 0) : 0;
-      clipsUsed = sameWeek ? (trial?.clips_this_week ?? 0) : 0;
     }
+
+    // Clips this calendar month, counted like Pro's: deleted ones included,
+    // so deleting a clip doesn't hand it back.
+    const now = new Date();
+    const { count: clipsThisMonth } = await supabase
+      .from("clips")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .in("status", ["ready", "deleted"])
+      .gte("created_at", new Date(now.getFullYear(), now.getMonth(), 1).toISOString())
+      .lt("created_at", new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString());
+    const clipsUsed = clipsThisMonth ?? 0;
 
     // Hours this week, counted from the VODs themselves. The count cap
     // alone does not bound cost: two 8-hour streams cost four times two
@@ -336,10 +360,11 @@ export async function getUserUsage(
       analyses_used: analysesUsed,
       clips_used: clipsUsed,
       analyses_limit: limit.analyses_per_week,
-      clips_limit: limit.clips_per_week,
+      clips_limit: FREE_CLIPS_PER_MONTH,
       can_analyze: canAnalyze,
-      can_generate_clip: clipsUsed < limit.clips_per_week,
+      can_generate_clip: clipsUsed < FREE_CLIPS_PER_MONTH,
       period_label: "this week",
+      clips_period_label: "this month",
       analyses_this_month: analysesUsed,
       clips_this_month: clipsUsed,
       hours_used: Math.round(hoursUsed * 10) / 10,
@@ -442,6 +467,7 @@ export async function getUserUsage(
     can_analyze: canAnalyze,
     can_generate_clip: clips_used < monthlyLimits.clips_per_month,
     period_label: "this month",
+    clips_period_label: "this month",
     analyses_this_month: analyses_used,
     clips_this_month: clips_used,
     hours_used: Math.round(hoursUsed * 10) / 10, // round to 1 decimal for UI

@@ -65,14 +65,18 @@ function getCurrentPeriodEnd(sub: Stripe.Subscription): number | undefined {
 
 /**
  * Detect whether a subscription is on the Pro Plus tier by checking its
- * price ids against STRIPE_PRO_PLUS_PRICE_ID. Used to flip the
- * `pro_plus` boolean on profiles so the limits.ts gate applies the
- * higher 35/60/35 caps.
+ * price ids against the Pro Plus prices, monthly and yearly. Used to flip
+ * the `pro_plus` boolean on profiles so the limits.ts gate applies the
+ * higher Pro Plus caps. Only the monthly price used to be checked, so a
+ * yearly Pro Plus subscriber ($299) got Pro's limits. Everything else is
+ * Pro, including subscribers still on an older Pro price.
  */
 function isProPlusSubscription(sub: Stripe.Subscription): boolean {
-  const proPlusPriceId = process.env.STRIPE_PRO_PLUS_PRICE_ID;
-  if (!proPlusPriceId) return false;
-  return sub.items.data.some((item) => item.price.id === proPlusPriceId);
+  const proPlusPriceIds = [process.env.STRIPE_PRO_PLUS_PRICE_ID, process.env.STRIPE_PRO_PLUS_ANNUAL_PRICE_ID].filter(
+    (id): id is string => !!id
+  );
+  if (proPlusPriceIds.length === 0) return false;
+  return sub.items.data.some((item) => proPlusPriceIds.includes(item.price.id));
 }
 
 /**

@@ -415,7 +415,7 @@ export default function OutreachPage() {
   function useTemplate(lead: Lead) {
     const body = `saw your ${lead.isComment ? "comment" : "post"}. something that helped me was running my VODs through levlcast. it flags where people dropped off and gives you one thing to change next stream, then tells you next time whether it actually worked. also cuts your best moments into clips so you're not scrubbing footage.
 
-2 free reports a week, no card. levlcast.com`;
+a free report every week, no card. levlcast.com`;
     const subject = "Re your stream question";
     setMessages((prev) => ({ ...prev, [lead.id]: { body, subject } }));
   }
