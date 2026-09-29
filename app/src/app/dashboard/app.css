@@ -528,6 +528,17 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .sp-post { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); border-bottom: 1px solid var(--line); margin-top: -28px; }
 .dash .sp-mission { padding: 28px 36px 32px 0; }
 .dash .sp-mission-note { margin: 12px 0 0; font-size: 13px; color: var(--ink-3); }
+/* Last stream's fix, checked by this report (progress_on_prior_fix). */
+.dash .sp-follow { margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--line); }
+.dash .sp-follow-verdict { padding: 2px 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 10px; letter-spacing: 0.12em; }
+.dash .sp-follow[data-status="fixed"] .sp-follow-verdict { color: var(--green); }
+.dash .sp-follow[data-status="partial"] .sp-follow-verdict { color: var(--warn); }
+.dash .sp-follow[data-status="regressed"] .sp-follow-verdict { color: var(--danger); }
+.dash .sp-follow[data-status="not_addressed"] .sp-follow-verdict { color: var(--ink-3); }
+.dash .sp-follow-ask { max-width: 52ch; margin: 0; font-weight: 600; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
+.dash .sp-follow-why { max-width: 56ch; margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-3); }
+.dash .sp-follow-metric { margin: 10px 0 0; font-family: var(--mono); font-size: 12px; letter-spacing: 0.02em; color: var(--ink-3); }
+.dash .sp-follow-metric b { font-weight: 500; color: var(--ink); }
 .dash .sp-post .sc { padding: 28px 0 32px 36px; border-left: 1px solid var(--line); }
 .dash .sp-post > .sc:only-child { padding-left: 0; border-left: 0; }
 /* The stream replay sits between the result and the post-match notes. */

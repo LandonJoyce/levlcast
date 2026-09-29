@@ -55,6 +55,53 @@ function passedLine(names: string[]): string {
   return ` Passed ${names.slice(0, 2).join(", ")} and ${names.length - 2} more.`;
 }
 
+type FollowUpStatus = "fixed" | "partial" | "regressed" | "not_addressed";
+type FollowUp = {
+  ask: string;
+  status: FollowUpStatus;
+  evidence: string | null;
+  metric: { label: string; before: string; after: string; unit: string } | null;
+};
+
+const FOLLOW_UP_LABEL: Record<FollowUpStatus, string> = {
+  fixed: "Did it",
+  partial: "Partly",
+  regressed: "Slipped",
+  not_addressed: "Not yet",
+};
+
+/** The coach's check on last stream's fix, or null when it's missing or malformed. */
+function readFollowUp(raw: unknown, clean: (s: string) => string): FollowUp | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const status = r.status as FollowUpStatus;
+  if (!(status in FOLLOW_UP_LABEL) || typeof r.prior_priority !== "string" || !r.prior_priority.trim()) return null;
+  const m = r.metric as Record<string, unknown> | undefined;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? String(Math.round(v * 10) / 10) : null);
+  const before = num(m?.before);
+  const after = num(m?.after);
+  let metric: FollowUp["metric"] = null;
+  if (m && typeof m.label === "string" && m.label.trim() && before !== null && after !== null) {
+    // The coach sometimes names the metric the way the report stores it
+    // ("dead_air_pct"), so it's turned back into words here.
+    const pct = /_pct$/i.test(m.label);
+    const words = m.label.trim().replace(/_pct$/i, "").replace(/_/g, " ");
+    const unit = typeof m.unit === "string" && m.unit.trim() ? m.unit.trim() : pct ? "%" : "";
+    metric = {
+      label: words.charAt(0).toUpperCase() + words.slice(1),
+      before,
+      after,
+      unit: unit === "%" ? "%" : unit ? ` ${unit}` : "",
+    };
+  }
+  return {
+    ask: clean(r.prior_priority.trim()),
+    status,
+    evidence: typeof r.evidence === "string" && r.evidence.trim() ? clean(r.evidence.trim()) : null,
+    metric,
+  };
+}
+
 /**
  * Where this stream left the streamer in this week's league. Null for
  * anything analysed before this week, since an old report can't say
@@ -260,6 +307,11 @@ export default async function StreamPage({
   const twitchId = (vod.twitch_vod_id as string | null) ?? null;
   const broadcastDate = (vod.stream_date as string | null) ?? null;
   const missed = report?.missed_clip as { time?: string; note?: string } | undefined;
+  // Every report after the first checks last stream's fix
+  // (progress_on_prior_fix in analyze.ts). The old report card showed it
+  // as "Did you fix it?"; the one-page redesign dropped that card, and
+  // the check went unseen under a promise that the next report checks.
+  const followUp = readFollowUp(report?.progress_on_prior_fix, clean);
 
   // The stream played back as a sculpture. Only once the result is open,
   // since it ends on the rank change, and only for reports that saved
@@ -460,8 +512,34 @@ export default async function StreamPage({
           {/* What to do next time, and where this one's points went. */}
           {report && (
             <section className="sp-post">
-              {(mission || bestMoment?.description) && (
+              {(followUp || mission || bestMoment?.description) && (
                 <div className="sp-mission">
+                  {followUp && (
+                    <div className="sp-follow" data-status={followUp.status}>
+                      <p className="hm-k">
+                        <span className="sp-k-left">
+                          Last stream&apos;s fix
+                          <span className="sp-follow-verdict">{FOLLOW_UP_LABEL[followUp.status]}</span>
+                        </span>
+                      </p>
+                      <p className="sp-follow-ask">{followUp.ask}</p>
+                      {followUp.evidence && <p className="sp-follow-why">{followUp.evidence}</p>}
+                      {followUp.metric && (
+                        <p className="sp-follow-metric">
+                          {followUp.metric.label}{" "}
+                          <b>
+                            {followUp.metric.before}
+                            {followUp.metric.unit}
+                          </b>{" "}
+                          to{" "}
+                          <b>
+                            {followUp.metric.after}
+                            {followUp.metric.unit}
+                          </b>
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {mission && (
                     <>
                       <p className="hm-k">Do this next stream</p>
