@@ -119,7 +119,7 @@ export function SubscriptionSection({
                   setUpgradeOpen(true);
                 }}
               >
-                Go Pro · $14.99/month
+                Go Pro · $20/month
               </button>
             </>
           ) : isCancelled ? (

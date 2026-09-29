@@ -22,8 +22,8 @@ function planSlug(tier: Tier, cycle: Cycle): string {
 
 const PRICE: Record<Tier, Record<Cycle, { price: string; cycle: string; sub: string; equiv?: string }>> = {
   pro: {
-    monthly: { price: "$14.99", cycle: "/month", sub: "cancel anytime" },
-    annual:  { price: "$149",   cycle: "/year",  sub: "save $30.88 vs monthly", equiv: "~$12.41/mo" },
+    monthly: { price: "$20", cycle: "/month", sub: "cancel anytime" },
+    annual:  { price: "$199",   cycle: "/year",  sub: "save $41 vs monthly", equiv: "~$16.58/mo" },
   },
   pro_plus: {
     monthly: { price: "$29.99", cycle: "/month", sub: "for heavy streamers" },

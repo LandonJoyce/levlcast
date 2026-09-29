@@ -107,7 +107,7 @@ const structuredData = {
   url: "https://www.levlcast.com",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Pro", price: "14.99", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "20.00", priceCurrency: "USD" },
   ],
 };
 

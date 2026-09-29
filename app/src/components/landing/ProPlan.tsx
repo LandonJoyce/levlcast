@@ -5,13 +5,13 @@ import { useState } from "react";
 
 /**
  * The Pro column of the homepage pricing, with a monthly/yearly switch.
- * The yearly plan ($149) has existed in checkout all along but the
+ * The yearly plan ($199) has existed in checkout all along but the
  * homepage only ever offered monthly, so nobody saw it before paying.
  * Both links go through sign-in, which hands the plan to checkout.
  */
 const CYCLES = {
-  monthly: { price: "$14.99", per: "/mo", note: null, plan: "monthly" },
-  yearly: { price: "$149", per: "/yr", note: "That’s about two months free.", plan: "annual" },
+  monthly: { price: "$20", per: "/mo", note: null, plan: "monthly" },
+  yearly: { price: "$199", per: "/yr", note: "That’s about two months free.", plan: "annual" },
 } as const;
 
 export default function ProPlan() {

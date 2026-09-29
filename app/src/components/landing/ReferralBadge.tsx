@@ -65,9 +65,10 @@ export default function ReferralBadge() {
   const percent = match ? Number(match[2]) : null;
 
   // Matches the current Pro monthly sticker price. Bumped from $9.99 to
-  // $14.99 on 2026-06-03 when the founding deal ended. If this drifts from
-  // the actual Stripe price, the badge will lie about the discounted total.
-  const STANDARD_MONTHLY = 14.99;
+  // $14.99 on 2026-06-03 when the founding deal ended, and to $20 on
+  // 2026-09-28. If this drifts from the actual Stripe price, the badge will
+  // lie about the discounted total.
+  const STANDARD_MONTHLY = 20;
   const discountedMonthly =
     percent !== null
       ? Math.round(STANDARD_MONTHLY * (1 - percent / 100) * 100) / 100

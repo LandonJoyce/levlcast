@@ -243,10 +243,10 @@ export default function PreviousHomePage() {
           </div>
           <div className="lv2-plan lv2-plan-lead">
             <p className="lv2-plan-n">Pro</p>
-            <p className="lv2-plan-p">$14.99<span>/mo</span></p>
+            <p className="lv2-plan-p">$20<span>/mo</span></p>
             <p className="lv2-plan-b">For streamers going live more than once a week. Whole streams coached, twenty a month, twenty clips, and posting straight to YouTube.</p>
             {/* Said "Start free", but ?plan=monthly sends you through sign-in
-                straight into a $14.99 Stripe checkout. A button that says
+                straight into a $20 Stripe checkout. A button that says
                 free and opens a card form is the fastest way to lose trust
                 on a pricing section. */}
             <Link href="/auth/login?plan=monthly" className="lv2-cta">Go Pro</Link>

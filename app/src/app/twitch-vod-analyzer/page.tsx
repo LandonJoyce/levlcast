@@ -38,7 +38,7 @@ const FAQS = [
   },
   {
     q: "Is it free?",
-    a: "You can try it on the first 12 minutes of any stream without an account. Signed in, Free is a report every week and 6 clips a month with no card, each report on the first 2 hours of a stream. Pro is $14.99 a month, or $149 a year, for whole streams coached, 20 reports and 20 clips a month.",
+    a: "You can try it on the first 12 minutes of any stream without an account. Signed in, Free is a report every week and 6 clips a month with no card, each report on the first 2 hours of a stream. Pro is $20 a month, or $199 a year, for whole streams coached, 20 reports and 20 clips a month.",
   },
   {
     q: "How long does it take?",
@@ -62,7 +62,7 @@ const STRUCTURED_DATA = [
     url: "https://www.levlcast.com/twitch-vod-analyzer",
     offers: [
       { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-      { "@type": "Offer", name: "Pro", price: "14.99", priceCurrency: "USD" },
+      { "@type": "Offer", name: "Pro", price: "20.00", priceCurrency: "USD" },
     ],
   },
   {

@@ -45,7 +45,7 @@ const FAQS = [
   },
   {
     q: "What does it cost?",
-    a: "Free is a report every week and 6 clips a month, with no card, each report coaching the first 2 hours of a stream. Pro is $14.99 a month, or $149 a year, for whole streams coached, 20 reports and 20 clips a month, vertical export and posting to YouTube.",
+    a: "Free is a report every week and 6 clips a month, with no card, each report coaching the first 2 hours of a stream. Pro is $20 a month, or $199 a year, for whole streams coached, 20 reports and 20 clips a month, vertical export and posting to YouTube.",
   },
 ];
 
@@ -60,7 +60,7 @@ const STRUCTURED_DATA = [
     url: "https://www.levlcast.com/twitch-clip-generator",
     offers: [
       { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-      { "@type": "Offer", name: "Pro", price: "14.99", priceCurrency: "USD" },
+      { "@type": "Offer", name: "Pro", price: "20.00", priceCurrency: "USD" },
     ],
   },
   {

@@ -19,7 +19,7 @@ export const PARTNER_NAMES: Record<string, string> = {
 };
 
 /** Pro's monthly sticker price. The discounted price shown to viewers is worked out from it. */
-export const PRO_MONTHLY_PRICE = 14.99;
+export const PRO_MONTHLY_PRICE = 20;
 
 /** Codes that are well-formed enough to look up. Mirrors /r/[code]. */
 export const PARTNER_CODE_PATTERN = /^[A-Z0-9_-]{3,40}$/;

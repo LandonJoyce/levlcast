@@ -51,7 +51,7 @@ const FEATURES: Item[] = [
 ];
 
 /** In the bar on desktop, so only the phone sheet lists it. */
-const PRICING: Item = { href: "/#pricing", title: "Pricing", blurb: "Free, or Pro at $14.99 a month.", icon: Tag };
+const PRICING: Item = { href: "/#pricing", title: "Pricing", blurb: "Free, or Pro at $20 a month.", icon: Tag };
 
 const MORE: Item[] = [
   { href: "/leaderboard", title: "Leaderboard", blurb: "The top 50 streamers right now.", icon: Medal },
