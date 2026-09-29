@@ -622,118 +622,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 /* ── Sections ── */
 .v3 .v3-sec { padding-block: clamp(48px, 6vw, 88px); }
 
-/* ── Match timeline ── */
-.v3 .v3-tl { margin: 0 0 30px; }
-.v3 .v3-tl-times {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--ll-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--ll-fg-faint);
-  margin-bottom: 12px;
-}
-.v3 .v3-tl-track {
-  position: relative;
-  height: 12px;
-  border-radius: 6px;
-  background: var(--ll-fg-dim);
-  margin-bottom: 76px;
-}
-/* Dead air punched out of the stream, so absence reads as absence. */
-.v3 .v3-tl-dead {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: var(--ll-bg);
-  box-shadow: inset 0 0 0 1px var(--ll-line-soft);
-}
-.v3 .v3-tl-pin {
-  --pin: var(--ll-fg-mute);
-  position: absolute;
-  top: 100%;
-  width: 1px;
-  height: 18px;
-  background: var(--ll-line-med);
-}
-.v3 .v3-tl-pin[data-row="2"] { height: 40px; }
-.v3 .v3-tl-pin::after {
-  content: "";
-  position: absolute;
-  bottom: -7px;
-  left: -3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--pin);
-}
-.v3 .v3-tl-pin-label {
-  position: absolute;
-  top: calc(100% + 12px);
-  left: -3px;
-  white-space: nowrap;
-  font-family: var(--ll-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--pin);
-}
-.v3 .v3-tl-pin[data-edge="end"] .v3-tl-pin-label { left: auto; right: -3px; }
-
-/* ── Scoreboard ── */
-.v3 .v3-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
-  border-top: 1px solid var(--ll-line-soft);
-  border-bottom: 1px solid var(--ll-line-soft);
-}
-.v3 .v3-stat { padding: 20px 18px 22px 0; }
-.v3 .v3-stat + .v3-stat { padding-left: 18px; border-left: 1px solid var(--ll-line-soft); }
-.v3 .v3-stat dt {
-  font-family: var(--ll-mono);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ll-fg-faint);
-  margin-bottom: 10px;
-}
-.v3 .v3-stat dd { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.v3 .v3-stat-v {
-  font-family: var(--v3-display);
-  font-weight: 900;
-  font-size: clamp(40px, 5vw, 62px);
-  line-height: 0.9;
-  letter-spacing: 0.01em;
-  color: var(--ll-fg);
-  font-variant-numeric: tabular-nums;
-}
-.v3 .v3-stat-n { font-size: 14px; line-height: 1.4; color: var(--ll-fg-mute); }
-
-/* ── The fix, one line under the scoreboard ── */
-.v3 .v3-fix {
-  margin: 26px 0 0;
-  padding-left: 16px;
-  border-left: 2px solid var(--ll-fg-dim);
-  max-width: 60ch;
-  font-family: var(--ll-display);
-  font-size: clamp(18px, 2vw, 22px);
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: -0.01em;
-  color: var(--ll-fg);
-}
-.v3 .v3-fix-k {
-  display: block;
-  margin-bottom: 6px;
-  font-family: var(--ll-mono);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ll-fg-faint);
-}
-
 /* ── Match history + league ── */
 .v3 .v3-split {
   display: grid;
@@ -1235,9 +1123,6 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-split { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
-  .v3 .v3-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .v3 .v3-stat:nth-child(3) { border-left: none; padding-left: 0; }
-  .v3 .v3-stat:nth-child(n + 3) { border-top: 1px solid var(--ll-line-soft); }
   .v3 .v3-rules { grid-template-columns: minmax(0, 1fr); }
   .v3 .v3-rules > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .v3 .v3-price { grid-template-columns: minmax(0, 1fr); }

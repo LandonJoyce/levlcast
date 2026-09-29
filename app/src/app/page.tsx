@@ -126,24 +126,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-/** Marks on the match timeline. Percentages are positions across the stream. */
-const MARKS = [
-  { at: 4, label: "Slow start" },
-  { at: 41, label: "Best moment" },
-  { at: 58, label: "Quiet stretch" },
-  { at: 86, label: "Energy dropped" },
-] as const;
-
-// Plain statements, the way a friend would say them. The first draft's
-// notes ("and you never clipped it", "cut and ready to post") had the
-// neat, slightly dramatic rhythm that reads as generated.
-const STATS = [
-  { k: "Slow start", v: "8:12", note: "before things picked up" },
-  { k: "Best moment", v: "1:42:10", note: "you didn't clip this one" },
-  { k: "Dead air", v: "17 min", note: "mostly in the third hour" },
-  { k: "Clips", v: "6", note: "ready to post" },
-] as const;
-
 /**
  * The kinds of stream the coaching adapts to. Each line is what the game
  * module in lib/analyze.ts actually tells the coach to look for, so this
@@ -254,56 +236,21 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── The breakdown: timeline + scoreboard ── */}
-      <section className="v3-sec" id="breakdown">
-        <h2 className="v3-h2">
-          Here&rsquo;s what we found in one four hour stream.
-        </h2>
-
-        <div className="v3-tl" aria-label="Where things happened across the stream">
-          <div className="v3-tl-times" aria-hidden="true">
-            <span>00:00</span>
-            <span>04:11</span>
-          </div>
-          <div className="v3-tl-track">
-            <span className="v3-tl-dead" style={{ left: "52%", width: "11%" }} />
-            {/* Labels alternate between two rows so neighbours never collide
-                on a narrow screen, and the last one hangs left of its pin so
-                it can't run off the edge. */}
-            {MARKS.map((m, i) => (
-              <span
-                key={m.label}
-                className="v3-tl-pin"
-                data-row={i % 2 === 1 ? "2" : undefined}
-                data-edge={m.at > 70 ? "end" : undefined}
-                style={{ left: `${m.at}%` }}
-              >
-                <span className="v3-tl-pin-label">{m.label}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <dl className="v3-stats">
-          {STATS.map((s) => (
-            <div key={s.k} className="v3-stat">
-              <dt>{s.k}</dt>
-              <dd>
-                <span className="v3-stat-v">{s.v}</span>
-                <span className="v3-stat-n">{s.note}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        {/* The coach's advice, in one line. This was a whole section of
-            quotes and notes, which was more reading than the page needed;
-            the stats above already show what happened, so all that's left
-            to say is what to do about it. */}
-        <p className="v3-fix">
-          <span className="v3-fix-k">Your fix for next stream</span>
-          Talk through the quiet parts and tell chat what you&apos;re doing next.
-        </p>
+      {/* ── Clips ── (moved up here when the example breakdown was cut) */}
+      <section className="v3-sec" id="clips">
+        <h2 className="v3-h2">We clip your best moments for you.</h2>
+        <p className="v3-shot-cap">Trim it, fix the captions, and post it to YouTube without leaving.</p>
+        <figure className="v3-shot">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/la/clip-editor.png"
+            alt="The LevlCast clip editor: trim sliders, an editable caption list, caption style picker, hook frame chooser, and format and destination options"
+            width={1697}
+            height={896}
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
       </section>
 
       {/* ── Coaching per kind of stream ── */}
@@ -424,23 +371,6 @@ export default async function HomePage() {
             </dd>
           </div>
         </dl>
-      </section>
-
-      {/* ── Clips ── */}
-      <section className="v3-sec" id="clips">
-        <h2 className="v3-h2">We clip your best moments for you.</h2>
-        <p className="v3-shot-cap">Trim it, fix the captions, and post it to YouTube without leaving.</p>
-        <figure className="v3-shot">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/la/clip-editor.png"
-            alt="The LevlCast clip editor: trim sliders, an editable caption list, caption style picker, hook frame chooser, and format and destination options"
-            width={1697}
-            height={896}
-            loading="lazy"
-            decoding="async"
-          />
-        </figure>
       </section>
 
       {/* ── Price ── */}
