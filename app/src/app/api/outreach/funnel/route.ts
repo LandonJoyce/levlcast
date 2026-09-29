@@ -142,7 +142,10 @@ export async function GET(req: NextRequest) {
       const s = signupBy.get(p.id);
       const v = s ? visitors.get(s.visitor) : undefined;
       const ref = s?.ref ?? v?.ref ?? null;
-      let source: "dm" | "preview" | "direct" | "unknown" = "unknown";
+      // No signup event: either the account is older than tracking, or the
+      // sign-in never came back to a browser we saw (the iPhone app, or
+      // Twitch finishing it on another device).
+      let source: "dm" | "preview" | "direct" | "untracked" | "unknown" = p.created_at >= DM_CODES_SINCE ? "untracked" : "unknown";
       if (s) source = ref?.startsWith("dm-") ? "dm" : v?.steps.has("preview_start") ? "preview" : "direct";
       return {
         login: p.twitch_login,

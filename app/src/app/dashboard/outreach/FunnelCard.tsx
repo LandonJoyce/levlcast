@@ -24,13 +24,14 @@ interface FunnelData {
   refused: Array<{ reason: string; count: number }>;
   failed: number;
   people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }>;
-  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "preview" | "direct" | "unknown"; dmUsername: string | null }>;
+  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
 }
 
 const SOURCE: Record<FunnelData["newAccounts"][number]["source"], string> = {
   dm: "from your DM",
   preview: "after a free report",
   direct: "signed in directly",
+  untracked: "no website visit recorded (iPhone app or another device)",
   unknown: "before tracking started",
 };
 
