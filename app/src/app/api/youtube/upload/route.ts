@@ -1,10 +1,11 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { uploadToYouTube, refreshYouTubeToken } from "@/lib/youtube";
 import { getUserUsage } from "@/lib/limits";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  // The iPhone app signs its calls with a Bearer token; the site uses cookies.
+  const supabase = await createClientFromRequest(req);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

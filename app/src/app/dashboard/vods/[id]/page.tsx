@@ -303,7 +303,9 @@ export default async function StreamPage({
               return typeof score === "number" && !isNaN(score) && date ? { score, date } : null;
             })
             .filter((p): p is { score: number; date: string } => p !== null)
-            .slice(0, 9),
+            .slice(0, 9)
+            // `prior` is newest first; the bars read oldest to newest, this stream last.
+            .reverse(),
           {
             score: currentScore,
             date: (vod.stream_date as string | null) ?? (vod.analyzed_at as string | null) ?? new Date().toISOString(),

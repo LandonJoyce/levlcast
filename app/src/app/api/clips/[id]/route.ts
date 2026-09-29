@@ -1,8 +1,9 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClientFromRequest, createAdminClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient();
+  // The iPhone app signs its calls with a Bearer token; the site uses cookies.
+  const supabase = await createClientFromRequest(req);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
