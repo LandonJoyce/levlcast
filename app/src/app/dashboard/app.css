@@ -591,7 +591,27 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 }
 .dash .sp-best a { display: flex; width: fit-content; margin-top: 8px; }
 .dash .sp-best a:hover,
-.dash a.sp-moment-time:hover { text-decoration-color: var(--ink); }
+.dash a.sp-moment-time:hover,
+.dash button.sp-moment-time:hover { text-decoration-color: var(--ink); }
+/* Watch the best moment in place (components/moment/watch-moment.tsx). */
+.dash .sp-watch {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 7px 13px 7px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.dash .sp-watch:hover { border-color: var(--ink-3); }
+.dash .sp-watch:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 2px; }
+.dash button.sp-moment-time:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 3px; border-radius: 4px; }
 .dash .sp-clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .dash .sp-clip { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
 .dash .sp-clip video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; }

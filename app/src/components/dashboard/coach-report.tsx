@@ -28,7 +28,27 @@
  * like homework.
  */
 
+import { createContext, useContext } from "react";
 import type { CoachReport } from "@/lib/analyze";
+import { WatchMoment } from "@/components/moment/watch-moment";
+import { clock, secondsFromStamp } from "@/lib/moment-time";
+
+/** When the stream happened, for the player's note on deleted broadcasts. */
+const StreamDate = createContext<string | null>(null);
+
+/**
+ * Times the coach gave exactly (best moment, rewatch moments, dead zones),
+ * so a "1:42" in its prose that means 1:42:10 plays 1:42:10 and not 1m42s.
+ */
+const KnownTimes = createContext<number[]>([]);
+
+function resolveStamp(time: string, known: number[]): number {
+  const plain = secondsFromStamp(time);
+  const parts = time.split(":");
+  if (parts.length !== 2) return plain;
+  const hourMinute = Number(parts[0]) * 3600 + Number(parts[1]) * 60;
+  return known.find((k) => k >= hourMinute && k < hourMinute + 60) ?? plain;
+}
 
 const INK = "var(--ink)";
 const INK_2 = "rgb(200, 190, 188)";
@@ -72,8 +92,13 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-/** A timestamp that opens the VOD at that moment. */
+/**
+ * A timestamp that plays that moment right here. It used to split the time
+ * on ":" as minutes and seconds, so "1:42:10" opened Twitch at 1:42.
+ */
 function Stamp({ time, vodId }: { time: string; vodId?: string }) {
+  const streamDate = useContext(StreamDate);
+  const known = useContext(KnownTimes);
   const style: React.CSSProperties = {
     fontFamily: MONO,
     fontSize: 12,
@@ -83,20 +108,12 @@ function Stamp({ time, vodId }: { time: string; vodId?: string }) {
     textUnderlineOffset: 3,
     whiteSpace: "nowrap",
   };
-  if (!vodId) return <span style={style}>{time}</span>;
-  const t = time.replace(/:/g, "").length >= 4 ? time : time;
-  const [m, s] = time.split(":");
-  const seconds = (parseInt(m || "0", 10) || 0) * 60 + (parseInt(s || "0", 10) || 0);
+  const seconds = resolveStamp(time, known);
+  if (!vodId) return <span style={style}>{clock(seconds)}</span>;
   return (
-    <a
-      href={`https://www.twitch.tv/videos/${vodId}?t=${seconds}s`}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={style}
-      title={`Open the VOD at ${t}`}
-    >
-      {time}
-    </a>
+    <WatchMoment vodId={vodId} seconds={seconds} streamDate={streamDate} style={style}>
+      {clock(seconds)}
+    </WatchMoment>
   );
 }
 
@@ -161,13 +178,13 @@ function Items({
   );
 }
 
-/** Turns bare m:ss timestamps in body text into VOD links. */
+/** Turns times in body text ("4:05", "102:10", "1:42:10") into moments to watch. */
 function Linkify({ text, vodId }: { text: string; vodId?: string }) {
-  const parts = text.split(/(\b\d{1,2}:\d{2}\b)/g);
+  const parts = text.split(/(\b\d{1,3}:\d{2}(?::\d{2})?\b)/g);
   return (
     <>
       {parts.map((p, i) =>
-        /^\d{1,2}:\d{2}$/.test(p) ? <Stamp key={i} time={p} vodId={vodId} /> : <span key={i}>{p}</span>
+        /^\d{1,3}:\d{2}(?::\d{2})?$/.test(p) ? <Stamp key={i} time={p} vodId={vodId} /> : <span key={i}>{p}</span>
       )}
     </>
   );
@@ -183,11 +200,14 @@ export function CoachReport({
   report,
   twitchVodId,
   streamDurationSeconds,
+  streamDate,
   trajectory,
 }: {
   report: CoachReport;
   twitchVodId?: string;
   streamDurationSeconds?: number;
+  /** When the stream happened, so a player on a deleted broadcast can say why. */
+  streamDate?: string | null;
   trajectory?: Array<{ score: number; date: string; current?: boolean }>;
 }) {
   const strengths = (report.strengths ?? []).filter(Boolean);
@@ -196,8 +216,21 @@ export function CoachReport({
   const rewatch = report.rewatch_moments ?? [];
   const deadZones = report.dead_zones ?? [];
   const duration = streamDurationSeconds ?? 0;
+  const knownTimes = [
+    report.best_moment?.time,
+    report.momentum_crash?.time,
+    ...rewatch.map((r) => r.time),
+    ...antiPatterns.map((a) => a.time),
+    ...deadZones.map((z) => z.time),
+  ]
+    .filter((t): t is string => typeof t === "string")
+    .map(secondsFromStamp)
+    // Only past the first hour can a prose "1:42" mean hours and minutes.
+    .filter((t) => t >= 3600);
 
   return (
+    <StreamDate.Provider value={streamDate ?? null}>
+    <KnownTimes.Provider value={knownTimes}>
     <div style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
       {report.stream_story && (
         <section>
@@ -398,5 +431,7 @@ export function CoachReport({
         </Section>
       )}
     </div>
+    </KnownTimes.Provider>
+    </StreamDate.Provider>
   );
 }

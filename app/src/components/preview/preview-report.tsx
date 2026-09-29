@@ -18,6 +18,7 @@
 import { TIERS } from "@/lib/rank";
 import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
 import { FullReportButton } from "./full-report-button";
+import { WatchMoment } from "@/components/moment/watch-moment";
 
 export interface PreviewPayload {
   twitch_vod_id: string;
@@ -204,15 +205,9 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
           <ol className="pr-clips">
             {peaks.map((p, i) => (
               <li key={i}>
-                <a
-                  className="pr-clip-at"
-                  href={`https://www.twitch.tv/videos/${preview.twitch_vod_id}?t=${Math.max(0, Math.floor(p.start ?? 0))}s`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Watch at ${fmtClock(p.start ?? 0)} on Twitch`}
-                >
+                <WatchMoment vodId={preview.twitch_vod_id} seconds={p.start ?? 0} label={p.title} className="pr-clip-at">
                   {fmtClock(p.start ?? 0)}
-                </a>
+                </WatchMoment>
                 <div>
                   <p className="pr-clip-t">{p.title}</p>
                   {p.hook ? <p className="pr-note">{p.hook}</p> : null}

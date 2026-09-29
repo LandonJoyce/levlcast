@@ -9,7 +9,8 @@
  * moments worth clipping.
  */
 
-import { ArrowUpRight } from "lucide-react";
+import { Play } from "lucide-react";
+import { WatchMoment } from "@/components/moment/watch-moment";
 import { fmtDuration, ReportItem } from "@/components/preview/preview-report";
 import type { WaitingPreviewState } from "@/lib/waiting-preview";
 
@@ -103,15 +104,10 @@ export function WaitingPreview({ state }: { state: WaitingPreviewState }) {
           <ul className="sp-moments">
             {peaks.map((pk, i) => (
               <li key={i} className="sp-moment">
-                <a
-                  className="sp-moment-time"
-                  href={`https://www.twitch.tv/videos/${p.twitch_vod_id}?t=${Math.max(0, Math.floor(pk.start ?? 0))}s`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Watch at ${clock(pk.start ?? 0)} on Twitch`}
-                >
-                  {clock(pk.start ?? 0)} <ArrowUpRight size={11} aria-hidden="true" />
-                </a>
+                <WatchMoment vodId={p.twitch_vod_id} seconds={pk.start ?? 0} label={pk.title} className="sp-moment-time">
+                  <Play size={9} fill="currentColor" aria-hidden="true" />
+                  {clock(pk.start ?? 0)}
+                </WatchMoment>
                 <div>
                   <p className="sp-moment-title">{pk.title}</p>
                   {pk.hook && <p className="sp-moment-hook">{pk.hook}</p>}

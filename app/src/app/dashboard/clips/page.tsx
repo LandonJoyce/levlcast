@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowUpRight, Loader2 } from "lucide-react";
+import { ArrowUpRight, Loader2, Play } from "lucide-react";
 import { GenerateClipButton } from "@/components/dashboard/generate-clip-button";
 import { FailedClipCard } from "@/components/dashboard/failed-clip-card";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
+import { WatchMoment } from "@/components/moment/watch-moment";
 
 /*
  * Clips you've made, and the moments you haven't clipped yet.
@@ -39,14 +40,6 @@ function categoryLabel(c: string | null | undefined): string {
   return c === "funny" ? "Comedy" : c.charAt(0).toUpperCase() + c.slice(1);
 }
 
-function vodLinkAt(twitchVodId: string | null | undefined, secs: number): string | null {
-  if (!twitchVodId) return null;
-  const t = Math.max(0, Math.floor(secs));
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const s = t % 60;
-  return `https://www.twitch.tv/videos/${twitchVodId}?t=${h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`}`;
-}
 
 function shortDate(iso: string | null): string {
   if (!iso) return "";
@@ -138,13 +131,13 @@ export default async function ClipsPage() {
       </p>
       <ol className="sp-moments">
         {g.moments.map((m) => {
-          const href = vodLinkAt(g.twitchVodId, m.start);
           return (
             <li key={m.index} className="sp-moment">
-              {href ? (
-                <a className="sp-moment-time" href={href} target="_blank" rel="noopener noreferrer" title="Open this moment on Twitch">
+              {g.twitchVodId ? (
+                <WatchMoment vodId={g.twitchVodId} seconds={m.start} label={m.title} streamDate={g.date} className="sp-moment-time">
+                  <Play size={9} fill="currentColor" aria-hidden="true" />
                   {clock(m.start)}
-                </a>
+                </WatchMoment>
               ) : (
                 <span className="sp-moment-time">{clock(m.start)}</span>
               )}

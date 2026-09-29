@@ -176,6 +176,7 @@
   font-variant-numeric: tabular-nums;
 }
 .v3 .pr-clip-at:hover { text-decoration-color: var(--ll-fg); }
+.v3 .pr-clip-at:focus-visible { outline: 2px solid var(--ll-fg-mute); outline-offset: 3px; border-radius: 4px; }
 .v3 .pr-clip-t { margin: 0 0 3px; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--ll-fg); }
 .v3 .pr-more { padding-top: 34px; }
 .v3 .pr-more-h {

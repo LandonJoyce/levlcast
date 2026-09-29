@@ -1,7 +1,7 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Play } from "lucide-react";
 import { formatDuration, ordinal } from "@/lib/utils";
 import { VodProgress } from "@/components/dashboard/vod-progress";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
@@ -28,6 +28,8 @@ import { loadWaitingPreview, type WaitingPreviewState } from "@/lib/waiting-prev
 import { loadAnalysisProgress, type AnalysisProgress } from "@/lib/analysis-progress";
 import { FREE_COACHED_SECONDS } from "@/lib/limits";
 import { CoachedPartNote } from "@/components/dashboard/coached-part-note";
+import { WatchMoment } from "@/components/moment/watch-moment";
+import { clock, secondsFromStamp } from "@/lib/moment-time";
 
 /*
  * One page per stream. There used to be two: a summary (score, best clip,
@@ -40,34 +42,6 @@ import { CoachedPartNote } from "@/components/dashboard/coached-part-note";
  *
  * /dashboard/vods/[id]/report redirects here.
  */
-
-/** Twitch VOD link that starts at `secs`. */
-function vodLinkAt(twitchVodId: string | null | undefined, secs: number): string | null {
-  if (!twitchVodId) return null;
-  const safe = Math.max(0, Math.floor(secs));
-  const h = Math.floor(safe / 3600);
-  const m = Math.floor((safe % 3600) / 60);
-  const s = safe % 60;
-  const t = h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`;
-  return `https://www.twitch.tv/videos/${twitchVodId}?t=${t}`;
-}
-
-/** "M:SS" or "H:MM:SS" to seconds. */
-function parseClipTime(t: string | null | undefined): number {
-  if (!t) return 0;
-  const parts = t.split(":").map(Number);
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
-}
-
-function clockTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return h > 0
-    ? `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-    : `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 function categoryLabel(c: string | null | undefined): string {
   if (!c) return "";
@@ -283,7 +257,8 @@ export default async function StreamPage({
   const headline: string | null = report?.punch_line ?? (report?.recommendation ? clean(report.recommendation) : null);
   const mission: string | null = report?.next_stream_goals?.[0] ?? (report?.recommendation ? clean(report.recommendation) : null);
   const bestMoment = report?.best_moment as { time?: string; description?: string } | undefined;
-  const bestLink = bestMoment?.time ? vodLinkAt(vod.twitch_vod_id as string | null, parseClipTime(bestMoment.time)) : null;
+  const twitchId = (vod.twitch_vod_id as string | null) ?? null;
+  const broadcastDate = (vod.stream_date as string | null) ?? null;
   const missed = report?.missed_clip as { time?: string; note?: string } | undefined;
 
   // The stream played back as a sculpture. Only once the result is open,
@@ -498,10 +473,16 @@ export default async function StreamPage({
                     <p className="sp-best">
                       <span className="sp-best-k">Best moment{bestMoment.time ? ` · ${bestMoment.time}` : ""}</span>
                       {bestMoment.description}
-                      {bestLink && (
-                        <a href={bestLink} target="_blank" rel="noopener noreferrer">
-                          Watch on Twitch <ArrowUpRight size={12} aria-hidden="true" />
-                        </a>
+                      {twitchId && bestMoment.time && (
+                        <WatchMoment
+                          vodId={twitchId}
+                          seconds={secondsFromStamp(bestMoment.time)}
+                          label="Best moment"
+                          streamDate={broadcastDate}
+                          className="sp-watch"
+                        >
+                          <Play size={11} fill="currentColor" aria-hidden="true" /> Watch it
+                        </WatchMoment>
                       )}
                     </p>
                   )}
@@ -595,15 +576,15 @@ export default async function StreamPage({
                     const start = Number(peak.start);
                     const end = Number(peak.end);
                     const clip = clipForPeak(start, end);
-                    const href = vodLinkAt(vod.twitch_vod_id as string | null, start);
                     return (
                       <li key={`peak-${i}`} className="sp-moment">
-                        {href ? (
-                          <a className="sp-moment-time" href={href} target="_blank" rel="noopener noreferrer" title="Open this moment on Twitch">
-                            {clockTime(start)}
-                          </a>
+                        {twitchId ? (
+                          <WatchMoment vodId={twitchId} seconds={start} label={peak.title} streamDate={broadcastDate} className="sp-moment-time">
+                            <Play size={9} fill="currentColor" aria-hidden="true" />
+                            {clock(start)}
+                          </WatchMoment>
                         ) : (
-                          <span className="sp-moment-time">{clockTime(start)}</span>
+                          <span className="sp-moment-time">{clock(start)}</span>
                         )}
                         <div className="sp-moment-main">
                           <p className="sp-moment-title">
@@ -629,17 +610,19 @@ export default async function StreamPage({
                   })}
                   {missed?.time && missed?.note && (
                     <li className="sp-moment sp-missed">
-                      {vodLinkAt(vod.twitch_vod_id as string | null, parseClipTime(missed.time)) ? (
-                        <a
+                      {twitchId ? (
+                        <WatchMoment
+                          vodId={twitchId}
+                          seconds={secondsFromStamp(missed.time)}
+                          label="Almost a clip"
+                          streamDate={broadcastDate}
                           className="sp-moment-time"
-                          href={vodLinkAt(vod.twitch_vod_id as string | null, parseClipTime(missed.time))!}
-                          target="_blank"
-                          rel="noopener noreferrer"
                         >
-                          {missed.time}
-                        </a>
+                          <Play size={9} fill="currentColor" aria-hidden="true" />
+                          {clock(secondsFromStamp(missed.time))}
+                        </WatchMoment>
                       ) : (
-                        <span className="sp-moment-time">{missed.time}</span>
+                        <span className="sp-moment-time">{clock(secondsFromStamp(missed.time))}</span>
                       )}
                       <div className="sp-moment-main">
                         <p className="sp-moment-title">Almost a clip</p>
@@ -658,6 +641,7 @@ export default async function StreamPage({
                 report={report as any}
                 twitchVodId={vod.twitch_vod_id ?? undefined}
                 streamDurationSeconds={vod.duration_seconds ?? undefined}
+                streamDate={broadcastDate}
                 trajectory={trajectory}
               />
             </FullBreakdown>
