@@ -50,3 +50,20 @@ export function twitchEmbedAt(vodId: string, seconds: number, parent: string): s
 
 /** Twitch keeps most past broadcasts 7 days (14 for Affiliates, 60 for Partners). */
 export const TWITCH_SHORTEST_KEEP_DAYS = 7;
+
+/**
+ * A time written in prose. The coach sometimes writes "at 1:42" meaning
+ * 1:42:10, so when one of the exact times it gave elsewhere in the report
+ * falls in that hour and minute, that's the one; otherwise it's minutes
+ * and seconds. `known` is those exact times, in seconds.
+ */
+export function resolveStamp(time: string, known: number[]): number {
+  const plain = secondsFromStamp(time);
+  const parts = time.split(":");
+  if (parts.length !== 2) return plain;
+  const hourMinute = Number(parts[0]) * 3600 + Number(parts[1]) * 60;
+  return known.find((k) => k >= hourMinute && k < hourMinute + 60) ?? plain;
+}
+
+/** Times written inside text: "4:05", "102:10", "1:42:10". */
+export const TIME_IN_TEXT = /\b\d{1,3}:\d{2}(?::\d{2})?\b/g;

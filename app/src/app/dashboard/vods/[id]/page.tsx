@@ -13,7 +13,7 @@ import { FirstScoreCelebration } from "@/components/dashboard/first-score-celebr
 import { RankPanel } from "@/components/dashboard/rank-panel";
 import { StreamScorecard } from "@/components/dashboard/stream-scorecard";
 import { FullBreakdown } from "@/components/dashboard/full-breakdown";
-import { CoachReport } from "@/components/dashboard/coach-report";
+import { VisualBreakdown } from "@/components/dashboard/visual-breakdown";
 import { DownloadClip, CopyCaption, PostToYouTube, DeleteClip } from "@/components/dashboard/clip-actions";
 import { getLeagueView, passedByStream } from "@/lib/league";
 import { currentWeekStart } from "@/lib/limits";
@@ -739,10 +739,10 @@ export default async function StreamPage({
 
           {report ? (
             <FullBreakdown>
-              <CoachReport
+              <VisualBreakdown
                 report={report as any}
-                twitchVodId={vod.twitch_vod_id ?? undefined}
-                streamDurationSeconds={vod.duration_seconds ?? undefined}
+                twitchVodId={twitchId ?? undefined}
+                durationSeconds={vod.duration_seconds ?? undefined}
                 streamDate={broadcastDate}
                 trajectory={trajectory}
               />
