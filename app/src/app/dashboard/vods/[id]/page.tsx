@@ -25,6 +25,7 @@ import { replayFromVod } from "@/components/replay/replay-data";
 import { WaitingPreview } from "@/components/dashboard/waiting-preview";
 import { ForgetPendingVod } from "@/components/dashboard/forget-pending-vod";
 import { loadWaitingPreview, type WaitingPreviewState } from "@/lib/waiting-preview";
+import { loadAnalysisProgress, type AnalysisProgress } from "@/lib/analysis-progress";
 
 /*
  * One page per stream. There used to be two: a summary (score, best clip,
@@ -198,17 +199,20 @@ export default async function StreamPage({
   const isReady = vod.status === "ready";
   const isVodProcessing = vod.status === "transcribing" || vod.status === "analyzing";
 
-  // While it runs: the free report on this stream's opening, when there is
-  // one, and whether this is their first report at all.
+  // While it runs: how far along it is, the free report on this stream's
+  // opening when there is one, and whether this is their first report.
   let waiting: WaitingPreviewState | null = null;
   let firstReport = false;
+  let progress: AnalysisProgress | null = null;
   if (isVodProcessing) {
-    const [preview, { count: readyCount }] = await Promise.all([
+    const [preview, { count: readyCount }, recorded] = await Promise.all([
       loadWaitingPreview(vod.twitch_vod_id as string | null),
       supabase.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "ready"),
+      loadAnalysisProgress(supabase, [id]),
     ]);
     waiting = preview;
     firstReport = (readyCount ?? 0) === 0;
+    progress = recorded.get(id) ?? null;
   }
 
   const readyClips = clips.filter((c) => c.status === "ready" && !c.is_highlight_reel);
@@ -345,7 +349,8 @@ export default async function StreamPage({
             <VodProgress
               status={vod.status}
               durationSeconds={vod.duration_seconds}
-              stepStartedAt={(vod.updated_at as string | null) ?? null}
+              updatedAt={(vod.updated_at as string | null) ?? null}
+              progress={progress}
               now={Date.now()}
               first={firstReport}
               emailed={!!user?.email}

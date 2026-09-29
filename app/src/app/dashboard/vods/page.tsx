@@ -10,6 +10,8 @@ import { FeedbackButton } from "@/components/dashboard/feedback-button";
 import { getUserUsage } from "@/lib/limits";
 import { isPlacementDelta } from "@/lib/rank";
 import { isLocked, isSealed } from "@/lib/sealed";
+import { loadAnalysisProgress } from "@/lib/analysis-progress";
+import { AnalysisBar } from "@/components/dashboard/analysis-bar";
 
 /*
  * Every stream synced from Twitch, newest first, one row each. This was a
@@ -74,7 +76,7 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
   const [{ data: vods }, { data: clips }, usage] = await Promise.all([
     supabase
       .from("vods")
-      .select("id, title, duration_seconds, status, stream_date, created_at, coach_report, thumbnail_url, failed_reason, rank_delta, rank_points_after, result_opened_at, sealed_extra_week")
+      .select("id, title, duration_seconds, status, stream_date, created_at, updated_at, coach_report, thumbnail_url, failed_reason, rank_delta, rank_points_after, result_opened_at, sealed_extra_week")
       .eq("user_id", user.id)
       .order("stream_date", { ascending: false }),
     supabase.from("clips").select("vod_id").eq("user_id", user.id).eq("status", "ready"),
@@ -87,6 +89,11 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
 
   const isProcessing = (s: string) => s === "transcribing" || s === "analyzing";
   const hasProcessing = list.some((v) => isProcessing(v.status));
+  // How far along the running ones are, for their bars.
+  const progress = hasProcessing
+    ? await loadAnalysisProgress(supabase, list.filter((v) => isProcessing(v.status)).map((v) => v.id as string))
+    : new Map();
+  const renderedAt = Date.now();
   const analyzed = list.filter((v) => v.status === "ready").length;
   const notAnalyzed = list.filter((v) => v.status === "pending" || v.status === "failed").length;
 
@@ -218,7 +225,15 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
                           <ChevronRight size={16} aria-hidden="true" />
                         </Link>
                       ) : processing ? (
-                        <span className="sl-busy">Analyzing</span>
+                        <AnalysisBar
+                          input={{
+                            status: v.status,
+                            durationSeconds: v.duration_seconds,
+                            updatedAt: (v.updated_at as string | null) ?? null,
+                            progress: progress.get(v.id) ?? null,
+                          }}
+                          now={renderedAt}
+                        />
                       ) : (
                         <div className="sl-analyze">
                           {needsPro && v.status === "pending" && <span className="sl-pro">Pro</span>}

@@ -12,18 +12,72 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PreviewReport, fmtDuration, type PreviewPayload } from "@/components/preview/preview-report";
 import { rememberRef, track } from "@/components/funnel/track";
+import { ease } from "@/lib/analysis-progress";
 
 /** How often we ask whether the report is done. */
 const POLL_MS = 4000;
 /** Give up after this long. Comfortably past a normal run. */
 const POLL_TIMEOUT_MS = 12 * 60 * 1000;
 
-/** The pipeline's statuses in order, and what each one is doing. */
+/**
+ * The pipeline's statuses in order, what each one is doing, where it sits
+ * on the progress bar, and about how long it usually takes. A whole free
+ * report is about a minute and a half.
+ */
 const STAGES = [
-  { status: "pending", label: "Pulling the stream from Twitch" },
-  { status: "transcribing", label: "Listening to what was said" },
-  { status: "analyzing", label: "Writing the report" },
+  { status: "pending", label: "Pulling the stream from Twitch", from: 0, to: 0.08, seconds: 8 },
+  { status: "transcribing", label: "Listening to what was said", from: 0.08, to: 0.5, seconds: 45 },
+  { status: "analyzing", label: "Writing the report", from: 0.5, to: 0.99, seconds: 45 },
 ] as const;
+
+/**
+ * How close a free report is to done. It's a single 12-minute part, so
+ * there's nothing inside a stage to count: each stage is timed from when
+ * this page saw it start, against how long it usually takes. The bar never
+ * goes backwards and doesn't finish until the report is in.
+ */
+function PreviewProgress({ status }: { status: string }) {
+  const stage = STAGES.find((s) => s.status === status) ?? STAGES[0];
+  // Null until mounted, so the server and the first browser render agree.
+  const [since, setSince] = useState<{ status: string; at: number } | null>(null);
+  const [now, setNow] = useState(0);
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    setSince({ status, at: Date.now() });
+    setNow(Date.now());
+  }, [status]);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const elapsed = since && since.status === status ? Math.max(0, (now - since.at) / 1000) : 0;
+  const fraction = Math.max(shown, stage.from + (stage.to - stage.from) * ease(elapsed / stage.seconds));
+  useEffect(() => setShown(fraction), [fraction]);
+  const pct = Math.round(fraction * 100);
+
+  return (
+    <div className="az-prog">
+      <div className="az-prog-row">
+        <span
+          className="az-prog-track"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="How far along the report is"
+        >
+          <span style={{ width: `${(fraction * 100).toFixed(1)}%` }} />
+        </span>
+        <span className="az-prog-pct">{pct}%</span>
+      </div>
+      <p className="az-prog-now" aria-live="polite">
+        {stage.label}
+      </p>
+    </div>
+  );
+}
 
 export function AnalyzeClient({
   initialPreview,
@@ -184,25 +238,17 @@ export function AnalyzeClient({
   }
 
   if (working && preview) {
-    const current = STAGES.findIndex((s) => s.status === preview.status);
     const streamer = preview.streamer_display_name || preview.streamer_login;
     const length = preview.duration_seconds ? fmtDuration(preview.duration_seconds) : null;
     return (
       <main className="az-main">
-        <section className="az-run" aria-live="polite">
+        <section className="az-run">
           <p className="v3-label">{via === "name" ? "Reading your latest stream" : "Working on it"}</p>
           <h1 className="az-run-title">{preview.title || "Your stream"}</h1>
           {(streamer || length) && (
             <p className="az-run-meta">{[streamer, length].filter(Boolean).join(" · ")}</p>
           )}
-          <ol className="az-stages">
-            {STAGES.map((s, i) => (
-              <li key={s.status} data-state={i < current ? "done" : i === current ? "now" : "todo"}>
-                <span className="az-stage-mark" aria-hidden="true" />
-                {s.label}
-              </li>
-            ))}
-          </ol>
+          <PreviewProgress status={preview.status} />
           <p className="v3-fine">This takes a minute or two. Keep the tab open and the report shows up here.</p>
         </section>
       </main>

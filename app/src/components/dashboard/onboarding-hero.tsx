@@ -22,7 +22,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TIERS } from "@/lib/rank";
 import { getUserUsage } from "@/lib/limits";
+import { loadAnalysisProgress } from "@/lib/analysis-progress";
 import { AnalyzeButton } from "./analyze-button";
+import { AnalysisBar } from "./analysis-bar";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -46,7 +48,7 @@ export async function OnboardingHero({ syncing = false }: { syncing?: boolean })
   const [{ data: inProgress }, { data: waiting, count }, usage] = await Promise.all([
     supabase
       .from("vods")
-      .select("id, title, duration_seconds, status")
+      .select("id, title, duration_seconds, status, updated_at")
       .eq("user_id", user.id)
       .in("status", ["transcribing", "analyzing"])
       .order("created_at", { ascending: false })
@@ -64,6 +66,7 @@ export async function OnboardingHero({ syncing = false }: { syncing?: boolean })
 
   const streams = waiting ?? [];
   const total = count ?? streams.length;
+  const progress = inProgress ? (await loadAnalysisProgress(supabase, [inProgress.id])).get(inProgress.id) ?? null : null;
 
   return (
     <section className="hm-top ob">
@@ -90,24 +93,18 @@ export async function OnboardingHero({ syncing = false }: { syncing?: boolean })
               {inProgress.title || "Your stream"}
               {inProgress.duration_seconds ? ` · ${formatDuration(inProgress.duration_seconds)}` : ""}
             </p>
-            <ol className="vp-steps">
-              {[
-                ["Pulled from Twitch", "done"],
-                ["Transcribing the audio", inProgress.status === "transcribing" ? "active" : "done"],
-                ["Writing your report", inProgress.status === "transcribing" ? "next" : "active"],
-              ].map(([label, state]) => (
-                <li key={label} className="vp-step" data-state={state}>
-                  <span className="vp-icon" aria-hidden="true">
-                    {state === "done" ? "✓" : state === "active" ? <span className="ob-dot" /> : null}
-                  </span>
-                  <div>
-                    <p className="vp-step-label">{label}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            {/* The stream's own page has the time left and, while this
-                runs, the free report on the stream's opening. */}
+            <AnalysisBar
+              input={{
+                status: inProgress.status,
+                durationSeconds: inProgress.duration_seconds,
+                updatedAt: (inProgress.updated_at as string | null) ?? null,
+                progress,
+              }}
+              now={Date.now()}
+              showTime
+            />
+            {/* The stream's own page has more on where it's up to and,
+                while this runs, the free report on the stream's opening. */}
             <div className="hm-actions">
               <Link href={`/dashboard/vods/${inProgress.id}`} className="btn btn-ghost">
                 Open your stream

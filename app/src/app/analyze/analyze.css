@@ -33,33 +33,20 @@
   overflow-wrap: anywhere;
 }
 .v3 .az-run-meta { margin: 0; font-size: 14px; color: var(--ll-fg-dim); }
-.v3 .az-stages {
-  margin: 28px 0 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--ll-line-soft);
+.v3 .az-prog { margin: 32px 0 20px; }
+.v3 .az-prog-row { display: flex; align-items: center; gap: 16px; }
+.v3 .az-prog-track { flex: 1; height: 8px; overflow: hidden; border-radius: 4px; background: var(--ll-line-soft); }
+.v3 .az-prog-track span { display: block; height: 100%; border-radius: inherit; background: var(--ll-fg); transition: width 0.5s linear; }
+.v3 .az-prog-pct {
+  min-width: 3.2ch;
+  font-family: var(--v3-display);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
-.v3 .az-stages li {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--ll-line-soft);
-  font-size: 15px;
-  color: var(--ll-fg-faint);
-}
-.v3 .az-stages li[data-state="done"] { color: var(--ll-fg-dim); }
-.v3 .az-stages li[data-state="now"] { color: var(--ll-fg); font-weight: 600; }
-.v3 .az-stage-mark {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--ll-line-med);
-  border-radius: 50%;
-}
-.v3 [data-state="done"] .az-stage-mark { background: var(--ll-fg-dim); border-color: var(--ll-fg-dim); }
-.v3 [data-state="now"] .az-stage-mark { border-color: var(--ll-fg); animation: az-pulse 1.4s ease-in-out infinite; }
-@keyframes az-pulse { 50% { background: var(--ll-fg); } }
+.v3 .az-prog-now { margin: 14px 0 0; font-size: 15px; font-weight: 600; color: var(--ll-fg); }
 .v3 .az-fail { max-width: 52ch; margin: 0; font-size: 17px; line-height: 1.55; color: var(--ll-fg-mute); }
 .v3 .az-again { margin-top: 36px; }
 
@@ -245,7 +232,7 @@
 .v3 .pr-ladder img { width: 100%; height: 100%; object-fit: contain; }
 
 @media (prefers-reduced-motion: reduce) {
-  .v3 [data-state="now"] .az-stage-mark { animation: none; background: var(--ll-fg); }
+  .v3 .az-prog-track span { transition: none; }
 }
 
 @media (max-width: 640px) {

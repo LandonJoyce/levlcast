@@ -50,6 +50,24 @@ async function readyKind(
   return "result";
 }
 
+/**
+ * Record how many transcription parts are done, for the progress bars
+ * (lib/analysis-progress.ts). Needs migration 035; until then the column
+ * isn't there, the write fails and the bars time each step instead.
+ */
+async function saveProgress(
+  supabase: ReturnType<typeof createAdminClient>,
+  vodId: string,
+  partsDone: number,
+  partsTotal: number
+): Promise<void> {
+  const { error } = await supabase
+    .from("vods")
+    .update({ progress: { parts_done: partsDone, parts_total: partsTotal, at: new Date().toISOString() } })
+    .eq("id", vodId);
+  if (error) console.warn(`[analyze] progress not recorded: ${error.message}`);
+}
+
 export const analyzeVod = inngest.createFunction(
   {
     id: "analyze-vod",
@@ -194,6 +212,11 @@ export const analyzeVod = inngest.createFunction(
         ? Buffer.from(segmentSetup.initSegmentBase64, "base64")
         : null;
 
+      // How many parts are done, recorded after each round for the progress
+      // bars (lib/analysis-progress.ts). Each write is its own small step so
+      // replays and retries never write an old count over a newer one.
+      await step.run("progress-0", () => saveProgress(supabase, vodId, 0, chunks.length));
+
       for (let batchStart = 0; batchStart < chunks.length; batchStart += BATCH_CONCURRENCY) {
         const batch = chunks
           .slice(batchStart, batchStart + BATCH_CONCURRENCY)
@@ -220,6 +243,9 @@ export const analyzeVod = inngest.createFunction(
           allChunkSegments[index] = result.segments;
           allChunkWords[index] = result.words;
         });
+
+        const partsDone = Math.min(chunks.length, batchStart + BATCH_CONCURRENCY);
+        await step.run(`progress-${partsDone}`, () => saveProgress(supabase, vodId, partsDone, chunks.length));
       }
 
       const allWords = allChunkWords.flat();
