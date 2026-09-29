@@ -14,6 +14,44 @@ import {
 
 export type StreamLayout = "no_cam" | "cam_br" | "cam_bl" | "cam_tr" | "cam_tl";
 
+/** Where the facecam sits in the source frame, as fractions of its width and height. */
+export interface CamBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** How a 16:9 clip is laid out as 9:16. */
+export interface VerticalLayout {
+  /** The facecam's box in the source frame, or null for gameplay only. */
+  cam: CamBox | null;
+  /** Which end of the vertical frame the facecam panel sits at. */
+  camAt: "top" | "bottom";
+}
+
+/** The four corner presets older clients send, as boxes a quarter of the frame each way. */
+export function presetLayout(layout: StreamLayout): VerticalLayout {
+  if (layout === "no_cam") return { cam: null, camAt: "top" };
+  const right = layout === "cam_br" || layout === "cam_tr";
+  const bottom = layout === "cam_br" || layout === "cam_bl";
+  return { cam: { x: right ? 0.75 : 0, y: bottom ? 0.75 : 0, w: 0.25, h: 0.25 }, camAt: bottom ? "bottom" : "top" };
+}
+
+/** A box kept inside the frame and at least 5% each way, or null if it isn't a box. */
+export function cleanCamBox(box: Partial<CamBox> | null | undefined): CamBox | null {
+  if (!box) return null;
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+  let { x, y, w, h } = { x: n(box.x), y: n(box.y), w: n(box.w), h: n(box.h) };
+  if ([x, y, w, h].some(Number.isNaN)) return null;
+  w = Math.min(1, Math.max(0.05, w));
+  h = Math.min(1, Math.max(0.05, h));
+  x = Math.min(1 - w, Math.max(0, x));
+  y = Math.min(1 - h, Math.max(0, y));
+  const r = (v: number) => Math.round(v * 10000) / 10000;
+  return { x: r(x), y: r(y), w: r(w), h: r(h) };
+}
+
 // The caption font is bundled with the deployment (see
 // next.config.ts → outputFileTracingIncludes). On Vercel functions live
 // at /var/task/, so the font ends up next to our compiled code. We copy
@@ -49,20 +87,20 @@ async function getCaptionFont(): Promise<string | null> {
  * both sides and becomes unreadable. We burn fresh captions sized for the
  * vertical frame instead.
  *
- * Layout options:
- *   no_cam  — center-crop gameplay to fill the full frame
- *   cam_br  — gameplay top 62%, facecam bottom-right 38%
- *   cam_bl  — gameplay top 62%, facecam bottom-left 38%
- *   cam_tr  — facecam top-right 38%, gameplay bottom 62%
- *   cam_tl  — facecam top-left 38%, gameplay bottom 62%
+ * Layout (VerticalLayout):
+ *   no cam  — center-crop gameplay to fill the full frame
+ *   cam     — the facecam box fills a panel 38% of the height, at the top
+ *             or the bottom; gameplay fills the other 62%. Each panel is
+ *             cropped to its own shape, so nothing is stretched.
+ *
+ * The captions are the clip's own: the ones the streamer edited, in their
+ * style, or the transcript grouped the usual way when they haven't.
  */
 export async function exportClipVertical(
   inputFilePath: string,
-  layout: StreamLayout,
+  layout: VerticalLayout,
   captionData?: {
-    vodWords: CaptionWord[];
-    clipStart: number;
-    clipEnd: number;
+    cards: CaptionCard[];
     style?: CaptionStyle;
   }
 ): Promise<Buffer> {
@@ -76,25 +114,22 @@ export async function exportClipVertical(
   const gameH = Math.round(H * 0.62);  // 1190 px
   const camH  = H - gameH;             // 730 px
 
-  // Build vertical captions if word data is available.
-  // Cards are clip-relative (0 = clip start). The export processes the full
-  // clip (no -ss offset), so no timestamp offset is needed — unlike cutClip.
+  // Vertical captions. Cards are clip-relative (0 = clip start). The export
+  // processes the full clip (no -ss offset), so no timestamp offset is
+  // needed — unlike cutClip.
   let captionFilter = "";
   let captionFiles: string[] = [];
-  if (captionData?.vodWords?.length) {
+  if (captionData?.cards?.length) {
     try {
       const fontPath = await getCaptionFont();
       if (fontPath) {
-        const sliced = sliceWordsForClip(captionData.vodWords, captionData.clipStart, captionData.clipEnd);
-        const cards = groupWordsIntoCards(sliced);
+        const cards = captionData.cards;
         if (cards.length > 0) {
-          // Y position within the game area so captions don't land in the facecam.
-          // For cam_tr/tl the game is at the bottom (starts at y=camH).
-          const isGameBottom = layout === "cam_tr" || layout === "cam_tl";
-          const yExpr = isGameBottom
-            ? `(${camH}+${gameH}*0.72)-(text_h/2)`
-            : layout === "no_cam"
-              ? `(h*0.72)-(text_h/2)`
+          // In the gameplay panel, so captions never land on the facecam.
+          const yExpr = !layout.cam
+            ? `(h*0.72)-(text_h/2)`
+            : layout.camAt === "top"
+              ? `(${camH}+${gameH}*0.72)-(text_h/2)`
               : `(${gameH}*0.72)-(text_h/2)`;
 
           const built = await buildCaptionFilters(cards, {
@@ -108,7 +143,7 @@ export async function exportClipVertical(
           });
           captionFilter = built.filter;
           captionFiles = built.textFiles;
-          console.log(`[export] Vertical captions: ${cards.length} cards, layout=${layout}`);
+          console.log(`[export] Vertical captions: ${cards.length} cards, cam=${layout.cam ? `${layout.camAt}` : "none"}`);
         }
       }
     } catch (err) {
@@ -160,8 +195,16 @@ export async function exportClipVertical(
   }
 }
 
-function buildVerticalFilterComplex(
-  layout: StreamLayout,
+/**
+ * The 9:16 filter graph. Gameplay is a centered crop in the shape of the
+ * panel it fills (the whole frame, or the 62% gameplay panel), and the
+ * facecam box fills its panel the way CSS object-fit: cover would. It used
+ * to crop gameplay to 9:16 and then scale it into the wider gameplay
+ * panel, which stretched it about 1.6x sideways, and the two bottom-corner
+ * presets cropped three quarters of the frame instead of the corner.
+ */
+export function buildVerticalFilterComplex(
+  layout: VerticalLayout,
   W: number,
   H: number,
   gameH: number,
@@ -169,25 +212,25 @@ function buildVerticalFilterComplex(
   captionFilter: string = ""
 ): string {
   const audioChain = `[0:a]asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[aout]`;
-  const gameCrop = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${gameH},setpts=PTS-STARTPTS`;
   // Caption filter starts with "," — appended directly before [vout] label
   const cap = captionFilter; // e.g. ",drawtext=...,drawtext=..."
+  const f = (n: number) => n.toFixed(4);
+  /** A centered crop of the whole frame in the shape `aspect` (width / height). */
+  const centerCrop = (aspect: number) =>
+    `crop='min(iw,ih*${f(aspect)})':'min(ih,iw/${f(aspect)})'`;
 
   let videoChain: string;
+  const cam = cleanCamBox(layout.cam);
 
-  if (layout === "no_cam") {
-    videoChain = `[0:v]crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=${W}:${H},setpts=PTS-STARTPTS${cap}[vout]`;
+  if (!cam) {
+    videoChain = `[0:v]${centerCrop(W / H)},scale=${W}:${H},setsar=1,setpts=PTS-STARTPTS${cap}[vout]`;
   } else {
-    const camCorners: Record<string, string> = {
-      cam_br: `iw*0.75:ih*0.75:iw*0.75:ih*0.75`,
-      cam_bl: `iw*0.25:ih*0.75:0:ih*0.75`,
-      cam_tr: `iw*0.25:ih*0.25:iw*0.75:0`,
-      cam_tl: `iw*0.25:ih*0.25:0:0`,
-    };
-    const camCrop = `crop=${camCorners[layout]},scale=${W}:${camH}:force_original_aspect_ratio=increase,crop=${W}:${camH}:(iw-${W})/2:(ih-${camH})/2,setpts=PTS-STARTPTS`;
-    const isTop = layout === "cam_tr" || layout === "cam_tl";
+    const gameCrop = `${centerCrop(W / gameH)},scale=${W}:${gameH},setsar=1,setpts=PTS-STARTPTS`;
+    const camCrop =
+      `crop=iw*${f(cam.w)}:ih*${f(cam.h)}:iw*${f(cam.x)}:ih*${f(cam.y)},` +
+      `scale=${W}:${camH}:force_original_aspect_ratio=increase,crop=${W}:${camH},setsar=1,setpts=PTS-STARTPTS`;
 
-    if (isTop) {
+    if (layout.camAt === "top") {
       videoChain = `[0:v]split=2[g][c];[c]${camCrop}[ct];[g]${gameCrop}[gt];[ct][gt]vstack=inputs=2${cap}[vout]`;
     } else {
       videoChain = `[0:v]split=2[g][c];[g]${gameCrop}[gt];[c]${camCrop}[cb];[gt][cb]vstack=inputs=2${cap}[vout]`;

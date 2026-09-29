@@ -205,7 +205,9 @@ export async function POST(
       return NextResponse.json({ error: "Failed to save edit" }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, videoUrl: publicUrl });
+    // The new clean source too: the editor keeps working on the saved cut
+    // without reloading the page.
+    return NextResponse.json({ ok: true, videoUrl: publicUrl, sourceUrl: cleanUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[edit] Failed for clip=${id}:`, message);

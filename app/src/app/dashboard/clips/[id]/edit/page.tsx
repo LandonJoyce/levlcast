@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { ClipEditor } from "@/components/dashboard/clip-editor";
 import { getUserUsage } from "@/lib/limits";
+import { roboto } from "@/app/fonts";
 import {
   sliceWordsForClip,
   groupWordsIntoCards,
@@ -12,12 +14,38 @@ import {
 } from "@/lib/captions";
 
 /**
- * Clip editor — trim, caption text, hook frame.
+ * Clip editor — trim, captions, format and facecam, cover.
  *
  * The editor works against the clip's stored clean source on R2 so re-cuts
  * are fast and don't require Twitch redownload. Bounds are constrained to
  * the original cut window — extending outward isn't supported here.
  */
+
+/** "48 seconds", or "2:05" from a minute up. */
+function clipLength(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s} seconds`;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function CantEdit({ title, body }: { title: string; body: string }) {
+  return (
+    <>
+      <header className="sp-head">
+        <Link href="/dashboard/clips" className="sp-back">
+          <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" /> Clips
+        </Link>
+      </header>
+      <div className="sp-state">
+        <p className="sp-state-title">{title}</p>
+        <p>{body}</p>
+        <Link href="/dashboard/clips" className="btn btn-ghost">
+          Back to clips
+        </Link>
+      </div>
+    </>
+  );
+}
 export default async function ClipEditPage({
   params,
 }: {
@@ -43,17 +71,10 @@ export default async function ClipEditPage({
   if (!clip) notFound();
   if (!clip.source_video_url) {
     return (
-      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", margin: "0 0 10px" }}>
-          This clip can't be edited
-        </h2>
-        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 0 16px" }}>
-          It was generated before the editor existed and doesn't have a clean source on file. Generate a new clip from the same moment to edit.
-        </p>
-        <Link href="/dashboard/clips" className="btn btn-ghost" style={{ fontSize: 12 }}>
-          Back to clips
-        </Link>
-      </div>
+      <CantEdit
+        title="This clip can't be edited."
+        body="It was made before the editor existed, so there's no clean copy on file. Make a new clip from the same moment and that one can be edited."
+      />
     );
   }
 
@@ -65,17 +86,10 @@ export default async function ClipEditPage({
   const reelSegments = (clip.reel_segments as Array<{ vodStart: number; vodEnd: number; reelStart: number; reelEnd: number }> | null) ?? null;
   if (isReel && (!reelSegments || reelSegments.length === 0)) {
     return (
-      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", margin: "0 0 10px" }}>
-          Re-generate this reel to edit it
-        </h2>
-        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 0 16px" }}>
-          This highlight reel was made before the editor supported reels. Regenerate it from the stream's report and the new copy will be editable.
-        </p>
-        <Link href="/dashboard/clips" className="btn btn-ghost" style={{ fontSize: 12 }}>
-          Back to clips
-        </Link>
-      </div>
+      <CantEdit
+        title="Make this reel again to edit it."
+        body="It was made before the editor handled reels. Make it again from the stream's page and the new one can be edited."
+      />
     );
   }
 
@@ -115,21 +129,30 @@ export default async function ClipEditPage({
     }
   }
 
+  const videoUrl = (clip.source_video_url as string) ?? (clip.video_url as string);
+
   return (
-    <>
+    <div className={`${roboto.variable} ce-page`}>
       <header className="sp-head">
         <Link href="/dashboard/clips" className="sp-back">
-          ← Clips
+          <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" /> Clips
         </Link>
-        <div>
-          <h1 className="page-title sp-title">{(clip.title as string) || "Edit clip"}</h1>
-          <p className="page-sub mh-sub">Trim it, fix caption typos, pick a hook frame. Edits don&apos;t use up a clip.</p>
+        <div className="sp-head-row">
+          <div className="sp-head-main">
+            <h1 className="page-title sp-title">{(clip.title as string) || "Edit clip"}</h1>
+            <p className="sp-meta">
+              {isReel ? "Highlight reel" : "Clip"} · {clipLength(fullDuration)}
+            </p>
+          </div>
         </div>
       </header>
 
+      {/* Keyed on the source so going back to the original cut starts the
+          editor over on it. */}
       <ClipEditor
+        key={videoUrl}
         clipId={clip.id as string}
-        videoUrl={(clip.source_video_url as string) ?? (clip.video_url as string)}
+        videoUrl={videoUrl}
         capturedThumbnailUrl={(clip.thumbnail_url as string | null) ?? null}
         candidateFrames={(clip.candidate_frames as string[] | null) ?? []}
         fullDuration={fullDuration}
@@ -141,6 +164,6 @@ export default async function ClipEditPage({
         hasOriginal={!!clip.original_video_url}
         title={(clip.title as string) ?? ""}
       />
-    </>
+    </div>
   );
 }

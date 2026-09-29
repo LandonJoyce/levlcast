@@ -1545,3 +1545,161 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
   cursor: pointer;
 }
 .dash .fn-range[data-on="1"] { border-color: var(--ink-3); color: var(--ink); }
+
+/* ── Clip editor (components/dashboard/clip-editor.tsx) ──
+   The preview on the left draws exactly what gets exported; everything
+   you can change sits on the right, split by rules like the rest of the
+   dashboard. */
+/* The page's wrapper only carries the caption font; its children space like any page's. */
+.dash .ce-page { display: contents; }
+.dash .ce { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 40px; align-items: start; }
+.dash .ce-stage { display: grid; gap: 14px; }
+/* The preview stays in view while the captions are edited, below the bar. */
+@media (min-width: 981px) and (min-height: 680px) {
+  .dash .ce-stage { position: sticky; top: 86px; }
+}
+.dash .ce-frame-wrap { display: flex; justify-content: center; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: rgba(0, 0, 0, 0.35); }
+.dash .ce-frame { position: relative; overflow: hidden; border-radius: 8px; background: #000; cursor: pointer; }
+/* Tall enough to judge, short enough that the play button and the
+   timeline fit under it on the first screen, below the page title. */
+.dash .ce-frame[data-format="vertical"] { height: clamp(320px, calc(100vh - 450px), 640px); aspect-ratio: 9 / 16; }
+.dash .ce-frame[data-format="horizontal"] { width: 100%; aspect-ratio: 16 / 9; }
+.dash .ce-src { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+/* Still in the page (hidden videos stop decoding in some browsers), just not seen. */
+.dash .ce-src-hidden { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.dash .ce-canvas { display: block; width: 100%; height: 100%; }
+.dash .ce-cap {
+  position: absolute;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-roboto), Roboto, Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1.18;
+  white-space: nowrap;
+  text-align: center;
+  paint-order: stroke fill;
+  pointer-events: none;
+}
+.dash .ce-transport { display: flex; align-items: center; gap: 12px; }
+.dash .ce-play { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line-2); border-radius: 50%; background: none; color: var(--ink); cursor: pointer; }
+.dash .ce-play:hover { border-color: var(--ink-3); }
+.dash .ce-clock { margin: 0; font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.dash .ce-clock span { color: var(--ink-3); }
+.dash .ce-dirty { margin: 0 0 0 auto; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warn); }
+
+/* The timeline: the clip on a line, trim handles at its ends. */
+.dash .ce-tl { display: grid; gap: 8px; }
+.dash .ce-tl-track { position: relative; height: 50px; border-radius: 8px; background: rgba(255, 238, 230, 0.05); cursor: pointer; touch-action: none; user-select: none; }
+/* Over the caption marks, so lines that got cut look cut. */
+.dash .ce-tl-out { position: absolute; top: 0; bottom: 0; z-index: 1; background: rgba(16, 13, 14, 0.66); pointer-events: none; }
+.dash .ce-tl-out:first-child { border-radius: 8px 0 0 8px; }
+.dash .ce-tl-keep { position: absolute; top: 0; bottom: 0; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); background: rgba(255, 238, 230, 0.07); pointer-events: none; }
+.dash .ce-tl-cap { position: absolute; bottom: 10px; height: 12px; padding: 0; border: 0; border-radius: 3px; background: rgba(255, 238, 230, 0.3); cursor: pointer; }
+.dash .ce-tl-cap:hover { background: rgba(255, 238, 230, 0.55); }
+.dash .ce-tl-cap[data-active] { background: var(--ink); }
+.dash .ce-tl-head { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--warn); pointer-events: none; }
+.dash .ce-tl-handle { position: absolute; top: -3px; bottom: -3px; z-index: 2; width: 14px; margin-left: -7px; border-radius: 5px; background: var(--ink); cursor: ew-resize; }
+.dash .ce-tl-handle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 18px; margin: -9px 0 0 -1px; border-radius: 1px; background: rgba(16, 13, 14, 0.5); }
+.dash .ce-tl-handle:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+.dash .ce-tl-times { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+
+/* The side: format, facecam, captions, cover, save. */
+.dash .ce-side { display: grid; }
+.dash .ce-sec { padding: 22px 0; border-top: 1px solid var(--line); }
+.dash .ce-sec:first-child { padding-top: 0; border-top: 0; }
+.dash .ce-sec .hm-k { align-items: center; }
+.dash .ce-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.dash .ce-link:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.dash .ce-link:disabled { opacity: 0.5; cursor: default; }
+.dash .ce-hint { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.dash .ce-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dash .ce-seg button { display: grid; gap: 3px; padding: 11px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: none; color: var(--ink-3); text-align: left; cursor: pointer; }
+.dash .ce-seg button b { font-family: var(--numbers); font-weight: 900; font-size: 22px; line-height: 1; color: var(--ink-2); }
+.dash .ce-seg button span { font-size: 12px; }
+.dash .ce-seg button:hover { border-color: var(--ink-3); }
+.dash .ce-seg button[aria-checked="true"] { border-color: var(--ink); background: rgba(255, 238, 230, 0.06); color: var(--ink-2); }
+.dash .ce-seg button[aria-checked="true"] b { color: var(--ink); }
+.dash .ce-seg-sm button { padding: 8px 10px; font-size: 13px; text-align: center; }
+.dash .ce-row { margin-top: 12px; }
+.dash .ce-cam { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 8px; background: #000; cursor: crosshair; touch-action: none; user-select: none; }
+.dash .ce-cam canvas { display: block; width: 100%; height: 100%; }
+.dash .ce-cam-box { position: absolute; border: 2px solid var(--ink); border-radius: 4px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); cursor: move; }
+.dash .ce-cam-tag {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--ink);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(16, 13, 14);
+  pointer-events: none;
+}
+.dash .ce-cam-grip { position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; border-radius: 4px; background: var(--ink); cursor: nwse-resize; }
+.dash .ce-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dash .ce-presets button { padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: none; font-size: 11.5px; color: var(--ink-3); cursor: pointer; }
+.dash .ce-presets button:hover { border-color: var(--ink-3); color: var(--ink); }
+.dash .ce-styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.dash .ce-styles button {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 11px 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(12, 10, 11);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.dash .ce-styles button:hover { border-color: var(--ink-3); }
+.dash .ce-styles button[aria-checked="true"] { border-color: var(--ink); color: var(--ink); }
+.dash .ce-style-aa { font-family: var(--font-roboto), Roboto, Arial, sans-serif; font-weight: 700; line-height: 1; paint-order: stroke fill; }
+.dash .ce-lines { list-style: none; display: grid; gap: 3px; max-height: 320px; margin: 14px 0 0; padding: 0 4px 0 0; overflow-y: auto; }
+.dash .ce-lines li { display: grid; grid-template-columns: 50px minmax(0, 1fr) 28px; align-items: center; gap: 6px; padding: 2px 2px 2px 0; border-radius: 8px; }
+.dash .ce-lines li[data-active] { background: rgba(255, 238, 230, 0.06); }
+.dash .ce-lines li[data-outside] { opacity: 0.4; }
+.dash .ce-line-t { padding: 6px 0 6px 6px; border: 0; background: none; font-family: var(--mono); font-size: 11px; text-align: left; color: var(--ink-3); cursor: pointer; }
+.dash .ce-line-t:hover { color: var(--ink); }
+.dash .ce-lines input { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: rgb(12, 10, 11); font-size: 13.5px; color: var(--ink); }
+.dash .ce-lines input:focus { outline: none; border-color: var(--ink-3); }
+.dash .ce-line-x { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 7px; background: none; color: var(--ink-4); cursor: pointer; }
+.dash .ce-line-x:hover { background: rgba(255, 238, 230, 0.06); color: var(--ink); }
+.dash .ce-covers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.dash .ce-covers button { position: relative; overflow: hidden; aspect-ratio: 16 / 9; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: #000; cursor: pointer; }
+.dash .ce-covers img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.dash .ce-covers button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.dash .ce-covers svg { position: absolute; right: 4px; top: 4px; padding: 2px; border-radius: 50%; background: var(--ink); color: rgb(16, 13, 14); }
+.dash .ce-ship { display: grid; gap: 10px; }
+.dash .ce-go { width: 100%; justify-content: center; }
+.dash .ce-go:disabled { opacity: 0.5; cursor: default; }
+.dash .ce-error { margin: 0; font-size: 13px; line-height: 1.5; color: var(--danger); }
+.dash .ce-busy { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--ink-2); }
+.dash .ce-done { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; font-size: 13px; color: var(--ink-2); }
+.dash .ce-done svg { color: var(--green); }
+.dash .ce-done a { font-weight: 600; color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.dash .ce-cover-now { display: flex; align-items: center; gap: 12px; }
+.dash .ce-cover-now img { flex: none; width: 96px; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--line); border-radius: 6px; }
+.dash .ce-cover-now .ce-hint { margin: 0; }
+@media (max-width: 980px) {
+  .dash .ce { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  /* svh: the screen with the browser's bars showing, so the timeline is on the first one. */
+  .dash .ce-frame[data-format="vertical"] { height: clamp(300px, calc(100vh - 400px), 560px); height: clamp(300px, calc(100svh - 400px), 560px); }
+}
+@media (max-width: 560px) {
+  .dash .ce-frame-wrap { padding: 12px; }
+}

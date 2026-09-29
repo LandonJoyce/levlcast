@@ -1,4 +1,16 @@
-import { Big_Shoulders } from "next/font/google";
+import { Big_Shoulders, Roboto } from "next/font/google";
+
+/**
+ * The caption face. Clips are burned with Roboto Bold (src/lib/fonts), so
+ * the clip editor previews captions in the same font at the same size.
+ * Exposed as --font-roboto.
+ */
+export const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-roboto",
+  display: "swap",
+});
 
 /**
  * The condensed face for numbers and result words (scores, ranks, the
