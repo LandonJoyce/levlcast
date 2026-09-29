@@ -68,6 +68,10 @@ export interface ReplayScene {
   seek(minute: number): void;
   /** Let go of the scrubber. */
   release(): void;
+  /** The minute of the stream the replay is showing now. */
+  now(): number;
+  /** Stop where it is (someone opened the stream itself to watch). */
+  pause(): void;
   dispose(): void;
 }
 
@@ -1260,6 +1264,13 @@ export function createReplayScene(opts: SceneOptions): ReplayScene {
       if (!dragging) return;
       dragging = false;
       playing = !reducedMotion;
+    },
+    now() {
+      return clamp(timeline.minuteAt(Math.min(t, SW_END)), 0, D);
+    },
+    pause() {
+      frozen = null;
+      playing = false;
     },
     dispose() {
       cancelAnimationFrame(raf);

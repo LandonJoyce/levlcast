@@ -629,3 +629,54 @@
   .rpl-stage[data-embedded="1"] { height: clamp(560px, 82vh, 760px); }
   .rpl-stage[data-embedded="1"] .rpl-top { top: 16px; }
 }
+
+/* ── Watching the stream itself (components/moment/watch-moment.tsx) ──
+   The replay shows the shape of the stream; these open the stream at a
+   moment: from a pin, or from whatever minute the replay is showing. */
+.rpl-watch {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px 0 12px;
+  border: 1px solid var(--ll-line-med);
+  border-radius: 999px;
+  background: none;
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ll-fg);
+  cursor: pointer;
+}
+.rpl-watch svg { width: 14px; height: 14px; }
+.rpl-watch:hover { border-color: var(--ll-fg-dim); }
+.rpl-watch:disabled { opacity: 0.35; cursor: default; }
+.rpl-watch:focus-visible { outline: 2px solid var(--ll-fg-mute); outline-offset: 2px; }
+.rpl-pin-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 3px 10px 3px 7px;
+  border: 1px solid color-mix(in oklab, var(--tone) 60%, transparent);
+  border-radius: 999px;
+  background: rgba(16, 13, 14, 0.72);
+  font-family: var(--ll-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow: none;
+  color: var(--ll-fg);
+  cursor: pointer;
+}
+.rpl-pin-watch svg { width: 11px; height: 11px; }
+.rpl-pin-watch:hover { border-color: var(--tone); }
+.rpl-pin[data-flip="1"] .rpl-pin-watch { margin-left: auto; }
+/* A faded-out pin's button can't be pressed. */
+.rpl-pin[data-on="0"] .rpl-pin-watch,
+.rpl-now[data-on="0"] .rpl-pin-watch { pointer-events: none; }
+.rpl-now .rpl-pin-watch { margin-top: 2px; }
+.rpl-now[data-flip="1"] .rpl-pin-watch { margin-left: auto; }

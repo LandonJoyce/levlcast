@@ -340,6 +340,7 @@ export default async function StreamPage({
       ? replayFromVod({
           title: vod.title as string | null,
           stream_date: vod.stream_date as string | null,
+          twitch_vod_id: twitchId,
           coach_report: report,
           peak_data: vod.peak_data,
           chat_pulse: vod.chat_pulse,

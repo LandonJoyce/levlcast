@@ -70,6 +70,22 @@ export function WatchMoment({
   );
 }
 
+export interface Moment {
+  vodId: string;
+  seconds: number;
+  label?: string;
+  streamDate?: string | null;
+}
+
+/**
+ * The same player, opened from code instead of a button: the replay opens
+ * it at whatever minute it's showing. Null keeps it closed.
+ */
+export function MomentDialog({ moment, onClose }: { moment: Moment | null; onClose: () => void }) {
+  if (!moment) return null;
+  return createPortal(<MomentPlayer {...moment} onClose={onClose} />, document.body);
+}
+
 function MomentPlayer({
   vodId,
   seconds,

@@ -56,6 +56,10 @@ export interface ReplayData {
   hasChat: boolean;
   /** Only the example has chat lines to show. A real stream's chat text isn't kept, and none is made up. */
   illustrativeChat?: boolean;
+  /** The past broadcast on Twitch, so any moment can be watched in place. Real streams only. */
+  vodId?: string;
+  /** When it was streamed, for the player's note on broadcasts Twitch has deleted. */
+  streamDate?: string | null;
 }
 
 /** One message in the replay's chat box. No usernames: nobody here is real. */
@@ -118,6 +122,7 @@ export function replayResult(d: ReplayData): DeltaResult {
 export interface VodForReplay {
   title: string | null;
   stream_date: string | null;
+  twitch_vod_id?: string | null;
   coach_report: Record<string, unknown> | null;
   peak_data: unknown;
   chat_pulse: unknown;
@@ -284,6 +289,8 @@ export function replayFromVod(v: VodForReplay): ReplayData | null {
     recorded: delta !== null && after !== null ? { pointsAfter: after, delta, placement } : undefined,
     offline,
     hasChat,
+    vodId: v.twitch_vod_id ?? undefined,
+    streamDate: v.stream_date,
   };
 }
 

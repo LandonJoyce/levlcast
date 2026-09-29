@@ -13,6 +13,7 @@ import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { TIER_HEX, type DeltaResult } from "@/lib/rank";
 import { durationLabel, replayResult, sceneAnchors, shortClock, type ReplayData, type SceneAnchor } from "./replay-data";
 import type { ReplayPhase, ReplayScene } from "./replay-scene";
+import { MomentDialog, type Moment } from "@/components/moment/watch-moment";
 import "./replay.css";
 
 type Phase = ReplayPhase | "loading" | "nogl";
@@ -47,6 +48,14 @@ export default function StreamReplay({
   const keyMinute = useRef(0);
   const [phase, setPhase] = useState<Phase>("loading");
   const [caption, setCaption] = useState(-1);
+  // Watching the stream itself, from a pin or from wherever the replay is.
+  const [watching, setWatching] = useState<Moment | null>(null);
+  const vodId = data.vodId;
+  const watch = (seconds: number, label: string) => {
+    if (!vodId) return;
+    sceneRef.current?.pause();
+    setWatching({ vodId, seconds: Math.max(0, Math.floor(seconds)), label, streamDate: data.streamDate });
+  };
 
   const result = useMemo(() => replayResult(data), [data]);
   const anchors = useMemo(() => sceneAnchors(data), [data]);
@@ -183,6 +192,7 @@ export default function StreamReplay({
               key={a.id}
               anchor={a}
               data={data}
+              onWatch={vodId ? watch : undefined}
               refFn={(el) => {
                 if (el) labelRefs.current.set(a.id, el);
                 else labelRefs.current.delete(a.id);
@@ -196,6 +206,11 @@ export default function StreamReplay({
           <p className="rpl-now-text" key={caption}>
             {cap ? cap.text : "Replaying your stream."}
           </p>
+          {cap && vodId && (
+            <button type="button" className="rpl-pin-watch" tabIndex={-1} onClick={() => watch(cap.minute * 60, cap.text)}>
+              <PlayIcon /> Watch
+            </button>
+          )}
         </div>
 
         <footer className="rpl-bottom" ref={bottomRef}>
@@ -239,6 +254,20 @@ export default function StreamReplay({
                 <span>{shortClock(D)}</span>
               </div>
             </div>
+            {vodId && (
+              <button
+                type="button"
+                className="rpl-watch"
+                onClick={() => {
+                  const minute = sceneRef.current?.now() ?? 0;
+                  watch(Math.floor(minute) * 60, "Your stream");
+                }}
+                disabled={phase === "loading" || phase === "nogl"}
+                title="Watch the stream from this minute"
+              >
+                <PlayIcon /> Watch this minute
+              </button>
+            )}
             {data.illustrativeChat && (
             <div className="rpl-chatbox" aria-hidden>
               <span className="rpl-chatbox-k">Chat</span>
@@ -267,12 +296,23 @@ export default function StreamReplay({
 
         {phase === "nogl" && <p className="rpl-none">This replay needs WebGL, which this browser has turned off.</p>}
       </div>
+      <MomentDialog moment={watching} onClose={() => setWatching(null)} />
     </section>
   );
 }
 
 /** A note pinned to a moment in the scene, with a hairline down to it. */
-function Pin({ anchor, data, refFn }: { anchor: SceneAnchor; data: ReplayData; refFn: (el: HTMLDivElement | null) => void }) {
+function Pin({
+  anchor,
+  data,
+  refFn,
+  onWatch,
+}: {
+  anchor: SceneAnchor;
+  data: ReplayData;
+  refFn: (el: HTMLDivElement | null) => void;
+  onWatch?: (seconds: number, label: string) => void;
+}) {
   if (anchor.kind === "time") {
     return (
       <div ref={refFn} className="rpl-pin rpl-pin-time" data-on="0">
@@ -291,24 +331,35 @@ function Pin({ anchor, data, refFn }: { anchor: SceneAnchor; data: ReplayData; r
   let kicker = "";
   let title = "";
   let stat = "";
+  let at = 0;
   if (anchor.kind === "clip") {
     const c = data.clips[anchor.index];
     kicker = `${c.best ? "Best moment" : "Clip"} · ${shortClock(c.minute)}`;
     title = c.title;
+    at = c.minute * 60;
     stat = `chat hit ${Math.max(...data.chat.slice(Math.floor(c.minute), Math.floor(c.minute) + 3))}/min`;
   } else if (anchor.kind === "dead") {
     const s = data.deadAir[anchor.index];
     kicker = `Dead air · ${shortClock(s.start)}`;
     title = `${s.minutes} minutes, nobody talking`;
+    at = s.start * 60;
   } else if (data.crash) {
     kicker = `Momentum crash · ${shortClock(data.crash.start)}`;
     title = `${data.crash.minutes} minutes downhill`;
+    at = data.crash.start * 60;
   }
   return (
     <div ref={refFn} className={`rpl-pin rpl-pin-${anchor.kind}`} data-on="0" data-place="ur">
       <span className="rpl-pin-k">{kicker}</span>
       <span className="rpl-pin-t">{title}</span>
       {stat && <span className="rpl-pin-s">{stat}</span>}
+      {/* Mouse and touch only: every moment here is also in the report's
+          own lists, where the keyboard reaches it. */}
+      {onWatch && (
+        <button type="button" className="rpl-pin-watch" tabIndex={-1} onClick={() => onWatch(at, title)}>
+          <PlayIcon /> Watch
+        </button>
+      )}
     </div>
   );
 }
