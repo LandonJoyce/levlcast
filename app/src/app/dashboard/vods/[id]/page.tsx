@@ -63,6 +63,25 @@ type FollowUp = {
   metric: { label: string; before: string; after: string; unit: string } | null;
 };
 
+/** Text with its times ("0:42", "1:42:10") as moments to watch. */
+function PlayableText({ text, vodId, streamDate }: { text: string; vodId: string | null; streamDate: string | null }) {
+  if (!vodId) return <>{text}</>;
+  const parts = text.split(/(\b\d{1,3}:\d{2}(?::\d{2})?\b)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^\d{1,3}:\d{2}(?::\d{2})?$/.test(part) ? (
+          <WatchMoment key={i} vodId={vodId} seconds={secondsFromStamp(part)} streamDate={streamDate} className="sp-inline-time">
+            {clock(secondsFromStamp(part))}
+          </WatchMoment>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 const FOLLOW_UP_LABEL: Record<FollowUpStatus, string> = {
   fixed: "Did it",
   partial: "Partly",
@@ -523,7 +542,11 @@ export default async function StreamPage({
                         </span>
                       </p>
                       <p className="sp-follow-ask">{followUp.ask}</p>
-                      {followUp.evidence && <p className="sp-follow-why">{followUp.evidence}</p>}
+                      {followUp.evidence && (
+                        <p className="sp-follow-why">
+                          <PlayableText text={followUp.evidence} vodId={twitchId} streamDate={broadcastDate} />
+                        </p>
+                      )}
                       {followUp.metric && (
                         <p className="sp-follow-metric">
                           {followUp.metric.label}{" "}
