@@ -3,6 +3,7 @@ import { getUserUsage } from "@/lib/limits";
 import { SubscriptionSection } from "./subscription-section";
 import { DeleteAccountSection } from "./delete-account-section";
 import { LeagueSection } from "./league-section";
+import { EmailSection } from "./email-section";
 import { redirect } from "next/navigation";
 
 /*
@@ -177,6 +178,8 @@ export default async function AccountPage({
           </li>
         </ul>
       </section>
+
+      <EmailSection optedOut={Boolean(profile?.email_opt_out)} />
 
       <LeagueSection optedOut={Boolean(profile?.league_opt_out)} />
 

@@ -27,6 +27,7 @@ import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
 import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
+import { emailsOff } from "@/lib/email-optout";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_CLIPS_PER_MONTH, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, PRO_PLUS_LIMITS, coachedRange, currentWeekStart, hasPaidPlan, touchStreak } from "@/lib/limits";
@@ -766,7 +767,8 @@ export const analyzeVod = inngest.createFunction(
         const { data: profile } = await supabase.from("profiles").select("twitch_display_name").eq("id", userId).single();
         const name = profile?.twitch_display_name ?? user.email.split("@")[0];
 
-        await sendVodReadyEmail(user.email, name, vodId, vod?.title ?? "Stream", await readyKind(supabase, vodId));
+        if (await emailsOff(supabase, userId)) return;
+        await sendVodReadyEmail(user.email, name, vodId, vod?.title ?? "Stream", await readyKind(supabase, vodId), userId);
       });
 
       // Coaching arc — generates after every analysis, cached by vod ID so it
@@ -1266,7 +1268,9 @@ export const generateClip = inngest.createFunction(
                 .single();
               const score = (vodData?.coach_report as any)?.overall_score as number | undefined;
               const name = profile?.twitch_display_name ?? user.email.split("@")[0];
-              await sendClipReadyEmail(user.email, name, vodId, peak.title, score);
+              if (!(await emailsOff(supabase, userId))) {
+                await sendClipReadyEmail(user.email, name, vodId, peak.title, score, userId);
+              }
             }
           } catch (err) {
             console.warn("[clip] clip-ready email failed:", err instanceof Error ? err.message : String(err));
@@ -1887,7 +1891,8 @@ export const sendActivationNudge = inngest.createFunction(
           .from("vods")
           .select("id", { count: "exact", head: true })
           .eq("user_id", profile.id);
-        await sendActivationEmail(user.email, name, (streams ?? 0) > 0);
+        if (await emailsOff(supabase, profile.id)) continue;
+        await sendActivationEmail(user.email, name, (streams ?? 0) > 0, profile.id);
         sent++;
 
         console.log(`[activation-nudge] Sent to ${user.email.slice(0, 4)}***`);
@@ -2029,13 +2034,16 @@ export const autoSyncTwitchVods = inngest.createFunction(
             continue;
           }
 
+          if (await emailsOff(supabase, profile.id)) continue;
+
           const name = profile.twitch_display_name || "Streamer";
           await sendNewVodEmail(
             user.email,
             name,
             newVods[0].title,
             newVods.length,
-            (priorAnalysisCount ?? 0) > 0
+            (priorAnalysisCount ?? 0) > 0,
+            profile.id
           );
           totalEmailed++;
 

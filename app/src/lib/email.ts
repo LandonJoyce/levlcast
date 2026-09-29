@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { optOutLinks } from "@/lib/email-optout";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -35,6 +36,20 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/**
+ * For emails about their streams (the ones they can turn off, migration
+ * 037): an Unsubscribe link in the footer, and the headers mail apps use
+ * for their own one-click Unsubscribe button.
+ */
+function optOut(userId?: string): { footer?: { label: string; href: string }; headers?: Record<string, string> } {
+  const links = userId ? optOutLinks(userId) : null;
+  if (!links) return {};
+  return {
+    footer: { label: "Unsubscribe", href: links.page },
+    headers: { "List-Unsubscribe": `<${links.oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+  };
 }
 
 type Block =
@@ -161,8 +176,10 @@ export async function sendNewVodEmail(
   name: string,
   vodTitle: string,
   vodCount: number,
-  hasPriorAnalyses: boolean
+  hasPriorAnalyses: boolean,
+  userId?: string
 ): Promise<void> {
+  const extra = optOut(userId);
   const subject = vodCount === 1 ? "Your latest stream is ready to analyze" : `${vodCount} new streams ready to analyze`;
   const { html, text } = renderEmail({
     preheader: hasPriorAnalyses ? "See how it went next to your last one." : "Get your first report and your placement.",
@@ -177,8 +194,9 @@ export async function sendNewVodEmail(
       { quote: vodTitle, label: vodCount === 1 ? "New stream" : `Newest of ${vodCount}` },
       { button: "Analyze it", href: `${SITE}/dashboard/vods` },
     ],
+    footer: extra.footer,
   });
-  await resend.emails.send({ from: FROM_LEVLCAST, to, subject, html, text });
+  await resend.emails.send({ from: FROM_LEVLCAST, to, subject, html, text, headers: extra.headers });
 }
 
 /**
@@ -214,9 +232,11 @@ export async function sendVodReadyEmail(
   name: string,
   vodId: string,
   title: string,
-  kind: VodReadyKind = "result"
+  kind: VodReadyKind = "result",
+  userId?: string
 ): Promise<void> {
   const copy = READY_COPY[kind];
+  const extra = optOut(userId);
   // The first report is the one moment a note from a real person matters
   // most, so it comes from Landon and a reply reaches him.
   const first = kind === "placement";
@@ -233,6 +253,7 @@ export async function sendVodReadyEmail(
         : []),
     ],
     signed: first,
+    footer: extra.footer,
   });
   await resend.emails.send({
     from: first ? FROM_LANDON : FROM_LEVLCAST,
@@ -241,6 +262,7 @@ export async function sendVodReadyEmail(
     subject: copy.subject,
     html,
     text,
+    headers: extra.headers,
   });
 }
 
@@ -330,8 +352,10 @@ export async function sendClipReadyEmail(
   name: string,
   vodId: string,
   clipTitle: string,
-  _score: number | undefined
+  _score: number | undefined,
+  userId?: string
 ): Promise<void> {
+  const extra = optOut(userId);
   const { html, text } = renderEmail({
     preheader: clipTitle,
     eyebrow: `Hey ${name}`,
@@ -345,8 +369,9 @@ export async function sendClipReadyEmail(
           "Free gets 6 clips a month. Pro gets 20, with 9:16 versions for Shorts, TikTok and Reels, and posting straight to YouTube.",
       },
     ],
+    footer: extra.footer,
   });
-  await resend.emails.send({ from: FROM_LEVLCAST, to, subject: "Your clip is ready", html, text });
+  await resend.emails.send({ from: FROM_LEVLCAST, to, subject: "Your clip is ready", html, text, headers: extra.headers });
 }
 
 /**
@@ -354,7 +379,8 @@ export async function sendClipReadyEmail(
  * nothing ran (a failed first report, or only streams under 10 minutes),
  * or Twitch isn't saving their streams at all.
  */
-export async function sendActivationEmail(to: string, name: string, hasStreams = true): Promise<void> {
+export async function sendActivationEmail(to: string, name: string, hasStreams = true, userId?: string): Promise<void> {
+  const extra = optOut(userId);
   const { html, text } = hasStreams
     ? renderEmail({
         preheader: "Pick a stream and it's done in about ten minutes.",
@@ -366,6 +392,7 @@ export async function sendActivationEmail(to: string, name: string, hasStreams =
           },
           { button: "Pick a stream", href: `${SITE}/dashboard/vods` },
         ],
+        footer: extra.footer,
       })
     : renderEmail({
         preheader: "Turn on Store past broadcasts and your first report starts by itself.",
@@ -378,6 +405,7 @@ export async function sendActivationEmail(to: string, name: string, hasStreams =
           { p: "After your next stream, your first report starts by itself." },
           { button: "Open LevlCast", href: `${SITE}/dashboard` },
         ],
+        footer: extra.footer,
       });
   await resend.emails.send({
     from: FROM_LEVLCAST,
@@ -385,6 +413,7 @@ export async function sendActivationEmail(to: string, name: string, hasStreams =
     subject: hasStreams ? "Your first report hasn't run yet" : "Turn on saved broadcasts to get your first report",
     html,
     text,
+    headers: extra.headers,
   });
 }
 
