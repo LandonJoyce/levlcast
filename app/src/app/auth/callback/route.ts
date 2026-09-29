@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { after, NextResponse, type NextRequest } from "next/server";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, type FirstReport } from "@/lib/email";
 import { fetchTwitchVods, getAppAccessToken, mapVodToRow, parseTwitchDuration } from "@/lib/twitch";
 import { inngest } from "@/lib/inngest/client";
 import { REF_COOKIE, REF_PATTERN, VISITOR_COOKIE } from "@/lib/funnel";
@@ -96,18 +96,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/login?error=profile_failed`);
   }
 
-  // Welcome email for new users. In after() so it doesn't hold up the
+  // Welcome email for new users, sent once we know whether their first
+  // report started (it says which), in after() so it doesn't hold up the
   // redirect but still gets to finish: a promise nobody awaits isn't
   // guaranteed to run once the response has gone out.
-  if (isNewUser && user.email) {
-    const email = user.email;
+  const welcome = async (firstReport: FirstReport) => {
+    if (!isNewUser || !user.email) return;
     const displayName = meta.nickname || meta.full_name || meta.name || meta.preferred_username || "there";
-    after(() =>
-      sendWelcomeEmail(email, displayName).catch((err) => {
-        console.error("[auth/callback] Welcome email failed:", err instanceof Error ? err.message : err);
-      })
-    );
-  }
+    await sendWelcomeEmail(user.email, displayName, firstReport).catch((err) => {
+      console.error("[auth/callback] Welcome email failed:", err instanceof Error ? err.message : err);
+    });
+  };
 
   // Sync a new streamer's VODs and start their first report, then send them
   // to the stream it's running on. That page shows the free report on the
@@ -135,7 +134,15 @@ export async function GET(request: NextRequest) {
       // in a minute or two instead of ten.
       after(async () => {
         const first = await queuing;
-        if (first) await startWaitingPreview(first.twitchVodId);
+        if (first) {
+          await startWaitingPreview(first.twitchVodId);
+          await welcome("started");
+          return;
+        }
+        // Nothing started: were there streams to start on? (The first-report
+        // step saves every stream Twitch has for them before picking one.)
+        const { count } = await admin.from("vods").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+        await welcome((count ?? 0) > 0 ? "pick" : "no_streams");
       });
       let timer: ReturnType<typeof setTimeout> | undefined;
       const first = await Promise.race([
@@ -152,6 +159,8 @@ export async function GET(request: NextRequest) {
       } else if (first) {
         response.headers.set("Location", `${origin}/dashboard/vods/${first.vodId}?welcome=1`);
       }
+    } else {
+      after(() => welcome("no_streams"));
     }
   }
 

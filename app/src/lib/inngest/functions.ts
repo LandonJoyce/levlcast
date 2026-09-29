@@ -1882,7 +1882,12 @@ export const sendActivationNudge = inngest.createFunction(
         if (!user?.email) continue;
 
         const name = profile.twitch_display_name || "Streamer";
-        await sendActivationEmail(user.email, name);
+        // Streams but no report, or Twitch isn't saving their streams at all.
+        const { count: streams } = await supabase
+          .from("vods")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", profile.id);
+        await sendActivationEmail(user.email, name, (streams ?? 0) > 0);
         sent++;
 
         console.log(`[activation-nudge] Sent to ${user.email.slice(0, 4)}***`);
@@ -1918,9 +1923,20 @@ export const autoSyncTwitchVods = inngest.createFunction(
         .select("user_id")
         .eq("status", "ready");
 
-      if (!activeUserIds?.length) return { synced: 0, emailed: 0 };
+      // And anyone who signed up this week without a report yet: if Twitch
+      // had nothing saved when they joined, this is what finds their first
+      // stream, and rescueUnactivatedSignups then starts its report. Before,
+      // nothing looked at their channel again unless they came back.
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: newcomers } = await supabase.from("profiles").select("id").gte("created_at", weekAgo);
 
-      const uniqueUserIds = Array.from(new Set(activeUserIds.map((r: { user_id: string }) => r.user_id)));
+      const uniqueUserIds = Array.from(
+        new Set([
+          ...(activeUserIds ?? []).map((r: { user_id: string }) => r.user_id),
+          ...(newcomers ?? []).map((r: { id: string }) => r.id),
+        ])
+      );
+      if (!uniqueUserIds.length) return { synced: 0, emailed: 0 };
 
       const { data: profiles } = await supabase
         .from("profiles")
@@ -2006,6 +2022,12 @@ export const autoSyncTwitchVods = inngest.createFunction(
             .select("id", { count: "exact", head: true })
             .eq("user_id", profile.id)
             .eq("status", "ready");
+          // No report yet means a newcomer: their first report starts by
+          // itself within the hour, so "ready to analyze" would be wrong.
+          if ((priorAnalysisCount ?? 0) === 0) {
+            console.log(`[auto-sync] ${profile.id.slice(0, 8)}: synced ${newVods.length}, first report starts on its own`);
+            continue;
+          }
 
           const name = profile.twitch_display_name || "Streamer";
           await sendNewVodEmail(
