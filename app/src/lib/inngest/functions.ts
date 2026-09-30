@@ -36,6 +36,7 @@ import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
 import { draftWaitingForReport, fillOutreachQueue } from "@/lib/outreach";
 import { redditSendMessage } from "@/lib/reddit";
+import { bestMomentAsPeak } from "@/lib/best-moment-clip";
 
 /**
  * Which "your report is ready" message fits: a placement, a free
@@ -608,7 +609,11 @@ export const analyzeVod = inngest.createFunction(
       // when the VOD is ready. Uses bold (default) style; user can change style
       // from the VOD page and regenerate.
       const autoClipData = await step.run("auto-generate-clip", async () => {
-        if (peaks.length === 0) return null;
+        // A stream with no clip-worthy peak still gets its clip: the coach's
+        // best moment (lib/best-moment-clip.ts). Quiet streams, often a
+        // first report, used to come back with no clip at all.
+        const topPeak = peaks[0] ?? bestMomentAsPeak(coachReport, vodSeconds);
+        if (!topPeak) return null;
 
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -641,8 +646,6 @@ export const analyzeVod = inngest.createFunction(
           console.log(`[analyze] Auto-generate skipped — clip limit reached (${clipsThisMonth}/${clipLimit})`);
           return null;
         }
-
-        const topPeak = peaks[0];
 
         // Expand short peaks to a minimum 30s window (mirrors API route logic)
         let start = Number(topPeak.start);
