@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { colors } from '@/lib/colors';
+import { colors, fonts } from '@/lib/theme';
+import { Button } from '@/lib/ui';
 
 export default function Index() {
   const router = useRouter();
@@ -10,17 +11,14 @@ export default function Index() {
 
   useEffect(() => {
     checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function checkSession() {
     setError(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.replace('/(tabs)/dashboard');
-      } else {
-        router.replace('/login');
-      }
+      router.replace(session ? '/(tabs)/dashboard' : '/login');
     } catch {
       setError(true);
     }
@@ -28,27 +26,23 @@ export default function Index() {
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorTitle}>Connection issue</Text>
-        <Text style={styles.errorText}>Couldn't reach LevlCast. Check your internet and try again.</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={checkSession}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
+      <View style={s.page}>
+        <Text style={s.title}>Can&apos;t reach LevlCast</Text>
+        <Text style={s.text}>Check your connection and try again.</Text>
+        <Button title="Try again" onPress={checkSession} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator color={colors.accentLight} />
+    <View style={s.page}>
+      <ActivityIndicator color={colors.ink3} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
-  errorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  retryBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
-  retryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+const s = StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  title: { fontFamily: fonts.display, fontSize: 22, color: colors.ink, marginBottom: 8 },
+  text: { fontSize: 15, lineHeight: 22, color: colors.ink3, textAlign: 'center', marginBottom: 22 },
 });

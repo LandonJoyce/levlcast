@@ -2,14 +2,14 @@
   "expo": {
     "name": "LevlCast",
     "slug": "levlcast",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#080c14"
+      "backgroundColor": "#100D0E"
     },
     "ios": {
       "supportsTablet": false,
@@ -24,7 +24,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png",
-        "backgroundColor": "#080c14"
+        "backgroundColor": "#100D0E"
       },
       "package": "com.levlcast.app"
     },
@@ -41,7 +41,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#9B6AFF",
+          "color": "#FFFAF7",
           "sounds": []
         }
       ]

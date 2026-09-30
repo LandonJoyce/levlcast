@@ -1,0 +1,30 @@
+═══════════════════════════════════════════════════════════
+LevlCast 1.0.4 — App Store Connect release notes
+═══════════════════════════════════════════════════════════
+
+WHAT'S NEW (paste into the "What's New in This Version" box)
+───────────────────────────────────────────────────────────
+
+A new look that matches levlcast.com.
+
+Your rank is up front now, with your last stream's result and the one thing to fix next time.
+
+New reports come in sealed. Call it, win or loss, then open it.
+
+One page per stream: the result, your rank after it, where the points went, and every moment worth clipping. Tap any time to watch that moment on Twitch.
+
+Matches: every analyzed stream as a ranked game, with your record and what keeps coming back across streams.
+
+Tapping a notification now opens the stream it's about.
+
+Plans updated: Pro coaches whole streams, with 20 reports and 20 clips a month.
+
+
+APP REVIEW NOTES (paste into the "Notes" box)
+───────────────────────────────────────────────────────────
+
+Demo account: same as 1.0.3 (see RELEASE_NOTES_1.0.3.txt). The account is set up as Pro so every feature can be tested.
+
+To test the subscription purchase: sign in with Apple using a sandbox account (new accounts start on the free plan), then tap Go Pro at the top of the Home tab or on the Account tab. The demo account is already Pro, so it doesn't show Go Pro.
+
+This update redesigns the app to match our website and updates the Pro plan description. No new permissions are requested. Subscriptions remain Apple in-app purchases through RevenueCat, and the price shown in the app comes from the App Store. No sign-in changes: Sign in with Apple and Twitch are both still offered.

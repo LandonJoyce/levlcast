@@ -1,245 +1,194 @@
-import { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, ScrollView, Linking,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Check } from 'lucide-react-native';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { supabase } from '@/lib/supabase';
-import { getProPackage, getAnnualPackage, purchasePro, restorePurchases } from '@/lib/revenuecat';
-import { colors } from '@/lib/colors';
-import { GradButton, BRAND_COLORS, BRAND_START, BRAND_END } from '@/lib/gradient';
-import { PurchasesPackage } from 'react-native-purchases';
+import { getProPackages, purchasePro, restorePurchases } from '@/lib/revenuecat';
+import { colors, fonts } from '@/lib/theme';
+import { Button, Label, Screen, Tag } from '@/lib/ui';
+
+/*
+ * LevlCast Pro, bought through the App Store. The same plan as the site's:
+ * whole streams, 20 reports and 30 hours a month, 20 clips. Every price on
+ * this screen comes from the App Store.
+ */
 
 const FEATURES = [
-  '20 VOD analyses per month',
-  '20 clips per month',
-  'Full AI coaching report on every stream',
-  'Clip editor: trim, captions, vertical 9:16 export',
-  'Highlight reels from your top moments',
-  'YouTube Shorts auto-posting',
+  'Whole streams coached, up to 8 hours each',
+  '20 reports a month, up to 30 hours',
+  '20 clips a month',
+  'Post clips to YouTube Shorts',
+  'What keeps coming back across your streams',
 ];
 
 export default function SubscribeScreen() {
-  const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
-  const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
-  const [selected, setSelected] = useState<'monthly' | 'annual'>('monthly');
+  const router = useRouter();
+  const [monthly, setMonthly] = useState<PurchasesPackage | null>(null);
+  const [annual, setAnnual] = useState<PurchasesPackage | null>(null);
+  const [cycle, setCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const router = useRouter();
 
-  useEffect(() => {
-    Promise.all([getProPackage(), getAnnualPackage()])
-      .then(([monthly, annual]) => {
-        setMonthlyPkg(monthly);
-        setAnnualPkg(annual);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const loadPrices = useCallback(async () => {
+    setLoading(true);
+    const p = await getProPackages();
+    setMonthly(p.monthly);
+    setAnnual(p.annual);
+    setLoading(false);
   }, []);
 
-  // Fall back to monthly if annual package isn't available in RevenueCat
-  const activePkg = selected === 'annual' ? (annualPkg ?? monthlyPkg) : monthlyPkg;
+  useEffect(() => {
+    loadPrices();
+  }, [loadPrices]);
 
-  async function handlePurchase() {
-    if (!activePkg) {
-      Alert.alert('Not Available', 'Subscription packages are not available right now. Please try again later.');
+  const pkg = cycle === 'annual' ? annual ?? monthly : monthly;
+  const product = pkg?.product;
+  const isAnnual = cycle === 'annual' && !!annual;
+  const save =
+    monthly && annual && monthly.product.price > 0
+      ? Math.round((1 - annual.product.price / (monthly.product.price * 12)) * 100)
+      : 0;
+
+  /** The purchase grants Pro through RevenueCat's webhook; wait for it so the app shows Pro right away. */
+  async function waitForPro() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    for (let i = 0; i < 8; i++) {
+      const { data } = await supabase.from('profiles').select('plan').eq('id', user.id).single();
+      if (data?.plan === 'pro') return;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  async function buy() {
+    if (!pkg) return;
+    setPurchasing(true);
+    const r = await purchasePro(pkg);
+    if (r.ok) {
+      await waitForPro();
+      setPurchasing(false);
+      Alert.alert("You're Pro", 'Every stream gets coached start to finish now.', [{ text: "Let's go", onPress: () => router.back() }]);
       return;
     }
-    setPurchasing(true);
-    const success = await purchasePro(activePkg);
-
-    if (success) {
-      // Sync the verified purchase to our backend — this is what actually
-      // grants Pro on profiles.plan (via service_role). We used to do an
-      // optimistic client-side update first, but a DB trigger now blocks
-      // client-initiated subscription column changes to close a paywall
-      // bypass, so the backend call is the single source of truth.
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/subscription/revenuecat`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          });
-        }
-      } catch {
-        // Non-fatal — RevenueCat webhook will sync it as a fallback
-      }
-    }
-
     setPurchasing(false);
-    if (success) {
-      Alert.alert('Welcome to Pro!', 'Your subscription is now active.', [
-        { text: "Let's go", onPress: () => router.back() },
-      ]);
-    }
+    if (!r.cancelled) Alert.alert("That didn't go through", r.message ?? 'Nothing was charged. Try again in a minute.');
   }
 
-  async function handleRestore() {
+  async function restore() {
     setRestoring(true);
-    const success = await restorePurchases();
+    const ok = await restorePurchases();
     setRestoring(false);
-    if (success) {
-      Alert.alert('Restored', 'Your Pro subscription is active.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+    if (ok) {
+      Alert.alert('Restored', 'Your Pro subscription is active.', [{ text: 'OK', onPress: () => router.back() }]);
     } else {
-      Alert.alert('Nothing to restore', 'No active subscription found.');
+      Alert.alert('Nothing to restore', "We didn't find an active subscription on this Apple ID.");
     }
   }
-
-  const monthlyPrice = monthlyPkg?.product.priceString ?? '$9.99';
-  const annualPrice = annualPkg?.product.priceString ?? null;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Founding member badge */}
-      <View style={styles.foundingBadge}>
-        <Text style={styles.foundingBadgeText}>Founding Member Price — Limited Time</Text>
-      </View>
+    <Screen inset={false}>
+      <Label>LevlCast Pro</Label>
+      <Text style={s.title}>Coach the whole stream, every time.</Text>
+      <Text style={s.sub}>Free coaches the first 2 hours of one stream a week. Pro coaches all of it, every stream.</Text>
 
-      <Text style={styles.title}>Upgrade to Pro</Text>
-      <Text style={styles.sub}>Full management for your streaming career — coaching, strategy, and growth.</Text>
-
-      {/* Plan toggle — only show annual if RevenueCat returned a real annual package */}
-      {annualPkg && (
-        <View style={styles.toggle}>
-          <TouchableOpacity
-            style={[styles.toggleOption, selected === 'monthly' && styles.toggleOptionActive]}
-            onPress={() => setSelected('monthly')}
-          >
-            <Text style={[styles.toggleText, selected === 'monthly' && styles.toggleTextActive]}>Monthly</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleOption, selected === 'annual' && styles.toggleOptionActive]}
-            onPress={() => setSelected('annual')}
-          >
-            <Text style={[styles.toggleText, selected === 'annual' && styles.toggleTextActive]}>Annual</Text>
-            <View style={styles.saveBadge}>
-              <Text style={styles.saveBadgeText}>2 months free</Text>
-            </View>
-          </TouchableOpacity>
+      {annual && monthly ? (
+        <View style={s.toggle}>
+          {(['monthly', 'annual'] as const).map((c) => (
+            <Pressable key={c} onPress={() => setCycle(c)} style={[s.toggleOpt, cycle === c && s.toggleOn]}>
+              <Text style={[s.toggleText, cycle === c && { color: colors.bg }]}>{c === 'monthly' ? 'Monthly' : 'Yearly'}</Text>
+              {c === 'annual' && save >= 5 ? (
+                <Text style={[s.toggleSave, cycle === c && { color: colors.bg }]}>Save {save}%</Text>
+              ) : null}
+            </Pressable>
+          ))}
         </View>
-      )}
+      ) : null}
 
-      {/* Price card */}
-      <View style={styles.priceCard}>
+      <View style={s.price}>
         {loading ? (
-          <ActivityIndicator color={colors.accentLight} />
-        ) : selected === 'monthly' ? (
+          <ActivityIndicator color={colors.ink3} />
+        ) : product ? (
           <>
-            <Text style={styles.price}>{monthlyPrice}<Text style={styles.pricePer}> / month</Text></Text>
-            <Text style={styles.cancelNote}>Founding member rate. Cancel anytime.</Text>
-          </>
-        ) : annualPrice ? (
-          <>
-            <Text style={styles.price}>{annualPrice}<Text style={styles.pricePer}> / year</Text></Text>
-            <Text style={styles.cancelNote}>Billed annually. Cancel anytime in App Store settings.</Text>
+            <View style={s.priceRow}>
+              <Text style={s.amount}>{product.priceString}</Text>
+              <Text style={s.per}>{isAnnual ? '/ year' : '/ month'}</Text>
+            </View>
+            <Text style={s.priceNote}>
+              {isAnnual && product.pricePerMonthString ? `About ${product.pricePerMonthString} a month. ` : ''}Cancel anytime in your App Store
+              settings.
+            </Text>
           </>
         ) : (
           <>
-            <Text style={styles.price}>{monthlyPrice}<Text style={styles.pricePer}> / month</Text></Text>
-            <Text style={styles.cancelNote}>Founding member rate. Cancel anytime.</Text>
+            <Text style={s.priceNote}>Couldn&apos;t load prices from the App Store.</Text>
+            <Button title="Try again" kind="ghost" small onPress={loadPrices} style={{ marginTop: 12, alignSelf: 'flex-start' }} />
           </>
         )}
       </View>
 
-      {/* Features */}
-      <View style={styles.featureList}>
-        {FEATURES.map(f => (
-          <View key={f} style={styles.featureRow}>
-            <Text style={styles.featureCheck}>✓</Text>
-            <Text style={styles.featureText}>{f}</Text>
+      <View style={s.features}>
+        {FEATURES.map((f) => (
+          <View key={f} style={s.feature}>
+            <Check size={16} color={colors.green} strokeWidth={2.4} />
+            <Text style={s.featureText}>{f}</Text>
           </View>
         ))}
       </View>
 
-      {/* Subscribe button */}
-      <GradButton
-        onPress={handlePurchase}
-        disabled={loading || purchasing}
-        loading={purchasing}
-        style={styles.subscribeWrap}
-        textStyle={{ fontSize: 16 }}
-      >
-        {selected === 'annual' ? 'Get Pro · Best Value' : 'Get Pro'}
-      </GradButton>
-
-      {/* Required: Restore Purchases */}
-      <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} disabled={restoring}>
-        {restoring ? (
-          <ActivityIndicator color={colors.accentLight} size="small" />
-        ) : (
-          <Text style={styles.restoreBtnText}>Restore Purchases</Text>
-        )}
-      </TouchableOpacity>
-
-      {/* Required: Subscription disclosure */}
-      <Text style={styles.disclosure}>
-        {selected === 'annual' && annualPrice
-          ? `${annualPrice}/year`
-          : `${monthlyPrice}/month`} charged to your Apple ID at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage subscriptions in your App Store account settings.
-      </Text>
-
-      {/* Required: ToS and Privacy links */}
-      <View style={styles.legalRow}>
-        <TouchableOpacity onPress={() => Linking.openURL('https://levlcast.com/terms')}>
-          <Text style={styles.legalLink}>Terms of Service</Text>
-        </TouchableOpacity>
-        <Text style={styles.legalDot}> · </Text>
-        <TouchableOpacity onPress={() => Linking.openURL('https://levlcast.com/privacy')}>
-          <Text style={styles.legalLink}>Privacy Policy</Text>
-        </TouchableOpacity>
+      <Button title={isAnnual ? 'Get Pro for a year' : 'Get Pro'} onPress={buy} loading={purchasing} disabled={!pkg || loading} />
+      <View style={s.freeRow}>
+        <Tag text="Free" color={colors.ink3} />
+        <Text style={s.freeText}>1 report a week (first 2 hours), 6 clips a month.</Text>
       </View>
-    </ScrollView>
+
+      <Pressable onPress={restore} disabled={restoring} hitSlop={8} style={s.restore}>
+        {restoring ? <ActivityIndicator color={colors.ink3} size="small" /> : <Text style={s.restoreText}>Restore purchases</Text>}
+      </Pressable>
+
+      <Text style={s.disclosure}>
+        {product
+          ? `${product.priceString} ${isAnnual ? 'a year' : 'a month'} is charged to your Apple ID when you confirm. `
+          : 'Payment is charged to your Apple ID when you confirm. '}
+        The subscription renews automatically unless you turn off auto-renew at least 24 hours before the end of the current period. Manage or
+        cancel it in your App Store account settings.
+      </Text>
+      <View style={s.legal}>
+        <Text style={s.legalLink} onPress={() => Linking.openURL('https://levlcast.com/terms')}>
+          Terms of Use
+        </Text>
+        <Text style={s.legalDot}> {'·'} </Text>
+        <Text style={s.legalLink} onPress={() => Linking.openURL('https://levlcast.com/privacy')}>
+          Privacy Policy
+        </Text>
+      </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 24, paddingBottom: 60 },
-
-  // Founding badge
-  foundingBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(155,106,255,0.15)', borderWidth: 1, borderColor: 'rgba(155,106,255,0.35)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 16 },
-  foundingBadgeText: { fontSize: 11, fontWeight: '700', color: colors.accentLight, letterSpacing: 0.3 },
-
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.8, marginBottom: 6 },
-  sub: { fontSize: 14, color: colors.muted, marginBottom: 24, lineHeight: 20 },
-
-  // Toggle
-  toggle: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 4, marginBottom: 16 },
-  toggleOption: { flex: 1, paddingVertical: 10, borderRadius: 9, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  toggleOptionActive: { backgroundColor: colors.accent },
-  toggleText: { fontSize: 14, fontWeight: '600', color: colors.muted },
-  toggleTextActive: { color: '#fff' },
-  saveBadge: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
-  saveBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
-
-  // Price card
-  priceCard: { backgroundColor: 'rgba(155,106,255,0.1)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(155,106,255,0.3)', padding: 22, marginBottom: 24, minHeight: 72, justifyContent: 'center' },
-  price: { fontSize: 32, fontWeight: '800', color: colors.accentLight },
-  pricePer: { fontSize: 16, fontWeight: '400', color: colors.muted },
-  cancelNote: { fontSize: 12, color: colors.muted, marginTop: 4 },
-
-  // Features
-  featureList: { marginBottom: 28, gap: 14 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featureCheck: { fontSize: 14, fontWeight: '800', color: colors.accentLight, width: 16 },
-  featureText: { fontSize: 15, color: colors.text, flex: 1 },
-
-  // Buttons
-  subscribeBtn: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 16 },
-  subscribeWrap: { marginBottom: 16, borderRadius: 14, shadowColor: '#943DFF', shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
-  subscribeBtnDisabled: { opacity: 0.5 },
-  subscribeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  restoreBtn: { alignItems: 'center', paddingVertical: 12, marginBottom: 24 },
-  restoreBtnText: { color: colors.accentLight, fontSize: 14, fontWeight: '600' },
-
-  // Legal
-  disclosure: { fontSize: 11, color: colors.muted, lineHeight: 17, textAlign: 'center', marginBottom: 16 },
-  legalRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  legalLink: { fontSize: 12, color: colors.accentLight },
-  legalDot: { color: colors.muted, fontSize: 12 },
+const s = StyleSheet.create({
+  title: { marginTop: 10, fontFamily: fonts.display, fontSize: 28, lineHeight: 34, letterSpacing: -0.7, color: colors.ink },
+  sub: { marginTop: 10, fontSize: 15, lineHeight: 22, color: colors.ink3 },
+  toggle: { flexDirection: 'row', marginTop: 24, padding: 4, borderRadius: 11, borderWidth: 1, borderColor: colors.line2 },
+  toggleOpt: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 8 },
+  toggleOn: { backgroundColor: colors.ink },
+  toggleText: { fontSize: 14, fontWeight: '700', color: colors.ink2 },
+  toggleSave: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.green },
+  price: { minHeight: 96, justifyContent: 'center', marginTop: 22, paddingVertical: 18, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  amount: { fontFamily: fonts.numbers, fontSize: 56, lineHeight: 58, color: colors.ink },
+  per: { fontSize: 16, color: colors.ink3 },
+  priceNote: { marginTop: 6, fontSize: 13.5, lineHeight: 19, color: colors.ink3 },
+  features: { gap: 14, marginVertical: 24 },
+  feature: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  featureText: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.ink },
+  freeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+  freeText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.ink3 },
+  restore: { alignSelf: 'center', marginTop: 22, paddingVertical: 6 },
+  restoreText: { fontSize: 14, fontWeight: '600', color: colors.ink2, textDecorationLine: 'underline' },
+  disclosure: { marginTop: 20, fontSize: 11.5, lineHeight: 17, textAlign: 'center', color: colors.ink4 },
+  legal: { flexDirection: 'row', justifyContent: 'center', marginTop: 12 },
+  legalLink: { fontSize: 12.5, color: colors.ink2, textDecorationLine: 'underline' },
+  legalDot: { fontSize: 12.5, color: colors.ink4 },
 });

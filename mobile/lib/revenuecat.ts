@@ -17,30 +17,30 @@ export function initRevenueCat(userId?: string) {
   }
 }
 
-export async function getProPackage(): Promise<PurchasesPackage | null> {
+/**
+ * Pro's monthly and yearly packages from the current offering. Prices come
+ * from the App Store in the buyer's own currency, so the app never shows a
+ * price it made up.
+ */
+export async function getProPackages(): Promise<{ monthly: PurchasesPackage | null; annual: PurchasesPackage | null }> {
   try {
     const offerings = await Purchases.getOfferings();
-    return offerings.current?.monthly ?? null;
+    return { monthly: offerings.current?.monthly ?? null, annual: offerings.current?.annual ?? null };
   } catch {
-    return null;
+    return { monthly: null, annual: null };
   }
 }
 
-export async function getAnnualPackage(): Promise<PurchasesPackage | null> {
-  try {
-    const offerings = await Purchases.getOfferings();
-    return offerings.current?.annual ?? null;
-  } catch {
-    return null;
-  }
-}
+export type PurchaseResult = { ok: true } | { ok: false; cancelled: boolean; message: string | null };
 
-export async function purchasePro(pkg: PurchasesPackage): Promise<boolean> {
+export async function purchasePro(pkg: PurchasesPackage): Promise<PurchaseResult> {
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return customerInfo.entitlements.active['pro'] !== undefined;
-  } catch {
-    return false;
+    if (customerInfo.entitlements.active['pro'] !== undefined) return { ok: true };
+    return { ok: false, cancelled: false, message: "The purchase went through but Pro isn't showing yet. Try Restore purchases in a minute." };
+  } catch (err: any) {
+    if (err?.userCancelled) return { ok: false, cancelled: true, message: null };
+    return { ok: false, cancelled: false, message: typeof err?.message === 'string' ? err.message : null };
   }
 }
 

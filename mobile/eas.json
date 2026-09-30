@@ -20,7 +20,12 @@
         "key": "v2"
       },
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ntquvgpzztyaikstblzc.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_doSpY7tLjZpIwjhfQVwsxw_yW50MsjM",
+        "EXPO_PUBLIC_APP_URL": "https://levlcast.vercel.app",
+        "EXPO_PUBLIC_REVENUECAT_APPLE_KEY": "appl_gPTCRvsYqrSoMuqWIHSasrpIDVQ",
+        "EXPO_PUBLIC_PROJECT_ID": "61fc2d39-8a0d-403c-b95a-6aa149e0270b"
       },
       "ios": {
         "resourceClass": "m-medium"

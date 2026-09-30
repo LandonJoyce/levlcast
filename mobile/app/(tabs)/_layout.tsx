@@ -1,55 +1,43 @@
 import { Tabs } from 'expo-router';
-import { colors } from '@/lib/colors';
-import { LayoutDashboard, Film, Scissors, Settings } from 'lucide-react-native';
+import { CircleUser, Film, House, Scissors, Swords } from 'lucide-react-native';
+import { colors } from '@/lib/theme';
 
+/** The site's top bar as tabs: Home, Streams, Clips, Matches, Account. */
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          backgroundColor: colors.bg,
+          borderTopColor: colors.line,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 10,
-          paddingTop: 8,
         },
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: colors.accentLight,
-        tabBarInactiveTintColor: colors.muted,
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
-        headerShadowVisible: false,
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.ink4,
+        tabBarLabelStyle: { fontWeight: '600' },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen
         name="dashboard"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
-        }}
+        options={{ title: 'Home', tabBarIcon: ({ color, size }) => <House color={color} size={size - 2} strokeWidth={1.8} /> }}
       />
       <Tabs.Screen
         name="vods"
-        options={{
-          title: 'VODs',
-          tabBarIcon: ({ color, size }) => <Film color={color} size={size} />,
-        }}
+        options={{ title: 'Streams', tabBarIcon: ({ color, size }) => <Film color={color} size={size - 2} strokeWidth={1.8} /> }}
       />
       <Tabs.Screen
         name="clips"
-        options={{
-          title: 'Clips',
-          tabBarIcon: ({ color, size }) => <Scissors color={color} size={size} />,
-        }}
+        options={{ title: 'Clips', tabBarIcon: ({ color, size }) => <Scissors color={color} size={size - 2} strokeWidth={1.8} /> }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{ title: 'Matches', tabBarIcon: ({ color, size }) => <Swords color={color} size={size - 2} strokeWidth={1.8} /> }}
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
-        }}
+        options={{ title: 'Account', tabBarIcon: ({ color, size }) => <CircleUser color={color} size={size - 2} strokeWidth={1.8} /> }}
       />
     </Tabs>
   );

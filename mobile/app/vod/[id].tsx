@@ -1,850 +1,584 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share, Alert, Linking } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { ChevronDown, ChevronUp, Play } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { colors } from '@/lib/colors';
+import { colors, fonts } from '@/lib/theme';
+import { Button, Hairline, Label, LabelRow, Loading, Note, Screen, SectionHead, Tag } from '@/lib/ui';
+import { RankPanel } from '@/components/RankPanel';
+import { SealedResult } from '@/components/SealedResult';
+import { Scorecard } from '@/components/Scorecard';
+import { Breakdown, type TrendPoint } from '@/components/Breakdown';
+import { PlayableText } from '@/components/Playable';
+import { AnalysisProgressCard } from '@/components/AnalysisBar';
+import { ClipCard, MomentRow, type ClipRow, type Peak } from '@/components/Moments';
+import { isPlacementDelta } from '@/lib/rank';
+import { callOutcome, hasPaidPlan, isLocked, isSealed, lockOpensAt } from '@/lib/sealed';
+import { coachedSeconds, FREE_COACHED_SECONDS } from '@/lib/progress';
+import { clean, clock, formatDuration, secondsFromStamp, signed, streamLength, watchAt } from '@/lib/time';
+import { api, makeClip, makeReel, startReport } from '@/lib/api';
 
-function parseTimeSecs(t: string): number {
-  const parts = t.split(':').map(Number);
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
-}
+/*
+ * One page per stream, in the order a game shows you after a match (the
+ * site's /dashboard/vods/[id]): the result and the rank it left you on,
+ * what to do next stream, where the points went, the clips and moments,
+ * and the full breakdown folded away at the bottom.
+ */
 
-function twitchTimestamp(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return h > 0 ? `${h}h${m}m${s}s` : m > 0 ? `${m}m${s}s` : `${s}s`;
-}
+type FollowUpStatus = 'fixed' | 'partial' | 'regressed' | 'not_addressed';
+const FOLLOW_UP_LABEL: Record<FollowUpStatus, string> = {
+  fixed: 'Did it',
+  partial: 'Partly',
+  regressed: 'Slipped',
+  not_addressed: 'Not yet',
+};
+const FOLLOW_UP_COLOR: Record<FollowUpStatus, string> = {
+  fixed: colors.green,
+  partial: colors.warn,
+  regressed: colors.danger,
+  not_addressed: colors.ink3,
+};
 
-function twitchVodUrl(twitchVodId: string | null, ts: string): string | null {
-  if (!twitchVodId) return null;
-  return `https://www.twitch.tv/videos/${twitchVodId}?t=${twitchTimestamp(parseTimeSecs(ts))}`;
-}
-
-// Renders prose with inline M:SS or H:MM:SS timestamps as tappable links.
-function LinkedText({ text, color, twitchVodId, style }: { text: string; color: string; twitchVodId: string | null; style?: any }) {
-  if (!text) return null;
-  if (!twitchVodId) return <Text style={style}>{text}</Text>;
-  const re = /\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
-  const out: React.ReactNode[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  let key = 0;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) out.push(<Text key={key++} style={style}>{text.slice(last, m.index)}</Text>);
-    const ts = m[0];
-    const href = twitchVodUrl(twitchVodId, ts);
-    out.push(
-      <Text
-        key={key++}
-        style={[style, { color, fontWeight: '700' }]}
-        onPress={() => href && Linking.openURL(href)}
-      >
-        {ts}
-      </Text>
-    );
-    last = m.index + ts.length;
+function readFollowUp(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, any>;
+  const status = r.status as FollowUpStatus;
+  if (!(status in FOLLOW_UP_LABEL) || typeof r.prior_priority !== 'string' || !r.prior_priority.trim()) return null;
+  const m = r.metric as Record<string, any> | undefined;
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? String(Math.round(v * 10) / 10) : null);
+  const before = num(m?.before);
+  const after = num(m?.after);
+  let metric: { label: string; before: string; after: string; unit: string } | null = null;
+  if (m && typeof m.label === 'string' && m.label.trim() && before !== null && after !== null) {
+    const pct = /_pct$/i.test(m.label);
+    const words = m.label.trim().replace(/_pct$/i, '').replace(/_/g, ' ');
+    const unit = typeof m.unit === 'string' && m.unit.trim() ? m.unit.trim() : pct ? '%' : '';
+    metric = { label: words.charAt(0).toUpperCase() + words.slice(1), before, after, unit: unit === '%' ? '%' : unit ? ` ${unit}` : '' };
   }
-  if (last < text.length) out.push(<Text key={key++} style={style}>{text.slice(last)}</Text>);
-  return <Text style={style}>{out}</Text>;
+  return {
+    ask: clean(r.prior_priority.trim()),
+    status,
+    evidence: typeof r.evidence === 'string' && r.evidence.trim() ? clean(r.evidence.trim()) : null,
+    metric,
+  };
 }
 
-interface CoachReport {
-  overall_score: number;
-  streamer_type: 'gaming' | 'just_chatting' | 'irl' | 'variety' | 'educational';
-  energy_trend: 'building' | 'declining' | 'consistent' | 'volatile';
-  viewer_retention_risk: 'low' | 'medium' | 'high';
-  strengths: string[];
-  improvements: string[];
-  best_moment: { time: string; description: string };
-  recommendation: string;
-  rewatch_moments?: Array<{ time: string; kind: 'best' | 'worst'; note: string }>;
-  cold_open?: { score: 'strong' | 'weak' | 'average'; note: string };
-  dead_zones?: Array<{ time: string; duration: number }>;
-  momentum_crash?: { time: string; duration_min: number; note: string };
-  trend_vs_history?: { direction: 'improving' | 'declining' | 'consistent' | 'first_stream'; note: string };
+type FailureKind = 'playback_token' | 'timeout' | 'generic';
+function categorizeFailure(reason: string | null | undefined): FailureKind {
+  const r = (reason ?? '').toLowerCase();
+  if (r.includes('playback token') || r.includes('blocked access') || r.includes('subscriber-only') || r.includes('dmca')) return 'playback_token';
+  if (r.includes('timed out') || r.includes('timeout') || r.includes('stalled')) return 'timeout';
+  return 'generic';
 }
 
-interface Peak {
-  title: string;
-  start: number;
-  end: number;
-  score: number;
-  category: string;
-  reason: string;
-  caption: string;
-}
+type Prior = { stream_date: string | null; analyzed_at: string | null; score: number | null; kind: string | null; breakdown: any };
 
-interface Clip {
-  id: string;
-  title: string;
-  status: string;
-  video_url: string | null;
-  caption_text: string | null;
-  peak_score: number | null;
-  start_time_seconds: number | null;
-}
-
-interface Vod {
-  id: string;
-  title: string;
-  stream_date: string;
-  status: string;
-  coach_report: CoachReport | null;
-  peak_data: Peak[] | null;
-  failed_reason: string | null;
-  twitch_vod_id: string | null;
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function scoreColor(score: number): string {
-  if (score >= 75) return colors.green;
-  if (score >= 50) return colors.yellow;
-  return colors.red;
-}
-
-const TREND_CONFIG = {
-  building:   { label: 'Building',    color: colors.green,  icon: '↗' },
-  declining:  { label: 'Declining',   color: colors.red,    icon: '↘' },
-  consistent: { label: 'Consistent',  color: colors.yellow, icon: '→' },
-  volatile:   { label: 'Volatile',    color: colors.muted,  icon: '↕' },
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  hype: 'Hype',
-  funny: 'Comedy',
-  educational: 'Educational',
-  emotional: 'Emotional',
-  clutch_play: 'Clutch Plays',
-  rage: 'Rage',
-  wholesome: 'Wholesome',
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  hype: '#f59e0b',
-  funny: '#a78bfa',
-  educational: '#3b82f6',
-  emotional: '#f472b6',
-  clutch_play: '#22d3ee',
-  rage: '#ef4444',
-  wholesome: '#4ade80',
-};
-
-const COLD_OPEN_CONFIG = {
-  strong:  { label: 'Strong Open', color: colors.green },
-  average: { label: 'Average Open', color: colors.yellow },
-  weak:    { label: 'Weak Open', color: colors.red },
-};
-
-// Parses **Bold Label** — rest of text and renders bold label + dimmer text.
-// Body timestamps become tappable Twitch deep-links.
-function BoldLeadText({ text, accent, twitchVodId, recurring = false }: { text: string; accent: string; twitchVodId: string | null; recurring?: boolean }) {
-  const match = text.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
-  if (!match) {
-    return <LinkedText text={text} color={accent} twitchVodId={twitchVodId} style={styles.bulletText} />;
-  }
-  return (
-    <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
-        <Text style={[styles.bulletBold, { color: accent }]}>{match[1]}</Text>
-        {recurring && (
-          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3, borderWidth: 1, borderColor: accent + '66', backgroundColor: accent + '1A' }}>
-            <Text style={{ fontSize: 9, fontWeight: '700', color: accent, letterSpacing: 0.8, textTransform: 'uppercase' }}>Recurring</Text>
-          </View>
-        )}
-      </View>
-      <LinkedText text={match[2]} color={accent} twitchVodId={twitchVodId} style={styles.bulletText} />
-    </View>
-  );
-}
-
-function LockedCard({ label, onUpgrade }: { label: string; onUpgrade: () => void }) {
-  return (
-    <TouchableOpacity
-      onPress={onUpgrade}
-      style={{ backgroundColor: 'rgba(155,106,255,0.07)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(155,106,255,0.2)', padding: 18, marginBottom: 14, alignItems: 'center', gap: 6 }}
-      activeOpacity={0.8}
-    >
-      <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(155,106,255,0.7)', letterSpacing: 1, textTransform: 'uppercase' }}>{label}</Text>
-      <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>Unlock with Pro →</Text>
-    </TouchableOpacity>
-  );
-}
-
-export default function VodDetailScreen() {
+export default function StreamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [vod, setVod] = useState<Vod | null>(null);
-  const [previousScore, setPreviousScore] = useState<number | null>(null);
-  const [streak, setStreak] = useState(0);
-  const [clips, setClips] = useState<Clip[]>([]);
+  const [vod, setVod] = useState<any>(null);
+  const [clips, setClips] = useState<ClipRow[]>([]);
+  const [prior, setPrior] = useState<Prior[]>([]);
   const [isPro, setIsPro] = useState(false);
-  const [recurringImprovements, setRecurringImprovements] = useState<string[]>([]);
+  const [firstReport, setFirstReport] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [retrying, setRetrying] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [generatingPeak, setGeneratingPeak] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const goPro = useCallback(() => router.push('/subscribe'), [router]);
+
+  const load = useCallback(async () => {
     if (!id) return;
     try {
-    setLoadError(null);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace('/login'); return; }
-
-    const [vodRes, prevRes, streakRes, clipsRes, profileRes] = await Promise.all([
-      supabase.from('vods')
-        .select('id, title, stream_date, status, coach_report, peak_data, failed_reason, twitch_vod_id')
-        .eq('id', id).single(),
-      supabase.from('vods')
-        .select('coach_report')
-        .eq('user_id', user.id).eq('status', 'ready').neq('id', id)
-        .order('stream_date', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('vods')
-        .select('status').eq('user_id', user.id)
-        .order('stream_date', { ascending: false }).limit(20),
-      supabase.from('clips')
-        .select('id, title, status, video_url, caption_text, peak_score, start_time_seconds')
-        .eq('vod_id', id).eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
-      supabase.from('profiles').select('plan, subscription_expires_at, coaching_arc').eq('id', user.id).single(),
-    ]);
-
-    setVod(vodRes.data as Vod);
-
-    const profile = profileRes.data;
-    const proActive = profile?.plan === 'pro' &&
-      !(profile.subscription_expires_at && new Date(profile.subscription_expires_at) < new Date());
-    setIsPro(proActive);
-
-    // Recurring improvements come from the coaching arc — issues that have
-    // shown up across multiple recent streams. Used to badge improvement
-    // items so the user can tell signal from noise.
-    const arc = (profile?.coaching_arc as any) || {};
-    setRecurringImprovements(Array.isArray(arc?.recurring_improvements) ? arc.recurring_improvements : []);
-
-    const prevScore = (prevRes.data?.coach_report as any)?.overall_score;
-    setPreviousScore(typeof prevScore === 'number' ? prevScore : null);
-
-    const streakVods = streakRes.data || [];
-    let count = 0;
-    for (const v of streakVods) {
-      if (v.status === 'ready') count++;
-      else break;
-    }
-    setStreak(count);
-
-    setClips((clipsRes.data || []) as Clip[]);
+      setError(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      const { data: v, error: vErr } = await supabase
+        .from('vods')
+        .select(
+          'id, title, duration_seconds, status, stream_date, analyzed_at, updated_at, progress, coach_report, twitch_vod_id, failed_reason, peak_data, rank_delta, rank_points_after, result_opened_at, result_call, sealed_extra_week'
+        )
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (vErr) throw vErr;
+      if (!v) {
+        setVod(null);
+        return;
+      }
+      const streamDate = (v.stream_date as string | null) ?? new Date(0).toISOString();
+      const [clipsRes, priorRes, profileRes, countRes] = await Promise.all([
+        supabase
+          .from('clips')
+          .select('id, title, status, video_url, thumbnail_url, caption_text, start_time_seconds, end_time_seconds, is_highlight_reel, peak_category, vod_id, failed_reason')
+          .eq('user_id', user.id)
+          .eq('vod_id', id)
+          .order('created_at', { ascending: false }),
+        // Only streams from before this one, so every comparison is against a stream that came first.
+        supabase
+          .from('vods')
+          .select('stream_date, analyzed_at, score:coach_report->overall_score, kind:coach_report->>streamer_type, breakdown:coach_report->score_breakdown')
+          .eq('user_id', user.id)
+          .eq('status', 'ready')
+          .neq('id', id)
+          .lt('stream_date', streamDate)
+          .order('stream_date', { ascending: false, nullsFirst: false })
+          .limit(12),
+        supabase.from('profiles').select('plan, subscription_expires_at').eq('id', user.id).single(),
+        supabase.from('vods').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'ready'),
+      ]);
+      setVod(v);
+      setClips((clipsRes.data ?? []) as ClipRow[]);
+      setPrior((priorRes.data ?? []) as unknown as Prior[]);
+      setIsPro(hasPaidPlan(profileRes.data));
+      setFirstReport((countRes.count ?? 0) === 0);
     } catch (err: any) {
-      setLoadError(err?.message || 'Failed to load stream report');
+      setError(err?.message || "Couldn't load this stream");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [id]);
+  }, [id, router]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  // Auto-poll when VOD is processing OR any clip is generating
+  const running = vod?.status === 'transcribing' || vod?.status === 'analyzing';
+  const clipBusy = clips.some((c) => c.status === 'processing');
   useEffect(() => {
-    if (!vod) return;
-    const vodProcessing = vod.status === 'transcribing' || vod.status === 'analyzing';
-    const clipProcessing = clips.some(c => c.status === 'processing');
-    if (!vodProcessing && !clipProcessing) return;
-    const interval = setInterval(loadData, 8000);
-    return () => clearInterval(interval);
-  }, [vod?.status, clips, loadData]);
+    if (!running && !clipBusy) return;
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
+  }, [running, clipBusy, load]);
 
-  async function retryAnalysis() {
-    if (!id) return;
-    setRetrying(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/vods/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ vodId: id }),
-      });
-      const json = await res.json();
-      if (json.upgrade) {
-        router.push('/subscribe');
-      } else if (json.error === 'limit_reached') {
-        Alert.alert('Monthly limit reached', json.message ?? "You've used your analyses for this month. Resets at the start of next month.");
-      } else {
-        await loadData();
-      }
-    } catch {
-      Alert.alert('Retry failed', 'Could not start analysis. Try again.');
-    } finally {
-      setRetrying(false);
+  const ready = vod?.status === 'ready';
+  const sealed = ready && isSealed(vod);
+
+  async function share() {
+    const r = await api(`/api/vods/${id}/share`, { method: 'POST' });
+    if (!r.ok || !r.data?.url) {
+      Alert.alert("Couldn't make a link", 'Try again in a minute.');
+      return;
     }
+    Share.share({ message: `My LevlCast report for ${vod?.title ?? 'my stream'}`, url: r.data.url }).catch(() => {});
   }
 
-  async function generateHighlightReel() {
-    if (!id || generatingPeak !== null) return;
-    setGeneratingPeak(-1); // sentinel: reel is being made
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/clips/highlight-reel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ vodId: id }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (json?.upgrade) {
-        router.push('/subscribe');
-      } else if (json?.error === 'limit_reached') {
-        Alert.alert('Monthly clip limit reached', json.message ?? "You've used your clips for this month. Resets at the start of next month.");
-      } else if (!res.ok) {
-        Alert.alert('Reel failed', json?.message || json?.error || 'Could not start highlight reel.');
-      } else {
-        Alert.alert('Reel building', 'Your highlight reel is rendering. It will show up in your clips list in a minute.');
-        await loadData();
-      }
-    } catch {
-      Alert.alert('Reel failed', 'Could not start highlight reel. Try again.');
-    } finally {
-      setGeneratingPeak(null);
-    }
-  }
-
-  async function generateClip(peakIndex: number) {
-    if (!id || generatingPeak !== null) return;
-    setGeneratingPeak(peakIndex);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_APP_URL}/api/clips/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ vodId: id, peakIndex }),
-      });
-      const json = await res.json();
-      if (json.upgrade) {
-        router.push('/subscribe');
-      } else if (json.error === 'limit_reached') {
-        Alert.alert('Monthly clip limit reached', json.message ?? "You've used your clips for this month. Resets at the start of next month.");
-      } else if (json.error) {
-        Alert.alert('Clip generation', json.message || json.error);
-      } else {
-        await loadData();
-      }
-    } catch {
-      Alert.alert('Clip failed', 'Could not generate clip. Try again.');
-    } finally {
-      setGeneratingPeak(null);
-    }
-  }
-
-  async function shareClip(clip: Clip) {
-    const parts: string[] = [clip.title];
-    if (clip.caption_text) parts.push('\n' + clip.caption_text);
-    if (clip.video_url) parts.push('\n' + clip.video_url);
-    await Share.share({ message: parts.join('') });
-  }
-
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={colors.accentLight} /></View>;
-  }
-
-  if (loadError) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.loadErrorTitle}>Couldn't load report</Text>
-        <Text style={styles.loadErrorText}>{loadError}</Text>
-        <TouchableOpacity style={styles.loadErrorBtn} onPress={loadData}>
-          <Text style={styles.loadErrorBtnText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (!vod) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>VOD not found.</Text>
-      </View>
-    );
-  }
-
-  const report = vod.coach_report;
-  const peaks = vod.peak_data || [];
-  const isProcessing = vod.status === 'transcribing' || vod.status === 'analyzing';
-  const hasProcessingClip = clips.some(c => c.status === 'processing');
-
-  // Track which peak start times already have a clip (ready or processing)
-  const claimedStarts = new Set(
-    clips
-      .filter(c => c.status === 'ready' || c.status === 'processing')
-      .map(c => c.start_time_seconds)
+  const header = (
+    <Stack.Screen
+      options={{
+        headerRight: ready && !sealed ? () => (
+          <Pressable onPress={share} hitSlop={10} style={{ paddingHorizontal: 8 }}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.ink }}>Share</Text>
+          </Pressable>
+        ) : undefined,
+      }}
+    />
   );
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <Text style={styles.title} numberOfLines={3}>{vod.title}</Text>
-      <Text style={styles.date}>
-        {new Date(vod.stream_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+  if (loading) return <Loading />;
+  if (error || !vod) {
+    return (
+      <Screen inset={false}>
+        {header}
+        <Text style={s.stateTitle}>{error ? "Couldn't load this stream." : 'Stream not found.'}</Text>
+        {error ? <Text style={s.body}>{error}</Text> : null}
+        <Button title="Try again" kind="ghost" onPress={load} style={{ marginTop: 16, alignSelf: 'flex-start' }} />
+      </Screen>
+    );
+  }
+
+  const report = vod.coach_report as Record<string, any> | null;
+  const peaks = ((vod.peak_data as Peak[] | null) ?? []).filter((p) => Number.isFinite(Number(p.start)));
+  const twitchId = (vod.twitch_vod_id as string | null) ?? null;
+  const dateLabel = vod.stream_date
+    ? new Date(vod.stream_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  async function analyze() {
+    setBusy('analyze');
+    const ok = await startReport(vod.id, goPro);
+    setBusy(null);
+    if (ok) load();
+  }
+
+  const head = (
+    <View style={{ marginBottom: 20 }}>
+      <Text style={s.title}>{vod.title || 'Untitled stream'}</Text>
+      <Text style={s.meta}>
+        {[dateLabel, vod.duration_seconds ? formatDuration(vod.duration_seconds) : null].filter(Boolean).join(' · ')}
       </Text>
+    </View>
+  );
 
-      {/* Processing state */}
-      {isProcessing && (
-        <View style={styles.processingCard}>
-          <ActivityIndicator color={colors.accentLight} style={{ marginBottom: 12 }} />
-          <Text style={styles.processingTitle}>
-            {vod.status === 'transcribing' ? 'Transcribing stream...' : 'Generating coaching report...'}
-          </Text>
-          <Text style={styles.processingText}>This usually takes 2–5 minutes. The page updates automatically.</Text>
-        </View>
-      )}
-
-      {/* Failed state */}
-      {vod.status === 'failed' && (
-        <View style={styles.failedCard}>
-          <Text style={styles.failedTitle}>Analysis failed</Text>
-          <Text style={styles.failedText}>
-            {vod.failed_reason || 'Something went wrong during analysis. You can retry below.'}
-          </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={retryAnalysis} disabled={retrying}>
-            {retrying
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.retryBtnText}>Retry Analysis</Text>
-            }
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {report && (
-        <>
-          {/* Score Hero */}
-          <View style={styles.scoreHero}>
-            <View style={[styles.scoreRing, { borderColor: scoreColor(report.overall_score) }]}>
-              <Text style={[styles.scoreNum, { color: scoreColor(report.overall_score) }]}>{report.overall_score}</Text>
-              <Text style={styles.scoreOf}>/100</Text>
-            </View>
-            <View style={styles.scoreRight}>
-              {/* Delta badge */}
-              {previousScore !== null && (() => {
-                const delta = report.overall_score - previousScore;
-                if (delta === 0) return (
-                  <View style={[styles.deltaBadge, styles.deltaNeutral]}>
-                    <Text style={[styles.deltaText, { color: colors.muted }]}>Same as last stream</Text>
-                  </View>
-                );
-                return (
-                  <View style={[styles.deltaBadge, delta > 0 ? styles.deltaUp : styles.deltaDown]}>
-                    <Text style={[styles.deltaText, { color: delta > 0 ? colors.green : colors.red }]}>
-                      {delta > 0 ? `+${delta}` : delta} from last stream
-                    </Text>
-                  </View>
-                );
-              })()}
-              {/* Streak badge */}
-              {streak >= 2 && (
-                <View style={styles.streakBadge}>
-                  <Text style={styles.streakText}>🔥 {streak} stream streak</Text>
-                </View>
-              )}
-              {/* Stat pills */}
-              <View style={styles.pillRow}>
-                {(() => {
-                  const trend = TREND_CONFIG[report.energy_trend] || TREND_CONFIG.consistent;
-                  return (
-                    <View style={[styles.pill, { borderColor: trend.color + '50', backgroundColor: trend.color + '18' }]}>
-                      <Text style={[styles.pillText, { color: trend.color }]}>{trend.icon} {trend.label}</Text>
-                    </View>
-                  );
-                })()}
-                {report.viewer_retention_risk && (
-                  <View style={[styles.pill, {
-                    borderColor: (report.viewer_retention_risk === 'low' ? colors.green : report.viewer_retention_risk === 'medium' ? colors.yellow : colors.red) + '50',
-                    backgroundColor: (report.viewer_retention_risk === 'low' ? colors.green : report.viewer_retention_risk === 'medium' ? colors.yellow : colors.red) + '18',
-                  }]}>
-                    <Text style={[styles.pillText, {
-                      color: report.viewer_retention_risk === 'low' ? colors.green : report.viewer_retention_risk === 'medium' ? colors.yellow : colors.red,
-                    }]}>
-                      {report.viewer_retention_risk.charAt(0).toUpperCase() + report.viewer_retention_risk.slice(1)} retention risk
-                    </Text>
-                  </View>
-                )}
-              </View>
+  // ── Not ready yet ──
+  if (!ready) {
+    const kind = vod.status === 'failed' ? categorizeFailure(vod.failed_reason) : null;
+    return (
+      <Screen inset={false} refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }}>
+        {header}
+        {head}
+        {running ? (
+          <AnalysisProgressCard
+            input={{ status: vod.status, durationSeconds: coachedSeconds(vod.duration_seconds, isPro), updatedAt: vod.updated_at, progress: vod.progress ?? null }}
+            firstPartOnly={!isPro && (vod.duration_seconds ?? 0) > FREE_COACHED_SECONDS}
+            first={firstReport}
+          />
+        ) : vod.status === 'pending' ? (
+          <View style={s.state}>
+            <Text style={s.stateTitle}>Not analyzed yet</Text>
+            <Text style={s.body}>
+              {isPro
+                ? 'Pro coaches the whole stream.'
+                : (vod.duration_seconds ?? 0) > FREE_COACHED_SECONDS
+                  ? `A free report coaches the first 2 hours of this ${streamLength(vod.duration_seconds)} stream. Pro coaches all of it.`
+                  : 'Your report is usually ready in about ten minutes.'}
+            </Text>
+            <Button title="Analyze this stream" onPress={analyze} loading={busy === 'analyze'} style={{ marginTop: 18, alignSelf: 'flex-start' }} />
+          </View>
+        ) : kind === 'playback_token' ? (
+          <View style={s.state}>
+            <Label color={colors.warn}>Twitch blocked access</Label>
+            <Text style={[s.stateTitle, { marginTop: 8 }]}>We couldn&apos;t get this VOD&apos;s audio from Twitch.</Text>
+            <Text style={s.body}>
+              Twitch says it&apos;s restricted, so nothing counted against your reports. Usually it&apos;s a subscriber-only VOD, one muted for
+              copyrighted music, or one that expired (Affiliates keep VODs 14 days, Partners 60).
+            </Text>
+            <View style={s.stateActions}>
+              <Button title="Retry" onPress={analyze} loading={busy === 'analyze'} />
+              {twitchId ? <Button title="Open on Twitch" kind="ghost" onPress={() => Linking.openURL(`https://www.twitch.tv/videos/${twitchId}`)} /> : null}
             </View>
           </View>
-
-          {/* #1 Priority — GATED */}
-          {isPro ? (
-            <View style={styles.priorityCard}>
-              <Text style={styles.priorityLabel}>#1 PRIORITY</Text>
-              <LinkedText text={report.recommendation} color={colors.accent} twitchVodId={vod.twitch_vod_id} style={styles.priorityText} />
+        ) : kind === 'timeout' ? (
+          <View style={s.state}>
+            <Label color={colors.warn}>Timed out</Label>
+            <Text style={[s.stateTitle, { marginTop: 8 }]}>The analysis didn&apos;t finish in time.</Text>
+            <Text style={s.body}>Usually Twitch was slow to send the audio. Nothing counted against your reports, and a retry almost always works.</Text>
+            <View style={s.stateActions}>
+              <Button title="Retry" onPress={analyze} loading={busy === 'analyze'} />
             </View>
-          ) : (
-            <LockedCard label="#1 Priority Fix" onUpgrade={() => router.push('/subscribe')} />
+          </View>
+        ) : (
+          <View style={s.state}>
+            <Label color={colors.danger}>Analysis failed</Label>
+            <Text style={[s.stateTitle, { marginTop: 8 }]}>{vod.failed_reason || 'Something went wrong on our side.'}</Text>
+            <View style={s.stateActions}>
+              <Button title="Retry" onPress={analyze} loading={busy === 'analyze'} />
+            </View>
+          </View>
+        )}
+      </Screen>
+    );
+  }
+
+  // ── Sealed: the call and the reveal ──
+  if (sealed) {
+    const locked = isLocked(vod, isPro);
+    return (
+      <Screen inset={false}>
+        {header}
+        {head}
+        <Hairline />
+        <View style={{ paddingVertical: 24 }}>
+          <SealedResult
+            vodId={vod.id}
+            placement={vod.rank_delta != null && isPlacementDelta(vod.rank_delta)}
+            locked={locked && vod.sealed_extra_week ? { opensAt: lockOpensAt(vod.sealed_extra_week) } : null}
+            onOpened={() => load()}
+            onGoPro={goPro}
+          />
+        </View>
+        <Hairline />
+      </Screen>
+    );
+  }
+
+  // ── The report ──
+  const currentScore = typeof report?.overall_score === 'number' ? (report.overall_score as number) : undefined;
+  const streamerType = report?.streamer_type ?? null;
+  const previous = (streamerType ? prior.find((p) => p.kind === streamerType) : null) ?? prior[0] ?? null;
+  const previousScore = typeof previous?.score === 'number' ? previous.score : undefined;
+  const scoreDelta = currentScore !== undefined && previousScore !== undefined ? currentScore - previousScore : null;
+  const rankDelta = (vod.rank_delta as number | null) ?? null;
+  const placement = rankDelta !== null && isPlacementDelta(rankDelta);
+  const result = rankDelta !== null && !placement ? rankDelta : null;
+  const called = callOutcome(vod) === 'called';
+
+  const headline: string | null = report?.punch_line ? clean(report.punch_line) : report?.recommendation ? clean(report.recommendation) : null;
+  const mission: string | null = report?.next_stream_goals?.[0] ? clean(report.next_stream_goals[0]) : report?.recommendation ? clean(report.recommendation) : null;
+  const best = report?.best_moment as { time?: string; description?: string } | undefined;
+  const missed = report?.missed_clip as { time?: string; note?: string } | undefined;
+  const followUp = readFollowUp(report?.progress_on_prior_fix);
+
+  // Oldest first, this stream last.
+  const trajectory: TrendPoint[] | undefined =
+    currentScore !== undefined
+      ? [
+          ...prior
+            .filter((p) => typeof p.score === 'number')
+            .slice(0, 9)
+            .reverse()
+            .map((p) => ({ score: p.score as number })),
+          { score: currentScore, current: true },
+        ]
+      : undefined;
+
+  const madeClips = clips.filter((c) => c.status === 'ready' || c.status === 'processing');
+  const failedClips = clips.filter((c) => c.status === 'failed');
+  const reel = clips.find((c) => c.is_highlight_reel && (c.status === 'ready' || c.status === 'processing'));
+  const readyCount = clips.filter((c) => c.status === 'ready' && !c.is_highlight_reel).length;
+
+  function clipFor(p: Peak): ClipRow | undefined {
+    const st = Math.round(Number(p.start));
+    const en = Math.round(Number(p.end));
+    return clips.find(
+      (c) =>
+        !c.is_highlight_reel &&
+        (c.status === 'ready' || c.status === 'processing') &&
+        (c.start_time_seconds ?? -1) >= st - 60 &&
+        (c.start_time_seconds ?? -1) <= en + 5
+    );
+  }
+
+  async function make(i: number) {
+    setBusy(`peak-${i}`);
+    const ok = await makeClip(vod.id, i, goPro);
+    setBusy(null);
+    if (ok) load();
+  }
+
+  async function reelIt() {
+    setBusy('reel');
+    const ok = await makeReel(vod.id, goPro);
+    setBusy(null);
+    if (ok) load();
+  }
+
+  return (
+    <Screen inset={false} refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }}>
+      {header}
+      {head}
+
+      {!isPro && report?.coached_range && !report.coached_range.picked ? (
+        <View style={{ marginBottom: 18 }}>
+          <Note>
+            <Text style={s.noteText}>
+              This report coaches the first {streamLength(report.coached_range.end)} of your {streamLength(report.coached_range.total)} stream.{' '}
+              <Text style={s.link} onPress={goPro}>
+                Pro coaches the whole stream.
+              </Text>
+            </Text>
+          </Note>
+        </View>
+      ) : null}
+
+      <Hairline />
+      <View style={{ paddingTop: 24 }}>
+        <LabelRow
+          left={
+            <>
+              <Label>Result</Label>
+              {called ? <Tag text="Called it" color={colors.gold} /> : null}
+            </>
+          }
+          right={
+            currentScore !== undefined ? (
+              <Text style={s.scoreK}>
+                Score {currentScore}
+                {isPro && scoreDelta !== null && scoreDelta !== 0 ? (
+                  <Text style={{ color: scoreDelta > 0 ? colors.green : colors.danger }}> {signed(scoreDelta)}</Text>
+                ) : null}
+              </Text>
+            ) : undefined
+          }
+        />
+        {result !== null ? (
+          <View style={s.verdict}>
+            <Text style={[s.verdictWord, { color: result >= 0 ? colors.green : colors.danger }]}>{result >= 0 ? 'Win' : 'Loss'}</Text>
+            <Text style={[s.verdictNum, { color: result >= 0 ? colors.green : colors.danger }]}>{signed(result)}</Text>
+          </View>
+        ) : placement ? (
+          <Text style={[s.verdictWord, { color: colors.ink }]}>Placed</Text>
+        ) : null}
+        {headline ? <Text style={s.headline}>{headline}</Text> : null}
+      </View>
+      <RankPanel points={(vod.rank_points_after as number | null) ?? null} delta={rankDelta} label="Rank after this stream" />
+      <Hairline />
+
+      {report && (followUp || mission || best?.description) ? (
+        <View style={s.block}>
+          {followUp ? (
+            <View style={s.follow}>
+              <LabelRow
+                left={
+                  <>
+                    <Label>Last stream&apos;s fix</Label>
+                    <Tag text={FOLLOW_UP_LABEL[followUp.status]} color={FOLLOW_UP_COLOR[followUp.status]} />
+                  </>
+                }
+              />
+              <Text style={s.followAsk}>{followUp.ask}</Text>
+              {followUp.evidence ? <PlayableText text={followUp.evidence} vodId={twitchId} style={s.followWhy} /> : null}
+              {followUp.metric ? (
+                <Text style={s.metric}>
+                  {followUp.metric.label}{' '}
+                  <Text style={{ color: colors.ink }}>
+                    {followUp.metric.before}
+                    {followUp.metric.unit}
+                  </Text>{' '}
+                  to{' '}
+                  <Text style={{ color: colors.ink }}>
+                    {followUp.metric.after}
+                    {followUp.metric.unit}
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+          {mission ? (
+            <>
+              <Label style={{ marginBottom: 10 }}>Do this next stream</Label>
+              <Text style={s.fix}>{mission}</Text>
+              <Text style={s.small}>Your next report checks whether you did it.</Text>
+            </>
+          ) : null}
+          {best?.description ? (
+            <View style={[s.best, !mission && !followUp && { marginTop: 0, paddingTop: 0, borderTopWidth: 0 }]}>
+              <Label style={{ marginBottom: 6 }}>Best moment{best.time ? ` · ${clock(secondsFromStamp(best.time))}` : ''}</Label>
+              <Text style={s.bestText}>{clean(best.description)}</Text>
+              {twitchId && best.time ? (
+                <Pressable onPress={() => watchAt(twitchId, secondsFromStamp(best.time))} hitSlop={8} style={s.watch}>
+                  <Play size={11} color={colors.ink} fill={colors.ink} />
+                  <Text style={s.watchText}>Watch it</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {report?.score_breakdown ? (
+        <>
+          <Hairline />
+          <View style={s.block}>
+            <Scorecard scores={report.score_breakdown} previousScores={previous?.breakdown ?? null} deadAirPct={report.dead_air_pct ?? null} />
+          </View>
+        </>
+      ) : null}
+
+      {(peaks.length > 0 || clips.length > 0) && (
+        <View style={s.section}>
+          <SectionHead title="Clips" meta={`${peaks.length} ${peaks.length === 1 ? 'moment' : 'moments'} · ${readyCount} made`} />
+          {clipBusy ? <Text style={[s.small, { marginTop: 0, marginBottom: 12 }]}>Making a clip now. It takes a minute or two and this page updates on its own.</Text> : null}
+
+          {madeClips.length > 0 && (
+            <View style={s.grid}>
+              {[...madeClips].sort((a, b) => Number(!!b.is_highlight_reel) - Number(!!a.is_highlight_reel)).map((c) => (
+                <ClipCard key={c.id} clip={c} onPress={() => router.push(`/clip/${c.id}`)} />
+              ))}
+            </View>
           )}
 
-          {/* Rewatch Moments — two minutes to study, one win + one mistake */}
-          {isPro && (report.rewatch_moments ?? []).length > 0 && (
-            <View style={styles.rewatchSection}>
-              <Text style={styles.sectionLabel}>REWATCH TWO MINUTES</Text>
-              <Text style={styles.rewatchHint}>60 seconds each. Study before next stream.</Text>
-              {(report.rewatch_moments ?? []).map((m, i) => {
-                const isBest = m.kind === 'best';
-                const accent = isBest ? colors.green : colors.red;
-                const accentBg = isBest ? 'rgba(163,230,53,0.08)' : 'rgba(248,113,113,0.08)';
-                const accentBorder = isBest ? 'rgba(163,230,53,0.25)' : 'rgba(248,113,113,0.25)';
-                const href = twitchVodUrl(vod.twitch_vod_id, m.time);
-                const row = (
-                  <View style={[styles.rewatchRow, { backgroundColor: accentBg, borderColor: accentBorder }]}>
-                    <Text style={[styles.rewatchKind, { color: accent }]}>{isBest ? 'WIN' : 'LESSON'}</Text>
-                    <Text style={styles.rewatchNote} numberOfLines={3}>{m.note}</Text>
-                    <Text style={[styles.rewatchTime, { color: accent }]}>{m.time}{href ? ' ↗' : ''}</Text>
-                  </View>
-                );
-                return href ? (
-                  <TouchableOpacity key={i} onPress={() => Linking.openURL(href)} activeOpacity={0.8}>{row}</TouchableOpacity>
-                ) : (
-                  <View key={i}>{row}</View>
+          {failedClips.map((c) => (
+            <View key={c.id} style={s.failedClip}>
+              <Text style={s.failedTitle} numberOfLines={1}>{c.title || 'Untitled clip'}</Text>
+              <Text style={s.failedWhy}>{c.failed_reason || "This clip didn't render. Open Clips to try it again."}</Text>
+            </View>
+          ))}
+
+          {peaks.length > 1 && !reel ? (
+            <Button
+              title="Make a highlight reel"
+              kind="ghost"
+              small
+              onPress={reelIt}
+              loading={busy === 'reel'}
+              disabled={clipBusy}
+              style={{ alignSelf: 'flex-start', marginBottom: 6 }}
+            />
+          ) : null}
+
+          {peaks.length > 0 && (
+            <View style={s.moments}>
+              {peaks.map((p, i) => {
+                const c = clipFor(p);
+                return (
+                  <MomentRow
+                    key={`peak-${i}`}
+                    peak={p}
+                    twitchVodId={twitchId}
+                    clipState={c ? (c.status as 'ready' | 'processing') : null}
+                    onOpenClip={c ? () => router.push(`/clip/${c.id}`) : undefined}
+                    onMake={() => make(i)}
+                    busy={busy === `peak-${i}`}
+                    disabled={clipBusy || (busy !== null && busy !== `peak-${i}`)}
+                  />
                 );
               })}
+              {missed?.time && missed?.note ? (
+                <MomentRow missed peak={{ title: 'Almost a clip', start: secondsFromStamp(missed.time), end: 0, reason: clean(missed.note) }} twitchVodId={twitchId} />
+              ) : null}
             </View>
           )}
-
-          {/* Clips */}
-          {clips.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>GENERATED CLIPS</Text>
-              {clips.map(clip => (
-                <View key={clip.id} style={styles.clipRow}>
-                  <View style={styles.clipInfo}>
-                    <Text style={styles.clipTitle} numberOfLines={2}>{clip.title}</Text>
-                    {clip.status === 'processing' && (
-                      <View style={styles.clipStatusRow}>
-                        <ActivityIndicator size="small" color={colors.muted} />
-                        <Text style={styles.clipStatusText}>Generating...</Text>
-                      </View>
-                    )}
-                    {clip.status === 'failed' && (
-                      <Text style={styles.clipFailed}>Failed</Text>
-                    )}
-                  </View>
-                  {clip.status === 'ready' && clip.video_url && (
-                    <TouchableOpacity style={styles.shareBtn} onPress={() => shareClip(clip)}>
-                      <Text style={styles.shareBtnText}>Share</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* What Worked — 1 strength free, rest locked */}
-          <View style={styles.section}>
-            <View style={styles.workedCard}>
-              <Text style={styles.sectionLabel}>WHAT WORKED</Text>
-              {(isPro ? (report.strengths ?? []) : (report.strengths ?? []).slice(0, 1)).map((s, i) => (
-                <View key={i} style={styles.bulletRow}>
-                  <Text style={[styles.bullet, { color: colors.green }]}>✓</Text>
-                  <BoldLeadText text={s} accent={colors.green} twitchVodId={vod.twitch_vod_id} />
-                </View>
-              ))}
-              {!isPro && (report.strengths ?? []).length > 1 && (
-                <TouchableOpacity onPress={() => router.push('/subscribe')} style={{ marginTop: 4 }}>
-                  <Text style={{ fontSize: 12, color: 'rgba(155,106,255,0.7)', fontWeight: '600' }}>+{(report.strengths ?? []).length - 1} more — Unlock with Pro →</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {/* Fix for Next Stream — GATED */}
-            {isPro ? (
-              <View style={styles.fixCard}>
-                <Text style={styles.sectionLabel}>FIX FOR NEXT STREAM</Text>
-                {(report.improvements ?? []).map((s, i) => {
-                  // Mark as recurring when the label (or full string) shows
-                  // up in the coaching arc's recurring list. Fuzzy: case-
-                  // insensitive substring match because arc labels may be
-                  // reworded slightly between streams.
-                  const labelMatch = s.match(/^\*\*(.+?)\*\*/);
-                  const label = (labelMatch?.[1] ?? '').toLowerCase();
-                  const sl = s.toLowerCase();
-                  const isRecurring = recurringImprovements.some((r) => {
-                    const rl = r.toLowerCase();
-                    const head = rl.split(':')[0].trim();
-                    return (label && (rl.includes(label) || label.includes(head))) ||
-                      (head && sl.includes(head));
-                  });
-                  return (
-                    <View key={i} style={styles.bulletRow}>
-                      <Text style={[styles.bullet, { color: colors.yellow }]}>→</Text>
-                      <BoldLeadText text={s} accent={colors.yellow} twitchVodId={vod.twitch_vod_id} recurring={isRecurring} />
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <LockedCard label="Fix For Next Stream" onUpgrade={() => router.push('/subscribe')} />
-            )}
-          </View>
-
-          {/* Best Moment — GATED */}
-          {isPro ? (
-            report.best_moment && (
-              <View style={styles.bestMomentCard}>
-                <Text style={styles.sectionLabel}>BEST MOMENT</Text>
-                <Text style={styles.bestMomentTime}>{report.best_moment.time}</Text>
-                <Text style={styles.bestMomentDesc}>{report.best_moment.description}</Text>
-              </View>
-            )
-          ) : (
-            <LockedCard label="Best Moment" onUpgrade={() => router.push('/subscribe')} />
-          )}
-
-          {/* Cold Open */}
-          {report.cold_open && (
-            <View style={styles.insightCard}>
-              <View style={styles.insightHeader}>
-                <Text style={styles.sectionLabel}>COLD OPEN</Text>
-                <View style={[styles.insightBadge, {
-                  backgroundColor: COLD_OPEN_CONFIG[report.cold_open.score]?.color + '18' || colors.muted + '18',
-                  borderColor: COLD_OPEN_CONFIG[report.cold_open.score]?.color + '50' || colors.muted + '50',
-                }]}>
-                  <Text style={[styles.insightBadgeText, {
-                    color: COLD_OPEN_CONFIG[report.cold_open.score]?.color || colors.muted,
-                  }]}>{COLD_OPEN_CONFIG[report.cold_open.score]?.label || report.cold_open.score}</Text>
-                </View>
-              </View>
-              <Text style={styles.insightText}>{report.cold_open.note}</Text>
-            </View>
-          )}
-
-          {/* Momentum Crash */}
-          {report.momentum_crash && (
-            <View style={styles.insightCard}>
-              <Text style={styles.sectionLabel}>WORST ENERGY DROP</Text>
-              <Text style={styles.insightTime}>{report.momentum_crash.time} ({report.momentum_crash.duration_min} min)</Text>
-              <Text style={styles.insightText}>{report.momentum_crash.note}</Text>
-            </View>
-          )}
-
-          {/* Dead Zones */}
-          {report.dead_zones && report.dead_zones.length > 0 && (
-            <View style={styles.insightCard}>
-              <Text style={styles.sectionLabel}>DEAD ZONES</Text>
-              {report.dead_zones.map((dz, i) => (
-                <View key={i} style={styles.deadZoneRow}>
-                  <Text style={styles.deadZoneTime}>{dz.time}</Text>
-                  <Text style={styles.deadZoneDur}>{Math.round(dz.duration / 60)} min</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Trend vs History */}
-          {report.trend_vs_history && report.trend_vs_history.direction !== 'first_stream' && (
-            <View style={styles.insightCard}>
-              <View style={styles.insightHeader}>
-                <Text style={styles.sectionLabel}>TREND</Text>
-                <View style={[styles.insightBadge, {
-                  backgroundColor: (report.trend_vs_history.direction === 'improving' ? colors.green : report.trend_vs_history.direction === 'declining' ? colors.red : colors.yellow) + '18',
-                  borderColor: (report.trend_vs_history.direction === 'improving' ? colors.green : report.trend_vs_history.direction === 'declining' ? colors.red : colors.yellow) + '50',
-                }]}>
-                  <Text style={[styles.insightBadgeText, {
-                    color: report.trend_vs_history.direction === 'improving' ? colors.green : report.trend_vs_history.direction === 'declining' ? colors.red : colors.yellow,
-                  }]}>{report.trend_vs_history.direction === 'improving' ? 'Improving' : report.trend_vs_history.direction === 'declining' ? 'Declining' : 'Consistent'}</Text>
-                </View>
-              </View>
-              <Text style={styles.insightText}>{report.trend_vs_history.note}</Text>
-            </View>
-          )}
-        </>
-      )}
-
-      {/* Peak Moments */}
-      {peaks.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.peakHeader}>
-            <Text style={styles.sectionLabel}>PEAK MOMENTS ({peaks.length})</Text>
-            {isPro && peaks.length >= 2 && (
-              <TouchableOpacity
-                style={styles.reelBtn}
-                onPress={generateHighlightReel}
-                disabled={generatingPeak === -1}
-              >
-                {generatingPeak === -1
-                  ? <ActivityIndicator size="small" color={colors.accentLight} />
-                  : <Text style={styles.reelBtnText}>Make Highlight Reel</Text>
-                }
-              </TouchableOpacity>
-            )}
-          </View>
-          {peaks.map((p, i) => {
-            const alreadyClaimed = claimedStarts.has(Math.round(p.start));
-            return (
-              <View key={i} style={styles.peakRow}>
-                <View style={styles.peakHeader}>
-                  <Text style={styles.peakTitle}>{p.title}</Text>
-                  <View style={[styles.peakCategoryPill, {
-                    backgroundColor: (CATEGORY_COLORS[p.category] || colors.accentLight) + '18',
-                    borderColor: (CATEGORY_COLORS[p.category] || colors.accentLight) + '50',
-                  }]}>
-                    <Text style={[styles.peakCategoryText, {
-                      color: CATEGORY_COLORS[p.category] || colors.accentLight,
-                    }]}>{CATEGORY_LABELS[p.category] || p.category}</Text>
-                  </View>
-                </View>
-                <Text style={styles.peakReason}>{p.reason}</Text>
-                <View style={styles.peakMeta}>
-                  <View style={styles.peakMetaLeft}>
-                    <Text style={styles.peakTime}>{formatTime(p.start)} – {formatTime(p.end)}</Text>
-                    <Text style={styles.peakScore}>Score {Math.round(p.score * 100)}</Text>
-                  </View>
-                  {alreadyClaimed ? (
-                    <Text style={styles.clipGenerated}>Clip generated</Text>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.genClipBtn, (hasProcessingClip || generatingPeak !== null) && styles.genClipBtnDisabled]}
-                      onPress={() => generateClip(i)}
-                      disabled={hasProcessingClip || generatingPeak !== null}
-                    >
-                      {generatingPeak === i ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                        <Text style={styles.genClipBtnText}>Generate Clip</Text>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            );
-          })}
         </View>
       )}
-    </ScrollView>
+
+      {report ? (
+        <View style={s.section}>
+          <Pressable onPress={() => setShowAll((v) => !v)} style={s.fold}>
+            <Text style={s.foldText}>Full breakdown</Text>
+            {showAll ? <ChevronUp size={18} color={colors.ink3} /> : <ChevronDown size={18} color={colors.ink3} />}
+          </Pressable>
+          {showAll ? (
+            <View style={{ paddingTop: 20 }}>
+              <Breakdown report={report} twitchVodId={twitchId} durationSeconds={vod.duration_seconds} trajectory={trajectory} />
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        <View style={s.state}>
+          <Text style={s.body}>There&apos;s no coach report for this stream. Analyze it again to get one.</Text>
+        </View>
+      )}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 20, paddingBottom: 60 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  title: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginBottom: 6, lineHeight: 26 },
-  date: { fontSize: 12, color: colors.muted, marginBottom: 20 },
-  errorText: { color: colors.muted, fontSize: 15 },
-  loadErrorTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
-  loadErrorText: { fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  loadErrorBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
-  loadErrorBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-
-  // Processing
-  processingCard: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 28, alignItems: 'center', marginBottom: 20 },
-  processingTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 8 },
-  processingText: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19 },
-  failedCard: { backgroundColor: 'rgba(248,113,113,0.08)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', padding: 24, alignItems: 'center', marginBottom: 20 },
-  failedTitle: { fontSize: 17, fontWeight: '700', color: colors.red, marginBottom: 8 },
-  failedText: { fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 19, marginBottom: 16 },
-  retryBtn: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 },
-  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
-  // Score hero
-  scoreHero: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(155,106,255,0.1)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(155,106,255,0.3)',
-    padding: 20,
-    marginBottom: 14,
-    alignItems: 'flex-start',
-    gap: 18,
-  },
-  scoreRing: { width: 88, height: 88, borderRadius: 44, borderWidth: 3, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  scoreNum: { fontSize: 32, fontWeight: '800', letterSpacing: -1 },
-  scoreOf: { fontSize: 12, color: colors.muted, marginTop: -4 },
-  scoreRight: { flex: 1, gap: 8 },
-  deltaBadge: { alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
-  deltaUp: { backgroundColor: 'rgba(74,222,128,0.12)', borderColor: 'rgba(74,222,128,0.3)' },
-  deltaDown: { backgroundColor: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.3)' },
-  deltaNeutral: { backgroundColor: 'rgba(136,146,164,0.12)', borderColor: 'rgba(136,146,164,0.3)' },
-  deltaText: { fontSize: 12, fontWeight: '700' },
-  streakBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(251,191,36,0.15)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(251,191,36,0.35)' },
-  streakText: { fontSize: 12, fontWeight: '700', color: colors.yellow },
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  pill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
-  pillText: { fontSize: 11, fontWeight: '700' },
-
-  // #1 Priority
-  priorityCard: { backgroundColor: 'rgba(155,106,255,0.1)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(155,106,255,0.35)', padding: 18, marginBottom: 14 },
-  priorityLabel: { fontSize: 11, fontWeight: '700', color: colors.accentLight, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
-  priorityText: { fontSize: 14, color: colors.text, lineHeight: 22, fontWeight: '500' },
-
-  // Shared section
-  section: { marginBottom: 14 },
-  reelBtn: { backgroundColor: 'rgba(155,106,255,0.16)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(155,106,255,0.4)' },
-  reelBtnText: { fontSize: 11, fontWeight: '700', color: colors.accentLight, letterSpacing: 0.4 },
-
-  // Clips
-  clipRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 8, gap: 12 },
-  clipInfo: { flex: 1 },
-  clipTitle: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4 },
-  clipStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  clipStatusText: { fontSize: 12, color: colors.muted },
-  clipFailed: { fontSize: 12, fontWeight: '600', color: colors.red },
-  shareBtn: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexShrink: 0 },
-  shareBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-
-  // What Worked / Fix for Next Stream
-  workedCard: { backgroundColor: 'rgba(74,222,128,0.06)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)', padding: 16, marginBottom: 10 },
-  fixCard: { backgroundColor: 'rgba(251,191,36,0.06)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)', padding: 16 },
-  bulletRow: { flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'flex-start' },
-  bullet: { fontSize: 13, fontWeight: '700', marginTop: 1 },
-  bulletText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 19 },
-  bulletBold: { fontWeight: '800', color: '#fff' },
-
-  // Your Missions
-  // Rewatch moments — Win + Lesson cards
-  rewatchSection: { marginBottom: 18 },
-  rewatchHint: { fontSize: 11, color: colors.muted, marginBottom: 10, letterSpacing: 0.4 },
-  rewatchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
-  rewatchKind: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4, width: 56 },
-  rewatchNote: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
-  rewatchTime: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
-
-  // Best moment
-  bestMomentCard: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 14 },
-  bestMomentTime: { fontSize: 22, fontWeight: '800', color: colors.accentLight, marginBottom: 4 },
-  bestMomentDesc: { fontSize: 13, color: colors.text, lineHeight: 19 },
-
-  // Insight cards (cold open, momentum crash, dead zones, trend)
-  insightCard: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 14 },
-  insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  insightBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1 },
-  insightBadgeText: { fontSize: 11, fontWeight: '700' },
-  insightTime: { fontSize: 16, fontWeight: '800', color: colors.accentLight, marginBottom: 4 },
-  insightText: { fontSize: 13, color: colors.text, lineHeight: 20 },
-  deadZoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
-  deadZoneTime: { fontSize: 13, fontWeight: '600', color: colors.text },
-  deadZoneDur: { fontSize: 12, fontWeight: '600', color: colors.muted },
-
-  // Peak moments
-  peakRow: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 8 },
-  peakHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
-  peakTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.text },
-  peakCategoryPill: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
-  peakCategoryText: { fontSize: 11, fontWeight: '700' },
-  peakReason: { fontSize: 12, color: colors.muted, lineHeight: 17, marginBottom: 8 },
-  peakMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  peakMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  peakTime: { fontSize: 12, fontWeight: '600', color: colors.muted },
-  peakScore: { fontSize: 12, fontWeight: '700', color: colors.accentLight },
-  clipGenerated: { fontSize: 12, fontWeight: '600', color: colors.green },
-  genClipBtn: { backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  genClipBtnDisabled: { opacity: 0.4 },
-  genClipBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-
-  // Shared
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 },
+const s = StyleSheet.create({
+  title: { fontFamily: fonts.display, fontSize: 26, lineHeight: 32, letterSpacing: -0.6, color: colors.ink },
+  meta: { marginTop: 8, fontFamily: fonts.mono, fontSize: 12, letterSpacing: 0.4, color: colors.ink3 },
+  body: { marginTop: 8, fontSize: 15, lineHeight: 22, color: colors.ink2 },
+  small: { marginTop: 12, fontSize: 13, lineHeight: 19, color: colors.ink3 },
+  link: { color: colors.ink, fontWeight: '600', textDecorationLine: 'underline' },
+  noteText: { fontSize: 14, lineHeight: 21, color: colors.ink3 },
+  state: { paddingVertical: 26, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
+  stateTitle: { fontFamily: fonts.display, fontSize: 20, lineHeight: 27, letterSpacing: -0.3, color: colors.ink },
+  stateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 },
+  scoreK: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.1, textTransform: 'uppercase', color: colors.ink4 },
+  verdict: { flexDirection: 'row', alignItems: 'baseline', gap: 14, marginTop: 2 },
+  verdictWord: { fontFamily: fonts.numbers, fontSize: 76, lineHeight: 72, textTransform: 'uppercase' },
+  verdictNum: { fontFamily: fonts.numbers, fontSize: 76, lineHeight: 72 },
+  headline: { marginTop: 18, fontFamily: fonts.display, fontSize: 20, lineHeight: 28, letterSpacing: -0.3, color: colors.ink },
+  block: { paddingVertical: 24 },
+  follow: { marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: colors.line },
+  followAsk: { fontSize: 15, fontWeight: '600', lineHeight: 22, color: colors.ink2 },
+  followWhy: { marginTop: 8, fontSize: 14, lineHeight: 21, color: colors.ink3 },
+  metric: { marginTop: 10, fontFamily: fonts.mono, fontSize: 12, color: colors.ink3 },
+  fix: { fontFamily: fonts.display, fontSize: 20, lineHeight: 28, letterSpacing: -0.3, color: colors.ink },
+  best: { marginTop: 26, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.line },
+  bestText: { fontSize: 15, lineHeight: 23, color: colors.ink2 },
+  watch: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start' },
+  watchText: { fontFamily: fonts.mono, fontSize: 12, color: colors.ink, textDecorationLine: 'underline' },
+  section: { marginTop: 28 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, rowGap: 20, marginBottom: 18 },
+  failedClip: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.line },
+  failedTitle: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  failedWhy: { marginTop: 2, fontSize: 13, color: colors.danger },
+  moments: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 8 },
+  fold: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
+  foldText: { fontFamily: fonts.display, fontSize: 18, letterSpacing: -0.3, color: colors.ink },
 });

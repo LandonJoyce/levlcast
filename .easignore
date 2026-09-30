@@ -1,2 +1,13 @@
 .agents
 .claude
+
+# EAS uses this file INSTEAD of .gitignore when it exists, so everything git
+# skips has to be listed here too. Without these lines the iPhone build
+# uploaded the website's secret keys (.env.local) and its build folders.
+node_modules/
+.next/
+.vercel/
+.env.local
+.env*.local
+*.log
+mobile.zip
