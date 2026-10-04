@@ -1,16 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { REVIEW_SUBS, modmailUrl, submitUrl } from "@/lib/review-subs";
 
 /**
- * Review threads: paste the link to a "drop your Twitch name and I'll look
- * at your last stream" thread, and everyone who replied gets their free
- * report and a reply written from it. Nothing posts from here; each reply
- * is copied and posted by hand under the person's comment.
+ * Review threads: post "drop your Twitch name and I'll look at your last
+ * stream" in the streamer subs, and everyone who replies gets their free
+ * report and a reply written from it.
  *
- * State lives in this browser (localStorage), so a refresh keeps the
- * thread, and "Check again" picks up new comments without re-running the
- * people already done.
+ * Post opens Reddit with the thread filled in, one more click to post. The
+ * server can't post by itself: that needs a Reddit API app, which Reddit
+ * wouldn't create for this account (the same reason DMs open a compose
+ * page). Subs whose rules ban tool posts get a message to the mods
+ * instead, and their Post button only appears once the mods say yes.
+ *
+ * Threads posted from the outreach account are found on their own, and
+ * while this page is open their replies are read every few minutes.
+ * Replies are never posted from here; each is copied and posted by hand.
+ *
+ * State lives in this browser (localStorage), so a refresh keeps it, and a
+ * check picks up new comments without re-running anyone already done.
  */
 
 type ItemState = "no_name" | "queued" | "waiting" | "ready" | "canned" | "problem" | "done";
@@ -22,6 +31,7 @@ type Item = {
   permalink: string | null;
   login: string | null;
   guess: string | null;
+  sub?: string | null;
   state: ItemState;
   vodId?: string;
   url?: string;
@@ -29,18 +39,33 @@ type Item = {
   problem?: string;
 };
 
-type Entry = Pick<Item, "key" | "author" | "comment" | "permalink" | "login" | "guess">;
+type Entry = Pick<Item, "key" | "author" | "comment" | "permalink" | "login" | "guess" | "sub">;
+
+type Thread = { id: string; sub: string; title: string; url: string; created: number; comments: number; removed: boolean };
+
+/** Per sub: when the mods were asked, whether they said yes, when Post was last pressed. */
+type SubMarks = Record<string, { asked?: string; approved?: boolean; opened?: string }>;
 
 const STORE_KEY = "lc-review-thread-v1";
+const SUBS_KEY = "lc-review-subs-v1";
 const BATCH = 10;
 const POLL_MS = 6000;
+/** How often an open page reads the threads again for new replies. */
+const RECHECK_MS = 5 * 60 * 1000;
 
-function load(): { input: string; items: Item[] } {
+function readStore<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return JSON.parse(raw);
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
   } catch {}
-  return { input: "", items: [] };
+  return fallback;
+}
+
+function ago(unixSeconds: number): string {
+  const s = Math.max(0, Date.now() / 1000 - unixSeconds);
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
 }
 
 const box: React.CSSProperties = {
@@ -60,10 +85,13 @@ const linkBtn: React.CSSProperties = {
   cursor: "pointer",
   textDecoration: "none",
 };
+const smallBtn: React.CSSProperties = { fontSize: 12, padding: "6px 14px", textDecoration: "none", whiteSpace: "nowrap" };
 
 export function ReviewThreadCard() {
   const [input, setInput] = useState("");
   const [items, setItems] = useState<Item[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [marks, setMarks] = useState<SubMarks>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -71,14 +99,20 @@ export function ReviewThreadCard() {
   const [restored, setRestored] = useState(false);
   const starting = useRef(false);
   const polling = useRef(false);
-  // The poll reads the list through this, so its timer isn't reset by every change.
+  const checking = useRef(false);
+  // Timers read these, so they aren't reset by every change.
   const itemsRef = useRef<Item[]>([]);
+  const inputRef = useRef("");
+  const threadsRef = useRef<Thread[]>([]);
   itemsRef.current = items;
+  inputRef.current = input;
+  threadsRef.current = threads;
 
   useEffect(() => {
-    const saved = load();
+    const saved = readStore<{ input: string; items: Item[] }>(STORE_KEY, { input: "", items: [] });
     setInput(saved.input);
     setItems(saved.items);
+    setMarks(readStore<SubMarks>(SUBS_KEY, {}));
     setRestored(true);
   }, []);
 
@@ -86,19 +120,47 @@ export function ReviewThreadCard() {
     if (!restored) return;
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({ input, items }));
+      localStorage.setItem(SUBS_KEY, JSON.stringify(marks));
     } catch {}
-  }, [input, items, restored]);
+  }, [input, items, marks, restored]);
 
   const patch = useCallback((key: string, p: Partial<Item>) => {
     setItems((list) => list.map((it) => (it.key === key ? { ...it, ...p } : it)));
   }, []);
 
-  /** Read the thread (or the pasted names) and add anyone new. */
-  async function check() {
-    setLoading(true);
-    setError(null);
+  function mark(sub: string, p: SubMarks[string]) {
+    setMarks((m) => ({ ...m, [sub]: { ...m[sub], ...p } }));
+  }
+
+  /** The review threads already posted from the outreach account. */
+  const loadMine = useCallback(async (): Promise<void> => {
     try {
-      const res = await fetch(`/api/outreach/reviews?input=${encodeURIComponent(input.trim())}`);
+      const res = await fetch("/api/outreach/reviews/mine", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok) return;
+      const list = (json.threads ?? []) as Thread[];
+      // Set the ref too, so a check straight after this sees them before the next render.
+      threadsRef.current = list;
+      setThreads(list);
+    } catch {}
+  }, []);
+
+  /** Read every thread (and any pasted names) and add anyone new. */
+  const check = useCallback(async (quiet = false) => {
+    if (checking.current) return;
+    const live = threadsRef.current.filter((t) => !t.removed).map((t) => t.url);
+    const text = [inputRef.current.trim(), ...live].filter(Boolean).join("\n");
+    if (!text) {
+      if (!quiet) setError("Post a thread first, or paste a thread link or some Twitch names.");
+      return;
+    }
+    checking.current = true;
+    if (!quiet) {
+      setLoading(true);
+      setError(null);
+    }
+    try {
+      const res = await fetch(`/api/outreach/reviews?input=${encodeURIComponent(text)}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Couldn't read that.");
       const entries = (json.entries ?? []) as Entry[];
@@ -109,13 +171,28 @@ export function ReviewThreadCard() {
           .map((e): Item => ({ ...e, state: e.login ? "queued" : "no_name" }));
         return [...list, ...fresh];
       });
-      if (entries.length === 0) setError("No replies yet. The mirror can be a few minutes behind Reddit, so check again soon.");
+      if (!quiet && entries.length === 0) setError("No replies yet. The mirror can be a few minutes behind Reddit, so check again soon.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read that.");
+      if (!quiet) setError(err instanceof Error ? err.message : "Couldn't read that.");
     } finally {
-      setLoading(false);
+      checking.current = false;
+      if (!quiet) setLoading(false);
     }
-  }
+  }, []);
+
+  // Find posted threads and read them on load, then again every few minutes while the page is open.
+  useEffect(() => {
+    void (async () => {
+      await loadMine();
+      if (threadsRef.current.some((t) => !t.removed)) await check(true);
+    })();
+    const timer = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      await loadMine();
+      await check(true);
+    }, RECHECK_MS);
+    return () => clearInterval(timer);
+  }, [loadMine, check]);
 
   // Start reports for anyone queued, a batch at a time.
   useEffect(() => {
@@ -207,11 +284,12 @@ export function ReviewThreadCard() {
   const count = (s: ItemState) => items.filter((it) => it.state === s).length;
   const toPost = count("ready") + count("canned");
   const running = count("queued") + count("waiting");
+  const canCheck = !!input.trim() || threads.some((t) => !t.removed);
 
   return (
     <div className="card" style={{ marginBottom: 20, overflow: "hidden" }}>
       <div className="card-head">
-        <h3>Review thread</h3>
+        <h3>Review threads</h3>
         <div className="right">
           {items.length > 0 && (
             <span className="label-mono">
@@ -220,15 +298,101 @@ export function ReviewThreadCard() {
           )}
         </div>
       </div>
+
+      {/* Where to post. Open subs post in one click; the rest ask the mods first. */}
+      <div className="card-pad" style={{ display: "grid", gap: 0, borderBottom: "1px solid var(--line)" }}>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <span className="mono-label">Post a review thread</span>
+          <span style={{ fontSize: 11, color: "var(--ink-3)" }}>
+            One sub a day is safest. The same post everywhere at once looks like spam to Reddit.
+          </span>
+        </div>
+        {REVIEW_SUBS.map((s) => {
+          const latest = threads.find((t) => t.sub === s.name);
+          const m = marks[s.name] ?? {};
+          const canPost = s.status === "open" || (s.status === "ask" && m.approved);
+          const justOpened = !!m.opened && !latest && Date.now() - Date.parse(m.opened) < 60 * 60 * 1000;
+          return (
+            <div
+              key={s.name}
+              style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, alignItems: "center", padding: "9px 0", borderTop: "1px solid var(--line)" }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div className="row gap-sm" style={{ alignItems: "baseline", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: s.status === "no" ? "var(--ink-3)" : "var(--ink)" }}>r/{s.name}</span>
+                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                    {s.members}
+                  </span>
+                  {latest && (
+                    <a
+                      href={latest.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 12, color: latest.removed ? "#F87171" : "var(--ink-2)", textDecoration: "underline", textUnderlineOffset: 3 }}
+                    >
+                      {latest.removed
+                        ? `Removed by the mods, ${ago(latest.created)}`
+                        : `Posted ${ago(latest.created)} · ${latest.comments} comment${latest.comments === 1 ? "" : "s"}`}
+                    </a>
+                  )}
+                </div>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
+                  {justOpened
+                    ? "Posted it? It shows up here within a few minutes."
+                    : s.status === "ask" && m.approved
+                      ? "The mods said yes."
+                      : s.status === "ask" && m.asked
+                        ? `${s.rule} Asked the mods ${ago(Date.parse(m.asked) / 1000)}.`
+                        : s.rule}
+                </p>
+              </div>
+              <div className="row gap-sm" style={{ alignItems: "center" }}>
+                {canPost && (
+                  <a
+                    href={submitUrl(s)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => mark(s.name, { opened: new Date().toISOString() })}
+                    className={`btn ${latest ? "btn-ghost" : "btn-blue"}`}
+                    style={smallBtn}
+                  >
+                    {latest ? "Post again" : "Post"}
+                  </a>
+                )}
+                {s.status === "ask" && !m.approved && (
+                  <>
+                    {m.asked && (
+                      <button onClick={() => mark(s.name, { approved: true })} style={linkBtn}>
+                        They said yes
+                      </button>
+                    )}
+                    <a
+                      href={modmailUrl(s)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => mark(s.name, { asked: new Date().toISOString() })}
+                      className="btn btn-ghost"
+                      style={smallBtn}
+                    >
+                      {m.asked ? "Ask again" : "Ask mods"}
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="card-pad" style={{ display: "grid", gap: 10 }}>
         <p style={{ margin: 0, fontSize: 13, color: "var(--ink-3)", lineHeight: 1.55 }}>
-          Paste the link to your review thread, or Twitch names one per line. Everyone gets their free report and a reply
-          written from it. You post the replies yourself.
+          Everyone who replies to your threads with their Twitch name gets their free report and a reply written from it.
+          Replies are checked every few minutes while this page is open. You post the replies yourself.
         </p>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="https://www.reddit.com/r/TwitchStreaming/comments/..."
+          placeholder="Another thread's link, or Twitch names one per line (optional)"
           rows={2}
           style={{ ...box, resize: "vertical", fontFamily: "inherit" }}
         />
@@ -239,10 +403,10 @@ export function ReviewThreadCard() {
             </button>
           )}
           <button
-            onClick={check}
-            disabled={loading || !input.trim()}
+            onClick={() => void check()}
+            disabled={loading || !canCheck}
             className="btn btn-blue"
-            style={{ fontSize: 12, padding: "7px 16px", opacity: loading || !input.trim() ? 0.5 : 1 }}
+            style={{ fontSize: 12, padding: "7px 16px", opacity: loading || !canCheck ? 0.5 : 1 }}
           >
             {loading ? "Reading..." : items.length > 0 ? "Check again" : "Run reviews"}
           </button>
@@ -255,9 +419,12 @@ export function ReviewThreadCard() {
           {items.map((it) => (
             <div key={it.key} style={{ padding: "14px 20px", borderBottom: "1px solid var(--line)", opacity: it.state === "done" ? 0.55 : 1 }}>
               <div className="row gap-sm" style={{ flexWrap: "wrap", alignItems: "baseline", marginBottom: it.comment && it.state !== "done" ? 4 : 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
-                  {it.author ? `u/${it.author}` : it.login}
-                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{it.author ? `u/${it.author}` : it.login}</span>
+                {it.sub && (
+                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                    r/{it.sub}
+                  </span>
+                )}
                 {it.author && it.login && (
                   <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
                     twitch.tv/{it.login}
@@ -283,7 +450,7 @@ export function ReviewThreadCard() {
               )}
 
               {it.state === "no_name" && (
-                <div className="row gap-sm" style={{ alignItems: "center" }}>
+                <div className="row gap-sm" style={{ alignItems: "center", flexWrap: "wrap" }}>
                   <input
                     value={names[it.key] ?? it.guess ?? ""}
                     onChange={(e) => setNames((n) => ({ ...n, [it.key]: e.target.value }))}

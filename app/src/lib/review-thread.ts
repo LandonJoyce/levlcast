@@ -48,6 +48,8 @@ export interface ThreadEntry {
   login: string | null;
   /** A name read out of a sentence ("my twitch is x"). Shown, but only runs once confirmed. */
   guess: string | null;
+  /** The subreddit the reply is in, when it came from a thread. */
+  sub?: string | null;
 }
 
 const SKIP_AUTHORS = new Set(["automoderator", "[deleted]", "reddit", "bmwdouche"]);
@@ -117,6 +119,12 @@ export function redditPostId(url: string): string | null {
   return m ? m[1].toLowerCase() : null;
 }
 
+/** Every thread linked in some pasted text, once each. */
+export function threadIds(text: string): string[] {
+  const ids = text.split(/\s+/).map(redditPostId).filter((id): id is string => !!id);
+  return [...new Set(ids)];
+}
+
 type RawComment = {
   id?: string;
   author?: string;
@@ -170,6 +178,7 @@ export async function fetchThread(postId: string): Promise<ThreadEntry[]> {
         permalink: c.permalink ? `https://www.reddit.com${c.permalink}` : null,
         login: found?.sure ? found.login : null,
         guess: found && !found.sure ? found.login : null,
+        sub: c.permalink?.match(/^\/r\/([^/]+)\//)?.[1] ?? null,
       };
     });
 }
