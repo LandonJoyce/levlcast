@@ -31,7 +31,7 @@ import { emailsOff } from "@/lib/email-optout";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_CLIPS_PER_MONTH, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, PRO_PLUS_LIMITS, coachedRange, currentWeekStart, hasPaidPlan, touchStreak } from "@/lib/limits";
-import { transcribePreviewWindow, buildPreviewReport } from "@/lib/public-preview";
+import { transcribePreviewWindow, transcribeOpening, buildPreviewReport, PREVIEW_SECONDS, LONG_PREVIEW_SECONDS } from "@/lib/public-preview";
 import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
 import { draftWaitingForReport, fillOutreachQueue } from "@/lib/outreach";
@@ -2115,36 +2115,48 @@ export const analyzePublicPreview = inngest.createFunction(
     }
 
     try {
-      const transcribed = await step.run("preview-transcribe", async () => {
+      const streamSeconds = (existing.duration_seconds as number | null) ?? 0;
+      let transcribed = await step.run("preview-transcribe", async () => {
         await supabase
           .from("public_previews")
           .update({ status: "transcribing" })
           .eq("id", previewId);
 
-        const result = await transcribePreviewWindow(twitchVodId, title);
+        // The first 12 minutes, or 24 when the opening is a quiet
+        // starting-soon screen (transcribeOpening in lib/public-preview.ts).
+        const result = await transcribeOpening(twitchVodId, title, streamSeconds);
         console.log(
           `[preview] ${previewId}: ${result.segments.length} segments over ${result.analyzedSeconds}s`
         );
         return result;
       });
 
-      const report = await step.run("preview-report", async () => {
+      const reportOn = (t: typeof transcribed) =>
+        buildPreviewReport(
+          t.segments,
+          title,
+          { analyzedSeconds: t.analyzedSeconds, totalSeconds: streamSeconds || t.analyzedSeconds },
+          // Absent in step state saved before this existed.
+          (t as { muted?: TimeRange[] }).muted ?? []
+        );
+
+      let report = await step.run("preview-report", async () => {
         await supabase
           .from("public_previews")
           .update({ status: "analyzing", game_category: transcribed.gameCategory })
           .eq("id", previewId);
-
-        return await buildPreviewReport(
-          transcribed.segments,
-          title,
-          {
-            analyzedSeconds: transcribed.analyzedSeconds,
-            totalSeconds: (existing.duration_seconds as number | null) ?? transcribed.analyzedSeconds,
-          },
-          // Absent in step state saved before this existed.
-          (transcribed as { muted?: TimeRange[] }).muted ?? []
-        );
+        return await reportOn(transcribed);
       });
+
+      // The coach found nothing to coach in the first 12 minutes (a
+      // starting-soon screen with some words over it): read further in
+      // once before turning the visitor away.
+      if (!report.coachReport && transcribed.analyzedSeconds < LONG_PREVIEW_SECONDS && streamSeconds > PREVIEW_SECONDS + 60) {
+        transcribed = await step.run("preview-transcribe-longer", async () =>
+          transcribePreviewWindow(twitchVodId, title, LONG_PREVIEW_SECONDS)
+        );
+        report = await step.run("preview-report-longer", async () => reportOn(transcribed));
+      }
 
       await step.run("preview-save", async () => {
         // A null coach report means the transcript had nothing usable in
@@ -2155,8 +2167,7 @@ export const analyzePublicPreview = inngest.createFunction(
             .from("public_previews")
             .update({
               status: "failed",
-              failed_reason:
-                "We couldn't hear enough talking in the first few minutes to coach this one. Try a VOD where you're on mic from the start.",
+              failed_reason: `We couldn't hear enough talking in the first ${Math.round(transcribed.analyzedSeconds / 60)} minutes to coach this one. Try a VOD where you're on mic from the start.`,
             })
             .eq("id", previewId);
           return;

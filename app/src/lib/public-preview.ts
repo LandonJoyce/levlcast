@@ -39,6 +39,28 @@ import type { CoachReport } from "@/lib/analyze";
 export const PREVIEW_SECONDS = 720;
 
 /**
+ * How far a preview reads when the first PREVIEW_SECONDS are too quiet to
+ * coach. Plenty of streams open on a starting-soon screen with music for
+ * ten minutes or more, and those were turned away with "we couldn't hear
+ * enough talking". Reading twice as far finds where they started, and the
+ * coach drops the pre-stream part on its own (detectStreamStartOffset).
+ */
+export const LONG_PREVIEW_SECONDS = 24 * 60;
+
+/** Under this many words in the window, the stream hadn't really started. */
+const MIN_PREVIEW_WORDS = 200;
+
+/** A window with too little talking to coach (no Claude spent finding that out). */
+export function tooQuietToCoach(segments: TranscriptSegment[]): boolean {
+  let words = 0;
+  for (const s of segments) words += s.text.split(/\s+/).filter(Boolean).length;
+  return words < MIN_PREVIEW_WORDS;
+}
+
+/** The window had no speech, or Twitch muted most of it: worth reading further in. */
+export class QuietOpeningError extends Error {}
+
+/**
  * Below this there isn't enough speech for the report to say anything
  * true, and Claude starts inventing. The full pipeline refuses under
  * 5 minutes for the same reason; previews hold the same line.
@@ -170,7 +192,8 @@ function parseHelixDuration(dur: string): number {
  */
 export async function transcribePreviewWindow(
   twitchVodId: string,
-  title: string
+  title: string,
+  windowSeconds: number = PREVIEW_SECONDS
 ): Promise<{ segments: TranscriptSegment[]; gameCategory: string; analyzedSeconds: number; muted: TimeRange[] }> {
   const detection = detectGame(title);
   const keywords = keywordsForGame(detection);
@@ -186,7 +209,7 @@ export async function transcribePreviewWindow(
   const urls: string[] = [];
   for (let i = 0; i < list.urls.length; i++) {
     const startsAt = list.startTimes[i] ?? 0;
-    if (startsAt >= PREVIEW_SECONDS) break;
+    if (startsAt >= windowSeconds) break;
     urls.push(list.urls[i]);
   }
 
@@ -198,8 +221,8 @@ export async function transcribePreviewWindow(
   // window rather than the segment end so the number shown to the user
   // matches what we promised.
   const analyzedSeconds = Math.min(
-    PREVIEW_SECONDS,
-    Math.round(list.startTimes[urls.length - 1] ?? PREVIEW_SECONDS)
+    windowSeconds,
+    Math.round(list.startTimes[urls.length - 1] ?? windowSeconds)
   );
 
   const initSegment = list.initSegmentBase64
@@ -209,18 +232,18 @@ export async function transcribePreviewWindow(
   // Muted segments stay in (dropping them would shift every timestamp in
   // this single request); the coach is told where they are instead.
   const muted = mutedRanges(list.startTimes.slice(0, urls.length), (list.muted ?? []).slice(0, urls.length));
-  const window = analyzedSeconds || PREVIEW_SECONDS;
+  const window = analyzedSeconds || windowSeconds;
 
   const stream = streamSegmentsToPassThrough(urls, initSegment);
   const { segments } = await transcribePassThrough(stream, keywords);
 
   if (segments.length === 0) {
     if (overlapSeconds(0, window, muted) > window * 0.5) {
-      throw new Error(
+      throw new QuietOpeningError(
         "Twitch muted the start of this stream for copyrighted music, so the part the free preview reads is silent. Try a different stream."
       );
     }
-    throw new Error("No speech detected in the opening of this stream. It may be muted, music-only, or starting-soon screen.");
+    throw new QuietOpeningError("No speech detected in the opening of this stream. It may be muted, music-only, or starting-soon screen.");
   }
 
   return {
@@ -229,6 +252,24 @@ export async function transcribePreviewWindow(
     analyzedSeconds: window,
     muted,
   };
+}
+
+/**
+ * The opening of a stream for the preview: the first PREVIEW_SECONDS, or
+ * the first LONG_PREVIEW_SECONDS when that much is a quiet starting-soon
+ * screen and the stream runs longer.
+ */
+export async function transcribeOpening(twitchVodId: string, title: string, streamSeconds: number) {
+  const canReadFurther = streamSeconds > PREVIEW_SECONDS + 60;
+  try {
+    const first = await transcribePreviewWindow(twitchVodId, title);
+    if (!canReadFurther || !tooQuietToCoach(first.segments)) return first;
+    console.log(`[preview] ${twitchVodId}: opening too quiet to coach, reading ${LONG_PREVIEW_SECONDS / 60} minutes`);
+  } catch (err) {
+    if (!(err instanceof QuietOpeningError) || !canReadFurther) throw err;
+    console.log(`[preview] ${twitchVodId}: ${err.message} Reading ${LONG_PREVIEW_SECONDS / 60} minutes instead.`);
+  }
+  return transcribePreviewWindow(twitchVodId, title, LONG_PREVIEW_SECONDS);
 }
 
 /**
