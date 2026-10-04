@@ -43,9 +43,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: "https://www.levlcast.com/auth/login",
+      url: "https://www.levlcast.com/why-no-one-watches-my-stream",
       lastModified: now,
       changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: "https://www.levlcast.com/what-to-say-on-stream",
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: "https://www.levlcast.com/how-to-start-a-stream",
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: "https://www.levlcast.com/leaderboard",
+      lastModified: now,
+      changeFrequency: "daily",
       priority: 0.7,
     },
     {

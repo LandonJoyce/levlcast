@@ -29,6 +29,13 @@ export default function SiteFooter() {
           <Link href="/#pricing">Pricing</Link>
         </div>
         <div>
+          <p className="v3-foot-h">Guides</p>
+          <Link href="/how-to-grow-on-twitch">Growing on Twitch</Link>
+          <Link href="/why-no-one-watches-my-stream">Why no one watches</Link>
+          <Link href="/what-to-say-on-stream">What to say on stream</Link>
+          <Link href="/how-to-start-a-stream">Starting a stream</Link>
+        </div>
+        <div>
           <p className="v3-foot-h">Get it</p>
           <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
             iPhone app
