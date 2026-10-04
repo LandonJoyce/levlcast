@@ -55,7 +55,7 @@ function passedLine(names: string[]): string {
   return ` Passed ${names.slice(0, 2).join(", ")} and ${names.length - 2} more.`;
 }
 
-type FollowUpStatus = "fixed" | "partial" | "regressed" | "not_addressed";
+type FollowUpStatus = "fixed" | "partial" | "regressed" | "not_addressed" | "didnt_come_up";
 type FollowUp = {
   ask: string;
   status: FollowUpStatus;
@@ -87,6 +87,8 @@ const FOLLOW_UP_LABEL: Record<FollowUpStatus, string> = {
   partial: "Partly",
   regressed: "Slipped",
   not_addressed: "Not yet",
+  // The stream had no place for it (a different game or format).
+  didnt_come_up: "Didn't come up",
 };
 
 /** The coach's check on last stream's fix, or null when it's missing or malformed. */

@@ -784,7 +784,13 @@ export interface CoachReport {
    */
   progress_on_prior_fix?: {
     prior_priority: string;
-    status: "fixed" | "partial" | "regressed" | "not_addressed";
+    /**
+     * didnt_come_up: the fix was tied to something this stream didn't have
+     * (a different game or format) and the skill behind it had no place to
+     * show. Added 2026-10-04: those were marked not_addressed, which read
+     * as "Not yet" on the page, a failure the streamer hadn't earned.
+     */
+    status: "fixed" | "partial" | "regressed" | "not_addressed" | "didnt_come_up";
     evidence: string;
     metric?: { label: string; before: number; after: number; unit?: string };
   };
@@ -1691,10 +1697,12 @@ The streamer was told to fix something specific in the most recent prior report:
 "${priorReports[0].recommendation}"
 
 You MUST evaluate, in this stream, whether they actually addressed it. Output as the progress_on_prior_fix field in the JSON. Rules:
-- status MUST be one of: "fixed" (clear improvement, the ask was met), "partial" (some progress but not all the way), "regressed" (got worse than before), "not_addressed" (no evidence they tried).
+- status MUST be one of: "fixed" (clear improvement, the ask was met), "partial" (some progress but not all the way), "regressed" (got worse than before), "not_addressed" (this stream had clear chances to do it and they didn't), "didnt_come_up" (this stream gave no chance to do it, see below).
+- Judge the skill behind the ask, not its exact setting. If the fix was tied to something this stream didn't have (a different game, format or segment), look for the same underlying skill anywhere in this stream. Example: "build suspense before every character reveal" on a stream with no reveals is about building suspense before big moments, so calling a shot out loud before it happens counts. If they showed the skill, use "fixed" or "partial" and say where.
+- Use "didnt_come_up" only when the stream genuinely had no place for the skill. Say why in one plain sentence. Never use "not_addressed" for a stream that couldn't have shown it: on the page that reads as a failure they didn't earn.
 - evidence is 1-2 sentences citing specific moments, timestamps, or sub-score movement from THIS stream. Reference what the stream actually showed, not platitudes.
 - If a quantifiable metric directly maps to the ask (dead_air_pct, opening score, energy sub-score, etc.), include it under metric with label/before/after/unit. before = the value from the most recent prior report. after = the value from this stream. Only include metric if you can ground both numbers in real data.
-- Do NOT fabricate. If the prior priority was vague or this stream gave no signal either way, status = "not_addressed" and say so plainly.
+- Do NOT fabricate. If the prior priority was vague and this stream gave no signal either way, status = "didnt_come_up" and say so plainly.
 - This field is the single most prominent element on the next report for the streamer. Write it as if their decision to keep using LevlCast depends on whether they trust this assessment.`;
       })()
     : "";
@@ -2038,7 +2046,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
   },
   "progress_on_prior_fix": {
     "prior_priority": "<the verbatim recommendation from the most recent prior report — copy it exactly>",
-    "status": "<fixed | partial | regressed | not_addressed>",
+    "status": "<fixed | partial | regressed | not_addressed | didnt_come_up>",
     "evidence": "<1-2 sentences with specific moments or timestamps from THIS stream that justify the status. Address as 'you'. No fabricated quotes.>",
     "metric": { "label": "<short metric name e.g. 'dead air' or 'opening score'>", "before": <number>, "after": <number>, "unit": "<optional unit like '%' or 'points' or 'sec'>" }
   }
