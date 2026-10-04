@@ -100,12 +100,14 @@ export async function GET(req: NextRequest) {
 
   const blank = (): Record<Step, number> => ({ land: 0, preview_start: 0, preview_ready: 0, cta: 0, signin_start: 0, signup: 0 });
   const dm = blank();
+  // People who came from a review-thread reply (links tagged ?ref=thread).
+  const thread = blank();
   const other = blank();
   const people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }> = [];
 
   for (const v of visitors.values()) {
     const fromDm = !!v.ref && v.ref.startsWith("dm-");
-    const bucket = fromDm ? dm : other;
+    const bucket = fromDm ? dm : v.ref === "thread" ? thread : other;
     let furthest: Step = "land";
     for (const s of STEPS) {
       if (v.steps.has(s)) {
@@ -145,8 +147,10 @@ export async function GET(req: NextRequest) {
       // No signup event: either the account is older than tracking, or the
       // sign-in never came back to a browser we saw (the iPhone app, or
       // Twitch finishing it on another device).
-      let source: "dm" | "preview" | "direct" | "untracked" | "unknown" = p.created_at >= DM_CODES_SINCE ? "untracked" : "unknown";
-      if (s) source = ref?.startsWith("dm-") ? "dm" : v?.steps.has("preview_start") ? "preview" : "direct";
+      let source: "dm" | "thread" | "preview" | "direct" | "untracked" | "unknown" = p.created_at >= DM_CODES_SINCE ? "untracked" : "unknown";
+      if (s) {
+        source = ref?.startsWith("dm-") ? "dm" : ref === "thread" ? "thread" : v?.steps.has("preview_start") ? "preview" : "direct";
+      }
       return {
         login: p.twitch_login,
         name: p.twitch_display_name || p.twitch_login,
@@ -163,6 +167,7 @@ export async function GET(req: NextRequest) {
     dmsSince,
     dmsSent: dmsSent ?? 0,
     dm,
+    thread,
     other,
     refused: [...refused.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([reason, count]) => ({ reason, count })),
     failed,

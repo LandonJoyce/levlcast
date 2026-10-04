@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { withDmRef } from "@/lib/funnel";
 import { FunnelCard } from "./FunnelCard";
+import { ReviewThreadCard } from "./ReviewThreadCard";
 
 // Subreddit picker for sub-scoped browsing. Removed dead/low-volume subs
 // (letsplay, TwitchFollowers, StreamersCommunity) and kept the active ones.
@@ -565,6 +566,8 @@ a free report every week, no card. levlcast.com`;
       </div>
 
       <FunnelCard />
+
+      <ReviewThreadCard />
 
       {/* Reddit's refusals are shown verbatim, because the text almost
           always says what to do: how many minutes a rate limit has left,

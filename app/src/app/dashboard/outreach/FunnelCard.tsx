@@ -20,15 +20,17 @@ interface FunnelData {
   dmsSince: string;
   dmsSent: number;
   dm: Counts;
+  thread?: Counts;
   other: Counts;
   refused: Array<{ reason: string; count: number }>;
   failed: number;
   people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }>;
-  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
+  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "thread" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
 }
 
 const SOURCE: Record<FunnelData["newAccounts"][number]["source"], string> = {
   dm: "from your DM",
+  thread: "from your review thread",
   preview: "after a free report",
   direct: "signed in directly",
   untracked: "no website visit recorded (iPhone app or another device)",
@@ -131,6 +133,12 @@ export function FunnelCard() {
           <>
             <p className="fn-k">From your DMs</p>
             <Row first={data.dmsSent} firstLabel={`DMs sent since ${shortDate(data.dmsSince)}`} counts={data.dm} />
+            {data.thread && data.thread.land > 0 && (
+              <>
+                <p className="fn-k">From your review threads</p>
+                <Row first={null} firstLabel={null} counts={data.thread} landLabel="Opened their report" />
+              </>
+            )}
             <p className="fn-k">Everyone else</p>
             <Row first={null} firstLabel={null} counts={data.other} landLabel="Opened the analyzer" />
 

@@ -17,12 +17,14 @@ export function LandingBeacon({ refParam, vodId }: { refParam?: string; vodId: s
     sent.current = true;
     const ref = rememberRef(refParam);
     track("land", "report-link");
-    // Someone handed their own finished report in a DM got a free report
-    // and saw it, the same as if they'd run it. Counted so the funnel's
-    // steps still add up for them.
-    if ((refParam ?? ref ?? "").startsWith("dm-")) {
-      track("preview_start", `${vodId} dm-report`);
-      track("preview_ready", `${vodId} dm-report`);
+    // Someone handed their own finished report in a DM or a review-thread
+    // reply got a free report and saw it, the same as if they'd run it.
+    // Counted so the funnel's steps still add up for them.
+    const via = refParam ?? ref ?? "";
+    if (via.startsWith("dm-") || via === "thread") {
+      const how = via === "thread" ? "thread-report" : "dm-report";
+      track("preview_start", `${vodId} ${how}`);
+      track("preview_ready", `${vodId} ${how}`);
     }
   }, [refParam, vodId]);
   return null;
