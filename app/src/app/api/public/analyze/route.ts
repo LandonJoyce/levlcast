@@ -274,9 +274,12 @@ export async function POST(request: Request) {
   // ---- 6. Queue it ---------------------------------------------------
   try {
     await inngest.send({
-      // Idempotency: the same VOD queued twice in quick succession is one
-      // job, so a double-click never double-bills.
-      id: `public-preview-${inserted.id}`,
+      // One job per attempt. A retry of a failed report reuses its row, and
+      // so its id, and Inngest drops an event whose id it has seen in the
+      // last 24 hours: with the row id alone, every retry sat on "pending"
+      // forever. A double click never gets this far, the in-flight check
+      // above hands back the running report first.
+      id: `public-preview-${inserted.id}-${Date.parse(String(inserted.created_at)) || Date.now()}`,
       name: "public/preview",
       data: { previewId: inserted.id, twitchVodId: vodId, title: meta.title },
     });

@@ -2070,10 +2070,15 @@ Omit the progress_on_prior_fix field entirely when no prior report history exist
   }), 3, 1000, (err) => !(err instanceof Anthropic.APIConnectionTimeoutError));
 
   // The thinking comes back as its own block ahead of the report, so the
-  // report is the text block wherever it sits. content[0] is now the
-  // thinking, and reading it would parse an empty string on every stream.
-  const textBlock = response.content.find((b) => b.type === "text");
-  const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
+  // report is in the text, wherever it sits. All of the text: with
+  // thinking between them the model can write a line in one text block and
+  // the report in the next, and reading only the first block threw the
+  // report away. (A suspect for a free report that came back empty twice
+  // in a row on 2026-10-05 even though the model finished normally.)
+  const text = response.content
+    .map((b) => (b.type === "text" ? b.text : ""))
+    .filter(Boolean)
+    .join("\n");
   const usage = response.usage;
   console.log(
     `[coach] ${response.model} (${effort}) took ${Math.round((Date.now() - coachStartedAt) / 1000)}s: ` +
@@ -2082,13 +2087,11 @@ Omit the progress_on_prior_fix field entirely when no prior report history exist
   );
 
   try {
-    // The report is the outermost object. A stray line around it shouldn't
-    // cost the streamer the whole report.
-    const stripped = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    const first = stripped.indexOf("{");
-    const last = stripped.lastIndexOf("}");
-    const cleaned = first >= 0 && last > first ? stripped.slice(first, last + 1) : stripped;
-    const report = stripEmDashes(JSON.parse(cleaned)) as CoachReport;
+    // The report is the first complete object in the answer. A stray line
+    // or note around it shouldn't cost the streamer the whole report.
+    const parsed = readReportJson(text);
+    if (!parsed) throw new Error("no report object in the answer");
+    const report = stripEmDashes(parsed) as unknown as CoachReport;
     // Attach computed metrics directly — no need to re-derive from AI text
     report.commentary_density = commentaryDensity;
     if (worstGaps.length > 0) {
@@ -2112,14 +2115,77 @@ Omit the progress_on_prior_fix field entirely when no prior report history exist
     // still drift toward paraphrase. We re-verify every quote against the
     // normalized transcript and drop entries that don't match — that way
     // a fabricated quote can't reach the user no matter what the model did.
-    if (report.anti_patterns && report.anti_patterns.length > 0) {
-      report.anti_patterns = verifyAntiPatternQuotes(report.anti_patterns, segments);
+    if (!Array.isArray(report.anti_patterns)) {
+      report.anti_patterns = [];
+    } else if (report.anti_patterns.length > 0) {
+      report.anti_patterns = verifyAntiPatternQuotes(
+        report.anti_patterns.filter((ap) => ap && typeof ap === "object"),
+        segments
+      );
     }
     return report;
-  } catch {
-    console.error("Failed to parse coach report:", text);
+  } catch (err) {
+    // Say why, on one line, before the text: the reason is what's needed to fix it.
+    console.error(
+      `[coach] report unreadable (${err instanceof Error ? err.message : String(err)}), stop ${response.stop_reason}, ` +
+        `${response.content.length} blocks, ${text.length} chars. Text: ${text.slice(0, 3000)}`
+    );
     return null;
   }
+}
+
+/**
+ * The report object in the coach's answer: the first complete {...} that
+ * parses, found by matching braces outside strings rather than taking the
+ * first "{" to the last "}", so a note after the report (or a brace in a
+ * line before it) can't break the parse. Mends the two slips that make
+ * otherwise good JSON unreadable: a raw line break inside a string, and a
+ * comma before a closing bracket.
+ */
+export function readReportJson(text: string): Record<string, unknown> | null {
+  let from = 0;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const start = text.indexOf("{", from);
+    if (start < 0) return null;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let out = "";
+    let closed = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === '"') inString = false;
+        else if (ch === "\n" || ch === "\r" || ch === "\t") {
+          out += " ";
+          continue;
+        }
+        out += ch;
+        continue;
+      }
+      if (ch === '"') inString = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}" || ch === "]") {
+        out = out.replace(/,\s*$/, "");
+        if (ch === "}") depth--;
+      }
+      out += ch;
+      if (depth === 0) {
+        closed = true;
+        break;
+      }
+    }
+    if (closed) {
+      try {
+        const parsed = JSON.parse(out);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+      } catch {}
+    }
+    from = start + 1;
+  }
+  return null;
 }
 
 /**
@@ -2147,7 +2213,7 @@ function verifyAntiPatternQuotes(
   const verified: typeof antiPatterns = [];
   const MIN_WORDS = 3;
   for (const ap of antiPatterns) {
-    const needle = normalize(ap.quote ?? "");
+    const needle = normalize(typeof ap.quote === "string" ? ap.quote : "");
     const wordCount = needle.split(" ").filter(Boolean).length;
     if (wordCount < MIN_WORDS) {
       // A 1-2 word "quote" is barely evidence. Drop it.
