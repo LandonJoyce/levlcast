@@ -417,11 +417,15 @@ export async function draftMessage(input: DraftInput, angle: Angle): Promise<Dra
   // "refusal" postdates the installed SDK's types, but the API does send it.
   if ((res.stop_reason as string | null) === "refusal") return { kind: "failed", reason: "declined to write it" };
 
-  // Find the text block rather than assuming it is first. content[0] can be
-  // a thinking block, in which case indexing position zero silently yields
-  // an empty string and a drafting failure looks like a filtering decision.
-  const textBlock = res.content.find((b) => b.type === "text");
-  const raw = textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
+  // All the text blocks, not the first block. content[0] can be a thinking
+  // block, in which case indexing position zero silently yields an empty
+  // string and a drafting failure looks like a filtering decision. And with
+  // thinking on, the answer can come in more than one text block (see
+  // generateCoachReport), so only the first could miss the JSON.
+  const raw = res.content
+    .map((b) => (b.type === "text" ? b.text : ""))
+    .join("\n")
+    .trim();
   if (!raw) return { kind: "failed", reason: "empty reply" };
 
   if (/^skip\b/i.test(raw)) {

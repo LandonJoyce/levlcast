@@ -388,8 +388,12 @@ export async function draftReviewReply(input: {
   });
   if (res.stop_reason === "max_tokens") throw new Error("ran out of room before finishing");
   if ((res.stop_reason as string | null) === "refusal") throw new Error("declined to write it");
-  const textBlock = res.content.find((b) => b.type === "text");
-  const raw = textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
+  // All the text, not the first block: with thinking on, the answer can
+  // come in more than one (see generateCoachReport).
+  const raw = res.content
+    .map((b) => (b.type === "text" ? b.text : ""))
+    .join("\n")
+    .trim();
   if (!raw) throw new Error("empty reply");
   return finishDraft("", raw.replace(/^["']|["']$/g, ""), url).body;
 }

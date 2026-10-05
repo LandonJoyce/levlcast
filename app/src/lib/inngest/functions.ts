@@ -31,7 +31,7 @@ import { emailsOff } from "@/lib/email-optout";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
 import { incrementTrialAnalysis, incrementTrialClip, FREE_CLIPS_PER_MONTH, FREE_WEEKLY_LIMITS, FOUNDING_LIMITS, PRO_LIMITS, PRO_PLUS_LIMITS, coachedRange, currentWeekStart, hasPaidPlan, touchStreak } from "@/lib/limits";
-import { transcribePreviewWindow, transcribeOpening, buildPreviewReport, PREVIEW_SECONDS, LONG_PREVIEW_SECONDS } from "@/lib/public-preview";
+import { transcribePreviewWindow, transcribeOpening, buildPreviewReport, tooQuietToCoach, PREVIEW_SECONDS, LONG_PREVIEW_SECONDS } from "@/lib/public-preview";
 import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
 import { draftWaitingForReport, fillOutreachQueue } from "@/lib/outreach";
@@ -2148,26 +2148,38 @@ export const analyzePublicPreview = inngest.createFunction(
         return await reportOn(transcribed);
       });
 
-      // The coach found nothing to coach in the first 12 minutes (a
-      // starting-soon screen with some words over it): read further in
-      // once before turning the visitor away.
-      if (!report.coachReport && transcribed.analyzedSeconds < LONG_PREVIEW_SECONDS && streamSeconds > PREVIEW_SECONDS + 60) {
-        transcribed = await step.run("preview-transcribe-longer", async () =>
-          transcribePreviewWindow(twitchVodId, title, LONG_PREVIEW_SECONDS)
-        );
-        report = await step.run("preview-report-longer", async () => reportOn(transcribed));
+      // No report from the first 12 minutes. Either the coach found nothing
+      // to coach (a starting-soon screen with some words over it) or its
+      // answer couldn't be read. Read further in once before turning the
+      // visitor away, which is also a second try. A stream with nothing
+      // further to read but plenty of talking gets the second try on the
+      // same words.
+      if (!report.coachReport) {
+        if (transcribed.analyzedSeconds < LONG_PREVIEW_SECONDS && streamSeconds > PREVIEW_SECONDS + 60) {
+          transcribed = await step.run("preview-transcribe-longer", async () =>
+            transcribePreviewWindow(twitchVodId, title, LONG_PREVIEW_SECONDS)
+          );
+          report = await step.run("preview-report-longer", async () => reportOn(transcribed));
+        } else if (!tooQuietToCoach(transcribed.segments)) {
+          report = await step.run("preview-report-retry", async () => reportOn(transcribed));
+        }
       }
 
       await step.run("preview-save", async () => {
-        // A null coach report means the transcript had nothing usable in
-        // it. Treat that as a failure the visitor can act on rather than
-        // rendering an empty report page.
+        // No coach report. Tell the visitor the true reason: a quiet stream
+        // is something they can change, but a stream with plenty of talking
+        // failed on our side, and blaming their mic for it (what this said
+        // for every failure until 2026-10-05) sends them away for good.
+        // Retries run now, so "try again" is real advice.
         if (!report.coachReport) {
+          const quiet = tooQuietToCoach(transcribed.segments);
           await supabase
             .from("public_previews")
             .update({
               status: "failed",
-              failed_reason: `We couldn't hear enough talking in the first ${Math.round(transcribed.analyzedSeconds / 60)} minutes to coach this one. Try a VOD where you're on mic from the start.`,
+              failed_reason: quiet
+                ? `We couldn't hear enough talking in the first ${Math.round(transcribed.analyzedSeconds / 60)} minutes to coach this one. Try a VOD where you're on mic from the start.`
+                : "Something went wrong on our end writing this report. Try it again in a minute.",
             })
             .eq("id", previewId);
           return;
