@@ -36,7 +36,10 @@ export async function GET() {
   try {
     const res = await fetch(url, { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" }, cache: "no-store" });
     if (!res.ok) throw new Error(`The Reddit mirror said ${res.status}.`);
-    rows = ((await res.json())?.data ?? []) as Post[];
+    const json = await res.json();
+    // A busy mirror answers 200 with {"error": "..."} and no data, which isn't "no threads".
+    if (json?.error) throw new Error(`The Reddit mirror is busy (${json.error}).`);
+    rows = (json?.data ?? []) as Post[];
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't reach the Reddit mirror." }, { status: 502 });
   }

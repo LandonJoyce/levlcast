@@ -61,6 +61,9 @@ const NOT_NAMES = new Set([
   "a", "an", "not", "so", "very", "pretty", "really", "still", "kinda", "super", "only",
   "small", "new", "tiny", "big", "dead", "slow", "hard", "difficult", "tough", "rough", "growing",
   "good", "bad", "great", "fun", "boring", "empty", "quiet", "live", "down", "up", "ok", "okay", "fine",
+  // Whole comments that are one word without being a name.
+  "lol", "lmao", "nice", "cool", "yes", "yep", "nope", "wow", "same", "this", "me", "bump", "hi", "hey",
+  "hello", "awesome", "dope", "bet", "thx", "following", "interested", "done", "deleted", "removed",
 ]);
 
 const TWITCH_LINK = /(?:https?:\/\/)?(?:www\.|m\.)?twitch\.tv\/[A-Za-z0-9_]{3,25}(?:\/[A-Za-z]+)?/gi;
@@ -79,7 +82,8 @@ export function nameFromComment(body: string): { login: string; sure: boolean } 
     if (login) return { login, sure: true };
   }
 
-  const alone = body.trim().replace(/^@/, "").replace(/[.!?,]+$/, "");
+  // Just the name, give or take an @ in front or "!!", a period or an emoji after.
+  const alone = body.trim().replace(/^[^A-Za-z0-9_]+/, "").replace(/[^A-Za-z0-9_]+$/, "");
   if (/^[A-Za-z0-9_]{3,25}$/.test(alone) && !/^\d+$/.test(alone) && !NOT_NAMES.has(alone.toLowerCase())) {
     return { login: alone.toLowerCase(), sure: true };
   }
@@ -152,7 +156,10 @@ export async function fetchThread(postId: string): Promise<ThreadEntry[]> {
       const url = `https://arctic-shift.photon-reddit.com/api/comments/search?link_id=${postId}&limit=100&sort=asc${after ? `&after=${after}` : ""}`;
       const res = await fetch(url, { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" } });
       if (!res.ok) throw new Error(`The Reddit mirror said ${res.status}. Try again in a minute.`);
-      const rows = ((await res.json())?.data ?? []) as RawComment[];
+      const json = await res.json();
+      // A busy mirror answers 200 with {"error": "Timeout. Maybe slow down a bit"} and no data.
+      if (json?.error) throw new Error(`The Reddit mirror is busy (${json.error}). Try again in a minute.`);
+      const rows = (json?.data ?? []) as RawComment[];
       comments.push(...rows);
       if (rows.length < 100) break;
       after = Number(rows[rows.length - 1].created_utc ?? 0) + 1;

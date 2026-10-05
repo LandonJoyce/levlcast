@@ -94,6 +94,7 @@ export function ReviewThreadCard() {
   const [marks, setMarks] = useState<SubMarks>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mineError, setMineError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
   const [restored, setRestored] = useState(false);
@@ -137,7 +138,11 @@ export function ReviewThreadCard() {
     try {
       const res = await fetch("/api/outreach/reviews/mine", { cache: "no-store" });
       const json = await res.json();
-      if (!res.ok) return;
+      if (!res.ok) {
+        setMineError(json.error ?? "Couldn't look up your threads.");
+        return;
+      }
+      setMineError(null);
       const list = (json.threads ?? []) as Thread[];
       // Set the ref too, so a check straight after this sees them before the next render.
       threadsRef.current = list;
@@ -165,11 +170,19 @@ export function ReviewThreadCard() {
       if (!res.ok) throw new Error(json.error ?? "Couldn't read that.");
       const entries = (json.entries ?? []) as Entry[];
       setItems((list) => {
+        const byKey = new Map(entries.map((e) => [e.key, e]));
+        // A reply the card couldn't read a name from before but can now (the reader got better) runs.
+        const updated = list.map((it): Item => {
+          const e = byKey.get(it.key);
+          if (!e || it.state !== "no_name") return it;
+          if (e.login) return { ...it, login: e.login, guess: null, state: "queued" };
+          return e.guess && !it.guess ? { ...it, guess: e.guess } : it;
+        });
         const known = new Set(list.map((it) => it.key));
         const fresh = entries
           .filter((e) => !known.has(e.key))
           .map((e): Item => ({ ...e, state: e.login ? "queued" : "no_name" }));
-        return [...list, ...fresh];
+        return [...updated, ...fresh];
       });
       if (!quiet && entries.length === 0) setError("No replies yet. The mirror can be a few minutes behind Reddit, so check again soon.");
     } catch (err) {
@@ -307,6 +320,12 @@ export function ReviewThreadCard() {
             One sub a day is safest. The same post everywhere at once looks like spam to Reddit.
           </span>
         </div>
+        {mineError && (
+          <p style={{ margin: "0 0 8px", fontSize: 12, color: "#F87171", lineHeight: 1.5 }}>
+            Couldn&apos;t find your posted threads just now. {mineError} It tries again every few minutes, or paste a
+            thread&apos;s link below.
+          </p>
+        )}
         {REVIEW_SUBS.map((s) => {
           const latest = threads.find((t) => t.sub === s.name);
           const m = marks[s.name] ?? {};
