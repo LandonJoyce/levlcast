@@ -662,7 +662,7 @@ export default function LiveDock({
           if (m.user.toLowerCase() === channel.toLowerCase()) return;
           lastChatAt.current = m.at;
           chatTimes.current.push(m.at);
-          chatLog.current = [...chatLog.current.filter((c) => m.at - c.at < 4 * 60_000), { name: m.name, text: m.text, at: m.at, first: m.firstTime }].slice(-60);
+          chatLog.current = [...chatLog.current.filter((c) => m.at - c.at < 4 * 60_000), { name: m.name, text: m.text, at: m.at, first: m.firstTime }].slice(-300);
           if (!chatters.current.has(m.user)) {
             chatters.current.add(m.user);
             setChatterCount(chatters.current.size);

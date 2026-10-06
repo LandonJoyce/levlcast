@@ -21,6 +21,7 @@ import { getLeagueView } from "@/lib/league";
 import { transcribeClip } from "@/lib/deepgram";
 import { liveAudioPlaylistUrl, pullNewAudio } from "@/lib/live/listen";
 import { coachTip, streamerHistory, type CoachContext } from "@/lib/live/coach";
+import { digestChat } from "@/lib/live/chat-digest";
 
 /**
  * Free plans get the coaching for the first this-many minutes of each
@@ -710,7 +711,8 @@ function chatFrom(input: unknown, now: number): ChatLine[] {
       first: m.first === true,
     }))
     .filter((m) => m.name && m.text && Number.isFinite(m.at) && now - m.at < 5 * 60_000 && m.at <= now + 60_000)
-    .slice(-60);
+    // A few thousand viewers chat 30 to 60 messages a minute: all of it fits.
+    .slice(-300);
 }
 
 function monthStart(): string {
@@ -864,6 +866,7 @@ async function coachContext(admin: Admin, owner: DockOwner, session: Record<stri
   ]);
   const quiet = Number(input.quietSeconds);
   const streamTitle = (session.title as string | null) || null;
+  const chat = chatFrom(input.chat, now).map((m) => ({ agoSec: (now - m.at) / 1000, name: m.name, text: m.text, first: m.first }));
   return {
     name: owner.displayName,
     game: (session.game_name as string | null) || null,
@@ -873,7 +876,8 @@ async function coachContext(admin: Admin, owner: DockOwner, session: Record<stri
     scene: typeof input.scene === "string" && input.scene ? input.scene.slice(0, 80) : null,
     quietSeconds: Number.isFinite(quiet) && quiet >= 0 ? quiet : null,
     heard: ((lines ?? []) as Array<{ said_at: string; text: string }>).map((l) => ({ agoSec: (now - Date.parse(l.said_at)) / 1000, text: l.text })),
-    chat: chatFrom(input.chat, now).map((m) => ({ agoSec: (now - m.at) / 1000, name: m.name, text: m.text, first: m.first })),
+    chat,
+    digest: digestChat(chat),
     recentTips: ((tips ?? []) as Array<{ title: string; say: string | null; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: t.say || t.title })),
     shown: ((shown ?? []) as Array<{ title: string; action: string; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: `${t.title}. ${t.action}` })),
     history,
