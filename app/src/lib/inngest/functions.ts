@@ -36,7 +36,7 @@ import { computeDelta, isPlacementDelta } from "@/lib/rank";
 import { formWeeklyLeagues, recordLeagueStream, settleFinishedLeagues } from "@/lib/league";
 import { draftWaitingForReport, fillOutreachQueue } from "@/lib/outreach";
 import { redditSendMessage } from "@/lib/reddit";
-import { bestMomentAsPeak } from "@/lib/best-moment-clip";
+import { bestMomentAsPeak, nameBestMoment } from "@/lib/best-moment-clip";
 
 /**
  * Which "your report is ready" message fits: a placement, a free
@@ -612,7 +612,16 @@ export const analyzeVod = inngest.createFunction(
         // A stream with no clip-worthy peak still gets its clip: the coach's
         // best moment (lib/best-moment-clip.ts). Quiet streams, often a
         // first report, used to come back with no clip at all.
-        const topPeak = peaks[0] ?? bestMomentAsPeak(coachReport, vodSeconds);
+        let topPeak = peaks[0] ?? null;
+        if (!topPeak) {
+          const moment = bestMomentAsPeak(coachReport, vodSeconds);
+          if (moment) {
+            // Its title and caption are written for viewers from what was said,
+            // not taken from the coach's note to the streamer.
+            const { data: vodInfo } = await supabase.from("vods").select("title").eq("id", vodId).single();
+            topPeak = await nameBestMoment(moment, filtered, { streamTitle: (vodInfo?.title as string | null) ?? null });
+          }
+        }
         if (!topPeak) return null;
 
         const now = new Date();
