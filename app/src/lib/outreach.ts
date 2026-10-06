@@ -114,11 +114,13 @@ export function angleFor(seed: string): Angle {
 export const OUTREACH_LINK = "https://www.levlcast.com/analyze";
 
 /**
- * One line about the Live panel, at the end of every Reddit message (DMs
- * and review-thread replies). No second link: the panel is on the same
- * site, and one link per message is what keeps a DM from reading as spam.
- * A few ways of saying it, picked per person, so a day's messages don't
- * all end the same, which Reddit's spam filter looks for.
+ * One line about the Live panel in every Reddit message (DMs and
+ * review-thread replies), at the end of the pitch, right before the link.
+ * Not after everything: tacked on under "free to try" it read like a P.S.
+ * No second link: the panel is on the same site, and one link per message
+ * is what keeps a DM from reading as spam. A few ways of saying it, picked
+ * per person, so a day's messages don't all read the same, which Reddit's
+ * spam filter looks for.
  */
 const LIVE_LINES = [
   "also I just made a free panel for OBS that coaches you while you're live, kinda like the report does after, it's on there too",
@@ -135,16 +137,28 @@ const OLD_LIVE_LINES = [
   "if you use OBS I also made a free panel that tells you when you've gone quiet or someone new says hi, it's on the site",
 ];
 
-/** The message with its Live line, unless it already talks about OBS some other way. */
+/**
+ * The message with its Live line just before the link, unless it already
+ * talks about OBS some other way. Drafts queued before 2026-10-06 carry the
+ * line at the very end; it's lifted off and put back in the right place.
+ */
 export function withLiveLine(body: string, seed: string): string {
   let text = body.trimEnd();
-  for (const old of OLD_LIVE_LINES) {
-    if (text.endsWith(old)) text = text.slice(0, -old.length).trimEnd();
+  for (const line of [...LIVE_LINES, ...OLD_LIVE_LINES]) {
+    if (text.endsWith(line)) text = text.slice(0, -line.length).trimEnd();
   }
   if (!text.trim() || /\bOBS\b/i.test(text)) return text === body.trimEnd() ? body : text;
   let hash = 0;
   for (const ch of seed.toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return `${text}\n\n${LIVE_LINES[hash % LIVE_LINES.length]}`;
+  const line = LIVE_LINES[hash % LIVE_LINES.length];
+
+  // finishDraft always puts the link on its own line.
+  const link = /^https:\/\/www\.levlcast\.com\/\S*$/m.exec(text);
+  if (!link) return `${text}\n\n${line}`;
+  const pitch = text.slice(0, link.index).trimEnd();
+  const rest = text.slice(link.index);
+  if (!pitch) return `${line}\n\n${rest}`;
+  return `${pitch}${/[.!?]$/.test(pitch) ? "" : "."} ${line}\n\n${rest}`;
 }
 
 export interface HarvestedLead {
@@ -387,7 +401,7 @@ ${steps}
 RULES
 - 40 to 75 words.
 - The site gets one short sentence. Never list what it does, and don't bring up ranks or leagues unless they asked about tracking progress.
-- Don't mention OBS or a live panel; a line about it is added at the end for you.
+- Don't mention OBS or a live panel; a line about it is added for you.
 - The link appears once, written exactly as above so it's clickable. Never write levlcast.com any other way.
 - No dashes of any kind (no em dash, no en dash, no double hyphen). Use commas and periods.
 - Nothing that sounds like an ad or a template: no "Hey there", "just wanted to reach out", "I came across your post", "feel free to", "game changer", "level up", "take your stream to the next level", no lists, no bold, no emoji, no hashtags.
