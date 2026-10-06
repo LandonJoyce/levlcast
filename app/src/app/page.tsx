@@ -8,7 +8,6 @@ import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
 import ProPlan from "@/components/landing/ProPlan";
 import AddToObsLink from "@/components/landing/AddToObsLink";
-import RankUp from "@/components/landing/RankUp";
 import { Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS, rankFromPoints } from "@/lib/rank";
@@ -99,11 +98,12 @@ async function getSiteStats(): Promise<SiteStats | null> {
  * 2026-09-25; the previous homepage is kept at /v2 and the one before it
  * at /v1, so either can be compared or restored.
  *
- * The organising idea: every stream is a ranked match, so the homepage is
- * the screen you see after one. The hero is a result (a promotion, the
- * points, the bar filling), the proof is a scoreboard, a match history and
- * a league table, and the ladder is drawn as a literal climb. The product
- * turned into a ranked game this month; the page now looks like one.
+ * The organising idea since 2026-10-06: the coach leads. The hero is the
+ * panel that coaches you inside OBS while you're live (the user's call:
+ * "this takes prio over ranking"), the next section is the report after
+ * every stream, and the ranked game (match history, league, the ladder
+ * drawn as a climb) follows further down. It was rank-first before, with a
+ * promotion screen as the hero (RankUp).
  *
  * It keeps the rules the current homepage wrote down, because they were
  * right: left-aligned, rules and frames instead of cards, no atmospheric
@@ -118,12 +118,10 @@ async function getSiteStats(): Promise<SiteStats | null> {
  * stats and the top match history row describe.
  */
 
-// Title kept from the previous homepage so search listings don't churn
-// with the redesign; the description now mentions the rank.
 export const metadata: Metadata = {
-  title: "LevlCast - Your Personal Streaming Manager",
+  title: "LevlCast: Live Coaching for Twitch Streamers",
   description:
-    "A coaching report on every Twitch stream: slow starts, dead air, the moments worth clipping, and a rank from Iron to Grandmaster. Try it free on any stream, no account needed.",
+    "A coach inside OBS while you're live, and a report after every Twitch stream that tells you what to fix. Free to start.",
   alternates: { canonical: "/" },
 };
 
@@ -189,32 +187,38 @@ export default async function HomePage() {
     <div className={`ll-page v3 ${shoulders.variable}`}>
       <SiteHeader />
 
-      {/* ── Hero: the result screen ── */}
-      <section className="v3-hero">
+      {/* ── Hero: the coach inside OBS. id="live" so old links to /#live land here. ── */}
+      <section className="v3-hero" id="live">
         <div className="v3-hero-copy">
           {/* Only renders for visitors who came through a partner link. */}
           <ReferralLine />
           <h1 className="v3-h1">
             {/* The marks are set apart so they can be pulled in: at this weight
                 and tracking the face leaves a gap before "." and "?". */}
-            <span className="v3-soft">
-              You streamed four hours<span className="v3-punct">.</span>
-            </span>
+            Coaching for
             <br />
-            Did you rank up<span className="v3-punct">?</span>
+            Twitch streamers<span className="v3-punct">.</span>
           </h1>
-          <p className="v3-sub">
-            Type your Twitch name. We go through your stream, tell you what went wrong and when, and rank you on a
-            ladder from Iron to Grandmaster.
-          </p>
-          <div className="v3-paste">
-            <UrlPasteHero hint={null} />
+          <p className="v3-sub">We coach you live inside OBS, and after every stream we tell you what to fix.</p>
+          <div className="v3-live-cta">
+            <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
+            <Link href="/analyze" className="v3-btn v3-btn-ghost">
+              Try a free report
+            </Link>
           </div>
-          <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
+          <p className="v3-fine">Free to start, no card needed. Only you can see the panel, never your viewers.</p>
         </div>
 
-        {/* The promotion, played once on load with a replay button. */}
-        <RankUp />
+        <figure className="v3-hero-panel">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/live/levlcast-panel.webp"
+            alt="The LevlCast panel in OBS during a stream: rank, a nudge, and a coaching tip telling the streamer to answer a question from chat"
+            width={576}
+            height={680}
+            decoding="async"
+          />
+        </figure>
       </section>
 
       {/* ── Proof: real numbers, live. Left out entirely if they can't load. ── */}
@@ -230,16 +234,16 @@ export default async function HomePage() {
               <dd>{fmt(stats.hours)}</dd>
             </div>
             <div>
-              <dt>Streamers ranked</dt>
+              <dt>Streamers coached</dt>
               <dd>{fmt(stats.streamers)}</dd>
             </div>
           </dl>
         </section>
       )}
 
-      {/* ── Live: the coach inside OBS ── */}
-      <section className="v3-sec" id="live">
-        <h2 className="v3-h2">A coach inside OBS while you&rsquo;re live.</h2>
+      {/* ── The panel in OBS, and what each plan coaches ── */}
+      <section className="v3-sec" id="obs">
+        <h2 className="v3-h2">It sits right next to your stream.</h2>
         <p className="v3-shot-cap">It coaches you while you&apos;re live, the way your report does after, and only you can see it.</p>
         <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -252,9 +256,6 @@ export default async function HomePage() {
             decoding="async"
           />
         </figure>
-        <div className="v3-live-cta">
-          <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
-        </div>
         <ul className="v3-live-plans">
           <li>
             <b>Free</b> coaches the first 30 minutes of every stream.
@@ -263,6 +264,16 @@ export default async function HomePage() {
             <b>Pro</b> coaches all of it, and listens to your stream to tell you what to do.
           </li>
         </ul>
+      </section>
+
+      {/* ── After the stream: the report, free on any stream ── */}
+      <section className="v3-sec" id="report">
+        <h2 className="v3-h2">After every stream, we tell you what to fix.</h2>
+        <p className="v3-shot-cap">Type your Twitch name to see it on your last stream.</p>
+        <div className="v3-paste">
+          <UrlPasteHero hint={null} />
+        </div>
+        <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
       </section>
 
       {/* ── Clips ── (moved up here when the example breakdown was cut) */}
@@ -436,16 +447,18 @@ export default async function HomePage() {
       {/* ── Closer ── */}
       <section className="v3-close">
         <h2 className="v3-close-h">
-          Play your first match<span className="v3-punct">.</span>
+          Get coached on your next stream<span className="v3-punct">.</span>
           <br />
           <span className="v3-soft">
-            It takes about a minute<span className="v3-punct">.</span>
+            It takes about a minute to set up<span className="v3-punct">.</span>
           </span>
         </h2>
-        <div className="v3-paste">
-          <UrlPasteHero hint={null} />
+        <div className="v3-live-cta">
+          <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
+          <Link href="/analyze" className="v3-btn v3-btn-ghost">
+            Try a free report
+          </Link>
         </div>
-        <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
       </section>
 
       <SiteFooter />

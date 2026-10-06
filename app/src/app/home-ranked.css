@@ -1190,3 +1190,12 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-live-cta .v3-fine { margin: 0; }
 .v3 .v3-live-plans { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 6px; font-size: 15px; line-height: 1.5; color: var(--ll-fg-mute); }
 .v3 .v3-live-plans b { color: var(--ll-fg); font-weight: 700; }
+
+/* The hero's picture since the coach leads: the panel itself, as it looks
+   docked in OBS. A hairline frame, no glow. */
+.v3 .v3-hero-panel { margin: 0; justify-self: end; width: min(100%, 460px); border: 1px solid var(--ll-line-soft); border-radius: 14px; overflow: hidden; background: rgb(16, 13, 14); }
+.v3 .v3-hero-panel img { display: block; width: 100%; height: auto; }
+.v3 .v3-hero .v3-live-cta { margin-top: 28px; }
+@media (max-width: 900px) { .v3 .v3-hero-panel { justify-self: start; } }
+/* "Coaching for / Twitch streamers." stays two lines beside the panel. */
+.v3 .v3-hero .v3-h1 { font-size: clamp(36px, 4.5vw, 58px); }

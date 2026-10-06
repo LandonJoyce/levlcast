@@ -24,11 +24,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.levlcast.com"),
   title: {
-    default: "LevlCast - Your Personal Streaming Manager",
+    default: "LevlCast: Live Coaching for Twitch Streamers",
     template: "%s | LevlCast",
   },
   description:
-    "LevlCast goes through your Twitch VODs and tells you what to fix: dead air, slow starts and the moments worth clipping. Every stream moves you up or down a ladder from Iron to Grandmaster. Free to start.",
+    "LevlCast coaches you live inside OBS, and after every Twitch stream it tells you what to fix: dead air, slow starts and the moments worth clipping. Free to start.",
   keywords: [
     "twitch stream manager",
     "personal streaming manager",
@@ -57,25 +57,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://www.levlcast.com",
-    title: "LevlCast: coaching and a rank for Twitch streamers",
-    description:
-      "Paste a Twitch VOD and see what went wrong and when, what to clip, and where you rank from Iron to Grandmaster. Free to try, no account needed.",
+    title: "LevlCast: coaching for Twitch streamers",
+    description: "A coach inside OBS while you're live, and a report after every stream that tells you what to fix. Free to start.",
     siteName: "LevlCast",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "LevlCast: you streamed four hours, did you rank up?",
+        alt: "LevlCast: coaching for Twitch streamers. The LevlCast panel in OBS with a coaching tip.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "LevlCast: coaching and a rank for Twitch streamers",
-    description:
-      "Paste a Twitch VOD and see what went wrong and when, what to clip, and where you rank from Iron to Grandmaster.",
-    site: "@levlcast",
+    title: "LevlCast: coaching for Twitch streamers",
+    description: "A coach inside OBS while you're live, and a report after every stream that tells you what to fix.",
+    // x.com/levlcast is someone else's account.
+    site: "@LevlCastApp",
     images: ["/opengraph-image"],
   },
   manifest: "/manifest.json",
