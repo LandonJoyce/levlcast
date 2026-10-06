@@ -21,6 +21,7 @@ import { UpgradeModal } from "./upgrade-modal";
 
 const LINKS = [
   { href: "/dashboard", label: "Home", active: (p: string) => p === "/dashboard" },
+  { href: "/dashboard/live", label: "Live", active: (p: string) => p.startsWith("/dashboard/live") },
   { href: "/dashboard/vods", label: "Streams", active: (p: string) => p.startsWith("/dashboard/vods") },
   { href: "/dashboard/clips", label: "Clips", active: (p: string) => p.startsWith("/dashboard/clips") },
   { href: "/dashboard/history", label: "Matches", active: (p: string) => p.startsWith("/dashboard/history") },
