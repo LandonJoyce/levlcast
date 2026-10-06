@@ -240,10 +240,7 @@ export default async function HomePage() {
       {/* ── Live: the coach inside OBS ── */}
       <section className="v3-sec" id="live">
         <h2 className="v3-h2">A coach inside OBS while you&rsquo;re live.</h2>
-        <p className="v3-shot-cap">
-          It tells you when you go quiet and who just showed up. On Pro it listens to your stream too, and tells you when chat
-          asked something you missed. Only you can see it, or hear it on your phone.
-        </p>
+        <p className="v3-shot-cap">It tells you when you&apos;ve gone quiet or someone new says hi, and only you can see it.</p>
         <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
