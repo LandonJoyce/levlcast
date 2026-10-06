@@ -1144,177 +1144,145 @@ export interface ChatMessage {
   id: string;
 }
 
+/** Twitch's web client id and the chat-replay query every chat-archive tool uses. */
+const CHAT_GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const CHAT_QUERY_HASH = "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a";
+
+type ChatPage = { messages: ChatMessage[]; last: number | null } | { error: string };
+
+/** One page of a VOD's chat around `offset` seconds: about 60 messages, starting a little before it. */
+async function fetchChatPage(vodId: string, offset: number, signal?: AbortSignal): Promise<ChatPage> {
+  const body = [{
+    operationName: "VideoCommentsByOffsetOrCursor",
+    variables: { videoID: vodId, contentOffsetSeconds: Math.max(0, Math.floor(offset)) },
+    extensions: { persistedQuery: { version: 1, sha256Hash: CHAT_QUERY_HASH } },
+  }];
+  let lastErr = "no response";
+  // Transient failures (5xx, network) get two more tries; a client error won't improve.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+    try {
+      const r = await fetch("https://gql.twitch.tv/gql", {
+        method: "POST",
+        headers: { "Client-Id": CHAT_GQL_CLIENT_ID, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (r.status >= 400 && r.status < 500) return { error: `GQL ${r.status}` };
+      if (!r.ok) {
+        lastErr = `HTTP ${r.status}`;
+        continue;
+      }
+      const json = (await r.json()) as unknown;
+      const first = (Array.isArray(json) ? json[0] : json) as {
+        errors?: Array<{ message?: string }>;
+        data?: { video?: { comments?: { edges?: Array<{ node: { id: string; contentOffsetSeconds: number; message?: { fragments?: Array<{ text?: string }> }; commenter?: { login?: string; displayName?: string } | null } }> } } };
+      };
+      if (first?.errors?.length) return { error: first.errors.map((e) => e.message).join("; ") };
+      const edges = first?.data?.video?.comments?.edges ?? [];
+      const messages: ChatMessage[] = [];
+      for (const { node: n } of edges) {
+        const text = (n.message?.fragments ?? []).map((x) => x.text ?? "").join("").trim();
+        if (!text) continue;
+        messages.push({ time: n.contentOffsetSeconds, user: n.commenter?.login ?? n.commenter?.displayName ?? "anonymous", text, id: n.id });
+      }
+      return { messages, last: edges.length ? edges[edges.length - 1].node.contentOffsetSeconds : null };
+    } catch (err) {
+      if (signal?.aborted) return { error: "aborted" };
+      lastErr = err instanceof Error ? err.message : String(err);
+    }
+  }
+  return { error: lastErr };
+}
+
 /**
- * Fetch the full chat replay for a public VOD via Twitch's internal GQL
- * (the same endpoint the web player uses for chat replay). Twitch GQL is
- * undocumented but stable across major chat-archive tools — pagination is
- * cursor-based and stops when hasNextPage is false.
+ * Fetch a public VOD's chat replay through Twitch's internal GQL (what the
+ * web player uses for chat replay).
  *
- * Caps at maxMessages (default 50k) to keep memory bounded for very long
- * VODs. A 4-hour stream typically has 5-15k messages depending on size.
+ * Paged by time, not by cursor: Twitch now refuses cursor pages after the
+ * first ("failed integrity check"), which left reports with only the first
+ * couple of minutes of chat. A page asked for by time comes
+ * back as about 60 messages starting a little before that time, so each
+ * page starts from the last message of the one before and duplicates are
+ * dropped by id. A few workers page separate stretches of the VOD at once,
+ * and the whole fetch stops at a time budget, returning what it has.
  *
- * Returns [] (not throw) on transient failures so caller can keep going
- * without chat — chat data is best-effort, not load-bearing.
+ * Caps at maxMessages (default 50k) to keep memory bounded. Returns what it
+ * got (never throws): chat is best-effort, not load-bearing.
  */
 export async function fetchTwitchVodChat(
   vodId: string,
   options: {
     maxMessages?: number;
     signal?: AbortSignal;
-    /** Stop once past this point of the VOD, for a report on its first part. */
+    /** Start here, in seconds into the VOD. */
+    fromSeconds?: number;
+    /** Stop once past this point of the VOD. Without it, one worker reads until chat runs out. */
     untilSeconds?: number;
+    /** Give up after this long and return what's in. */
+    budgetMs?: number;
+    /** Stretches read at once. */
+    workers?: number;
   } = {}
 ): Promise<ChatMessage[]> {
   const maxMessages = options.maxMessages ?? 50_000;
-  const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+  const from = Math.max(0, options.fromSeconds ?? 0);
+  const until = options.untilSeconds;
+  const deadline = Date.now() + (options.budgetMs ?? 150_000);
+  const MAX_PAGES = 3000;
 
+  const seen = new Set<string>();
   const messages: ChatMessage[] = [];
-  let cursor: string | null = null;
-  let pageCount = 0;
-  const MAX_PAGES = 1500; // sanity cap (~150k messages at 100/page)
+  let pages = 0;
+  let stoppedBy: string | null = null;
 
-  while (pageCount < MAX_PAGES) {
-    pageCount++;
-
-    const variables: Record<string, unknown> = { videoID: vodId };
-    if (cursor) {
-      variables.cursor = cursor;
-    } else {
-      variables.contentOffsetSeconds = 0;
-    }
-
-    const body = [{
-      operationName: "VideoCommentsByOffsetOrCursor",
-      variables,
-      extensions: {
-        persistedQuery: {
-          version: 1,
-          // Persisted query hash used by every chat-replay tool that scrapes
-          // Twitch (TwitchDownloader, ChatDownloader, etc.). Stable for years.
-          sha256Hash: "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a",
-        },
-      },
-    }];
-
-    // Retry transient failures (5xx, network errors) up to 2 times before
-    // bailing on this page. Bailing the whole fetch on one flake means the
-    // user sees an empty pulse for what would otherwise be a great stream.
-    let res: Response | null = null;
-    let lastErr: unknown = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
-      try {
-        const r = await fetch("https://gql.twitch.tv/gql", {
-          method: "POST",
-          headers: { "Client-Id": GQL_CLIENT_ID, "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: options.signal,
-        });
-        if (r.ok) { res = r; break; }
-        if (r.status >= 400 && r.status < 500) {
-          // Client errors won't get better with retry — log and stop paging
-          console.warn(`[twitch chat] GQL ${r.status} on page ${pageCount} (client error, stopping)`);
-          return messages;
-        }
-        lastErr = new Error(`HTTP ${r.status}`);
-      } catch (err) {
-        lastErr = err;
+  /** Read [a, b) from the start, page after page. b = Infinity reads until chat runs out. */
+  const readStretch = async (a: number, b: number) => {
+    let offset = a;
+    let stall = 0;
+    while (offset < b) {
+      if (Date.now() > deadline) return void (stoppedBy ??= "time budget");
+      if (pages >= MAX_PAGES) return void (stoppedBy ??= "page cap");
+      if (messages.length >= maxMessages) return void (stoppedBy ??= "message cap");
+      if (options.signal?.aborted) return void (stoppedBy ??= "aborted");
+      pages++;
+      const page = await fetchChatPage(vodId, offset, options.signal);
+      // Past the end of the VOD, Twitch answers "service error": that's the end, not a failure.
+      if ("error" in page) return void (page.error !== "service error" && (stoppedBy ??= page.error));
+      if (page.last === null) return;
+      let fresh = 0;
+      for (const m of page.messages) {
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        // Messages from before this stretch belong to the one before it.
+        if (m.time < a || m.time >= b) continue;
+        messages.push(m);
+        fresh++;
+      }
+      if (page.last >= b) return;
+      if (page.last >= offset && fresh > 0) {
+        offset = page.last + 1;
+        stall = 0;
+      } else {
+        // Chat so dense the page was all repeats: step ahead a little more each time.
+        stall = Math.min(stall + 5, 30);
+        offset = Math.max(offset, page.last + 1) + stall;
       }
     }
-    if (!res) {
-      console.warn(`[twitch chat] Page ${pageCount} failed after retries:`, lastErr);
-      break;
-    }
+  };
 
-    let json: unknown;
-    try {
-      json = await res.json();
-    } catch (err) {
-      console.warn(`[twitch chat] JSON parse failed on page ${pageCount}:`, err);
-      break;
-    }
-
-    // Surface GraphQL errors — without this a stale persisted-query hash
-    // returns errors: [...] with empty data and we'd silently get zero chat.
-    type GqlError = { message?: string };
-    const maybeErrs = (Array.isArray(json) ? json[0] : json) as { errors?: GqlError[] };
-    if (maybeErrs?.errors && maybeErrs.errors.length > 0) {
-      console.warn(`[twitch chat] GQL errors on page ${pageCount}:`, maybeErrs.errors.map((e) => e.message).join("; "));
-      // If first page has errors, the whole fetch is doomed (likely stale
-      // persisted-query hash). Stop and return whatever we have.
-      if (pageCount === 1) return messages;
-    }
-
-    type CommentEdge = {
-      cursor: string;
-      node: {
-        id: string;
-        contentOffsetSeconds: number;
-        message?: { fragments?: Array<{ text?: string }> };
-        commenter?: { login?: string; displayName?: string } | null;
-      };
-    };
-    type CommentsPayload = {
-      data?: {
-        video?: {
-          comments?: {
-            edges?: CommentEdge[];
-            pageInfo?: { hasNextPage?: boolean };
-          };
-        };
-      };
-    };
-
-    // Persisted-query response is wrapped in a single-element array
-    const payload = (Array.isArray(json) ? json[0] : json) as CommentsPayload;
-    const comments = payload?.data?.video?.comments;
-    const edges = comments?.edges ?? [];
-    const hasNext = comments?.pageInfo?.hasNextPage ?? false;
-
-    // Empty edges + no next page → genuinely done. Empty edges + next page
-    // means a transient hiccup; we can't advance the cursor without an edge,
-    // so bail rather than infinite-loop.
-    if (edges.length === 0) {
-      if (hasNext) {
-        console.warn(`[twitch chat] Empty page ${pageCount} with hasNextPage=true (no cursor to advance) — stopping`);
-      }
-      break;
-    }
-
-    for (const edge of edges) {
-      const n = edge.node;
-      const text = (n.message?.fragments ?? [])
-        .map((f) => f.text ?? "")
-        .join("")
-        .trim();
-      if (!text) continue;
-      messages.push({
-        time: n.contentOffsetSeconds,
-        user: n.commenter?.login ?? n.commenter?.displayName ?? "anonymous",
-        text,
-        id: n.id,
-      });
-    }
-
-    if (messages.length >= maxMessages) {
-      console.warn(`[twitch chat] Hit message cap ${maxMessages}, stopping`);
-      break;
-    }
-
-    // Pages come in stream order, so past the wanted part there's no more to read.
-    if (options.untilSeconds !== undefined && edges[edges.length - 1].node.contentOffsetSeconds >= options.untilSeconds) break;
-
-    if (!hasNext) break;
-    const nextCursor = edges[edges.length - 1].cursor;
-    if (!nextCursor || nextCursor === cursor) {
-      // Cursor didn't advance — would loop forever otherwise
-      console.warn(`[twitch chat] Cursor failed to advance on page ${pageCount} — stopping`);
-      break;
-    }
-    cursor = nextCursor;
+  if (until === undefined) {
+    await readStretch(from, Infinity);
+  } else {
+    const span = Math.max(0, until - from);
+    const n = Math.max(1, Math.min(options.workers ?? 6, Math.ceil(span / 300)));
+    const step = span / n;
+    await Promise.all(Array.from({ length: n }, (_, i) => readStretch(from + i * step, i === n - 1 ? until : from + (i + 1) * step)));
   }
 
-  console.log(`[twitch chat] Fetched ${messages.length} messages across ${pageCount} pages for VOD ${vodId}`);
+  messages.sort((x, y) => x.time - y.time);
+  if (messages.length > maxMessages) messages.length = maxMessages;
+  console.log(`[twitch chat] Fetched ${messages.length} messages in ${pages} pages for VOD ${vodId}${stoppedBy ? ` (stopped early: ${stoppedBy})` : ""}`);
   return messages;
 }
 

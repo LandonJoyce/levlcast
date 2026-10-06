@@ -345,7 +345,7 @@ export const analyzeVod = inngest.createFunction(
           // Only chat from the part this report covers, so the coach isn't
           // told about chat in hours it can't hear, and the fetch stops there.
           const upTo = coveredRange ? Math.min(coveredRange.end, duration) : duration;
-          const fetched = await fetchTwitchVodChat(vodForChat.twitch_vod_id, coveredRange ? { untilSeconds: upTo } : {});
+          const fetched = await fetchTwitchVodChat(vodForChat.twitch_vod_id, { fromSeconds: coveredRange?.start ?? 0, untilSeconds: upTo });
           const messages = coveredRange ? fetched.filter((m) => m.time >= coveredRange.start && m.time < upTo) : fetched;
           // Save buckets unconditionally — empty buckets (0 messages, e.g. on
           // very old VODs Twitch no longer serves chat replay for) let the UI
