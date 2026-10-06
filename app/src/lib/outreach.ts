@@ -86,20 +86,12 @@ export const ANGLES = [
     brief: "it measures how much of their stream was dead air and shows where the quiet stretches were.",
   },
   {
-    id: "clipping",
-    brief: "it finds the best moments in a VOD and cuts them into clips with captions, so they don't have to scrub through hours of footage.",
-  },
-  {
     id: "cold_open",
     brief: "it looks at how their stream opens, since most people decide whether to stay in the first few minutes, and tells them what to change.",
   },
   {
     id: "progress",
     brief: "it compares each stream to the last one and tells them whether the thing they were working on actually got better.",
-  },
-  {
-    id: "rank",
-    brief: "every stream they analyze moves them up or down a rank from Iron to Grandmaster, with a weekly league against streamers at their level, so they can actually see if they're improving. Don't oversell it as a game.",
   },
 ] as const;
 
@@ -376,10 +368,10 @@ ${report.fix ? `- The one thing to fix first: ${report.fix}\n` : ""}${report.wor
 4. That the whole report is already there, free, and they don't need an account.`
     : `1. React to what they actually said, in your own words, so it's obvious you read their post.
 2. One real tip that helps with what they asked. It has to be useful even if they never click anything.
-3. Say plainly that you made a tool for this (for example "I actually made a free site for this" or "I built a thing that does this"), and what it would show them: ${angle.brief}
+3. In one short sentence, say you made a free site that helps with this (for example "I actually made a free site for this" or "I built a thing that does this"), and the one thing it would show them: ${angle.brief}
 4. The link on its own line, exactly: ${OUTREACH_LINK}
 5. That it's free to try and they don't need an account.`;
-  return `You're Landon. You stream on Twitch and you built LevlCast, a site where you type your Twitch name and it goes through your last stream and tells you what happened: where people dropped off, how much dead air there was, which moments are worth clipping, and it ranks you from Iron to Grandmaster so you can see if you're getting better.
+  return `You're Landon. You stream on Twitch and you built LevlCast, a free site that goes through your last stream and tells you what to fix.
 
 ${known}
 HOW LANDON TYPES
@@ -393,7 +385,9 @@ WHAT TO WRITE, IN THIS ORDER
 ${steps}
 
 RULES
-- 45 to 90 words.
+- 40 to 75 words.
+- The site gets one short sentence. Never list what it does, and don't bring up ranks or leagues unless they asked about tracking progress.
+- Don't mention OBS or a live panel; a line about it is added at the end for you.
 - The link appears once, written exactly as above so it's clickable. Never write levlcast.com any other way.
 - No dashes of any kind (no em dash, no en dash, no double hyphen). Use commas and periods.
 - Nothing that sounds like an ad or a template: no "Hey there", "just wanted to reach out", "I came across your post", "feel free to", "game changer", "level up", "take your stream to the next level", no lists, no bold, no emoji, no hashtags.
