@@ -61,9 +61,14 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
     if (url.searchParams.get("obs") === "1") {
       want = true;
       url.searchParams.delete("obs");
-      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     }
+    // "Get Pro" in the Live panel lands here with ?upgrade=1.
+    const upgrade = url.searchParams.get("upgrade") === "1";
+    if (upgrade) url.searchParams.delete("upgrade");
+    if (want || upgrade) window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     if (want) setObsOpen(true);
+    if (upgrade && !isPro) setUpgradeOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Replies from Landon to the streamer's feedback, marked on the menu.

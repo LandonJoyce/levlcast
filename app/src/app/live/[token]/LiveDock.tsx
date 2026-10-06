@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings, X } from "lucide-react";
 import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
 import { ObsLink, type ObsInput, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat } from "@/lib/live/chat";
@@ -154,6 +154,10 @@ function saveLayout(l: Layout): void {
     localStorage.setItem(LAYOUT_KEY, JSON.stringify(l));
   } catch {}
 }
+
+/** Pro, from the panel: the dashboard opens with the upgrade window (in their own browser). */
+const GET_PRO = "/dashboard?upgrade=1";
+const WELCOME_KEY = "lc-live-welcome-v1";
 
 /** "just now", "3 min ago". Real time, whatever the test speed. */
 function ago(ms: number): string {
@@ -447,6 +451,18 @@ export default function LiveDock({
   // Customize: the layout, saved on this device, and what's been closed.
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
   const [layoutSheet, setLayoutSheet] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  /** The first-open welcome, until they press Got it (per device). */
+  const [welcomed, setWelcomed] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flash = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  }, []);
+  /** Set when they press Connect, so a successful connection can say so (and not on every page load). */
+  const connectAsked = useRef(false);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
@@ -480,6 +496,11 @@ export default function LiveDock({
     setCanVoice(Voice.supported());
     setVoicePick(loadVoicePick());
     setLayout(loadLayout());
+    try {
+      setWelcomed(localStorage.getItem(WELCOME_KEY) === "1");
+    } catch {
+      setWelcomed(false);
+    }
     const cfg = loadObs();
     setObsCfg(cfg);
     setDraft({ password: cfg.password, port: String(cfg.port) });
@@ -582,7 +603,14 @@ export default function LiveDock({
         status: (s, detail) => {
           setObsStatus(s);
           setObsDetail(detail ?? null);
-          if (s === "connected") lastTalkAt.current = Date.now();
+          if (s === "connected") {
+            lastTalkAt.current = Date.now();
+            if (connectAsked.current) {
+              connectAsked.current = false;
+              setSheetOpen(false);
+              flash("Connected to OBS. Mic and scene nudges are on.");
+            }
+          }
         },
         level: (db) => {
           const t = Date.now();
@@ -631,7 +659,7 @@ export default function LiveDock({
       link.close();
       obsRef.current = null;
     };
-  }, [obsCfg.enabled, obsCfg.port, obsCfg.password, attempt, updateObs]);
+  }, [obsCfg.enabled, obsCfg.port, obsCfg.password, attempt, updateObs, flash]);
 
   // One tick a second drives every timer and cue.
   useEffect(() => {
@@ -955,7 +983,7 @@ export default function LiveDock({
           <p className="ld-now-t">Off for the rest of this stream</p>
           <p className="ld-now-a">
             Free covers the first {freeMinutes} minutes of each stream. Pro covers all of it.{" "}
-            <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+            <a href={GET_PRO} target="_blank" rel="noopener noreferrer">
               See Pro
             </a>
           </p>
@@ -972,7 +1000,7 @@ export default function LiveDock({
             </div>
             <p className="ld-coach-p">
               Listens to your stream and tells you what to do, like a question you missed or a play to talk chat through.{" "}
-              <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+              <a href={GET_PRO} target="_blank" rel="noopener noreferrer">
                 See Pro
               </a>
             </p>
@@ -1104,6 +1132,15 @@ export default function LiveDock({
       ) : null,
   };
 
+  const showWelcome = Boolean(state) && !live && !welcomed;
+  const dismissWelcome = () => {
+    setWelcomed(true);
+    try {
+      localStorage.setItem(WELCOME_KEY, "1");
+    } catch {}
+  };
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+
   const startVoice = () => {
     if (!voice.current) voice.current = new Voice(token, pickNow);
     voice.current.pick = pickNow;
@@ -1113,7 +1150,9 @@ export default function LiveDock({
     voice.current.start(SAMPLE_LINES.on);
     remoteFirst.current = true;
     setVoiceAsk(false);
+    setSettingsOpen(false);
     setVoiceOn(true);
+    flash("Voice is on. Keep this page open while you stream.");
   };
   const stopVoice = () => {
     voice.current?.stop();
@@ -1135,6 +1174,7 @@ export default function LiveDock({
   };
 
   const connect = () => {
+    connectAsked.current = true;
     const port = Number(draft.port) || 4455;
     updateObs({ enabled: true, port, password: draft.password });
     setAttempt((n) => n + 1);
@@ -1148,20 +1188,97 @@ export default function LiveDock({
           {live ? <>Live {liveSince !== null ? clock(now - liveSince) : ""}</> : "Offline"}
         </span>
         <span className="ld-who">{displayName}</span>
-        <button type="button" className="ld-icon" onClick={() => setLayoutSheet(true)} aria-label="Customize your panel" title="Customize">
-          <SlidersHorizontal size={14} strokeWidth={2} aria-hidden="true" />
-        </button>
+        {state && (
+          <button type="button" className="ld-tier" data-pro={pro ? "1" : "0"} onClick={() => setSettingsOpen(true)} title={pro ? "You're on Pro" : "See what Pro adds"}>
+            {pro ? "Pro" : "Free"}
+          </button>
+        )}
         {(canVoice || voiceOn) && (
           <button type="button" className="ld-voice" data-on={voiceOn ? "1" : "0"} onClick={toggleVoice} aria-pressed={voiceOn}>
             {voiceOn ? "Voice on" : "Voice"}
           </button>
         )}
         {!isPhone && (
-          <button type="button" className="ld-obs" data-state={obsStatus} onClick={() => setSheetOpen(true)}>
-            {obsLabel}
+          <button type="button" className="ld-obs" data-state={obsStatus} onClick={() => setSheetOpen(true)} title={obsLabel}>
+            {obsStatus === "off" && !obsCfg.enabled ? "Connect OBS" : obsStatus === "connecting" ? "OBS…" : "OBS"}
           </button>
         )}
+        <button type="button" className="ld-icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" title="Settings">
+          <Settings size={15} strokeWidth={2} aria-hidden="true" />
+        </button>
       </header>
+
+      {toast && (
+        <p className="ld-toast" role="status">
+          {toast}
+        </p>
+      )}
+
+      {showWelcome && (
+        <section className="ld-welcome" aria-label="You're all set">
+          <svg className="ld-welcome-check" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="21" />
+            <path d="M14.5 24.5l6.5 6.5L33.5 18" />
+          </svg>
+          <p className="ld-welcome-t">You&apos;re all set</p>
+          <p className="ld-welcome-s">
+            {isPhone ? "LevlCast is on your phone. Only you can hear it." : "LevlCast is in OBS. Only you can see it, never your viewers."}
+          </p>
+          <ul className="ld-checks">
+            {isPhone ? (
+              <>
+                <li data-done="1">
+                  <i aria-hidden="true" />
+                  <span>Opened on your phone</span>
+                </li>
+                <li data-done={voiceOn ? "1" : "0"}>
+                  <i aria-hidden="true" />
+                  <span>Turn on Voice and put in one earbud</span>
+                  {!voiceOn && (
+                    <button type="button" onClick={startVoice}>
+                      Turn on
+                    </button>
+                  )}
+                </li>
+                <li data-done="0">
+                  <i aria-hidden="true" />
+                  <span>Keep the panel open in OBS on your computer too</span>
+                </li>
+              </>
+            ) : (
+              <>
+                <li data-done="1">
+                  <i aria-hidden="true" />
+                  <span>Added to OBS</span>
+                </li>
+                <li data-done={obsStatus === "connected" ? "1" : "0"}>
+                  <i aria-hidden="true" />
+                  <span>Connect OBS so it knows when your mic goes quiet</span>
+                  {obsStatus !== "connected" && (
+                    <button type="button" onClick={() => setSheetOpen(true)}>
+                      Connect
+                    </button>
+                  )}
+                </li>
+                <li data-done="0">
+                  <i aria-hidden="true" />
+                  <span>Want it in your ear? Use voice on your phone</span>
+                  <button type="button" onClick={() => setVoiceAsk(true)}>
+                    How
+                  </button>
+                </li>
+              </>
+            )}
+            <li data-done="0">
+              <i aria-hidden="true" />
+              <span>Go live. It fills in by itself.</span>
+            </li>
+          </ul>
+          <button type="button" className="ld-btn" onClick={dismissWelcome}>
+            Got it
+          </button>
+        </section>
+      )}
 
       {!state && !pollError && <p className="ld-wait">Checking your stream…</p>}
 
@@ -1207,7 +1324,7 @@ export default function LiveDock({
         </section>
       )}
 
-      {state && !live && !(session && session.endedAt && now - Date.parse(session.endedAt) < END_SCREEN_MS) && (
+      {state && !live && !(showWelcome && !session) && !(session && session.endedAt && now - Date.parse(session.endedAt) < END_SCREEN_MS) && (
         <section className="ld-off">
           <p className="ld-off-t">You&apos;re offline</p>
           <p className="ld-off-s">Go live and this fills in. Keep it open while you stream.</p>
@@ -1234,7 +1351,7 @@ export default function LiveDock({
               <Spark samples={session.samples} />
               <ReportCard data={report} origin={typeof window === "undefined" ? "" : window.location.origin} />
             </div>
-          ) : (
+          ) : showWelcome ? null : (
             <ul className="ld-how">
               <li>
                 <b>While you&apos;re live</b> it tells you when you go quiet, who&apos;s new in chat and how your viewers are doing.
@@ -1244,7 +1361,7 @@ export default function LiveDock({
               </li>
             </ul>
           )}
-          {obsStatus !== "connected" && (
+          {obsStatus !== "connected" && !showWelcome && (
             <p className="ld-hint">
               <button type="button" onClick={() => setSheetOpen(true)}>
                 Connect OBS
@@ -1286,6 +1403,93 @@ export default function LiveDock({
                 Use voice here anyway
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {settingsOpen && (
+        <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Settings">
+          <div className="ld-sheet-in">
+            <div className="ld-sheet-head">
+              <p>Settings</p>
+              <button type="button" onClick={() => setSettingsOpen(false)}>
+                Done
+              </button>
+            </div>
+
+            <section className="ld-set">
+              <p className="ld-k">Your plan</p>
+              {pro ? (
+                <>
+                  <p className="ld-set-t">You&apos;re on Pro</p>
+                  <p className="ld-set-s">
+                    Your coach listens all stream, and you get the natural voices.
+                    {coachStatus?.capHours ? ` ${coachStatus.usedHours ?? 0} of ${coachStatus.capHours} coach hours used this month.` : ""}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="ld-set-t">You&apos;re on Free</p>
+                  <ul className="ld-set-list">
+                    <li>A coach that listens to your stream and tells you what to do</li>
+                    <li>Coaching for the whole stream, not just the first 30 minutes</li>
+                    <li>Natural voices that sound like a real person</li>
+                  </ul>
+                  <a className="ld-report-go" href={`${origin}${GET_PRO}`} target="_blank" rel="noopener noreferrer">
+                    Get Pro
+                  </a>
+                </>
+              )}
+            </section>
+
+            <section className="ld-set">
+              <p className="ld-k">Voice</p>
+              <div className="ld-set-row">
+                <span>Read nudges out loud</span>
+                <button type="button" className="ld-switch" role="switch" aria-checked={voiceOn} onClick={toggleVoice} data-on={voiceOn ? "1" : "0"}>
+                  <i />
+                </button>
+              </div>
+              <div className="ld-set-row">
+                <span>
+                  Voice: <b>{pickLabel}</b>
+                </span>
+                <button type="button" className="ld-link" onClick={() => setVoiceSheet(true)}>
+                  Change
+                </button>
+              </div>
+              <p className="ld-set-s">Best on your phone with one earbud. Anything this computer plays can end up on stream.</p>
+            </section>
+
+            {!isPhone && (
+              <section className="ld-set">
+                <p className="ld-k">OBS</p>
+                <div className="ld-set-row">
+                  <span className="ld-set-obs" data-state={obsStatus}>
+                    {obsStatus === "connected" ? `Connected${obsCfg.mic ? ` · ${obsCfg.mic}` : ""}` : obsStatus === "connecting" ? "Connecting…" : "Not connected"}
+                  </span>
+                  <button type="button" className="ld-link" onClick={() => setSheetOpen(true)}>
+                    {obsStatus === "connected" ? "Settings" : "Connect"}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            <section className="ld-set">
+              <p className="ld-k">This panel</p>
+              <div className="ld-set-row">
+                <span>Pick what shows and in what order</span>
+                <button type="button" className="ld-link" onClick={() => setLayoutSheet(true)}>
+                  Customize
+                </button>
+              </div>
+              <div className="ld-set-row">
+                <span>Everything it does, step by step</span>
+                <a className="ld-link" href={`${origin}/dashboard/live`} target="_blank" rel="noopener noreferrer">
+                  How it works
+                </a>
+              </div>
+            </section>
           </div>
         </div>
       )}
@@ -1366,7 +1570,7 @@ export default function LiveDock({
             {!pro && (
               <p className="ld-help">
                 These sound like a real person. They come with Pro.{" "}
-                <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+                <a href={GET_PRO} target="_blank" rel="noopener noreferrer">
                   See Pro
                 </a>
               </p>
