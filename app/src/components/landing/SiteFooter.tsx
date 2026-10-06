@@ -25,6 +25,7 @@ export default function SiteFooter() {
         <div>
           <p className="v3-foot-h">Product</p>
           <Link href="/analyze">Analyze a stream</Link>
+          <Link href="/obs">Live coach in OBS</Link>
           <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/#pricing">Pricing</Link>
         </div>

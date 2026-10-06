@@ -19,6 +19,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
+      // The OBS panel on its own page, for links that should preview it.
+      url: "https://www.levlcast.com/obs",
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: "https://www.levlcast.com/twitch-vod-analyzer",
       lastModified: now,
       changeFrequency: "monthly",
