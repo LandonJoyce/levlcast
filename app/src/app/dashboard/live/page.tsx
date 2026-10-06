@@ -56,17 +56,30 @@ export default async function LivePage() {
         </p>
       </div>
 
+      <figure className="lv-shot">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/live/levlcast-in-obs.webp" width={1600} height={900} alt="The LevlCast panel docked on the right side of OBS during a stream" />
+        <figcaption>What it looks like in OBS. It&apos;s part of OBS&apos;s window, not your stream.</figcaption>
+      </figure>
+
       <LiveSetup />
 
       <section className="card card-pad lv-steps">
-        <h3>Add it to OBS, about 2 minutes</h3>
+        <h3>Add it to OBS, about a minute</h3>
         <ol>
           <li>
             <b>Copy your link</b> above.
           </li>
           <li>
-            In OBS, open <b>Docks</b>, then <b>Custom Browser Docks</b>. Name it <b>LevlCast</b>, paste the link and click{" "}
-            <b>Apply</b>. Drag the new panel wherever you like.
+            In OBS, click <b>Docks</b>, then <b>Custom Browser Docks</b>.
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/live/obs-step-docks.webp" width={520} height={420} alt="The Docks menu in OBS, with Custom Browser Docks at the bottom" />
+          </li>
+          <li>
+            Type <b>LevlCast</b> as the name, paste your link next to it, and click <b>Apply</b>. Drag the new panel wherever you
+            like.
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/live/obs-step-dialog.webp" width={680} height={227} alt="OBS's Custom Browser Docks window with LevlCast and the link filled in" />
           </li>
           <li>
             For mic and scene coaching, open <b>Tools</b>, then <b>WebSocket Server Settings</b>. Tick <b>Enable WebSocket server</b>,

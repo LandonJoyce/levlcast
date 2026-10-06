@@ -244,6 +244,7 @@ export async function transcribeClip(audio: Buffer): Promise<TranscribeResult> {
     method: "POST",
     headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}` },
     body: new Uint8Array(audio),
+    signal: AbortSignal.timeout(25_000),
   });
   if (!res.ok) throw new Error(formatDeepgramError(res.status, await res.text()));
   return parseDeepgramResponse(await res.json());
@@ -256,6 +257,7 @@ export async function speakLine(text: string, voice: string): Promise<ArrayBuffe
     method: "POST",
     headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(formatDeepgramError(res.status, await res.text()));
   return res.arrayBuffer();

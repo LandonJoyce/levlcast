@@ -99,6 +99,21 @@ CREATE TABLE IF NOT EXISTS public.live_lines (
 );
 CREATE INDEX IF NOT EXISTS live_lines_session ON public.live_lines (session_id, said_at);
 
+-- Safe to run again: columns added after the first draft of this file,
+-- for a database that ran an earlier copy of it.
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS panel_seen_at     timestamptz;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS listen_url        text;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS listen_url_at     timestamptz;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS listen_seq        bigint;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS listen_lock_until timestamptz;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS coached_at        timestamptz;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS listened_seconds  integer NOT NULL DEFAULT 0;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS coach_calls       integer NOT NULL DEFAULT 0;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS coach_tokens_in   integer NOT NULL DEFAULT 0;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS coach_tokens_out  integer NOT NULL DEFAULT 0;
+ALTER TABLE public.live_sessions ADD COLUMN IF NOT EXISTS tts_chars         integer NOT NULL DEFAULT 0;
+ALTER TABLE public.live_cues     ADD COLUMN IF NOT EXISTS say               text;
+
 ALTER TABLE public.live_docks    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.live_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.live_samples  ENABLE ROW LEVEL SECURITY;

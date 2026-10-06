@@ -105,7 +105,12 @@ export class Voice {
    * later can still play.
    */
   start(greeting: string): void {
-    if (this.pick.kind === "levl") return this.play(`/api/live/voice-sample?v=${this.pick.id}&line=on`, greeting);
+    if (this.pick.kind === "levl") {
+      // The device voice steps in when a clip can't play, and phones only
+      // let it speak later if it spoke during a tap: so it says nothing, now.
+      if (canSpeak()) window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+      return this.play(`/api/live/voice-sample?v=${this.pick.id}&line=on`, greeting);
+    }
     const a = this.el();
     a.src = SILENCE;
     a.play().catch(() => {});

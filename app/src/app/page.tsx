@@ -7,6 +7,7 @@ import ReferralLine from "@/components/landing/ReferralLine";
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
 import ProPlan from "@/components/landing/ProPlan";
+import AddToObsLink from "@/components/landing/AddToObsLink";
 import RankUp from "@/components/landing/RankUp";
 import { Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
@@ -235,6 +236,30 @@ export default async function HomePage() {
           </dl>
         </section>
       )}
+
+      {/* ── Live: the coach inside OBS ── */}
+      <section className="v3-sec" id="live">
+        <h2 className="v3-h2">A coach inside OBS while you&rsquo;re live.</h2>
+        <p className="v3-shot-cap">
+          It tells you when you go quiet and who just showed up. On Pro it listens to your stream too, and tells you when chat
+          asked something you missed. Only you can see it, or hear it on your phone.
+        </p>
+        <figure className="v3-shot">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/live/levlcast-in-obs.webp"
+            alt="OBS during a stream, with the LevlCast panel docked on the right showing a coaching tip, viewers and chat"
+            width={1600}
+            height={900}
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+        <div className="v3-live-cta">
+          <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
+          <span className="v3-fine">Free for the first 30 minutes of every stream.</span>
+        </div>
+      </section>
 
       {/* ── Clips ── (moved up here when the example breakdown was cut) */}
       <section className="v3-sec" id="clips">

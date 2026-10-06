@@ -20,6 +20,7 @@ import { OnboardingHero } from "@/components/dashboard/onboarding-hero";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
 import { RankPanel } from "@/components/dashboard/rank-panel";
+import { AddToObsButton, LivePromo } from "@/components/dashboard/add-to-obs";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -144,6 +145,14 @@ export default async function DashboardPage({
 
   const displayName = profile?.twitch_display_name || "Streamer";
 
+  // Live gets introduced here until the panel has been open during one of
+  // their streams. A read that fails just leaves the introduction up.
+  const { count: liveCount } = await supabase
+    .from("live_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+  const showLivePromo = !liveCount;
+
   // ─── Empty state — no streams analyzed yet ─────────────
   if (totalAnalyzed === 0) {
     // Detect whether an analysis is currently running so we can poll the
@@ -185,6 +194,7 @@ export default async function DashboardPage({
 
         <AdminReplyCard />
         <OnboardingHero syncing={syncing} />
+        {showLivePromo && <LivePromo />}
         {hasSocial && <FriendsSection duels={newDuels} leagues={newLeagues} />}
       </>
     );
@@ -266,13 +276,17 @@ export default async function DashboardPage({
 
       <div className="hm-hello">
         <h1 className="page-title">Hey, {displayName}.</h1>
-        <Link href="/dashboard/vods" className="btn btn-ghost">
-          <Icons.Twitch /> Analyze a stream
-        </Link>
+        <div className="hm-hello-actions">
+          <AddToObsButton className="btn btn-ghost">Add to OBS</AddToObsButton>
+          <Link href="/dashboard/vods" className="btn btn-ghost">
+            <Icons.Twitch /> Analyze a stream
+          </Link>
+        </div>
       </div>
 
       <OnboardingChecklist />
       <AdminReplyCard />
+      {showLivePromo && <LivePromo />}
 
       <section className="hm-top">
         {/* Keyed on the points so opening a result remounts it and the

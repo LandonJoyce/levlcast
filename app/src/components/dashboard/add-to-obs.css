@@ -1,0 +1,104 @@
+/* "Add to OBS" (components/dashboard/add-to-obs.tsx). Uses the dashboard's tokens from app.css. */
+
+.dash .ato {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  align-items: start;
+  overflow-y: auto;
+  padding: 40px 16px;
+  background: rgba(8, 6, 7, 0.8);
+}
+.dash .ato-in {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 26px 26px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+}
+.dash .ato-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.dash .ato-x:hover { color: var(--ink); border-color: var(--line-2); }
+.dash .ato h2 { margin: 0 40px 6px 0; font-family: var(--display); font-size: 21px; font-weight: 800; letter-spacing: -0.015em; }
+.dash .ato-sub { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+
+.dash .ato-steps { list-style: none; counter-reset: ato; margin: 20px 0 0; padding: 0; display: grid; gap: 18px; }
+.dash .ato-steps li { counter-increment: ato; display: grid; gap: 10px; padding-left: 34px; position: relative; }
+.dash .ato-steps li::before {
+  content: counter(ato);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+}
+.dash .ato-steps p { margin: 1px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.dash .ato-steps b { color: var(--ink); font-weight: 700; }
+.dash .ato-steps img { display: block; width: 100%; max-width: 440px; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.dash .ato-copy { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.dash .ato-copy .btn { flex-shrink: 0; }
+.dash .ato-copy input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 8px 10px;
+}
+.dash .ato-done { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink); font-size: 14px; }
+.dash .ato-err { margin: 10px 0 0; color: var(--danger); font-size: 13px; }
+.dash .ato-more { display: inline-block; margin-top: 10px; color: var(--ink-2); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.dash .ato-more:hover { color: var(--ink); }
+
+/* The home page's introduction to Live */
+.dash .obs-promo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.dash .obs-promo img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+.dash .obs-promo h2 { margin: 0 0 8px; font-family: var(--display); font-size: 21px; font-weight: 800; letter-spacing: -0.015em; }
+.dash .obs-promo p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
+.dash .obs-promo-actions { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.dash .obs-promo-link { color: var(--ink-2); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.dash .obs-promo-link:hover { color: var(--ink); }
+
+@media (max-width: 760px) {
+  .dash .obs-promo { grid-template-columns: 1fr; gap: 16px; }
+  .dash .ato { padding: 16px 10px; }
+  .dash .ato-in { padding: 22px 16px 18px; }
+  .dash .ato-steps li { padding-left: 30px; }
+}
+
+.dash .hm-hello-actions { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -1184,3 +1184,7 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .ru-stage { height: 160px; }
   .v3 .ru-emb { width: 140px; height: 140px; }
 }
+
+/* Live (the coach inside OBS) */
+.v3 .v3-live-cta { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 20px; margin-top: 24px; }
+.v3 .v3-live-cta .v3-fine { margin: 0; }

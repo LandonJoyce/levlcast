@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { FeedbackModal } from "./feedback-modal";
 import { UpgradeModal } from "./upgrade-modal";
+import { AddToObsModal } from "./add-to-obs";
 
 /**
  * The bar across the top of every signed-in page. It replaced a left
@@ -42,10 +43,28 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
   const [menu, setMenu] = useState<"account" | "sheet" | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [obsOpen, setObsOpen] = useState(false);
   const [unreadReplies, setUnreadReplies] = useState(0);
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMenu(null), [pathname]);
+
+  // "Add it to OBS" on the homepage, or a link in a DM, lands here with
+  // ?obs=1 (or, through sign-in, a note in localStorage): open the window.
+  useEffect(() => {
+    let want = false;
+    try {
+      want = localStorage.getItem("levlcast_pending_obs") === "1";
+      localStorage.removeItem("levlcast_pending_obs");
+    } catch {}
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("obs") === "1") {
+      want = true;
+      url.searchParams.delete("obs");
+      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    }
+    if (want) setObsOpen(true);
+  }, []);
 
   // Replies from Landon to the streamer's feedback, marked on the menu.
   useEffect(() => {
@@ -107,6 +126,16 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
 
   const accountLinks = (
     <>
+      <button
+        type="button"
+        className="ab-item"
+        onClick={() => {
+          setMenu(null);
+          setObsOpen(true);
+        }}
+      >
+        Add LevlCast to OBS
+      </button>
       <Link href="/dashboard/settings" className="ab-item">Account</Link>
       <Link href="/dashboard/collabs" className="ab-item">
         Collabs
@@ -216,6 +245,7 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
         </div>
       )}
 
+      <AddToObsModal open={obsOpen} onClose={() => setObsOpen(false)} />
       <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} defaultCategory="general" trigger="sidebar" />
       {!isPro && (
         <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={upgradeReason ?? ""} />

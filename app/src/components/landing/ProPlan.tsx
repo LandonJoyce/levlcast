@@ -33,8 +33,8 @@ export default function ProPlan() {
         <span>{c.per}</span>
       </p>
       <p className="v3-plan-b">
-        For streamers going live more than once a week. Whole streams coached, twenty a month, twenty clips, and
-        posting straight to YouTube.
+        For streamers going live more than once a week. Whole streams coached, twenty a month, twenty clips, posting
+        straight to YouTube, and a coach in OBS that listens while you&apos;re live.
         {c.note && <> {c.note}</>}
       </p>
       <Link href={`/auth/login?plan=${c.plan}`} className="v3-btn">

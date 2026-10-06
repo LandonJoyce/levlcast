@@ -63,3 +63,8 @@
 }
 
 .dash .lv-plan-line { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; }
+
+.dash .lv-shot { margin: 0; }
+.dash .lv-shot img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--r-lg); }
+.dash .lv-shot figcaption { margin-top: 8px; color: var(--ink-3); font-size: 13px; }
+.dash .lv-steps li img { display: block; width: 100%; max-width: 460px; height: auto; margin: 10px 0 4px; border: 1px solid var(--line); border-radius: 8px; }

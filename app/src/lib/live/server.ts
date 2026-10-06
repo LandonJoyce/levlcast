@@ -594,15 +594,15 @@ async function listenedThisMonth(admin: Admin, userId: string): Promise<number> 
 export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<ListenResult> {
   if (!owner.pro) return { state: "pro", nextMs: 10 * 60_000 };
   const admin = createAdminClient();
-  const { data: session } = await admin
+  const { data: open } = await admin
     .from("live_sessions")
-    .select("id, started_at, title, game_name, listen_url, listen_url_at, listen_seq, listen_lock_until, coached_at, listened_seconds, coach_calls, coach_tokens_in, coach_tokens_out")
+    .select("id, listen_lock_until")
     .eq("user_id", owner.userId)
     .is("ended_at", null)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!session) return { state: "offline", nextMs: 30_000 };
+  if (!open) return { state: "offline", nextMs: 30_000 };
 
   const capHours = PRO_COACH_HOURS;
   const used = await listenedThisMonth(admin, owner.userId);
@@ -610,84 +610,106 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
   if (used >= capHours * 3600) return { state: "cap", nextMs: 10 * 60_000, usedHours, capHours };
 
   // Claim the stream for this call. Two docks open means one listens.
-  const held = (session.listen_lock_until as string | null) ?? null;
-  const busy = async (): Promise<ListenResult> => ({ state: "busy", nextMs: 15_000, usedHours, capHours, cues: await coachCuesSince(admin, session.id, input.after) });
+  const held = (open.listen_lock_until as string | null) ?? null;
+  const busy = async (): Promise<ListenResult> => ({ state: "busy", nextMs: 15_000, usedHours, capHours, cues: await coachCuesSince(admin, open.id, input.after) });
   if (held && Date.parse(held) > Date.now()) return busy();
   const until = new Date(Date.now() + LISTEN_LOCK_MS).toISOString();
-  const claim = admin.from("live_sessions").update({ listen_lock_until: until }).eq("id", session.id);
-  const { data: claimed } = await (held ? claim.eq("listen_lock_until", held) : claim.is("listen_lock_until", null)).select("id");
-  if (!claimed?.length) return busy();
+  const claim = admin.from("live_sessions").update({ listen_lock_until: until }).eq("id", open.id);
+  // The row comes back from the claim itself: read any earlier and another
+  // dock could finish in between, and this one would hear its audio again.
+  const { data: claimed } = await (held ? claim.eq("listen_lock_until", held) : claim.is("listen_lock_until", null)).select(
+    "id, started_at, title, game_name, listen_url, listen_url_at, listen_seq, coached_at, listened_seconds, coach_calls, coach_tokens_in, coach_tokens_out"
+  );
+  const session = (claimed ?? [])[0] as Record<string, unknown> | undefined;
+  const sessionId = String(open.id);
+  if (!session) return busy();
 
   try {
     const now = Date.now();
     const patch: Record<string, unknown> = {};
 
     // ── Hear ──
+    // A new playlist link numbers its segments from 0 again, and starts
+    // from now, so it's read from its start rather than after the old number.
     let url = (session.listen_url as string | null) ?? null;
+    let afterSeq = session.listen_seq === null || session.listen_seq === undefined ? null : Number(session.listen_seq);
     const urlAt = session.listen_url_at ? Date.parse(String(session.listen_url_at)) : 0;
     if (!url || now - urlAt > PLAYLIST_MAX_AGE_MS) {
       url = await liveAudioPlaylistUrl(owner.login);
       patch.listen_url = url;
       patch.listen_url_at = new Date().toISOString();
+      afterSeq = null;
     }
     if (!url) return { state: "noaudio", nextMs: 60_000, usedHours, capHours };
-    const afterSeq = session.listen_seq === null || session.listen_seq === undefined ? null : Number(session.listen_seq);
     let pulled = await pullNewAudio(url, afterSeq);
     if (pulled.gone) {
       url = await liveAudioPlaylistUrl(owner.login);
       patch.listen_url = url;
       patch.listen_url_at = new Date().toISOString();
       if (!url) {
-        await admin.from("live_sessions").update(patch).eq("id", session.id);
+        await admin.from("live_sessions").update(patch).eq("id", sessionId);
         return { state: "noaudio", nextMs: 60_000, usedHours, capHours };
       }
-      pulled = await pullNewAudio(url, afterSeq);
+      pulled = await pullNewAudio(url, null);
     }
 
     let heard: string | null = null;
     if (pulled.audio) {
-      const { segments } = await transcribeClip(pulled.audio);
-      // Twitch's own clock for the audio, else "just now, minus the clip".
-      const start = pulled.startAt ?? now - pulled.seconds * 1000;
-      const lines = segments
-        .map((u) => ({ session_id: session.id, said_at: new Date(start + u.start * 1000).toISOString(), text: u.text.trim().slice(0, 500) }))
-        .filter((l) => l.text);
-      if (lines.length) {
-        await admin.from("live_lines").insert(lines);
-        heard = lines[lines.length - 1].text;
+      try {
+        const { segments } = await transcribeClip(pulled.audio);
+        // Twitch's own clock for the audio, else "just now, minus the clip".
+        const start = pulled.startAt ?? now - pulled.seconds * 1000;
+        const lines = segments
+          .map((u) => ({ session_id: sessionId, said_at: new Date(start + u.start * 1000).toISOString(), text: u.text.trim().slice(0, 500) }))
+          .filter((l) => l.text);
+        if (lines.length) {
+          await admin.from("live_lines").insert(lines);
+          heard = lines[lines.length - 1].text;
+        }
+      } catch (err) {
+        // That stretch goes unheard rather than tried again: a clip that
+        // can't be read once won't be read on the next call either.
+        console.error("[live] transcribing failed:", err instanceof Error ? err.message : err);
       }
     }
+    // Saved before the coach runs, so nothing gets heard (and paid for) twice.
     patch.listen_seq = pulled.lastSeq;
     patch.listened_seconds = Number(session.listened_seconds ?? 0) + Math.round(pulled.seconds);
+    await admin.from("live_sessions").update(patch).eq("id", sessionId);
 
     // ── Coach ──
+    const coached: Record<string, unknown> = {};
     const coachedAt = session.coached_at ? Date.parse(String(session.coached_at)) : null;
     if (coachedAt === null) {
       // The first call starts the clock, so the first tip has a few minutes to go on.
-      patch.coached_at = new Date().toISOString();
+      coached.coached_at = new Date().toISOString();
     } else if (now - coachedAt >= COACH_EVERY_MS) {
-      patch.coached_at = new Date().toISOString();
-      const context = await coachContext(admin, owner, session, input, now);
-      if (context.heard.length || context.chat.length) {
-        const answer = await coachTip(context);
-        patch.coach_calls = Number(session.coach_calls ?? 0) + 1;
-        patch.coach_tokens_in = Number(session.coach_tokens_in ?? 0) + answer.tokensIn;
-        patch.coach_tokens_out = Number(session.coach_tokens_out ?? 0) + answer.tokensOut;
-        if (answer.tip) {
-          const { error } = await admin
-            .from("live_cues")
-            .insert({ session_id: session.id, kind: "coach", title: answer.tip.title, action: answer.tip.say, say: answer.tip.say, tone: answer.tip.tone, source: "coach" });
-          if (error) throw new Error(error.message);
+      // Set first: a failed look waits its turn like any other, no retry storm.
+      coached.coached_at = new Date().toISOString();
+      try {
+        const context = await coachContext(admin, owner, session, input, now);
+        if (context.heard.length || context.chat.length) {
+          const answer = await coachTip(context);
+          coached.coach_calls = Number(session.coach_calls ?? 0) + 1;
+          coached.coach_tokens_in = Number(session.coach_tokens_in ?? 0) + answer.tokensIn;
+          coached.coach_tokens_out = Number(session.coach_tokens_out ?? 0) + answer.tokensOut;
+          if (answer.tip) {
+            const { error } = await admin
+              .from("live_cues")
+              .insert({ session_id: sessionId, kind: "coach", title: answer.tip.title, action: answer.tip.say, say: answer.tip.say, tone: answer.tip.tone, source: "coach" });
+            if (error) throw new Error(error.message);
+          }
         }
+      } catch (err) {
+        console.error("[live] coach failed:", err instanceof Error ? err.message : err);
       }
     }
-
-    await admin.from("live_sessions").update(patch).eq("id", session.id);
+    if (Object.keys(coached).length) await admin.from("live_sessions").update(coached).eq("id", sessionId);
     // Call again before the playlist rolls past what this call saw.
     const nextMs = pulled.windowSeconds ? Math.min(30_000, Math.max(8_000, (pulled.windowSeconds - 8) * 1000)) : 15_000;
-    return { state: "listening", nextMs, heard, cues: await coachCuesSince(admin, session.id, input.after), usedHours, capHours };
+    return { state: "listening", nextMs, heard, cues: await coachCuesSince(admin, sessionId, input.after), usedHours, capHours };
   } finally {
-    await admin.from("live_sessions").update({ listen_lock_until: null }).eq("id", session.id).eq("listen_lock_until", until);
+    await admin.from("live_sessions").update({ listen_lock_until: null }).eq("id", sessionId).eq("listen_lock_until", until);
   }
 }
 

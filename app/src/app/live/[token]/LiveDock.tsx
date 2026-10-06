@@ -439,9 +439,10 @@ export default function LiveDock({
     if (fired.length) setFeed((f) => [...fired.reverse(), ...f].slice(0, 25));
   }, [signals, coaching, brain]);
 
-  // Voice mode: pick up nudges an OBS panel sent, every few seconds.
+  // Voice mode: pick up nudges an OBS panel sent, every few seconds, while
+  // there's a stream and coaching to speak.
   useEffect(() => {
-    if (!voiceOn) return;
+    if (!voiceOn || !live || !coaching) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
@@ -461,7 +462,7 @@ export default function LiveDock({
       } catch {
         // Try again next round.
       } finally {
-        if (alive) timer = setTimeout(load, Math.max(1000, 4000 / speed));
+        if (alive) timer = setTimeout(load, Math.max(1000, 5000 / speed));
       }
     };
     void load();
@@ -469,7 +470,7 @@ export default function LiveDock({
       alive = false;
       if (timer) clearTimeout(timer);
     };
-  }, [voiceOn, token, speed, addServerCues]);
+  }, [voiceOn, live, coaching, token, speed, addServerCues]);
 
   // Pro: the listening coach. Whichever device works out the nudges (the
   // OBS panel, or a phone on its own) asks the server to listen; any
