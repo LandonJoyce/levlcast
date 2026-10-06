@@ -1374,7 +1374,7 @@ export default function LiveDock({
 
       {pollError && <p className="ld-err">{pollError}</p>}
 
-      <footer className="ld-foot">Only you can see this. It&apos;s part of OBS, not your stream.</footer>
+      <footer className="ld-foot">{isPhone ? "Only you can see and hear this. Your viewers never will." : "Only you can see this. It's part of OBS, not your stream."}</footer>
 
       {voiceAsk && (
         <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Voice coaching">
