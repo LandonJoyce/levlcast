@@ -7,18 +7,36 @@
  * closed with the follower count, so the dock can show a summary.
  *
  * Nothing here runs in the background. A dock that isn't open costs nothing.
+ *
+ * Pro also gets the listening coach (listenOnce, below): while a dock is
+ * open it hears the stream's audio, and every couple of minutes it may give
+ * one tip made for this streamer.
  */
 
 import { randomBytes } from "crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAppAccessToken, invalidateAppTokenCache } from "@/lib/twitch";
 import { hasPaidPlan } from "@/lib/limits";
+import { transcribeClip } from "@/lib/deepgram";
+import { liveAudioPlaylistUrl, pullNewAudio } from "@/lib/live/listen";
+import { coachTip, streamerHistory, type CoachContext } from "@/lib/live/coach";
 
 /**
  * Free plans get the coaching for the first this-many minutes of each
  * stream; Pro gets all of it. The numbers (viewers, chat) show for everyone.
  */
 export const FREE_COACH_MINUTES = 30;
+
+/** Pro's listening coach hears up to this many hours of stream a month. */
+export const PRO_COACH_HOURS = 30;
+/** How often the coach looks at the stream and maybe says something. */
+const COACH_EVERY_MS = Number(process.env.LIVE_COACH_EVERY_MS) || 150_000;
+/** One dock listens at a time. Its claim runs out after this, in case it died mid-call. */
+const LISTEN_LOCK_MS = 50_000;
+/** A playlist link this old is swapped for a fresh one, even if it still works. */
+const PLAYLIST_MAX_AGE_MS = 60 * 60_000;
+/** The natural voices: at most this many characters a stream, about 90 cents' worth. */
+const SPOKEN_CHARS_PER_STREAM = 30_000;
 
 /** Twitch's API, overridable so the dock can be tested against a stand-in. */
 const HELIX = process.env.TWITCH_API_BASE || "https://api.twitch.tv";
@@ -51,6 +69,8 @@ export interface LiveSession {
   samples: Array<[number, number]>;
   followersStart: number | null;
   followersNow: number | null;
+  /** When an OBS panel last checked in during this stream. */
+  panelSeenAt: string | null;
 }
 
 export interface LiveState {
@@ -192,7 +212,11 @@ const followerCache = new Map<string, { at: number; total: number | null }>();
  * session once the stream is over. Polls closer together than MIN_POLL_MS
  * (two docks, or a quick reload) get the last answer and save nothing.
  */
-export async function pollLive(owner: DockOwner): Promise<LiveState> {
+export async function pollLive(owner: DockOwner, opts: { panel?: boolean } = {}): Promise<LiveState> {
+  // An OBS panel checking in is noted every time, cached answer or not: a
+  // phone in voice mode goes by it to decide whose nudges to speak.
+  if (opts.panel) await markPanel(owner);
+
   const cached = pollCache.get(owner.userId);
   if (cached && Date.now() - cached.at < MIN_POLL_MS) return cached.state;
 
@@ -299,6 +323,7 @@ async function recordMinute(admin: Admin, owner: DockOwner, stream: TwitchStream
     samples,
     followersStart: (session.followers_start as number | null) ?? null,
     followersNow: followersNow.total,
+    panelSeenAt: (session.panel_seen_at as string | null) ?? null,
   };
 }
 
@@ -339,6 +364,7 @@ async function closeAndSummarize(admin: Admin, owner: DockOwner): Promise<LiveSe
     samples,
     followersStart: (last.followers_start as number | null) ?? null,
     followersNow: (last.followers_end as number | null) ?? null,
+    panelSeenAt: (last.panel_seen_at as string | null) ?? null,
   };
 }
 
@@ -348,8 +374,9 @@ async function sessionByStream(admin: Admin, userId: string, streamId: string) {
     .select("*")
     .eq("user_id", userId)
     .eq("twitch_stream_id", streamId)
-    .maybeSingle();
-  return data as Record<string, unknown> | null;
+    .order("created_at", { ascending: true })
+    .limit(1);
+  return ((data ?? [])[0] ?? null) as Record<string, unknown> | null;
 }
 
 async function samplesFor(admin: Admin, sessionId: string): Promise<Array<[number, number]>> {
@@ -360,4 +387,355 @@ async function samplesFor(admin: Admin, sessionId: string): Promise<Array<[numbe
     .order("minute", { ascending: true })
     .limit(2000);
   return ((data ?? []) as Array<{ minute: number; viewers: number }>).map((r) => [Number(r.minute), Number(r.viewers)]);
+}
+
+// ── Nudges passed from the OBS panel to a phone in voice mode ──────────
+
+export interface RelayedCue {
+  id: string;
+  kind: string;
+  title: string;
+  action: string;
+  say: string | null;
+  tone: string;
+  source: string;
+  createdAt: string;
+}
+
+const CUE_KINDS = new Set(["raid", "newChatter", "quiet", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
+const CUE_TONES = new Set(["nudge", "good", "info"]);
+/** At most this many nudges a minute per stream, whatever a panel sends. */
+const MAX_CUES_PER_MINUTE = 20;
+/** The same nudge twice in this long (two panels open) is saved once. */
+const SAME_CUE_MS = 2 * 60_000;
+
+async function openSession(admin: Admin, userId: string) {
+  const { data } = await admin
+    .from("live_sessions")
+    .select("id, started_at, panel_seen_at")
+    .eq("user_id", userId)
+    .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as { id: string; started_at: string; panel_seen_at: string | null } | null;
+}
+
+async function markPanel(owner: DockOwner): Promise<void> {
+  const admin = createAdminClient();
+  await admin
+    .from("live_sessions")
+    .update({ panel_seen_at: new Date().toISOString() })
+    .eq("user_id", owner.userId)
+    .is("ended_at", null);
+}
+
+/**
+ * Save nudges the OBS panel showed, for a phone in voice mode to speak.
+ * Held to the plan: a free stream's nudges stop at FREE_COACH_MINUTES,
+ * the same as on screen, so a modified page gets no further.
+ */
+export async function saveCues(
+  owner: DockOwner,
+  cues: Array<{ kind?: unknown; title?: unknown; action?: unknown; say?: unknown; tone?: unknown }>
+): Promise<number> {
+  const admin = createAdminClient();
+  const session = await openSession(admin, owner.userId);
+  if (!session) return 0;
+  if (!owner.pro && Date.now() - Date.parse(session.started_at) > FREE_COACH_MINUTES * 60_000) return 0;
+
+  const minuteAgo = new Date(Date.now() - 60_000).toISOString();
+  const { count } = await admin
+    .from("live_cues")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", session.id)
+    .gte("created_at", minuteAgo);
+  const room = Math.max(0, MAX_CUES_PER_MINUTE - (count ?? 0));
+
+  const { data: recent } = await admin
+    .from("live_cues")
+    .select("kind, title")
+    .eq("session_id", session.id)
+    .gte("created_at", new Date(Date.now() - SAME_CUE_MS).toISOString());
+  const seen = new Set(((recent ?? []) as Array<{ kind: string; title: string }>).map((c) => `${c.kind}|${c.title}`));
+
+  const clean = cues
+    .filter((c) => typeof c.kind === "string" && CUE_KINDS.has(c.kind) && c.kind !== "coach" && typeof c.title === "string" && typeof c.action === "string")
+    .filter((c) => !seen.has(`${c.kind}|${String(c.title).slice(0, 120)}`))
+    .slice(0, Math.min(10, room))
+    .map((c, i) => ({
+      session_id: session.id,
+      kind: String(c.kind),
+      title: String(c.title).slice(0, 120),
+      action: String(c.action).slice(0, 200),
+      say: typeof c.say === "string" && c.say.trim() ? c.say.slice(0, 240) : null,
+      tone: typeof c.tone === "string" && CUE_TONES.has(c.tone) ? c.tone : "nudge",
+      source: "panel",
+      // A millisecond apart, so a batch keeps its order for "newer than".
+      created_at: new Date(Date.now() + i).toISOString(),
+    }));
+  if (!clean.length) return 0;
+  const { error } = await admin.from("live_cues").insert(clean);
+  if (error) throw new Error(error.message);
+  return clean.length;
+}
+
+/** Nudges newer than `after` (an ISO time) in the stream that's live now. */
+export async function cuesSince(owner: DockOwner, after: string | null): Promise<{ live: boolean; panelSeenAt: string | null; cues: RelayedCue[] }> {
+  const admin = createAdminClient();
+  const session = await openSession(admin, owner.userId);
+  if (!session) return { live: false, panelSeenAt: null, cues: [] };
+  // A phone that just opened gets the last minute, not the whole stream.
+  const since = after && !Number.isNaN(Date.parse(after)) ? after : new Date(Date.now() - 60_000).toISOString();
+  const { data } = await admin
+    .from("live_cues")
+    .select("id, kind, title, action, say, tone, source, created_at")
+    .eq("session_id", session.id)
+    .gt("created_at", since)
+    .order("created_at", { ascending: true })
+    .limit(20);
+  const cues = ((data ?? []) as Array<Record<string, unknown>>).map(toRelayed);
+  return { live: true, panelSeenAt: session.panel_seen_at, cues };
+}
+
+function toRelayed(r: Record<string, unknown>): RelayedCue {
+  return {
+    id: String(r.id),
+    kind: String(r.kind),
+    title: String(r.title),
+    action: String(r.action),
+    say: (r.say as string | null) ?? null,
+    tone: String(r.tone),
+    source: String(r.source),
+    createdAt: String(r.created_at),
+  };
+}
+
+/**
+ * The coach's tips newer than `after`, so every open screen shows them,
+ * not just the one that happened to be listening. No `after` (a screen
+ * that just opened) gets the last minute and a half.
+ */
+async function coachCuesSince(admin: Admin, sessionId: string, after: unknown): Promise<RelayedCue[]> {
+  const since = typeof after === "string" && !Number.isNaN(Date.parse(after)) ? after : new Date(Date.now() - 90_000).toISOString();
+  const { data } = await admin
+    .from("live_cues")
+    .select("id, kind, title, action, say, tone, source, created_at")
+    .eq("session_id", sessionId)
+    .eq("source", "coach")
+    .gt("created_at", since)
+    .order("created_at", { ascending: true })
+    .limit(5);
+  return ((data ?? []) as Array<Record<string, unknown>>).map(toRelayed);
+}
+
+// ── The listening coach (Pro) ──────────────────────────────────────────
+
+export type ListenState = "listening" | "busy" | "offline" | "pro" | "cap" | "noaudio";
+
+export interface ListenResult {
+  state: ListenState;
+  /** When the dock should call again. */
+  nextMs: number;
+  /** The newest line heard, so the dock can show it's listening. */
+  heard?: string | null;
+  /** The coach's tips since the dock's `after`, oldest first. */
+  cues?: RelayedCue[];
+  usedHours?: number;
+  capHours?: number;
+}
+
+export interface ListenInput {
+  /** The newest tip this dock already has (its createdAt). */
+  after?: unknown;
+  chat?: unknown;
+  scene?: unknown;
+  quietSeconds?: unknown;
+}
+
+interface ChatLine {
+  name: string;
+  text: string;
+  at: number;
+  first: boolean;
+}
+
+/** The chat the dock sends: its last few minutes, trimmed to something sane. */
+function chatFrom(input: unknown, now: number): ChatLine[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter((m): m is Record<string, unknown> => !!m && typeof m === "object")
+    .map((m) => ({
+      name: String(m.name ?? "").slice(0, 40),
+      text: String(m.text ?? "").slice(0, 200),
+      at: Number(m.at),
+      first: m.first === true,
+    }))
+    .filter((m) => m.name && m.text && Number.isFinite(m.at) && now - m.at < 5 * 60_000 && m.at <= now + 60_000)
+    .slice(-60);
+}
+
+function monthStart(): string {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
+}
+
+/** Seconds of stream the coach has heard for this streamer this month. */
+async function listenedThisMonth(admin: Admin, userId: string): Promise<number> {
+  const { data } = await admin.from("live_sessions").select("listened_seconds").eq("user_id", userId).gte("started_at", monthStart());
+  return ((data ?? []) as Array<{ listened_seconds: number | null }>).reduce((a, r) => a + Number(r.listened_seconds ?? 0), 0);
+}
+
+/**
+ * One call from an open dock: hear what the stream said since the last
+ * call, and every COACH_EVERY_MS ask the coach whether there's a tip.
+ * Only one dock at a time does this for a stream; the others get "busy".
+ */
+export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<ListenResult> {
+  if (!owner.pro) return { state: "pro", nextMs: 10 * 60_000 };
+  const admin = createAdminClient();
+  const { data: session } = await admin
+    .from("live_sessions")
+    .select("id, started_at, title, game_name, listen_url, listen_url_at, listen_seq, listen_lock_until, coached_at, listened_seconds, coach_calls, coach_tokens_in, coach_tokens_out")
+    .eq("user_id", owner.userId)
+    .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!session) return { state: "offline", nextMs: 30_000 };
+
+  const capHours = PRO_COACH_HOURS;
+  const used = await listenedThisMonth(admin, owner.userId);
+  const usedHours = Math.round((used / 3600) * 10) / 10;
+  if (used >= capHours * 3600) return { state: "cap", nextMs: 10 * 60_000, usedHours, capHours };
+
+  // Claim the stream for this call. Two docks open means one listens.
+  const held = (session.listen_lock_until as string | null) ?? null;
+  const busy = async (): Promise<ListenResult> => ({ state: "busy", nextMs: 15_000, usedHours, capHours, cues: await coachCuesSince(admin, session.id, input.after) });
+  if (held && Date.parse(held) > Date.now()) return busy();
+  const until = new Date(Date.now() + LISTEN_LOCK_MS).toISOString();
+  const claim = admin.from("live_sessions").update({ listen_lock_until: until }).eq("id", session.id);
+  const { data: claimed } = await (held ? claim.eq("listen_lock_until", held) : claim.is("listen_lock_until", null)).select("id");
+  if (!claimed?.length) return busy();
+
+  try {
+    const now = Date.now();
+    const patch: Record<string, unknown> = {};
+
+    // ── Hear ──
+    let url = (session.listen_url as string | null) ?? null;
+    const urlAt = session.listen_url_at ? Date.parse(String(session.listen_url_at)) : 0;
+    if (!url || now - urlAt > PLAYLIST_MAX_AGE_MS) {
+      url = await liveAudioPlaylistUrl(owner.login);
+      patch.listen_url = url;
+      patch.listen_url_at = new Date().toISOString();
+    }
+    if (!url) return { state: "noaudio", nextMs: 60_000, usedHours, capHours };
+    const afterSeq = session.listen_seq === null || session.listen_seq === undefined ? null : Number(session.listen_seq);
+    let pulled = await pullNewAudio(url, afterSeq);
+    if (pulled.gone) {
+      url = await liveAudioPlaylistUrl(owner.login);
+      patch.listen_url = url;
+      patch.listen_url_at = new Date().toISOString();
+      if (!url) {
+        await admin.from("live_sessions").update(patch).eq("id", session.id);
+        return { state: "noaudio", nextMs: 60_000, usedHours, capHours };
+      }
+      pulled = await pullNewAudio(url, afterSeq);
+    }
+
+    let heard: string | null = null;
+    if (pulled.audio) {
+      const { segments } = await transcribeClip(pulled.audio);
+      // Twitch's own clock for the audio, else "just now, minus the clip".
+      const start = pulled.startAt ?? now - pulled.seconds * 1000;
+      const lines = segments
+        .map((u) => ({ session_id: session.id, said_at: new Date(start + u.start * 1000).toISOString(), text: u.text.trim().slice(0, 500) }))
+        .filter((l) => l.text);
+      if (lines.length) {
+        await admin.from("live_lines").insert(lines);
+        heard = lines[lines.length - 1].text;
+      }
+    }
+    patch.listen_seq = pulled.lastSeq;
+    patch.listened_seconds = Number(session.listened_seconds ?? 0) + Math.round(pulled.seconds);
+
+    // ── Coach ──
+    const coachedAt = session.coached_at ? Date.parse(String(session.coached_at)) : null;
+    if (coachedAt === null) {
+      // The first call starts the clock, so the first tip has a few minutes to go on.
+      patch.coached_at = new Date().toISOString();
+    } else if (now - coachedAt >= COACH_EVERY_MS) {
+      patch.coached_at = new Date().toISOString();
+      const context = await coachContext(admin, owner, session, input, now);
+      if (context.heard.length || context.chat.length) {
+        const answer = await coachTip(context);
+        patch.coach_calls = Number(session.coach_calls ?? 0) + 1;
+        patch.coach_tokens_in = Number(session.coach_tokens_in ?? 0) + answer.tokensIn;
+        patch.coach_tokens_out = Number(session.coach_tokens_out ?? 0) + answer.tokensOut;
+        if (answer.tip) {
+          const { error } = await admin
+            .from("live_cues")
+            .insert({ session_id: session.id, kind: "coach", title: answer.tip.title, action: answer.tip.say, say: answer.tip.say, tone: answer.tip.tone, source: "coach" });
+          if (error) throw new Error(error.message);
+        }
+      }
+    }
+
+    await admin.from("live_sessions").update(patch).eq("id", session.id);
+    // Call again before the playlist rolls past what this call saw.
+    const nextMs = pulled.windowSeconds ? Math.min(30_000, Math.max(8_000, (pulled.windowSeconds - 8) * 1000)) : 15_000;
+    return { state: "listening", nextMs, heard, cues: await coachCuesSince(admin, session.id, input.after), usedHours, capHours };
+  } finally {
+    await admin.from("live_sessions").update({ listen_lock_until: null }).eq("id", session.id).eq("listen_lock_until", until);
+  }
+}
+
+/** Everything the coach gets to see for one look at the stream. */
+async function coachContext(admin: Admin, owner: DockOwner, session: Record<string, unknown>, input: ListenInput, now: number): Promise<CoachContext> {
+  const since = (ms: number) => new Date(now - ms).toISOString();
+  const [{ data: lines }, { data: tips }, { data: shown }, { data: samples }, history] = await Promise.all([
+    admin.from("live_lines").select("said_at, text").eq("session_id", session.id).gte("said_at", since(4 * 60_000)).order("said_at", { ascending: true }).limit(80),
+    admin.from("live_cues").select("title, say, created_at").eq("session_id", session.id).eq("source", "coach").gte("created_at", since(20 * 60_000)).order("created_at", { ascending: true }).limit(10),
+    admin.from("live_cues").select("title, action, created_at").eq("session_id", session.id).neq("source", "coach").gte("created_at", since(10 * 60_000)).order("created_at", { ascending: true }).limit(10),
+    admin.from("live_samples").select("minute, viewers").eq("session_id", session.id).order("minute", { ascending: false }).limit(15),
+    streamerHistory(admin, owner.userId).catch(() => null),
+  ]);
+  const quiet = Number(input.quietSeconds);
+  return {
+    name: owner.displayName,
+    game: (session.game_name as string | null) || null,
+    title: (session.title as string | null) || null,
+    minutesLive: Math.max(0, Math.round((now - Date.parse(String(session.started_at))) / 60_000)),
+    viewers: ((samples ?? []) as Array<{ viewers: number }>).map((r) => Number(r.viewers)).reverse(),
+    scene: typeof input.scene === "string" && input.scene ? input.scene.slice(0, 80) : null,
+    quietSeconds: Number.isFinite(quiet) && quiet >= 0 ? quiet : null,
+    heard: ((lines ?? []) as Array<{ said_at: string; text: string }>).map((l) => ({ agoSec: (now - Date.parse(l.said_at)) / 1000, text: l.text })),
+    chat: chatFrom(input.chat, now).map((m) => ({ agoSec: (now - m.at) / 1000, name: m.name, text: m.text, first: m.first })),
+    recentTips: ((tips ?? []) as Array<{ title: string; say: string | null; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: t.say || t.title })),
+    shown: ((shown ?? []) as Array<{ title: string; action: string; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: `${t.title}. ${t.action}` })),
+    history,
+  };
+}
+
+/**
+ * May this stream have another line read in a natural voice? Pro only,
+ * while live, within the stream's budget. Counts the characters if so.
+ */
+export async function spendSpokenChars(owner: DockOwner, chars: number): Promise<boolean> {
+  if (!owner.pro) return false;
+  const admin = createAdminClient();
+  const { data: session } = await admin
+    .from("live_sessions")
+    .select("id, tts_chars")
+    .eq("user_id", owner.userId)
+    .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!session) return false;
+  const spent = Number(session.tts_chars ?? 0);
+  if (spent + chars > SPOKEN_CHARS_PER_STREAM) return false;
+  await admin.from("live_sessions").update({ tts_chars: spent + chars }).eq("id", session.id);
+  return true;
 }

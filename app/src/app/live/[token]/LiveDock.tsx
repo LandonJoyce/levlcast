@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CueEngine, clock, nowCue, type Cue, type LiveSignals } from "@/lib/live/cues";
+import { CueEngine, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
 import { ObsLink, type ObsInput, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat } from "@/lib/live/chat";
+import { Voice, deviceVoices, loadVoicePick, saveVoicePick, voiceName, voiceNote, type VoicePick } from "@/lib/live/voice";
+import { LEVL_VOICES, SAMPLE_LINES } from "@/lib/live/voices";
 
 /**
  * The Live dock: what a streamer keeps open inside OBS while they stream.
@@ -15,8 +17,39 @@ import { TwitchChat } from "@/lib/live/chat";
  *  - OBS on this computer, if connected: the mic level and the scene
  *
  * From those, lib/live/cues.ts decides what to tell them, one cue at a time.
+ * On Pro, the listening coach adds tips made for this streamer: the server
+ * hears the stream (POST /api/live/<token>/listen, driven from here) and
+ * every couple of minutes may answer with one.
  * Nothing here is ever shown on stream; the dock is part of OBS's window.
  */
+
+/** A tip or nudge as the server passes it on. */
+interface ServerCue {
+  id: string;
+  kind: CueKind;
+  title: string;
+  action: string;
+  say: string | null;
+  tone: Cue["tone"];
+  createdAt: string;
+}
+
+interface CoachStatus {
+  state: "listening" | "busy" | "offline" | "pro" | "cap" | "noaudio" | "error";
+  heard: string | null;
+  usedHours?: number;
+  capHours?: number;
+}
+
+const COACH_LINE: Record<CoachStatus["state"], string> = {
+  listening: "Listening to your stream",
+  busy: "Listening on your other screen",
+  offline: "Waiting for your stream",
+  pro: "",
+  cap: "",
+  noaudio: "Can't hear your stream yet. Trying again.",
+  error: "Reconnecting…",
+};
 
 interface Session {
   id: string;
@@ -131,6 +164,8 @@ export default function LiveDock({
   const chatters = useRef(new Set<string>());
   const chatTimes = useRef<number[]>([]);
   const lastChatAt = useRef<number | null>(null);
+  /** The last few minutes of chat, for the listening coach. */
+  const chatLog = useRef<Array<{ name: string; text: string; at: number; first: boolean }>>([]);
   const [chatterCount, setChatterCount] = useState(0);
 
   // OBS
@@ -157,10 +192,36 @@ export default function LiveDock({
   const [attempt, setAttempt] = useState(0);
   const sessionId = useRef<string | null>(null);
 
+  // Voice: nudges spoken into an earbud, meant for a phone (lib/live/voice.ts).
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [voiceAsk, setVoiceAsk] = useState(false);
+  const [lastSaid, setLastSaid] = useState<string | null>(null);
+  const [panelSeenAt, setPanelSeenAt] = useState<string | null>(null);
+  const [isPhone, setIsPhone] = useState(false);
+  /** Known only in the browser, so it starts false to match the server's page. */
+  const [canVoice, setCanVoice] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [voicePick, setVoicePick] = useState<VoicePick | null>(null);
+  const [voiceSheet, setVoiceSheet] = useState(false);
+  const [phoneVoices, setPhoneVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const voice = useRef<Voice | null>(null);
+  const spoken = useRef(new Set<string>());
+  const relayed = useRef(new Set<string>());
+  const remoteAfter = useRef<string | null>(null);
+  const remoteFirst = useRef(true);
+
+  // The listening coach (Pro).
+  const [coachStatus, setCoachStatus] = useState<CoachStatus | null>(null);
+  const coachAfter = useRef<string | null>(null);
+  const sceneNow = useRef<string | null>(null);
+  const obsUp = useRef(false);
+
   /** False once a free plan's coaching window is over; chat events read it. */
   const coachingRef = useRef(true);
+  /** False while a phone just speaks another device's panel nudges. */
+  const brainRef = useRef(true);
   const pushCue = useCallback((c: Cue) => {
-    if (coachingRef.current) setFeed((f) => [c, ...f].slice(0, 25));
+    if (coachingRef.current && brainRef.current) setFeed((f) => [c, ...f].slice(0, 25));
   }, []);
 
   const updateObs = useCallback((patch: Partial<ObsConfig>) => {
@@ -171,8 +232,12 @@ export default function LiveDock({
     });
   }, []);
 
-  // Saved OBS settings, once on load.
+  // Saved OBS settings, once on load. A phone can't reach OBS (it runs on
+  // the computer), so phones get voice instead of the OBS button.
   useEffect(() => {
+    setIsPhone(window.matchMedia("(pointer: coarse)").matches);
+    setCanVoice(Voice.supported());
+    setVoicePick(loadVoicePick());
     const cfg = loadObs();
     setObsCfg(cfg);
     setDraft({ password: cfg.password, port: String(cfg.port) });
@@ -182,13 +247,22 @@ export default function LiveDock({
     if (engine.current) engine.current.tuning = { quietSeconds: obsCfg.quietSeconds, speed };
   }, [obsCfg.quietSeconds, speed]);
 
+  // The device's voices load late in some browsers.
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const load = () => setPhoneVoices(deviceVoices());
+    load();
+    window.speechSynthesis.addEventListener?.("voiceschanged", load);
+    return () => window.speechSynthesis.removeEventListener?.("voiceschanged", load);
+  }, []);
+
   // The server: viewers, followers, the stream itself. About once a minute.
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
       try {
-        const res = await fetch(`/api/live/${token}`, { cache: "no-store" });
+        const res = await fetch(`/api/live/${token}${voiceOn ? "" : "?panel=1"}`, { cache: "no-store" });
         const json = await res.json();
         if (!alive) return;
         if (res.ok) {
@@ -208,7 +282,7 @@ export default function LiveDock({
       alive = false;
       if (timer) clearTimeout(timer);
     };
-  }, [token, pollSeconds]);
+  }, [token, pollSeconds, voiceOn]);
 
   // A new stream, started while the dock was open, starts with a clean
   // slate. The first answer after opening isn't one: chat that arrived
@@ -237,6 +311,7 @@ export default function LiveDock({
           if (m.user.toLowerCase() === channel.toLowerCase()) return;
           lastChatAt.current = m.at;
           chatTimes.current.push(m.at);
+          chatLog.current = [...chatLog.current.filter((c) => m.at - c.at < 4 * 60_000), { name: m.name, text: m.text, at: m.at, first: m.firstTime }].slice(-60);
           if (!chatters.current.has(m.user)) {
             chatters.current.add(m.user);
             setChatterCount(chatters.current.size);
@@ -325,6 +400,27 @@ export default function LiveDock({
   const coaching = live && (pro || coachLeftMs > 0);
   coachingRef.current = coaching;
 
+  // A phone in voice mode, with an OBS panel open elsewhere in the last
+  // few minutes, speaks that panel's nudges instead of making its own.
+  const remotePanel = voiceOn && panelSeenAt !== null && now - Date.parse(panelSeenAt) < 3 * 60_000;
+  const brain = !remotePanel;
+  brainRef.current = brain;
+  sceneNow.current = scene;
+  obsUp.current = obsStatus === "connected";
+
+  /** Tips from the server, added once each. */
+  const addServerCues = useCallback((list: ServerCue[], prefix: string) => {
+    if (!list.length) return;
+    const at = Date.now();
+    setFeed((f) => {
+      const have = new Set(f.map((c) => c.id));
+      const incoming = list
+        .filter((c) => !have.has(`${prefix}${c.id}`))
+        .map((c) => ({ id: `${prefix}${c.id}`, kind: c.kind, title: c.title, action: c.action, tone: c.tone, at, ...(c.say ? { say: c.say } : {}) }));
+      return incoming.length ? [...incoming.reverse(), ...f].slice(0, 25) : f;
+    });
+  }, []);
+
   const signals: LiveSignals = useMemo(
     () => ({
       now,
@@ -338,10 +434,133 @@ export default function LiveDock({
   );
 
   useEffect(() => {
-    if (!engine.current || !coaching) return;
+    if (!engine.current || !coaching || !brain) return;
     const fired = engine.current.tick(signals);
     if (fired.length) setFeed((f) => [...fired.reverse(), ...f].slice(0, 25));
-  }, [signals, coaching]);
+  }, [signals, coaching, brain]);
+
+  // Voice mode: pick up nudges an OBS panel sent, every few seconds.
+  useEffect(() => {
+    if (!voiceOn) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const q = remoteAfter.current ? `?after=${encodeURIComponent(remoteAfter.current)}` : "";
+        const res = await fetch(`/api/live/${token}/cues${q}`, { cache: "no-store" });
+        const json = await res.json();
+        if (!alive || !res.ok) return;
+        setPanelSeenAt(json.panelSeenAt ?? null);
+        const list = (json.cues ?? []) as ServerCue[];
+        if (list.length) remoteAfter.current = list[list.length - 1].createdAt;
+        // Whatever was said before this phone tuned in stays unsaid. While
+        // it works out its own nudges, these are its own, already shown.
+        const fresh = remoteFirst.current || brainRef.current ? [] : list;
+        remoteFirst.current = false;
+        addServerCues(fresh, "r-");
+      } catch {
+        // Try again next round.
+      } finally {
+        if (alive) timer = setTimeout(load, Math.max(1000, 4000 / speed));
+      }
+    };
+    void load();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [voiceOn, token, speed, addServerCues]);
+
+  // Pro: the listening coach. Whichever device works out the nudges (the
+  // OBS panel, or a phone on its own) asks the server to listen; any
+  // screen open gets the tips.
+  useEffect(() => {
+    if (!pro || !live || !brain) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const call = async () => {
+      let wait = 30_000;
+      try {
+        const t = Date.now();
+        const res = await fetch(`/api/live/${token}/listen`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            after: coachAfter.current,
+            chat: chatLog.current.filter((c) => t - c.at < 4 * 60_000),
+            scene: sceneNow.current,
+            quietSeconds: obsUp.current && lastTalkAt.current !== null ? Math.round((t - lastTalkAt.current) / 1000) : null,
+          }),
+        });
+        const json = await res.json();
+        if (!alive || !res.ok) return;
+        wait = Number(json.nextMs) || wait;
+        const list = (json.cues ?? []) as ServerCue[];
+        if (list.length) coachAfter.current = list[list.length - 1].createdAt;
+        addServerCues(list, "s-");
+        setCoachStatus((c) => ({ state: json.state, heard: json.heard ?? c?.heard ?? null, usedHours: json.usedHours, capHours: json.capHours }));
+      } catch {
+        setCoachStatus((c) => ({ ...(c ?? { heard: null }), state: "error" }));
+      } finally {
+        if (alive) timer = setTimeout(call, Math.min(5 * 60_000, Math.max(5_000, wait)));
+      }
+    };
+    void call();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [pro, live, brain, token, addServerCues]);
+
+  // Voice mode: say the newest nudge. Several at once means the newest wins.
+  useEffect(() => {
+    if (!voiceOn || !coaching) return;
+    const fresh = feed.filter((c) => !spoken.current.has(c.id));
+    if (!fresh.length) return;
+    fresh.forEach((c) => spoken.current.add(c.id));
+    const line = spokenLine(fresh[0]);
+    voice.current?.say(line);
+    setLastSaid(line);
+  }, [feed, voiceOn, coaching]);
+
+  // Whoever works out the nudges passes them on: for a phone in voice mode
+  // to speak, and so the listening coach knows what was already said.
+  useEffect(() => {
+    if (!brain || !live || !coaching) return;
+    // r- came from the server and s- the coach saved itself; only the panel's own go up.
+    const fresh = feed.filter((c) => !relayed.current.has(c.id) && !c.id.startsWith("r-") && !c.id.startsWith("s-"));
+    if (!fresh.length) return;
+    fresh.forEach((c) => relayed.current.add(c.id));
+    void fetch(`/api/live/${token}/cues`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cues: fresh.map(({ kind, title, action, tone, say }) => ({ kind, title, action, tone, say })) }),
+    }).catch(() => {});
+  }, [feed, brain, live, coaching, token]);
+
+  // Voice mode keeps the phone's screen on; a locked phone stops talking.
+  useEffect(() => {
+    if (!voiceOn || !("wakeLock" in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let alive = true;
+    const get = async () => {
+      try {
+        lock = await navigator.wakeLock.request("screen");
+      } catch {
+        // Not allowed here; the phone may dim on its own schedule.
+      }
+    };
+    void get();
+    const onVisible = () => {
+      if (alive && document.visibilityState === "visible") void get();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      document.removeEventListener("visibilitychange", onVisible);
+      void lock?.release().catch(() => {});
+    };
+  }, [voiceOn]);
 
   const current = engine.current && coaching ? engine.current.current(signals) : null;
   const card = coaching ? nowCue(current, feed, now, speed) : null;
@@ -360,6 +579,66 @@ export default function LiveDock({
 
   const micInputs = inputs.filter((i) => AUDIO_KIND.test(i.kind));
 
+  // Pro starts on a natural voice; free on the device's best. A pick of a
+  // natural voice that's no longer allowed falls back too.
+  const firstPhoneVoice = phoneVoices[0]?.voiceURI ?? "";
+  const pickNow: VoicePick = useMemo(
+    () => (voicePick && (voicePick.kind === "device" || pro) ? voicePick : pro ? { kind: "levl", id: "thalia" } : { kind: "device", id: firstPhoneVoice }),
+    [voicePick, pro, firstPhoneVoice]
+  );
+  // The plan arrives a moment after the page opens. Voice started before
+  // then moves to the right voice once it's known.
+  useEffect(() => {
+    if (voice.current) voice.current.pick = pickNow;
+  }, [pickNow]);
+  const pickLabel =
+    pickNow.kind === "levl"
+      ? LEVL_VOICES.find((v) => v.id === pickNow.id)?.name ?? "Thalia"
+      : (() => {
+          const v = phoneVoices.find((x) => x.voiceURI === pickNow.id) ?? phoneVoices[0];
+          return v ? voiceName(v) : "your phone's voice";
+        })();
+
+  const choose = (pick: VoicePick) => {
+    setVoicePick(pick);
+    saveVoicePick(pick);
+    if (voice.current) voice.current.pick = pick;
+  };
+  const preview = (pick: VoicePick) => {
+    if (!voice.current) voice.current = new Voice(token, pickNow);
+    voice.current.preview(pick, "sample", SAMPLE_LINES.sample);
+  };
+
+  const startVoice = () => {
+    if (!voice.current) voice.current = new Voice(token, pickNow);
+    voice.current.pick = pickNow;
+    // Nothing from before gets read out; and saying something inside the
+    // tap is what lets a phone speak later without one.
+    feed.forEach((c) => spoken.current.add(c.id));
+    voice.current.start(SAMPLE_LINES.on);
+    remoteFirst.current = true;
+    setVoiceAsk(false);
+    setVoiceOn(true);
+  };
+  const stopVoice = () => {
+    voice.current?.stop();
+    setVoiceOn(false);
+  };
+  const toggleVoice = () => {
+    if (voiceOn) stopVoice();
+    else if (isPhone) startVoice();
+    else setVoiceAsk(true);
+  };
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}`);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1600);
+    } catch {
+      // Copy it from the address bar instead.
+    }
+  };
+
   const connect = () => {
     const port = Number(draft.port) || 4455;
     updateObs({ enabled: true, port, password: draft.password });
@@ -374,9 +653,16 @@ export default function LiveDock({
           {live ? <>Live {liveSince !== null ? clock(now - liveSince) : ""}</> : "Offline"}
         </span>
         <span className="ld-who">{displayName}</span>
-        <button type="button" className="ld-obs" data-state={obsStatus} onClick={() => setSheetOpen(true)}>
-          {obsLabel}
-        </button>
+        {(canVoice || voiceOn) && (
+          <button type="button" className="ld-voice" data-on={voiceOn ? "1" : "0"} onClick={toggleVoice} aria-pressed={voiceOn}>
+            {voiceOn ? "Voice on" : "Voice"}
+          </button>
+        )}
+        {!isPhone && (
+          <button type="button" className="ld-obs" data-state={obsStatus} onClick={() => setSheetOpen(true)}>
+            {obsLabel}
+          </button>
+        )}
       </header>
 
       {!state && !pollError && <p className="ld-wait">Checking your stream…</p>}
@@ -385,12 +671,22 @@ export default function LiveDock({
         <>
           {coaching ? (
             <section className="ld-now" data-tone={card?.tone ?? "calm"}>
-              <p className="ld-k">Now</p>
+              <p className="ld-k">{card?.kind === "coach" ? "Coach" : "Now"}</p>
               <p className="ld-now-t">{card ? card.title : "Looking good"}</p>
               <p className="ld-now-a">{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
+              {voiceOn && (
+                <p className="ld-voiceline">
+                  {remotePanel ? "Speaking your OBS panel's nudges" : "Speaking your nudges"} in {pickLabel}&apos;s voice.{" "}
+                  <button type="button" onClick={() => setVoiceSheet(true)}>
+                    Change
+                  </button>
+                  {lastSaid && <span> Last: {lastSaid}</span>}
+                </p>
+              )}
               {!pro && Number.isFinite(coachLeftMs) && (
                 <p className="ld-plan">
-                  Free plan: {Math.max(1, Math.ceil((coachLeftMs * speed) / 60_000))} min of coaching left this stream
+                  Free plan: {Math.max(1, Math.ceil((coachLeftMs * speed) / 60_000))} min of coaching left this stream. Pro adds a coach that listens to
+                  your stream.
                 </p>
               )}
             </section>
@@ -437,6 +733,12 @@ export default function LiveDock({
                 </span>
                 <span className="ld-v">{talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}</span>
               </p>
+            ) : isPhone ? (
+              <p className="ld-hint">
+                {remotePanel
+                  ? "Mic and scene nudges come from your OBS panel."
+                  : "Open this link in an OBS panel on your computer to also get mic and scene nudges."}
+              </p>
             ) : (
               <p className="ld-hint">
                 <button type="button" onClick={() => setSheetOpen(true)}>
@@ -457,6 +759,18 @@ export default function LiveDock({
                 <span className="ld-v">{scene}</span>
               </p>
             )}
+            {pro && coachStatus && (
+              <p className="ld-coachline" data-state={coachStatus.state}>
+                <span className="ld-l">Coach</span>
+                <span className="ld-v">
+                  {coachStatus.state === "cap"
+                    ? `Used this month's ${coachStatus.capHours ?? ""} hours. Nudges keep going.`
+                    : coachStatus.state === "listening" && coachStatus.heard
+                      ? `Heard: ${coachStatus.heard}`
+                      : COACH_LINE[coachStatus.state]}
+                </span>
+              </p>
+            )}
           </div>
 
           {feed.length > 0 && (
@@ -464,9 +778,12 @@ export default function LiveDock({
               <p className="ld-k">Earlier</p>
               <ul>
                 {feed.slice(0, 8).map((c) => (
-                  <li key={c.id} data-tone={c.tone}>
+                  <li key={c.id} data-tone={c.tone} data-kind={c.kind}>
                     <span className="ld-at">{liveSince !== null ? clock(Math.max(0, c.at - liveSince)) : ""}</span>
-                    <span>{c.title}</span>
+                    <span>
+                      {c.kind === "coach" && <b className="ld-tag">Coach</b>}
+                      {c.kind === "coach" ? c.action : c.title}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -518,6 +835,97 @@ export default function LiveDock({
       {pollError && <p className="ld-err">{pollError}</p>}
 
       <footer className="ld-foot">Only you can see this. It&apos;s part of OBS, not your stream.</footer>
+
+      {voiceAsk && (
+        <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Voice coaching">
+          <div className="ld-sheet-in">
+            <div className="ld-sheet-head">
+              <p>Voice works best on your phone</p>
+              <button type="button" onClick={() => setVoiceAsk(false)}>
+                Close
+              </button>
+            </div>
+            <p className="ld-help">
+              Anything this computer plays out loud can end up on your stream if OBS records your desktop audio.
+            </p>
+            <ol className="ld-steps">
+              <li>Open this same link on your phone.</li>
+              <li>
+                Put in one earbud and tap <b>Voice</b> there.
+              </li>
+              <li>Keep this panel open here. It hears your mic and sees your scenes, and passes its nudges to your phone.</li>
+            </ol>
+            <div className="ld-row">
+              <button type="button" className="ld-btn" onClick={copyLink}>
+                {linkCopied ? "Copied" : "Copy the link"}
+              </button>
+              <button type="button" className="ld-link" onClick={startVoice}>
+                Use voice here anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {voiceSheet && (
+        <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Pick a voice">
+          <div className="ld-sheet-in">
+            <div className="ld-sheet-head">
+              <p>Pick a voice</p>
+              <button type="button" onClick={() => setVoiceSheet(false)}>
+                Done
+              </button>
+            </div>
+            <p className="ld-k">
+              LevlCast voices{!pro && <span className="ld-pro"> Pro</span>}
+            </p>
+            <ul className="ld-voices">
+              {LEVL_VOICES.map((v) => {
+                const on = pickNow.kind === "levl" && pickNow.id === v.id;
+                return (
+                  <li key={v.id} data-on={on ? "1" : "0"}>
+                    <button type="button" className="ld-voice-pick" disabled={!pro} onClick={() => choose({ kind: "levl", id: v.id })} aria-pressed={on}>
+                      <b>{v.name}</b> <span>{v.note}</span>
+                    </button>
+                    <button type="button" className="ld-play" onClick={() => preview({ kind: "levl", id: v.id })}>
+                      Play
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {!pro && (
+              <p className="ld-help">
+                These sound like a real person. They come with Pro.{" "}
+                <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+                  See Pro
+                </a>
+              </p>
+            )}
+            {phoneVoices.length > 0 && (
+              <>
+                <p className="ld-k">This {isPhone ? "phone's" : "device's"} voices</p>
+                <ul className="ld-voices">
+                  {phoneVoices.map((v) => {
+                    const on = pickNow.kind === "device" && pickNow.id === v.voiceURI;
+                    return (
+                      <li key={v.voiceURI} data-on={on ? "1" : "0"}>
+                        <button type="button" className="ld-voice-pick" onClick={() => choose({ kind: "device", id: v.voiceURI })} aria-pressed={on}>
+                          <b>{voiceName(v)}</b> <span>{voiceNote(v)}</span>
+                        </button>
+                        <button type="button" className="ld-play" onClick={() => preview({ kind: "device", id: v.voiceURI })}>
+                          Play
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="ld-help">Phones can download better voices in their settings, under accessibility or text to speech.</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {sheetOpen && (
         <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Connect OBS">

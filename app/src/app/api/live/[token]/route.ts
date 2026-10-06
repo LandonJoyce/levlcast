@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * key (OBS can't sign in), and it unlocks this one streamer's live numbers
  * and nothing else. See lib/live/server.ts.
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!isDockToken(token)) return NextResponse.json({ error: "Unknown dock link." }, { status: 404 });
 
@@ -23,7 +23,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   }
 
   try {
-    const state = await pollLive(owner);
+    // ?panel=1: the OBS panel (it makes the nudges). A phone in voice mode leaves it off.
+    const panel = new URL(req.url).searchParams.get("panel") === "1";
+    const state = await pollLive(owner, { panel });
     return NextResponse.json(state, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("[live] poll failed:", err instanceof Error ? err.message : err);

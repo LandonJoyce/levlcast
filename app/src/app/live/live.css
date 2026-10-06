@@ -143,3 +143,28 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-plan { margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 11.5px; }
 .ld-now-off .ld-now-t { font-size: 16px; }
 .ld-now-off a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Voice ── */
+.ld-voice { flex-shrink: 0; font: inherit; font-size: 11px; color: var(--ink-2); background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px 9px; cursor: pointer; }
+.ld-voice[data-on="1"] { color: var(--good); border-color: rgba(163, 230, 53, 0.35); }
+.ld-voiceline { margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 11.5px; }
+.ld-voiceline span { color: var(--ink-2); }
+.ld-voiceline button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ld-help a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Picking a voice */
+.ld-pro { color: var(--good); }
+.ld-voices { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 4px; }
+.ld-voices li { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 2px 4px 2px 2px; }
+.ld-voices li[data-on="1"] { border-color: rgba(163, 230, 53, 0.45); }
+.ld-voice-pick { flex: 1; min-width: 0; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-radius: 6px; padding: 7px 8px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ld-voice-pick b { font-weight: 700; }
+.ld-voice-pick span { color: var(--ink-3); font-size: 12px; }
+.ld-voice-pick:disabled { cursor: default; opacity: 0.6; }
+.ld-play { flex-shrink: 0; font: inherit; font-size: 12px; color: var(--ink-2); background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+
+/* The listening coach */
+.ld-coachline .ld-v { color: var(--ink-2); }
+.ld-coachline[data-state="noaudio"] .ld-v, .ld-coachline[data-state="cap"] .ld-v { color: var(--nudge); }
+.ld-tag { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--nudge); margin-right: 6px; }
+.ld-feed li[data-kind="coach"] span:last-child { color: var(--ink); white-space: normal; }

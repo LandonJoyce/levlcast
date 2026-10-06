@@ -216,6 +216,51 @@ export async function transcribePassThrough(
   return parseDeepgramResponse(await res.json());
 }
 
+// ── Live: short clips and spoken nudges ────────────────────────────────
+
+/** Overridable so the live coach can be tested against a stand-in. */
+const DEEPGRAM_BASE = process.env.DEEPGRAM_BASE_URL || "https://api.deepgram.com";
+
+/**
+ * Live clips need the words and roughly when they were said; the rest of
+ * BASE_PARAMS (speaker ids, filler words) is for the reports.
+ */
+const CLIP_PARAMS: Record<string, string> = {
+  model: "nova-3",
+  smart_format: "true",
+  punctuate: "true",
+  utterances: "true",
+  utt_split: "1.5",
+  language: "multi",
+};
+
+/**
+ * Transcribe a short clip held in memory: the last half minute or so of a
+ * live stream's audio, for the listening coach. Content-Type is left off
+ * so Deepgram works out the container (MPEG-TS or fMP4) itself.
+ */
+export async function transcribeClip(audio: Buffer): Promise<TranscribeResult> {
+  const res = await fetch(`${DEEPGRAM_BASE}/v1/listen?${new URLSearchParams(CLIP_PARAMS)}`, {
+    method: "POST",
+    headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}` },
+    body: new Uint8Array(audio),
+  });
+  if (!res.ok) throw new Error(formatDeepgramError(res.status, await res.text()));
+  return parseDeepgramResponse(await res.json());
+}
+
+/** One spoken line in one of Deepgram's Aura voices, as MP3. */
+export async function speakLine(text: string, voice: string): Promise<ArrayBuffer> {
+  const params = new URLSearchParams({ model: `aura-2-${voice}-en`, encoding: "mp3" });
+  const res = await fetch(`${DEEPGRAM_BASE}/v1/speak?${params}`, {
+    method: "POST",
+    headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error(formatDeepgramError(res.status, await res.text()));
+  return res.arrayBuffer();
+}
+
 /**
  * Transcribe a local audio file using Deepgram's pre-recorded API.
  * Streams the file so we don't load it all into memory.
