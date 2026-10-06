@@ -133,7 +133,7 @@ export function LivePromo() {
       <img src="/live/levlcast-in-obs.webp" width={1600} height={900} alt="The LevlCast panel docked on the right side of OBS during a stream" />
       <div className="obs-promo-text">
         <h2>A coach inside OBS while you stream</h2>
-        <p>It tells you when you&apos;ve gone quiet or someone new says hi, and only you can see it.</p>
+        <p>It coaches you while you&apos;re live, the way your report does after, and only you can see it.</p>
         <div className="obs-promo-actions">
           <AddToObsButton className="btn btn-blue">Add to OBS</AddToObsButton>
           <Link href="/dashboard/live" className="obs-promo-link">

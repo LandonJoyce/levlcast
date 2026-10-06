@@ -240,7 +240,7 @@ export default async function HomePage() {
       {/* ── Live: the coach inside OBS ── */}
       <section className="v3-sec" id="live">
         <h2 className="v3-h2">A coach inside OBS while you&rsquo;re live.</h2>
-        <p className="v3-shot-cap">It tells you when you&apos;ve gone quiet or someone new says hi, and only you can see it.</p>
+        <p className="v3-shot-cap">It coaches you while you&apos;re live, the way your report does after, and only you can see it.</p>
         <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

@@ -47,8 +47,7 @@ export default async function LivePage() {
         <span className="page-eyebrow">Live</span>
         <h1 className="page-title">Coaching while you stream</h1>
         <p className="page-sub">
-          A panel inside OBS that watches your stream with you: viewers, chat, and a nudge when you go quiet, sit on your
-          starting screen too long, or someone new says hi. Only you can see it.
+          A panel inside OBS that coaches you while you&apos;re live, the way your report does after. Only you can see it.
         </p>
         <p className="lv-plan-line">
           Free coaches the first {FREE_COACH_MINUTES} minutes of every stream. Pro coaches all of it, and adds a coach that
