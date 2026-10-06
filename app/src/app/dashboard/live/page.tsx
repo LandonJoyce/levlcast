@@ -51,7 +51,8 @@ export default async function LivePage() {
           starting screen too long, or someone new says hi. Only you can see it.
         </p>
         <p className="lv-plan-line">
-          Free coaches the first {FREE_COACH_MINUTES} minutes of every stream. Pro coaches the whole thing.
+          Free coaches the first {FREE_COACH_MINUTES} minutes of every stream. Pro coaches all of it, and adds a coach that
+          listens to your stream and gives you tips just for you.
         </p>
       </div>
 
@@ -70,6 +71,10 @@ export default async function LivePage() {
           <li>
             For mic and scene coaching, open <b>Tools</b>, then <b>WebSocket Server Settings</b>. Tick <b>Enable WebSocket server</b>,
             click <b>Show Connect Info</b> and copy the password. Then press <b>Connect OBS</b> in the LevlCast panel and paste it.
+          </li>
+          <li>
+            Want it in your ear instead? Open the same link on your phone, put in one earbud and tap <b>Voice</b>. Keep the OBS
+            panel open too, so your phone hears about your mic and scenes.
           </li>
         </ol>
         <p className="lv-note">
