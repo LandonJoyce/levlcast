@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Share2, Check, Link as LinkIcon, Trash2 } from "lucide-react";
+import { X_HANDLE } from "@/lib/social";
 
 interface Props {
   vodId: string;
@@ -55,7 +56,8 @@ function buildTweet(url: string, score?: number, recommendation?: string | null)
   lines.push("");
   lines.push("Get yours free:");
   const text = lines.join("\n");
-  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  // via= adds "via @LevlCastApp", so whoever sees the post can find us.
+  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&via=${X_HANDLE}`;
 }
 
 function XIcon({ size = 13 }: { size?: number }) {

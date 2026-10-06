@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Link as LinkIcon, X } from "lucide-react";
 import { rankFromPoints, TIER_HEX } from "@/lib/rank";
+import { X_HANDLE } from "@/lib/social";
 
 /**
  * The first report is a placement: it puts the streamer on the ladder.
@@ -43,7 +44,8 @@ function buildTweet(url: string, score: number, rank: string | null, fix: string
   lines.push("");
   lines.push("Get yours free:");
   const text = lines.join("\n");
-  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  // via= adds "via @LevlCastApp", so whoever sees the post can find us.
+  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&via=${X_HANDLE}`;
 }
 
 function XIcon({ size = 14 }: { size?: number }) {
