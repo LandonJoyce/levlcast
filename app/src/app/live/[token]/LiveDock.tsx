@@ -1433,7 +1433,7 @@ export default function LiveDock({
                   <ul className="ld-set-list">
                     <li>A coach that listens to your stream and tells you what to do</li>
                     <li>Coaching for the whole stream, not just the first 30 minutes</li>
-                    <li>Natural voices that sound like a real person</li>
+                    <li>More voices to pick from</li>
                   </ul>
                   <a className="ld-report-go" href={`${origin}${GET_PRO}`} target="_blank" rel="noopener noreferrer">
                     Get Pro
@@ -1569,7 +1569,7 @@ export default function LiveDock({
             </ul>
             {!pro && (
               <p className="ld-help">
-                These sound like a real person. They come with Pro.{" "}
+                These come with Pro.{" "}
                 <a href={GET_PRO} target="_blank" rel="noopener noreferrer">
                   See Pro
                 </a>
