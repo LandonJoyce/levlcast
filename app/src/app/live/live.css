@@ -168,3 +168,4 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-coachline[data-state="noaudio"] .ld-v, .ld-coachline[data-state="cap"] .ld-v { color: var(--nudge); }
 .ld-tag { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--nudge); margin-right: 6px; }
 .ld-feed li[data-kind="coach"] span:last-child { color: var(--ink); white-space: normal; }
+.ld-v[data-muted="1"] { color: var(--nudge); }

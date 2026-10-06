@@ -177,6 +177,9 @@ export default function LiveDock({
   const sceneSince = useRef<number | null>(null);
   const lastTalkAt = useRef<number | null>(null);
   const talkingRef = useRef(false);
+  /** Since when the mic has been muted in OBS. A muted mic still shows levels, so it can't count as talking. */
+  const mutedSince = useRef<number | null>(null);
+  const [micMuted, setMicMuted] = useState(false);
   const [talking, setTalking] = useState(false);
   const [levelDb, setLevelDb] = useState(-Infinity);
   const levelShownAt = useRef(0);
@@ -344,7 +347,9 @@ export default function LiveDock({
         },
         level: (db) => {
           const t = Date.now();
-          if (db > TALK_DB) {
+          if (mutedSince.current !== null) {
+            // Viewers hear none of it, so it's not talking.
+          } else if (db > TALK_DB) {
             lastTalkAt.current = t;
             if (!talkingRef.current) {
               talkingRef.current = true;
@@ -358,6 +363,17 @@ export default function LiveDock({
             levelShownAt.current = t;
             setLevelDb(db);
           }
+        },
+        muted: (m) => {
+          if (m === (mutedSince.current !== null)) return;
+          mutedSince.current = m ? Date.now() : null;
+          setMicMuted(m);
+          if (m && talkingRef.current) {
+            talkingRef.current = false;
+            setTalking(false);
+          }
+          // Unmuting starts the quiet clock fresh rather than counting the muted stretch.
+          if (!m) lastTalkAt.current = Date.now();
         },
         scene: (name) => {
           setScene(name);
@@ -428,9 +444,12 @@ export default function LiveDock({
       liveSince,
       viewers: viewerPoints,
       lastChatAt: lastChatAt.current,
-      obs: obsStatus === "connected" ? { lastTalkAt: lastTalkAt.current, scene, sceneSince: sceneSince.current } : null,
+      obs:
+        obsStatus === "connected"
+          ? { lastTalkAt: lastTalkAt.current, scene, sceneSince: sceneSince.current, mutedSince: mutedSince.current }
+          : null,
     }),
-    [now, live, liveSince, viewerPoints, obsStatus, scene]
+    [now, live, liveSince, viewerPoints, obsStatus, scene, micMuted]
   );
 
   useEffect(() => {
@@ -732,7 +751,9 @@ export default function LiveDock({
                 <span className="ld-meter" aria-hidden="true">
                   <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
                 </span>
-                <span className="ld-v">{talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}</span>
+                <span className="ld-v" data-muted={micMuted ? "1" : "0"}>
+                  {micMuted ? "Muted in OBS" : talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}
+                </span>
               </p>
             ) : isPhone ? (
               <p className="ld-hint">

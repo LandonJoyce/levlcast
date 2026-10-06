@@ -21,7 +21,8 @@ export type CueKind =
   | "viewersUp"
   | "chatQuiet"
   | "catchUp"
-  | "coach";
+  | "coach"
+  | "muted";
 
 export interface Cue {
   id: string;
@@ -44,7 +45,13 @@ export interface LiveSignals {
   /** The last chat message from someone other than the streamer. */
   lastChatAt: number | null;
   /** Null when OBS isn't connected. */
-  obs: null | { lastTalkAt: number | null; scene: string | null; sceneSince: number | null };
+  obs: null | {
+    lastTalkAt: number | null;
+    scene: string | null;
+    sceneSince: number | null;
+    /** Since when the mic has been muted in OBS, or null when it isn't. */
+    mutedSince?: number | null;
+  };
 }
 
 export interface CueTuning {
@@ -59,6 +66,7 @@ export const DEFAULT_TUNING: CueTuning = { quietSeconds: 45, speed: 1 };
 /** Higher wins the "now" card. */
 export const PRIORITY: Record<CueKind, number> = {
   raid: 100,
+  muted: 110, // above a raid: raiders who arrive to a muted mic hear nothing
   newChatter: 90,
   coach: 85,
   quiet: 80,
@@ -73,6 +81,7 @@ export const PRIORITY: Record<CueKind, number> = {
 /** How long a fired cue stays the "now" card, in seconds. */
 export const SHOW_FOR: Record<CueKind, number> = {
   raid: 90,
+  muted: 0, // shown for as long as it's true
   newChatter: 30,
   coach: 120,
   quiet: 0, // shown for as long as it's true
@@ -151,6 +160,7 @@ export class CueEngine {
   private watchingSince: number | null = null;
   /** The quiet stretch (by when it began) already logged, so it's logged once. */
   private quietLogged: number | null = null;
+  private mutedLogged: number | null = null;
   private sceneLogged: number | null = null;
 
   constructor(public tuning: CueTuning = DEFAULT_TUNING) {}
@@ -182,7 +192,13 @@ export class CueEngine {
    */
   current(s: LiveSignals): Cue | null {
     if (!s.live || !s.obs) return null;
-    const { scene, sceneSince, lastTalkAt } = s.obs;
+    const { scene, sceneSince, lastTalkAt, mutedSince } = s.obs;
+
+    // Talking into a muted mic: viewers hear nothing. Muting on a break or
+    // starting screen is normal, so not there.
+    if (mutedSince != null && s.now - mutedSince >= this.ms(5) && !this.onSpecialScene(s)) {
+      return make("muted", "Your mic is muted", "Unmute it in OBS. Viewers can't hear you.", mutedSince, "nudge", "Your mic is muted in OBS. Viewers can't hear you.");
+    }
 
     if (scene && sceneSince !== null) {
       const on = s.now - sceneSince;
@@ -214,6 +230,10 @@ export class CueEngine {
     const watching = this.watchingSince;
 
     const cur = this.current(s);
+    if (cur?.kind === "muted" && this.mutedLogged !== cur.at) {
+      this.mutedLogged = cur.at;
+      out.push({ ...cur, id: `${cur.id}-log`, title: "Mic was muted", at: now });
+    }
     if (cur?.kind === "quiet" && this.quietLogged !== cur.at) {
       this.quietLogged = cur.at;
       out.push(make("quiet", `Quiet for ${this.tuning.quietSeconds} seconds`, cur.action, now, "nudge", this.next("quiet", SAY.quiet)));

@@ -402,7 +402,7 @@ export interface RelayedCue {
   createdAt: string;
 }
 
-const CUE_KINDS = new Set(["raid", "newChatter", "quiet", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
+const CUE_KINDS = new Set(["raid", "newChatter", "quiet", "muted", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
 const CUE_TONES = new Set(["nudge", "good", "info"]);
 /** At most this many nudges a minute per stream, whatever a panel sends. */
 const MAX_CUES_PER_MINUTE = 20;

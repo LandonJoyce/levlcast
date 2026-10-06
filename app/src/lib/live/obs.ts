@@ -3,9 +3,9 @@
  * OBS 28 and later). It runs in the dock on the streamer's own computer:
  * the connection is to localhost, and the password never leaves the machine.
  *
- * It reads three things: how loud the mic is (to tell talking from quiet),
- * which scene is on air, and whether OBS is streaming. It never changes
- * anything in OBS.
+ * It reads four things: how loud the mic is (to tell talking from quiet),
+ * whether the mic is muted, which scene is on air, and whether OBS is
+ * streaming. It never changes anything in OBS.
  */
 
 export type ObsStatus = "off" | "connecting" | "connected" | "error";
@@ -19,6 +19,8 @@ export interface ObsHandlers {
   status(s: ObsStatus, detail?: string): void;
   /** The chosen mic's peak level in dB, about 20 times a second. -Infinity is silence. */
   level(db: number): void;
+  /** The chosen mic was muted or unmuted in OBS. A muted mic still reports levels, so this decides. */
+  muted(m: boolean): void;
   scene(name: string): void;
   streaming(active: boolean): void;
   inputs(list: ObsInput[], mic: string | null): void;
@@ -32,6 +34,7 @@ export interface ObsOptions {
 
 // Event subscription bits (obs-websocket 5 protocol).
 const SUB_SCENES = 1 << 2;
+const SUB_INPUTS = 1 << 3;
 const SUB_OUTPUTS = 1 << 6;
 const SUB_VOLUME = 1 << 16;
 
@@ -101,6 +104,13 @@ export class ObsLink {
 
   setMic(name: string): void {
     this.mic = name;
+    void this.checkMute();
+  }
+
+  private async checkMute(): Promise<void> {
+    if (!this.mic) return;
+    const r = await this.request("GetInputMute", { inputName: this.mic });
+    if (r) this.on.muted(Boolean(r.inputMuted));
   }
 
   private send(op: number, d: unknown): void {
@@ -129,7 +139,7 @@ export class ObsLink {
 
     if (msg.op === 0) {
       // Hello: answer with the password proof if OBS asks for one.
-      const identify: Record<string, unknown> = { rpcVersion: 1, eventSubscriptions: SUB_SCENES | SUB_OUTPUTS | SUB_VOLUME };
+      const identify: Record<string, unknown> = { rpcVersion: 1, eventSubscriptions: SUB_SCENES | SUB_INPUTS | SUB_OUTPUTS | SUB_VOLUME };
       if (d.authentication) {
         const secret = await sha256b64(this.opts.password + d.authentication.salt);
         identify.authentication = await sha256b64(secret + d.authentication.challenge);
@@ -153,6 +163,7 @@ export class ObsLink {
         this.mic = list.find((i) => MIC_KIND.test(i.kind))?.name ?? null;
       }
       this.on.inputs(list, this.mic);
+      await this.checkMute();
       return;
     }
 
@@ -176,6 +187,9 @@ export class ObsLink {
           this.on.level(peak > 0 ? 20 * Math.log10(peak) : -Infinity);
           return;
         }
+        case "InputMuteStateChanged":
+          if (data.inputName === this.mic) this.on.muted(Boolean(data.inputMuted));
+          return;
         case "CurrentProgramSceneChanged":
           if (data.sceneName) this.on.scene(String(data.sceneName));
           return;
