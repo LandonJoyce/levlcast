@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ANGLES, angleFor, draftMessage } from "@/lib/outreach";
+import { ANGLES, angleFor, draftMessage, withLiveLine } from "@/lib/outreach";
 
 const ADMIN_EMAIL = "landonjoyce@hotmail.com";
 
@@ -53,7 +53,13 @@ export async function GET(req: NextRequest) {
     .select("id", { count: "exact", head: true })
     .eq("status", "waiting_report");
 
-  return NextResponse.json({ queue: data ?? [], waiting: waiting ?? 0 });
+  // Drafts written before the Live line existed get it too, so what's on
+  // screen (and sent) matches what new drafts say.
+  const queue = ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    ...row,
+    message_body: row.message_body ? withLiveLine(String(row.message_body), String(row.reddit_username ?? "")) : row.message_body,
+  }));
+  return NextResponse.json({ queue, waiting: waiting ?? 0 });
 }
 
 export async function POST(req: NextRequest) {

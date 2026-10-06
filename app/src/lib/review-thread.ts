@@ -19,7 +19,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
 import { extractChannel } from "@/lib/twitch-input";
 import { isRedditConfigured, redditGet } from "@/lib/reddit";
-import { finishDraft } from "@/lib/outreach";
+import { finishDraft, withLiveLine } from "@/lib/outreach";
 import {
   fetchPreviewVodMeta,
   latestVodForChannel,
@@ -395,5 +395,5 @@ export async function draftReviewReply(input: {
     .join("\n")
     .trim();
   if (!raw) throw new Error("empty reply");
-  return finishDraft("", raw.replace(/^["']|["']$/g, ""), url).body;
+  return withLiveLine(finishDraft("", raw.replace(/^["']|["']$/g, ""), url).body, input.author ?? input.vodId);
 }

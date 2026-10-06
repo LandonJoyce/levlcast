@@ -121,6 +121,28 @@ export function angleFor(seed: string): Angle {
  */
 export const OUTREACH_LINK = "https://www.levlcast.com/analyze";
 
+/**
+ * One line about the Live panel, at the end of every Reddit message (DMs
+ * and review-thread replies). No second link: the panel is on the same
+ * site, and one link per message is what keeps a DM from reading as spam.
+ * A few ways of saying it, picked per person, so a day's messages don't
+ * all end the same, which Reddit's spam filter looks for.
+ */
+const LIVE_LINES = [
+  "also I just made a free panel for OBS that tells you when you've gone quiet or someone new says hi while you're live, it's on there too",
+  "oh and if you stream with OBS there's a free panel on there now that tells you when you've gone quiet or someone new says hi",
+  "also just added a free OBS panel to it that tells you when you go quiet or someone new says hi while you're live",
+  "if you use OBS I also made a free panel that tells you when you've gone quiet or someone new says hi, it's on the site",
+];
+
+/** The message with its Live line, unless it already talks about OBS. */
+export function withLiveLine(body: string, seed: string): string {
+  if (!body.trim() || /\bOBS\b/i.test(body)) return body;
+  let hash = 0;
+  for (const ch of seed.toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return `${body.trimEnd()}\n\n${LIVE_LINES[hash % LIVE_LINES.length]}`;
+}
+
 export interface HarvestedLead {
   username: string;
   source: "post" | "comment";
@@ -437,7 +459,8 @@ export async function draftMessage(input: DraftInput, angle: Angle): Promise<Dra
   try {
     const parsed = JSON.parse(match[0]) as { subject?: string; body?: string };
     if (!parsed.body) return { kind: "failed", reason: "no message body" };
-    return { kind: "draft", ...finishDraft(parsed.subject ?? "", parsed.body, link) };
+    const done = finishDraft(parsed.subject ?? "", parsed.body, link);
+    return { kind: "draft", subject: done.subject, body: withLiveLine(done.body, input.username) };
   } catch {
     return { kind: "failed", reason: "unreadable JSON" };
   }
