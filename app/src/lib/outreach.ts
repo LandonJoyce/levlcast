@@ -129,18 +129,30 @@ export const OUTREACH_LINK = "https://www.levlcast.com/analyze";
  * all end the same, which Reddit's spam filter looks for.
  */
 const LIVE_LINES = [
+  "also I just made a free panel for OBS that coaches you while you're live, kinda like the report does after, it's on there too",
+  "oh and if you stream with OBS there's a free panel on there now that coaches you live while you stream, same idea as the report",
+  "also just added a free OBS panel to it that coaches you while you're live, like the report but during the stream",
+  "if you use OBS I also made a free panel that coaches you while you're live, it's on the site too",
+];
+
+/** The first wording of the line (2026-10-05). Drafts still carrying it get the current one. */
+const OLD_LIVE_LINES = [
   "also I just made a free panel for OBS that tells you when you've gone quiet or someone new says hi while you're live, it's on there too",
   "oh and if you stream with OBS there's a free panel on there now that tells you when you've gone quiet or someone new says hi",
   "also just added a free OBS panel to it that tells you when you go quiet or someone new says hi while you're live",
   "if you use OBS I also made a free panel that tells you when you've gone quiet or someone new says hi, it's on the site",
 ];
 
-/** The message with its Live line, unless it already talks about OBS. */
+/** The message with its Live line, unless it already talks about OBS some other way. */
 export function withLiveLine(body: string, seed: string): string {
-  if (!body.trim() || /\bOBS\b/i.test(body)) return body;
+  let text = body.trimEnd();
+  for (const old of OLD_LIVE_LINES) {
+    if (text.endsWith(old)) text = text.slice(0, -old.length).trimEnd();
+  }
+  if (!text.trim() || /\bOBS\b/i.test(text)) return text === body.trimEnd() ? body : text;
   let hash = 0;
   for (const ch of seed.toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return `${body.trimEnd()}\n\n${LIVE_LINES[hash % LIVE_LINES.length]}`;
+  return `${text}\n\n${LIVE_LINES[hash % LIVE_LINES.length]}`;
 }
 
 export interface HarvestedLead {

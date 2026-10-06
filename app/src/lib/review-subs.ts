@@ -30,7 +30,9 @@ const STANDARD_BODY = `I stream too, and I built a tool that goes through a stre
 
 Drop your Twitch name below and I'll run your last stream and reply with what it found and a link to the full breakdown. It's free and you don't need to sign up for anything.
 
-You need past broadcasts turned on so there's a VOD for it to read.`;
+You need past broadcasts turned on so there's a VOD for it to read.
+
+I also just added a free panel for OBS that coaches you while you're live, if anyone wants to try that too.`;
 
 const STANDARD_TITLE = "Drop your Twitch name and I'll tell you what's costing you viewers in your last stream";
 
@@ -53,7 +55,9 @@ export const REVIEW_SUBS: ReviewSub[] = [
 
 Comment your Twitch name and I'll run your last stream and reply with what it found. Free, nothing to sign up for.
 
-Past broadcasts need to be turned on so there's a VOD to read.`,
+Past broadcasts need to be turned on so there's a VOD to read.
+
+There's also a free OBS panel now that coaches you while you're live, if you want that too.`,
   },
   {
     name: "ContentCreators",
@@ -65,7 +69,7 @@ Past broadcasts need to be turned on so there's a VOD to read.`,
 
 If you stream on Twitch, comment your channel name and I'll reply with what it found on your last stream plus a link to the full breakdown. It's free and you don't need an account.
 
-You need past broadcasts turned on.`,
+You need past broadcasts turned on. I also made a free panel for OBS that coaches you during the stream, if anyone's interested.`,
   },
   {
     name: "TwitchStreamers",
@@ -77,7 +81,7 @@ You need past broadcasts turned on.`,
 
 Comment just your Twitch name, no links since the sub doesn't allow channel links, and I'll reply with what it found on your last stream. Free, no sign up.
 
-You need past broadcasts turned on.`,
+You need past broadcasts turned on. Also added a free OBS panel that coaches you while you're live, if anyone wants it.`,
   },
   {
     name: "SmallStreamers",
@@ -127,7 +131,7 @@ export const REVIEW_TITLES = new Set(REVIEW_SUBS.map((s) => s.title.toLowerCase(
 export const MODMAIL_SUBJECT = "Can I run a free stream review thread?";
 
 export function modmailBody(sub: string): string {
-  return `Hey, I'm Landon. I built LevlCast, a free tool that goes through a Twitch VOD and points out where viewers probably dropped off (dead air, slow starts) and what's worth clipping.
+  return `Hey, I'm Landon. I built LevlCast, a free tool that goes through a Twitch VOD and points out where viewers probably dropped off (dead air, slow starts) and what's worth clipping. It also has a free panel for OBS that coaches you while you're live.
 
 I'd like to post one thread in r/${sub} where people drop their Twitch name and I reply to each with what it found on their last stream. No sign up needed to see it. I know the sub doesn't allow promo without asking, so I wanted to check with you first. Happy to do it however works for you, or not at all if it's not a fit.
 
