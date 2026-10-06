@@ -254,8 +254,15 @@ export default async function HomePage() {
         </figure>
         <div className="v3-live-cta">
           <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
-          <span className="v3-fine">Free for the first 30 minutes of every stream.</span>
         </div>
+        <ul className="v3-live-plans">
+          <li>
+            <b>Free</b> coaches the first 30 minutes of every stream.
+          </li>
+          <li>
+            <b>Pro</b> coaches all of it, and listens to your stream to tell you what to do.
+          </li>
+        </ul>
       </section>
 
       {/* ── Clips ── (moved up here when the example breakdown was cut) */}

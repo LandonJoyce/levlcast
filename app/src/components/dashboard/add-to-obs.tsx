@@ -12,7 +12,25 @@ import "./add-to-obs.css";
  * Docks, with pictures of exactly where. Opened from the home page and the
  * account menu; /dashboard/live has the rest (phone voice, mic and scenes).
  */
-export function AddToObsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** What Free and Pro get, in two lines; Pro sees what it's paying for instead. */
+export function LivePlans({ pro }: { pro: boolean }) {
+  if (pro) return <p className="obs-plans-pro">You&apos;re on Pro, so it coaches your whole stream and listens to it too.</p>;
+  return (
+    <ul className="obs-plans">
+      <li>
+        <b>Free</b> coaches the first 30 minutes of every stream.
+      </li>
+      <li>
+        <b>Pro</b> coaches all of it, and listens to your stream to tell you what to do.{" "}
+        <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+          See Pro
+        </a>
+      </li>
+    </ul>
+  );
+}
+
+export function AddToObsModal({ open, onClose, pro = false }: { open: boolean; onClose: () => void; pro?: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -100,6 +118,7 @@ export function AddToObsModal({ open, onClose }: { open: boolean; onClose: () =>
         </ol>
 
         <p className="ato-done">That&apos;s it. The panel opens in OBS, and you can drag it wherever you like.</p>
+        <LivePlans pro={pro} />
         {error && <p className="ato-err">{error}</p>}
         <Link href="/dashboard/live" className="ato-more" onClick={onClose}>
           More on the Live page: hear it on your phone, get mic and scene nudges
@@ -110,14 +129,14 @@ export function AddToObsModal({ open, onClose }: { open: boolean; onClose: () =>
 }
 
 /** A button that opens the window, for pages that are otherwise server-rendered. */
-export function AddToObsButton({ className, children }: { className?: string; children: ReactNode }) {
+export function AddToObsButton({ className, children, pro = false }: { className?: string; children: ReactNode; pro?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" className={className} onClick={() => setOpen(true)}>
         {children}
       </button>
-      <AddToObsModal open={open} onClose={() => setOpen(false)} />
+      <AddToObsModal open={open} onClose={() => setOpen(false)} pro={pro} />
     </>
   );
 }
@@ -126,7 +145,7 @@ export function AddToObsButton({ className, children }: { className?: string; ch
  * The home page's introduction to Live, for streamers who haven't used it
  * yet. Once the panel has been open during one of their streams it goes.
  */
-export function LivePromo() {
+export function LivePromo({ pro = false }: { pro?: boolean }) {
   return (
     <section className="obs-promo">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -134,8 +153,11 @@ export function LivePromo() {
       <div className="obs-promo-text">
         <h2>A coach inside OBS while you stream</h2>
         <p>It coaches you while you&apos;re live, the way your report does after, and only you can see it.</p>
+        <LivePlans pro={pro} />
         <div className="obs-promo-actions">
-          <AddToObsButton className="btn btn-blue">Add to OBS</AddToObsButton>
+          <AddToObsButton className="btn btn-blue" pro={pro}>
+            Add to OBS
+          </AddToObsButton>
           <Link href="/dashboard/live" className="obs-promo-link">
             How it works
           </Link>

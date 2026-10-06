@@ -144,6 +144,10 @@ export default async function DashboardPage({
   const isYouTubeConnected = !!ytConnection;
 
   const displayName = profile?.twitch_display_name || "Streamer";
+  // For the Live card and window: what Pro adds, or what they already have.
+  const livePro =
+    profile?.plan === "pro" &&
+    !(profile.subscription_expires_at && new Date(profile.subscription_expires_at as string) < new Date());
 
   // Live gets introduced here until the panel has been open during one of
   // their streams. A read that fails just leaves the introduction up.
@@ -194,7 +198,7 @@ export default async function DashboardPage({
 
         <AdminReplyCard />
         <OnboardingHero syncing={syncing} />
-        {showLivePromo && <LivePromo />}
+        {showLivePromo && <LivePromo pro={livePro} />}
         {hasSocial && <FriendsSection duels={newDuels} leagues={newLeagues} />}
       </>
     );
@@ -277,7 +281,9 @@ export default async function DashboardPage({
       <div className="hm-hello">
         <h1 className="page-title">Hey, {displayName}.</h1>
         <div className="hm-hello-actions">
-          <AddToObsButton className="btn btn-ghost">Add to OBS</AddToObsButton>
+          <AddToObsButton className="btn btn-ghost" pro={livePro}>
+            Add to OBS
+          </AddToObsButton>
           <Link href="/dashboard/vods" className="btn btn-ghost">
             <Icons.Twitch /> Analyze a stream
           </Link>
@@ -286,7 +292,7 @@ export default async function DashboardPage({
 
       <OnboardingChecklist />
       <AdminReplyCard />
-      {showLivePromo && <LivePromo />}
+      {showLivePromo && <LivePromo pro={livePro} />}
 
       <section className="hm-top">
         {/* Keyed on the points so opening a result remounts it and the

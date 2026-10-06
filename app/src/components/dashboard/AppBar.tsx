@@ -245,7 +245,7 @@ export default function AppBar({ user, isPro, trial, upgradeReason, collabPendin
         </div>
       )}
 
-      <AddToObsModal open={obsOpen} onClose={() => setObsOpen(false)} />
+      <AddToObsModal open={obsOpen} onClose={() => setObsOpen(false)} pro={isPro} />
       <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} defaultCategory="general" trigger="sidebar" />
       {!isPro && (
         <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={upgradeReason ?? ""} />

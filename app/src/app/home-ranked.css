@@ -1188,3 +1188,5 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 /* Live (the coach inside OBS) */
 .v3 .v3-live-cta { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 20px; margin-top: 24px; }
 .v3 .v3-live-cta .v3-fine { margin: 0; }
+.v3 .v3-live-plans { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 6px; font-size: 15px; line-height: 1.5; color: var(--ll-fg-mute); }
+.v3 .v3-live-plans b { color: var(--ll-fg); font-weight: 700; }
