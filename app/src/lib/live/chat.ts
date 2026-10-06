@@ -21,6 +21,21 @@ export interface ChatHandlers {
 
 const TWITCH_IRC = "wss://irc-ws.chat.twitch.tv:443";
 
+/** A Twitch clip link: clips.twitch.tv/<id> (or its embed), or twitch.tv/<channel>/clip/<id>. */
+const CLIP_LINK = /(?:clips\.twitch\.tv\/(?:embed\?clip=)?|twitch\.tv\/(\w{3,25})\/clip\/)([A-Za-z0-9_-]{4,100})/i;
+
+/**
+ * The clip id in a chat message, from a !clip bot or someone sharing one.
+ * A link naming another channel doesn't count; a clips.twitch.tv link
+ * doesn't say whose it is, so the server checks those.
+ */
+export function clipIdIn(text: string, channel: string): string | null {
+  const m = CLIP_LINK.exec(text);
+  if (!m) return null;
+  if (m[1] && m[1].toLowerCase() !== channel.toLowerCase()) return null;
+  return m[2];
+}
+
 function unescapeTag(v: string): string {
   return v.replace(/\\s/g, " ").replace(/\\:/g, ";").replace(/\\r/g, "\r").replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
 }

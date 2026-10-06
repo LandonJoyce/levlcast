@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type React
 import { ChevronDown, ChevronUp, Settings, X } from "lucide-react";
 import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
 import { ObsLink, type ObsInput, type ObsProblem, type ObsStatus } from "@/lib/live/obs";
-import { TwitchChat } from "@/lib/live/chat";
+import { TwitchChat, clipIdIn } from "@/lib/live/chat";
 import { Voice, deviceVoices, loadVoicePick, saveVoicePick, voiceName, voiceNote, type VoicePick } from "@/lib/live/voice";
 import { LEVL_VOICES, SAMPLE_LINES } from "@/lib/live/voices";
 import { DIVISION_SIZE, TIER_HEX, rankFromPoints } from "@/lib/rank";
@@ -78,8 +78,20 @@ interface LiveState {
   lastDelta: number | null;
   league: { name: string; place: number; size: number; endsAt: string } | null;
   session: Session | null;
+  /** Clips of the live stream, newest first, as Twitch lists them. */
+  clips?: Clip[];
   serverTime: string;
 }
+
+interface Clip {
+  id: string;
+  title: string;
+  creator: string;
+  createdAt: string;
+}
+
+/** A clip older than this is old news by the time Twitch lists it. */
+const CLIP_FRESH_MS = 15 * 60_000;
 
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
@@ -113,6 +125,7 @@ const NUDGES: Array<[CueKind, string]> = [
   ["quiet", "Going quiet"],
   ["newChatter", "New chatters"],
   ["raid", "Raids"],
+  ["clip", "Clips"],
   ["viewersDown", "Viewers dropping"],
   ["viewersUp", "Viewers climbing"],
   ["chatQuiet", "Quiet chat"],
@@ -318,7 +331,7 @@ interface ObsConfig {
 }
 
 const OBS_KEY = "lc-live-obs-v1";
-const DEFAULT_OBS: ObsConfig = { enabled: false, port: 4455, password: "", mic: null, quietSeconds: 45, ok: false };
+const DEFAULT_OBS: ObsConfig = { enabled: false, port: 4455, password: "", mic: null, quietSeconds: 90, ok: false };
 /** "Not now" on the Connect OBS card, per device. */
 const CONNECT_SKIP_KEY = "lc-live-connect-skip-v1";
 /** OBS takes a few seconds to start its server after a restart; trouble only shows once it's lasted this long. */
@@ -331,10 +344,22 @@ const QUIET_DB = -45;
 /** Audio inputs worth offering as "your mic". */
 const AUDIO_KIND = /(input|output)_capture|audio/i;
 
+/** A focused minute of quiet is fine, so the shortest choice is a minute. Older saves (30 or 45 seconds) move up. */
+const QUIET_CHOICES: Array<[number, string]> = [
+  [60, "1 minute"],
+  [90, "90 seconds"],
+  [120, "2 minutes"],
+  [180, "3 minutes"],
+];
+
 function loadObs(): ObsConfig {
   try {
     const raw = localStorage.getItem(OBS_KEY);
-    if (raw) return { ...DEFAULT_OBS, ...JSON.parse(raw) };
+    if (raw) {
+      const cfg: ObsConfig = { ...DEFAULT_OBS, ...JSON.parse(raw) };
+      if (!QUIET_CHOICES.some(([s]) => s === cfg.quietSeconds)) cfg.quietSeconds = DEFAULT_OBS.quietSeconds;
+      return cfg;
+    }
   } catch {}
   return DEFAULT_OBS;
 }
@@ -497,6 +522,41 @@ export default function LiveDock({
     if (coachingRef.current && brainRef.current) setFeed((f) => [c, ...f].slice(0, 25));
   }, []);
 
+  // Clips: each one is told once, whether Twitch's list or a link in chat
+  // brings it first.
+  const seenClips = useRef(new Set<string>());
+  const askedClips = useRef(new Set<string>());
+  const clipsPrimed = useRef(false);
+  const streamTitle = useRef<string | null>(null);
+  const clipCue = useCallback(
+    (clip: Clip, agoMs: number) => {
+      if (seenClips.current.has(clip.id)) return;
+      seenClips.current.add(clip.id);
+      if (agoMs > CLIP_FRESH_MS || !engine.current) return;
+      // A clip keeps the stream's title unless whoever made it renamed it.
+      const named = clip.title && clip.title !== streamTitle.current ? clip.title : null;
+      pushCue(engine.current.clip(clip.creator, named, agoMs, Date.now()));
+    },
+    [pushCue]
+  );
+  /** A clip link in chat: is it a clip of this channel? Twitch can take a few seconds to know a new one. */
+  const lookUpClip = useCallback(
+    async (id: string) => {
+      for (const delay of [0, 12_000]) {
+        if (delay) await new Promise((r) => setTimeout(r, delay));
+        try {
+          const res = await fetch(`/api/live/${token}/clip?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+          if (!res.ok) return;
+          const json = (await res.json()) as { clip: Clip | null; agoMs: number | null };
+          if (json.clip) return clipCue(json.clip, json.agoMs ?? 0);
+        } catch {
+          return;
+        }
+      }
+    },
+    [token, clipCue]
+  );
+
   const updateObs = useCallback((patch: Partial<ObsConfig>) => {
     setObsCfg((c) => {
       const next = { ...c, ...patch };
@@ -608,6 +668,12 @@ export default function LiveDock({
             setChatterCount(chatters.current.size);
           }
           if (m.firstTime && engine.current) pushCue(engine.current.newChatter(m.name, Date.now()));
+          // A !clip bot or someone sharing a clip: no need to wait for Twitch's list.
+          const clipId = clipIdIn(m.text, channel);
+          if (clipId && coachingRef.current && brainRef.current && !seenClips.current.has(clipId) && !askedClips.current.has(clipId)) {
+            askedClips.current.add(clipId);
+            void lookUpClip(clipId);
+          }
         },
         raid: (from, viewers) => {
           if (engine.current) pushCue(engine.current.raid(from, viewers, Date.now()));
@@ -617,7 +683,21 @@ export default function LiveDock({
     );
     chat.connect();
     return () => chat.close();
-  }, [channel, chatUrl, pushCue]);
+  }, [channel, chatUrl, pushCue, lookUpClip]);
+
+  // Clips as Twitch lists them, a minute or two after they're made. A panel
+  // opened mid-stream skips the ones from well before it opened.
+  useEffect(() => {
+    if (!state?.live) return;
+    streamTitle.current = state.session?.title ?? null;
+    const at = Date.parse(state.serverTime);
+    for (const clip of [...(state.clips ?? [])].reverse()) {
+      const age = Math.max(0, at - Date.parse(clip.createdAt));
+      if (!clipsPrimed.current && age > 3 * 60_000) seenClips.current.add(clip.id);
+      else clipCue(clip, age);
+    }
+    clipsPrimed.current = true;
+  }, [state, clipCue]);
 
   // OBS on this computer: the mic and the scene. Only when it's been set up.
   useEffect(() => {
@@ -1820,9 +1900,9 @@ export default function LiveDock({
             <label className="ld-field">
               <span>Tell me I&apos;m quiet after</span>
               <select value={obsCfg.quietSeconds} onChange={(e) => updateObs({ quietSeconds: Number(e.target.value) })}>
-                {[30, 45, 60, 90].map((s) => (
+                {QUIET_CHOICES.map(([s, label]) => (
                   <option key={s} value={s}>
-                    {s} seconds
+                    {label}
                   </option>
                 ))}
               </select>

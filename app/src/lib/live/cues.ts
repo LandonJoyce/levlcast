@@ -14,6 +14,7 @@
 export type CueKind =
   | "raid"
   | "newChatter"
+  | "clip"
   | "quiet"
   | "startingScene"
   | "breakScene"
@@ -61,12 +62,20 @@ export interface CueTuning {
   speed: number;
 }
 
-export const DEFAULT_TUNING: CueTuning = { quietSeconds: 45, speed: 1 };
+/** A focused minute of quiet is fine; two to three minutes isn't. */
+export const DEFAULT_TUNING: CueTuning = { quietSeconds: 90, speed: 1 };
+
+/** "a minute", "90 seconds", "2 minutes". */
+function stretch(seconds: number): string {
+  if (seconds === 60) return "a minute";
+  return seconds % 60 === 0 ? `${seconds / 60} minutes` : `${seconds} seconds`;
+}
 
 /** Higher wins the "now" card. */
 export const PRIORITY: Record<CueKind, number> = {
   raid: 100,
   muted: 110, // above a raid: raiders who arrive to a muted mic hear nothing
+  clip: 95, // a moment viewers loved, and a name to thank
   newChatter: 90,
   coach: 85,
   quiet: 80,
@@ -83,6 +92,7 @@ export const SHOW_FOR: Record<CueKind, number> = {
   raid: 90,
   muted: 0, // shown for as long as it's true
   newChatter: 30,
+  clip: 60,
   coach: 120,
   quiet: 0, // shown for as long as it's true
   startingScene: 0,
@@ -138,6 +148,11 @@ const SAY = {
     (name: string) => `${name} is new in chat. Say hi to them by name.`,
     (name: string) => `First message from ${name}. Greet them.`,
     (name: string) => `${name} just talked for the first time. Say hi.`,
+  ],
+  clip: [
+    (who: string) => `${who} just clipped your stream. Tell chat what happened.`,
+    (who: string) => `New clip from ${who}. Talk chat through that moment.`,
+    (who: string) => `${who} clipped that. Tell chat what you were thinking.`,
   ],
   raid: [
     (from: string, n: string) => `Raid from ${from}${n}. Welcome them and say what tonight is.`,
@@ -236,7 +251,7 @@ export class CueEngine {
     }
     if (cur?.kind === "quiet" && this.quietLogged !== cur.at) {
       this.quietLogged = cur.at;
-      out.push(make("quiet", `Quiet for ${this.tuning.quietSeconds} seconds`, cur.action, now, "nudge", this.next("quiet", SAY.quiet)));
+      out.push(make("quiet", `Quiet for ${stretch(this.tuning.quietSeconds)}`, cur.action, now, "nudge", this.next("quiet", SAY.quiet)));
     }
     if ((cur?.kind === "startingScene" || cur?.kind === "breakScene") && this.sceneLogged !== cur.at) {
       this.sceneLogged = cur.at;
@@ -287,6 +302,22 @@ export class CueEngine {
   raid(from: string, viewers: number, now: number): Cue {
     const n = viewers > 0 ? ` with ${viewers} people` : "";
     return make("raid", `Raid from ${from}${viewers > 0 ? ` with ${viewers}` : ""}`, "Welcome them by name and say what tonight is.", now, "good", this.next("raid", SAY.raid)(from, n));
+  }
+
+  /**
+   * Someone clipped the stream: a moment chat liked, worth bringing back
+   * up. Twitch lists a clip a minute or two after it's made, so an older
+   * one says how long ago instead of "just". `title` is only passed when
+   * whoever made it renamed it.
+   */
+  clip(creator: string, title: string | null, agoMs: number, now: number): Cue {
+    const who = creator || "Someone";
+    const minutes = Math.floor(agoMs / 60_000);
+    const fresh = minutes < 2;
+    const named = title ? `"${title.length > 60 ? `${title.slice(0, 57)}...` : title}". ` : "";
+    const action = fresh ? "Tell chat what happened there." : `About ${minutes} min ago. Bring that moment back up with chat.`;
+    const say = fresh ? this.next("clip", SAY.clip)(who) : `${who} clipped your stream ${minutes} minutes ago. Bring that moment back up with chat.`;
+    return make("clip", `${who} clipped your stream`, `${named}${action}`, now, "good", say);
   }
 
   newChatter(name: string, now: number): Cue {

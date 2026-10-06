@@ -89,7 +89,17 @@ export interface LiveState {
   league: LeagueLine | null;
   /** The live session, or the last one when offline. */
   session: LiveSession | null;
+  /** Clips viewers made of the live stream, newest first. Empty offline. */
+  clips: LiveClip[];
   serverTime: string;
+}
+
+/** A clip someone made of the stream. */
+export interface LiveClip {
+  id: string;
+  title: string;
+  creator: string;
+  createdAt: string;
 }
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -235,6 +245,79 @@ export async function followerTotal(twitchId: string): Promise<number | null> {
   }
 }
 
+// ── Clips ───────────────────────────────────────────────────────────────
+
+/** Twitch's clip ids are the slug at the end of a clip link. */
+const CLIP_ID_RE = /^[A-Za-z0-9_-]{4,100}$/;
+
+export function isClipId(id: string): boolean {
+  return CLIP_ID_RE.test(id);
+}
+
+function toClip(r: Record<string, unknown>): LiveClip | null {
+  const id = String(r.id ?? "");
+  const createdAt = String(r.created_at ?? "");
+  if (!id || Number.isNaN(Date.parse(createdAt))) return null;
+  return { id, title: String(r.title ?? "").slice(0, 140), creator: String(r.creator_name ?? "").slice(0, 40), createdAt };
+}
+
+const clipCache = new Map<string, { at: number; since: string; clips: LiveClip[] }>();
+
+/**
+ * The stream's clips, newest first, read at most every MIN_POLL_MS per
+ * channel. Twitch lists a new clip a minute or two after it's made, which
+ * is why a clip link posted in chat is checked on its own (clipOfChannel).
+ */
+export async function clipsSince(twitchId: string, since: string): Promise<LiveClip[]> {
+  // RFC3339 to the second, the way Twitch's own examples write it.
+  const from = new Date(since).toISOString().replace(/\.\d{3}Z$/, "Z");
+  const hit = clipCache.get(twitchId);
+  if (hit && hit.since === from && Date.now() - hit.at < MIN_POLL_MS) return hit.clips;
+  let clips = hit && hit.since === from ? hit.clips : [];
+  try {
+    const res = await helix(`clips?broadcaster_id=${encodeURIComponent(twitchId)}&started_at=${encodeURIComponent(from)}&first=50`);
+    if (res.ok) {
+      const rows = ((await res.json()) as { data?: Array<Record<string, unknown>> }).data ?? [];
+      clips = rows
+        .map(toClip)
+        .filter((c): c is LiveClip => c !== null)
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+        .slice(0, 20);
+    }
+  } catch {
+    // The last list stands; the next poll tries again.
+  }
+  clipCache.set(twitchId, { at: Date.now(), since: from, clips });
+  return clips;
+}
+
+const clipLookups = new Map<string, { at: number; clip: LiveClip | null }>();
+
+/**
+ * One clip by id, if it's a clip of this channel: a link someone posted in
+ * chat, often a !clip bot. Not found is only remembered briefly, since
+ * Twitch can take a few seconds to know a brand new clip.
+ */
+export async function clipOfChannel(twitchId: string, id: string): Promise<LiveClip | null> {
+  if (!isClipId(id)) return null;
+  const key = `${twitchId}|${id}`;
+  const hit = clipLookups.get(key);
+  if (hit && (hit.clip || Date.now() - hit.at < 10_000)) return hit.clip;
+  let clip: LiveClip | null = null;
+  try {
+    const res = await helix(`clips?id=${encodeURIComponent(id)}`);
+    if (res.ok) {
+      const row = ((await res.json()) as { data?: Array<Record<string, unknown>> }).data?.[0];
+      if (row && String(row.broadcaster_id) === twitchId) clip = toClip(row);
+    }
+  } catch {
+    // Unknown this time.
+  }
+  if (clipLookups.size > 500) clipLookups.clear();
+  clipLookups.set(key, { at: Date.now(), clip });
+  return clip;
+}
+
 // ── One poll from the dock ──────────────────────────────────────────────
 
 const pollCache = new Map<string, { at: number; state: LiveState }>();
@@ -264,9 +347,13 @@ export async function pollLive(owner: DockOwner, opts: { panel?: boolean } = {})
     league: await leagueLine(admin, owner.userId),
     serverTime: new Date().toISOString(),
   };
-  const state: LiveState = stream
-    ? { ...base, live: true, session: await recordMinute(admin, owner, stream) }
-    : { ...base, live: false, session: await closeAndSummarize(admin, owner) };
+  let state: LiveState;
+  if (stream) {
+    const [session, clips] = await Promise.all([recordMinute(admin, owner, stream), clipsSince(owner.twitchId, stream.startedAt)]);
+    state = { ...base, live: true, session, clips };
+  } else {
+    state = { ...base, live: false, session: await closeAndSummarize(admin, owner), clips: [] };
+  }
 
   pollCache.set(owner.userId, { at: Date.now(), state });
   return state;
@@ -453,7 +540,7 @@ export interface RelayedCue {
   createdAt: string;
 }
 
-const CUE_KINDS = new Set(["raid", "newChatter", "quiet", "muted", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
+const CUE_KINDS = new Set(["raid", "newChatter", "clip", "quiet", "muted", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
 const CUE_TONES = new Set(["nudge", "good", "info"]);
 /** At most this many nudges a minute per stream, whatever a panel sends. */
 const MAX_CUES_PER_MINUTE = 20;
@@ -767,14 +854,16 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
 /** Everything the coach gets to see for one look at the stream. */
 async function coachContext(admin: Admin, owner: DockOwner, session: Record<string, unknown>, input: ListenInput, now: number): Promise<CoachContext> {
   const since = (ms: number) => new Date(now - ms).toISOString();
-  const [{ data: lines }, { data: tips }, { data: shown }, { data: samples }, history] = await Promise.all([
+  const [{ data: lines }, { data: tips }, { data: shown }, { data: samples }, history, clips] = await Promise.all([
     admin.from("live_lines").select("said_at, text").eq("session_id", session.id).gte("said_at", since(4 * 60_000)).order("said_at", { ascending: true }).limit(80),
     admin.from("live_cues").select("title, say, created_at").eq("session_id", session.id).eq("source", "coach").gte("created_at", since(20 * 60_000)).order("created_at", { ascending: true }).limit(10),
     admin.from("live_cues").select("title, action, created_at").eq("session_id", session.id).neq("source", "coach").gte("created_at", since(10 * 60_000)).order("created_at", { ascending: true }).limit(10),
     admin.from("live_samples").select("minute, viewers").eq("session_id", session.id).order("minute", { ascending: false }).limit(15),
     streamerHistory(admin, owner.userId).catch(() => null),
+    clipsSince(owner.twitchId, String(session.started_at)).catch(() => [] as LiveClip[]),
   ]);
   const quiet = Number(input.quietSeconds);
+  const streamTitle = (session.title as string | null) || null;
   return {
     name: owner.displayName,
     game: (session.game_name as string | null) || null,
@@ -788,6 +877,12 @@ async function coachContext(admin: Admin, owner: DockOwner, session: Record<stri
     recentTips: ((tips ?? []) as Array<{ title: string; say: string | null; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: t.say || t.title })),
     shown: ((shown ?? []) as Array<{ title: string; action: string; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: `${t.title}. ${t.action}` })),
     history,
+    // The last 10 minutes of clips, oldest first. A clip keeps the stream's
+    // title unless whoever made it renamed it, and only a new name says anything.
+    clips: clips
+      .filter((c) => now - Date.parse(c.createdAt) < 10 * 60_000)
+      .reverse()
+      .map((c) => ({ agoSec: (now - Date.parse(c.createdAt)) / 1000, creator: c.creator, title: c.title && c.title !== streamTitle ? c.title : null })),
   };
 }
 
