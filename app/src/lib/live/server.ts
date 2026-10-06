@@ -17,6 +17,7 @@ import { randomBytes } from "crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getAppAccessToken, invalidateAppTokenCache } from "@/lib/twitch";
 import { hasPaidPlan } from "@/lib/limits";
+import { getLeagueView } from "@/lib/league";
 import { transcribeClip } from "@/lib/deepgram";
 import { liveAudioPlaylistUrl, pullNewAudio } from "@/lib/live/listen";
 import { coachTip, streamerHistory, type CoachContext } from "@/lib/live/coach";
@@ -84,12 +85,38 @@ export interface LiveState {
   /** Their LevlCast rank points (null until placed), and what the latest opened result did to them. */
   rankPoints: number | null;
   lastDelta: number | null;
+  /** Where they stand in this week's league, if they're in one. */
+  league: LeagueLine | null;
   /** The live session, or the last one when offline. */
   session: LiveSession | null;
   serverTime: string;
 }
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+export interface LeagueLine {
+  name: string;
+  place: number;
+  size: number;
+  endsAt: string;
+}
+
+/** The league line, read at most every few minutes per streamer: it changes when a report lands, not by the minute. */
+const leagueCache = new Map<string, { at: number; line: LeagueLine | null }>();
+
+async function leagueLine(admin: Admin, userId: string): Promise<LeagueLine | null> {
+  const hit = leagueCache.get(userId);
+  if (hit && Date.now() - hit.at < 5 * 60_000) return hit.line;
+  let line: LeagueLine | null = null;
+  try {
+    const view = await getLeagueView(admin, userId);
+    if (view) line = { name: view.name, place: view.you.position, size: view.standings.length, endsAt: view.endsAt };
+  } catch {
+    // No line this time; the rank still shows.
+  }
+  leagueCache.set(userId, { at: Date.now(), line });
+  return line;
+}
 
 // ── Dock links ──────────────────────────────────────────────────────────
 
@@ -234,6 +261,7 @@ export async function pollLive(owner: DockOwner, opts: { panel?: boolean } = {})
     freeCoachMinutes: FREE_COACH_MINUTES,
     rankPoints: owner.rankPoints,
     lastDelta: await lastOpenedDelta(admin, owner.userId),
+    league: await leagueLine(admin, owner.userId),
     serverTime: new Date().toISOString(),
   };
   const state: LiveState = stream

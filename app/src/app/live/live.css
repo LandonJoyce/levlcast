@@ -217,3 +217,16 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
   .ld-report-bar i { animation: none; left: 0; width: 100%; opacity: 0.5; }
 }
 .ld-report-up { margin: 0; justify-self: start; padding: 3px 9px; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgb(16, 13, 14); background: var(--tier-gold, #e3b341); border-radius: 999px; }
+
+/* Design pass: fewer boxes, one clear row of numbers */
+.ld-stats { gap: 0; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ld-stats > div { background: none; border: 0; border-radius: 0; padding: 9px 10px 8px; }
+.ld-stats > div + div { border-left: 1px solid var(--line); }
+.ld-stats > div:first-child { padding-left: 2px; }
+.ld-stats b { font-size: 26px; }
+.ld-stats span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.ld-rank-l { margin: 3px 0 0; color: var(--ink-3); font-size: 11px; }
+.ld-rank-l b { color: var(--ink); font-weight: 700; }
+.ld-how { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; color: var(--ink-2); font-size: 13px; }
+.ld-how li { padding-left: 12px; border-left: 2px solid var(--line-2); }
+.ld-how b { color: var(--ink); }

@@ -74,8 +74,15 @@ interface LiveState {
   freeCoachMinutes: number;
   rankPoints: number | null;
   lastDelta: number | null;
+  league: { name: string; place: number; size: number; endsAt: string } | null;
   session: Session | null;
   serverTime: string;
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
 /** The last stream's report, from /api/live/<token>/report. */
@@ -89,7 +96,7 @@ interface StreamReport {
 const END_SCREEN_MS = 12 * 60 * 60_000;
 
 /** Their LevlCast rank, the same one as on the dashboard. */
-function RankRow({ points, delta }: { points: number | null; delta: number | null }) {
+function RankRow({ points, delta, league }: { points: number | null; delta: number | null; league: LiveState["league"] }) {
   if (points === null) return <p className="ld-rank-none">Unranked. Your first report puts you on the ladder.</p>;
   const rank = rankFromPoints(points);
   const next = nextDivision(rank);
@@ -113,6 +120,11 @@ function RankRow({ points, delta }: { points: number | null; delta: number | nul
           <i style={{ width: `${rank.progress}%` }} />
         </div>
         <p className="ld-rank-n">{next && toNext !== null ? `${toNext} to ${next}` : next ? `${rank.progress}% of the way to ${next}` : "Top of the ladder"}</p>
+        {league && (
+          <p className="ld-rank-l">
+            <b>{ordinal(league.place)}</b> of {league.size} in {league.name}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -862,7 +874,7 @@ export default function LiveDock({
 
       {!state && !pollError && <p className="ld-wait">Checking your stream…</p>}
 
-      {state && <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} />}
+      {state && <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} league={state.league ?? null} />}
 
       {state && live && session && (
         <>
@@ -976,7 +988,7 @@ export default function LiveDock({
             <section className="ld-feed">
               <p className="ld-k">Earlier</p>
               <ul>
-                {feed.slice(0, 8).map((c) => (
+                {feed.slice(0, 5).map((c) => (
                   <li key={c.id} data-tone={c.tone} data-kind={c.kind}>
                     <span className="ld-at">{liveSince !== null ? clock(Math.max(0, c.at - liveSince)) : ""}</span>
                     <span>
@@ -1047,7 +1059,14 @@ export default function LiveDock({
               <ReportCard data={report} origin={typeof window === "undefined" ? "" : window.location.origin} />
             </div>
           ) : (
-            <p className="ld-off-s">Your first stream with this open shows up here.</p>
+            <ul className="ld-how">
+              <li>
+                <b>While you&apos;re live</b> it tells you when you go quiet, who&apos;s new in chat and how your viewers are doing.
+              </li>
+              <li>
+                <b>After</b> you get a recap and your report, right here.
+              </li>
+            </ul>
           )}
           {obsStatus !== "connected" && (
             <p className="ld-hint">
