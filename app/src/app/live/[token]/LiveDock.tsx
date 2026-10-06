@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CueEngine, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
 import { ObsLink, type ObsInput, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat } from "@/lib/live/chat";
 import { Voice, deviceVoices, loadVoicePick, saveVoicePick, voiceName, voiceNote, type VoicePick } from "@/lib/live/voice";
@@ -90,6 +91,74 @@ interface StreamReport {
   stream: null | { id: string; title: string | null; endedAt: string | null; live: boolean };
   vod: null | { twitchId: string; title: string; durationSeconds: number | null };
   report: null | { id: string; status: string; sealed: boolean; delta: number | null; pointsAfter: number | null };
+}
+
+/** The panel's sections, which a streamer can hide and reorder (Customize). */
+type SectionId = "rank" | "now" | "coach" | "numbers" | "graph" | "status" | "earlier";
+
+const SECTIONS: Record<SectionId, string> = {
+  rank: "Rank and league",
+  now: "Nudges",
+  coach: "Coach",
+  numbers: "Viewers, chatters, followers",
+  graph: "Viewer graph",
+  status: "Mic, chat and scene",
+  earlier: "Earlier nudges",
+};
+
+/** The nudges a streamer can turn off, in the order they matter. */
+const NUDGES: Array<[CueKind, string]> = [
+  ["muted", "Muted mic"],
+  ["quiet", "Going quiet"],
+  ["newChatter", "New chatters"],
+  ["raid", "Raids"],
+  ["viewersDown", "Viewers dropping"],
+  ["viewersUp", "Viewers climbing"],
+  ["chatQuiet", "Quiet chat"],
+  ["catchUp", "Catch-up reminders"],
+  ["startingScene", "Long starting screen"],
+  ["breakScene", "Long breaks"],
+];
+
+interface Layout {
+  order: SectionId[];
+  hidden: SectionId[];
+  /** Nudge kinds this device doesn't show or say. */
+  off: CueKind[];
+}
+
+const DEFAULT_LAYOUT: Layout = { order: ["rank", "now", "coach", "numbers", "graph", "status", "earlier"], hidden: [], off: [] };
+const LAYOUT_KEY = "lc-live-layout-v1";
+
+/** The saved layout, with any section added since it was saved put back at the end. */
+function loadLayout(): Layout {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "null") as Partial<Layout> | null;
+    if (!raw) return DEFAULT_LAYOUT;
+    const known = (ids: unknown) => (Array.isArray(ids) ? ids.filter((id): id is SectionId => typeof id === "string" && id in SECTIONS) : []);
+    const order = known(raw.order);
+    for (const id of DEFAULT_LAYOUT.order) if (!order.includes(id)) order.push(id);
+    const kinds = new Set(NUDGES.map(([k]) => k));
+    return {
+      order,
+      hidden: known(raw.hidden),
+      off: Array.isArray(raw.off) ? raw.off.filter((k): k is CueKind => kinds.has(k as CueKind)) : [],
+    };
+  } catch {
+    return DEFAULT_LAYOUT;
+  }
+}
+
+function saveLayout(l: Layout): void {
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(l));
+  } catch {}
+}
+
+/** "just now", "3 min ago". Real time, whatever the test speed. */
+function ago(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  return m < 1 ? "just now" : `${m} min ago`;
 }
 
 /** How long after a stream the panel still shows its end screen. */
@@ -375,6 +444,13 @@ export default function LiveDock({
   // The last stream's report, for the end of stream screen.
   const [report, setReport] = useState<StreamReport | null>(null);
 
+  // Customize: the layout, saved on this device, and what's been closed.
+  const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
+  const [layoutSheet, setLayoutSheet] = useState(false);
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
+
   // The listening coach (Pro).
   const [coachStatus, setCoachStatus] = useState<CoachStatus | null>(null);
   const coachAfter = useRef<string | null>(null);
@@ -403,6 +479,7 @@ export default function LiveDock({
     setIsPhone(window.matchMedia("(pointer: coarse)").matches);
     setCanVoice(Voice.supported());
     setVoicePick(loadVoicePick());
+    setLayout(loadLayout());
     const cfg = loadObs();
     setObsCfg(cfg);
     setDraft({ password: cfg.password, port: String(cfg.port) });
@@ -725,7 +802,9 @@ export default function LiveDock({
     const fresh = feed.filter((c) => !spoken.current.has(c.id));
     if (!fresh.length) return;
     fresh.forEach((c) => spoken.current.add(c.id));
-    const line = spokenLine(fresh[0]);
+    const sayable = fresh.filter((c) => !layoutRef.current.off.includes(c.kind));
+    if (!sayable.length) return;
+    const line = spokenLine(sayable[0]);
     voice.current?.say(line);
     setLastSaid(line);
   }, [feed, voiceOn, coaching]);
@@ -769,8 +848,35 @@ export default function LiveDock({
     };
   }, [voiceOn]);
 
-  const current = engine.current && coaching ? engine.current.current(signals) : null;
-  const card = coaching ? nowCue(current, feed, now, speed) : null;
+  const coachShown = !layout.hidden.includes("coach");
+  /** A nudge that's true for a while (quiet, muted) is closed for that stretch; the rest one by one. */
+  const cueKey = (c: Cue) => (SHOW_FOR[c.kind] === 0 ? `${c.kind}:${c.at}` : c.id);
+  const shownKind = (c: Cue) => !layout.off.includes(c.kind) && !(c.kind === "coach" && coachShown);
+  const rawCurrent = engine.current && coaching ? engine.current.current(signals) : null;
+  const current = rawCurrent && shownKind(rawCurrent) && !dismissed.has(cueKey(rawCurrent)) ? rawCurrent : null;
+  const card = coaching ? nowCue(current, feed.filter((c) => shownKind(c) && !dismissed.has(cueKey(c))), now, speed) : null;
+  const dismiss = (c: Cue) => setDismissed((d) => new Set(d).add(cueKey(c)));
+  const earlier = feed.filter(shownKind).slice(0, 5);
+  const coachTips = feed.filter((c) => c.kind === "coach");
+  const latestTip = coachTips.find((c) => !dismissed.has(cueKey(c))) ?? null;
+  const olderTips = coachTips.filter((c) => c !== latestTip).slice(0, 3);
+
+  const updateLayout = (next: Layout) => {
+    setLayout(next);
+    saveLayout(next);
+  };
+  const moveSection = (id: SectionId, by: -1 | 1) => {
+    const order = [...layout.order];
+    const i = order.indexOf(id);
+    const j = i + by;
+    if (i < 0 || j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    updateLayout({ ...layout, order });
+  };
+  const toggleSection = (id: SectionId) =>
+    updateLayout({ ...layout, hidden: layout.hidden.includes(id) ? layout.hidden.filter((h) => h !== id) : [...layout.hidden, id] });
+  const toggleNudge = (kind: CueKind) =>
+    updateLayout({ ...layout, off: layout.off.includes(kind) ? layout.off.filter((k) => k !== kind) : [...layout.off, kind] });
 
   // Chat speed: messages in the last minute.
   chatTimes.current = chatTimes.current.filter((t) => now - t < 5 * 60_000);
@@ -814,6 +920,188 @@ export default function LiveDock({
   const preview = (pick: VoicePick) => {
     if (!voice.current) voice.current = new Voice(token, pickNow);
     voice.current.preview(pick, "sample", SAMPLE_LINES.sample);
+  };
+
+  const s = session;
+  const sections: Record<SectionId, () => ReactNode> = {
+    rank: () => <RankRow points={state?.rankPoints ?? null} delta={state?.lastDelta ?? null} league={state?.league ?? null} />,
+    now: () =>
+      coaching ? (
+        <section className="ld-now" data-tone={card?.tone ?? "calm"}>
+          {card && (
+            <button type="button" className="ld-x" onClick={() => dismiss(card)} aria-label="Dismiss" title="Dismiss">
+              <X size={14} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          )}
+          <p className="ld-k">Now</p>
+          <p className="ld-now-t">{card ? card.title : "Looking good"}</p>
+          <p className="ld-now-a">{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
+          {voiceOn && (
+            <p className="ld-voiceline">
+              {remotePanel ? "Speaking your OBS panel's nudges" : "Speaking your nudges"} in {pickLabel}&apos;s voice.{" "}
+              <button type="button" onClick={() => setVoiceSheet(true)}>
+                Change
+              </button>
+              {lastSaid && <span> Last: {lastSaid}</span>}
+            </p>
+          )}
+          {!pro && Number.isFinite(coachLeftMs) && (
+            <p className="ld-plan">Free plan: {Math.max(1, Math.ceil((coachLeftMs * speed) / 60_000))} min of nudges left this stream.</p>
+          )}
+        </section>
+      ) : (
+        <section className="ld-now ld-now-off" data-tone="calm">
+          <p className="ld-k">Nudges</p>
+          <p className="ld-now-t">Off for the rest of this stream</p>
+          <p className="ld-now-a">
+            Free covers the first {freeMinutes} minutes of each stream. Pro covers all of it.{" "}
+            <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+              See Pro
+            </a>
+          </p>
+        </section>
+      ),
+    coach: () => {
+      // On a free plan with no Pro panel feeding it: one line about what it is.
+      if (!pro && !remotePanel) {
+        return (
+          <section className="ld-coach" aria-label="Your coach">
+            <div className="ld-coach-h">
+              <p className="ld-k">Coach</p>
+              <span className="ld-pro">Pro</span>
+            </div>
+            <p className="ld-coach-p">
+              Listens to your stream and tells you what to do, like a question you missed or a play to talk chat through.{" "}
+              <a href="/#pricing" target="_blank" rel="noopener noreferrer">
+                See Pro
+              </a>
+            </p>
+          </section>
+        );
+      }
+      const st = coachStatus?.state;
+      const status = coachStatus
+        ? st === "cap"
+          ? `Used this month's ${coachStatus.capHours ?? ""} hours`
+          : COACH_LINE[coachStatus.state]
+        : remotePanel
+          ? "From your OBS panel"
+          : "Starting up";
+      const heard = st === "listening" ? coachStatus?.heard : null;
+      return (
+        <section className="ld-coach" aria-label="Your coach">
+          <div className="ld-coach-h">
+            <p className="ld-k">Coach</p>
+            <span className="ld-coach-s" data-state={st ?? "remote"}>
+              {status}
+            </span>
+          </div>
+          {latestTip ? (
+            <div className="ld-tip" data-tone={latestTip.tone}>
+              <button type="button" className="ld-x" onClick={() => dismiss(latestTip)} aria-label="Dismiss this tip" title="Dismiss">
+                <X size={14} strokeWidth={2.2} aria-hidden="true" />
+              </button>
+              <p className="ld-tip-t">{latestTip.title}</p>
+              <p className="ld-tip-a">{latestTip.action}</p>
+              <p className="ld-tip-at">{ago(Date.now() - latestTip.at)}</p>
+            </div>
+          ) : (
+            <p className="ld-coach-p">
+              Every couple of minutes it tells you one thing worth doing, like answering a question you missed or talking chat through a
+              play.
+            </p>
+          )}
+          {olderTips.length > 0 && (
+            <ul className="ld-tips">
+              {olderTips.map((c) => (
+                <li key={c.id}>
+                  <span className="ld-at">{liveSince !== null ? clock(Math.max(0, c.at - liveSince)) : ""}</span>
+                  <span>{c.action}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {heard && <p className="ld-heard">Heard: &ldquo;{heard}&rdquo;</p>}
+        </section>
+      );
+    },
+    numbers: () =>
+      s ? (
+        <div className="ld-stats">
+          <div>
+            <b>{s.viewers ?? "-"}</b>
+            <span>Viewers</span>
+          </div>
+          <div>
+            <b>{s.peak}</b>
+            <span>Peak</span>
+          </div>
+          <div>
+            <b>{chatterCount}</b>
+            <span>Chatters</span>
+          </div>
+          <div>
+            <b>{followersGained === null ? "-" : `${followersGained >= 0 ? "+" : ""}${followersGained}`}</b>
+            <span>Followers</span>
+          </div>
+        </div>
+      ) : null,
+    graph: () => (s ? <Spark samples={s.samples} /> : null),
+    status: () => (
+      <div className="ld-lines">
+        {obsStatus === "connected" ? (
+          <p>
+            <span className="ld-l">Mic</span>
+            <span className="ld-meter" aria-hidden="true">
+              <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
+            </span>
+            <span className="ld-v" data-muted={micMuted ? "1" : "0"}>
+              {micMuted ? "Muted in OBS" : talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}
+            </span>
+          </p>
+        ) : isPhone ? (
+          <p className="ld-hint">
+            {remotePanel ? "Mic and scene nudges come from your OBS panel." : "Open this link in an OBS panel on your computer to also get mic and scene nudges."}
+          </p>
+        ) : (
+          <p className="ld-hint">
+            <button type="button" onClick={() => setSheetOpen(true)}>
+              Connect OBS
+            </button>{" "}
+            to get told when you go quiet or stay on your starting screen.
+          </p>
+        )}
+        <p>
+          <span className="ld-l">Chat</span>
+          <span className="ld-v">
+            {chatStatus === "connected" ? `${perMinute} ${perMinute === 1 ? "message" : "messages"} a minute` : chatStatus === "connecting" ? "Connecting…" : "Reconnecting…"}
+          </span>
+        </p>
+        {scene && (
+          <p>
+            <span className="ld-l">Scene</span>
+            <span className="ld-v">{scene}</span>
+          </p>
+        )}
+      </div>
+    ),
+    earlier: () =>
+      earlier.length > 0 ? (
+        <section className="ld-feed">
+          <p className="ld-k">Earlier</p>
+          <ul>
+            {earlier.map((c) => (
+              <li key={c.id} data-tone={c.tone} data-kind={c.kind}>
+                <span className="ld-at">{liveSince !== null ? clock(Math.max(0, c.at - liveSince)) : ""}</span>
+                <span>
+                  {c.kind === "coach" && <b className="ld-tag">Coach</b>}
+                  {c.kind === "coach" ? c.action : c.title}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null,
   };
 
   const startVoice = () => {
@@ -860,6 +1148,9 @@ export default function LiveDock({
           {live ? <>Live {liveSince !== null ? clock(now - liveSince) : ""}</> : "Offline"}
         </span>
         <span className="ld-who">{displayName}</span>
+        <button type="button" className="ld-icon" onClick={() => setLayoutSheet(true)} aria-label="Customize your panel" title="Customize">
+          <SlidersHorizontal size={14} strokeWidth={2} aria-hidden="true" />
+        </button>
         {(canVoice || voiceOn) && (
           <button type="button" className="ld-voice" data-on={voiceOn ? "1" : "0"} onClick={toggleVoice} aria-pressed={voiceOn}>
             {voiceOn ? "Voice on" : "Voice"}
@@ -874,132 +1165,17 @@ export default function LiveDock({
 
       {!state && !pollError && <p className="ld-wait">Checking your stream…</p>}
 
-      {state && <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} league={state.league ?? null} />}
+      {state && !live && !layout.hidden.includes("rank") && (
+        <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} league={state.league ?? null} />
+      )}
 
       {state && live && session && (
         <>
-          {coaching ? (
-            <section className="ld-now" data-tone={card?.tone ?? "calm"}>
-              <p className="ld-k">{card?.kind === "coach" ? "Coach" : "Now"}</p>
-              <p className="ld-now-t">{card ? card.title : "Looking good"}</p>
-              <p className="ld-now-a">{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
-              {voiceOn && (
-                <p className="ld-voiceline">
-                  {remotePanel ? "Speaking your OBS panel's nudges" : "Speaking your nudges"} in {pickLabel}&apos;s voice.{" "}
-                  <button type="button" onClick={() => setVoiceSheet(true)}>
-                    Change
-                  </button>
-                  {lastSaid && <span> Last: {lastSaid}</span>}
-                </p>
-              )}
-              {!pro && Number.isFinite(coachLeftMs) && (
-                <p className="ld-plan">
-                  Free plan: {Math.max(1, Math.ceil((coachLeftMs * speed) / 60_000))} min of coaching left this stream. Pro adds a coach that listens to
-                  your stream.
-                </p>
-              )}
-            </section>
-          ) : (
-            <section className="ld-now ld-now-off" data-tone="calm">
-              <p className="ld-k">Coaching</p>
-              <p className="ld-now-t">Off for the rest of this stream</p>
-              <p className="ld-now-a">
-                Free covers the first {freeMinutes} minutes of each stream. Pro coaches all of it.{" "}
-                <a href="/#pricing" target="_blank" rel="noopener noreferrer">
-                  See Pro
-                </a>
-              </p>
-            </section>
-          )}
-
-          <div className="ld-stats">
-            <div>
-              <b>{session.viewers ?? "-"}</b>
-              <span>Viewers</span>
-            </div>
-            <div>
-              <b>{session.peak}</b>
-              <span>Peak</span>
-            </div>
-            <div>
-              <b>{chatterCount}</b>
-              <span>Chatters</span>
-            </div>
-            <div>
-              <b>{followersGained === null ? "-" : `${followersGained >= 0 ? "+" : ""}${followersGained}`}</b>
-              <span>Followers</span>
-            </div>
-          </div>
-
-          <Spark samples={session.samples} />
-
-          <div className="ld-lines">
-            {obsStatus === "connected" ? (
-              <p>
-                <span className="ld-l">Mic</span>
-                <span className="ld-meter" aria-hidden="true">
-                  <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
-                </span>
-                <span className="ld-v" data-muted={micMuted ? "1" : "0"}>
-                  {micMuted ? "Muted in OBS" : talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}
-                </span>
-              </p>
-            ) : isPhone ? (
-              <p className="ld-hint">
-                {remotePanel
-                  ? "Mic and scene nudges come from your OBS panel."
-                  : "Open this link in an OBS panel on your computer to also get mic and scene nudges."}
-              </p>
-            ) : (
-              <p className="ld-hint">
-                <button type="button" onClick={() => setSheetOpen(true)}>
-                  Connect OBS
-                </button>{" "}
-                to get told when you go quiet or stay on your starting screen.
-              </p>
-            )}
-            <p>
-              <span className="ld-l">Chat</span>
-              <span className="ld-v">
-                {chatStatus === "connected" ? `${perMinute} ${perMinute === 1 ? "message" : "messages"} a minute` : chatStatus === "connecting" ? "Connecting…" : "Reconnecting…"}
-              </span>
-            </p>
-            {scene && (
-              <p>
-                <span className="ld-l">Scene</span>
-                <span className="ld-v">{scene}</span>
-              </p>
-            )}
-            {pro && coachStatus && (
-              <p className="ld-coachline" data-state={coachStatus.state}>
-                <span className="ld-l">Coach</span>
-                <span className="ld-v">
-                  {coachStatus.state === "cap"
-                    ? `Used this month's ${coachStatus.capHours ?? ""} hours. Nudges keep going.`
-                    : coachStatus.state === "listening" && coachStatus.heard
-                      ? `Heard: ${coachStatus.heard}`
-                      : COACH_LINE[coachStatus.state]}
-                </span>
-              </p>
-            )}
-          </div>
-
-          {feed.length > 0 && (
-            <section className="ld-feed">
-              <p className="ld-k">Earlier</p>
-              <ul>
-                {feed.slice(0, 5).map((c) => (
-                  <li key={c.id} data-tone={c.tone} data-kind={c.kind}>
-                    <span className="ld-at">{liveSince !== null ? clock(Math.max(0, c.at - liveSince)) : ""}</span>
-                    <span>
-                      {c.kind === "coach" && <b className="ld-tag">Coach</b>}
-                      {c.kind === "coach" ? c.action : c.title}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          {layout.order
+            .filter((id) => !layout.hidden.includes(id))
+            .map((id) => (
+              <Fragment key={id}>{sections[id]()}</Fragment>
+            ))}
         </>
       )}
 
@@ -1110,6 +1286,52 @@ export default function LiveDock({
                 Use voice here anyway
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {layoutSheet && (
+        <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Customize your panel">
+          <div className="ld-sheet-in">
+            <div className="ld-sheet-head">
+              <p>Customize your panel</p>
+              <button type="button" onClick={() => setLayoutSheet(false)}>
+                Done
+              </button>
+            </div>
+            <p className="ld-help">Pick what shows while you&apos;re live, and in what order. It&apos;s saved on this device.</p>
+            <ul className="ld-lay">
+              {layout.order.map((id, i) => (
+                <li key={id} data-off={layout.hidden.includes(id) ? "1" : "0"}>
+                  <label>
+                    <input type="checkbox" checked={!layout.hidden.includes(id)} onChange={() => toggleSection(id)} />
+                    <span>{SECTIONS[id]}</span>
+                  </label>
+                  <span className="ld-lay-move">
+                    <button type="button" onClick={() => moveSection(id, -1)} disabled={i === 0} aria-label={`Move ${SECTIONS[id]} up`}>
+                      <ChevronUp size={15} aria-hidden="true" />
+                    </button>
+                    <button type="button" onClick={() => moveSection(id, 1)} disabled={i === layout.order.length - 1} aria-label={`Move ${SECTIONS[id]} down`}>
+                      <ChevronDown size={15} aria-hidden="true" />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="ld-k">Nudges to show</p>
+            <ul className="ld-lay">
+              {NUDGES.map(([kind, name]) => (
+                <li key={kind}>
+                  <label>
+                    <input type="checkbox" checked={!layout.off.includes(kind)} onChange={() => toggleNudge(kind)} />
+                    <span>{name}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="ld-link" onClick={() => updateLayout(DEFAULT_LAYOUT)}>
+              Back to how it was
+            </button>
           </div>
         </div>
       )}
