@@ -10,13 +10,16 @@
 
 export type ObsStatus = "off" | "connecting" | "connected" | "error";
 
+/** Why it isn't connected: OBS turned the password down, OBS isn't answering (closed, or its server is off), or the connection dropped. */
+export type ObsProblem = "password" | "unreachable" | "lost";
+
 export interface ObsInput {
   name: string;
   kind: string;
 }
 
 export interface ObsHandlers {
-  status(s: ObsStatus, detail?: string): void;
+  status(s: ObsStatus, problem?: ObsProblem): void;
   /** The chosen mic's peak level in dB, about 20 times a second. -Infinity is silence. */
   level(db: number): void;
   /** The chosen mic was muted or unmuted in OBS. A muted mic still reports levels, so this decides. */
@@ -69,7 +72,7 @@ export class ObsLink {
     try {
       ws = new WebSocket(`ws://127.0.0.1:${this.opts.port}`, "obswebsocket.json");
     } catch {
-      this.on.status("error", "Couldn't open a connection to OBS.");
+      this.on.status("error", "unreachable");
       return;
     }
     this.ws = ws;
@@ -81,15 +84,12 @@ export class ObsLink {
       this.ws = null;
       if (this.stopped) return;
       if (e.code === 4009) {
-        this.on.status("error", "Wrong password. Copy it again from OBS: Tools, WebSocket Server Settings, Show Connect Info.");
+        this.on.status("error", "password");
         return; // a wrong password won't fix itself
       }
-      this.on.status(
-        "error",
-        this.opened
-          ? "Lost the connection to OBS. Reconnecting."
-          : "Can't reach OBS. Make sure it's open and the WebSocket server is on (Tools, WebSocket Server Settings)."
-      );
+      // OBS still starting up, closed, or its server off: keep trying, so a
+      // restarted OBS picks back up without anyone pressing anything.
+      this.on.status("error", this.opened ? "lost" : "unreachable");
       this.retry = setTimeout(() => this.connect(), 5000);
     };
   }

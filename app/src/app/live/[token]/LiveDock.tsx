@@ -3,12 +3,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Settings, X } from "lucide-react";
 import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
-import { ObsLink, type ObsInput, type ObsStatus } from "@/lib/live/obs";
+import { ObsLink, type ObsInput, type ObsProblem, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat } from "@/lib/live/chat";
 import { Voice, deviceVoices, loadVoicePick, saveVoicePick, voiceName, voiceNote, type VoicePick } from "@/lib/live/voice";
 import { LEVL_VOICES, SAMPLE_LINES } from "@/lib/live/voices";
 import { DIVISION_SIZE, TIER_HEX, rankFromPoints } from "@/lib/rank";
 import { nextDivision } from "@/components/dashboard/rank-panel";
+import DeadLink from "./DeadLink";
 
 /**
  * The Live dock: what a streamer keeps open inside OBS while they stream.
@@ -312,10 +313,16 @@ interface ObsConfig {
   password: string;
   mic: string | null;
   quietSeconds: number;
+  /** It has connected on this device before, so trouble now is a problem to fix, not setup. */
+  ok: boolean;
 }
 
 const OBS_KEY = "lc-live-obs-v1";
-const DEFAULT_OBS: ObsConfig = { enabled: false, port: 4455, password: "", mic: null, quietSeconds: 45 };
+const DEFAULT_OBS: ObsConfig = { enabled: false, port: 4455, password: "", mic: null, quietSeconds: 45, ok: false };
+/** "Not now" on the Connect OBS card, per device. */
+const CONNECT_SKIP_KEY = "lc-live-connect-skip-v1";
+/** OBS takes a few seconds to start its server after a restart; trouble only shows once it's lasted this long. */
+const OBS_GRACE_MS = 10_000;
 
 /** Louder than this is talking; quieter than QUIET_DB is quiet. In between keeps the last state. */
 const TALK_DB = -38;
@@ -389,6 +396,8 @@ export default function LiveDock({
 }) {
   const [state, setState] = useState<LiveState | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
+  /** The link was replaced (or never existed) while the panel was open. */
+  const [dead, setDead] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   // Chat
@@ -403,7 +412,14 @@ export default function LiveDock({
   // OBS
   const [obsCfg, setObsCfg] = useState<ObsConfig>(DEFAULT_OBS);
   const [obsStatus, setObsStatus] = useState<ObsStatus>("off");
-  const [obsDetail, setObsDetail] = useState<string | null>(null);
+  /** Why it isn't connected. Stays through the retries, so the message doesn't blink. */
+  const [obsProblem, setObsProblem] = useState<ObsProblem | null>(null);
+  const obsProblemSince = useRef<number | null>(null);
+  /** Until the saved choice loads, so the card doesn't flash. */
+  const [connectSkipped, setConnectSkipped] = useState(true);
+  const [welcomeConnect, setWelcomeConnect] = useState(false);
+  const [troubleOpen, setTroubleOpen] = useState(false);
+  const [troubleHidden, setTroubleHidden] = useState(false);
   const [inputs, setInputs] = useState<ObsInput[]>([]);
   const [scene, setScene] = useState<string | null>(null);
   const sceneSince = useRef<number | null>(null);
@@ -498,12 +514,16 @@ export default function LiveDock({
     setLayout(loadLayout());
     try {
       setWelcomed(localStorage.getItem(WELCOME_KEY) === "1");
+      setConnectSkipped(localStorage.getItem(CONNECT_SKIP_KEY) === "1");
     } catch {
       setWelcomed(false);
+      setConnectSkipped(false);
     }
     const cfg = loadObs();
     setObsCfg(cfg);
-    setDraft({ password: cfg.password, port: String(cfg.port) });
+    // The password box starts empty: a saved password stays saved, and a
+    // paste can't land on the end of the old one.
+    setDraft({ password: "", port: String(cfg.port) });
   }, []);
 
   useEffect(() => {
@@ -524,6 +544,9 @@ export default function LiveDock({
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
+      // A failed check tries again sooner, so a panel that opened before the
+      // internet did (OBS starting with the computer) catches up quickly.
+      let next = pollSeconds * 1000;
       try {
         const res = await fetch(`/api/live/${token}${voiceOn ? "" : "?panel=1"}`, { cache: "no-store" });
         const json = await res.json();
@@ -531,13 +554,18 @@ export default function LiveDock({
         if (res.ok) {
           setState(json as LiveState);
           setPollError(null);
+          setDead(false);
+        } else if (res.status === 404) {
+          setDead(true);
         } else {
           setPollError(json.error ?? "Couldn't reach LevlCast. Trying again.");
+          next = Math.min(next, 10_000);
         }
       } catch {
         if (alive) setPollError("Can't reach LevlCast. Check your internet. Trying again.");
+        next = Math.min(next, 10_000);
       } finally {
-        if (alive) timer = setTimeout(load, pollSeconds * 1000);
+        if (alive) timer = setTimeout(load, next);
       }
     };
     void load();
@@ -600,11 +628,29 @@ export default function LiveDock({
     const link = new ObsLink(
       { port: obsCfg.port, password: obsCfg.password, mic: loadObs().mic },
       {
-        status: (s, detail) => {
+        status: (s, problem) => {
           setObsStatus(s);
-          setObsDetail(detail ?? null);
+          if (s === "error") {
+            setObsProblem(problem ?? "unreachable");
+            if (obsProblemSince.current === null) obsProblemSince.current = Date.now();
+            // A turned-down password is cleared from the box, so the next paste goes in clean.
+            if (problem === "password") setDraft((d) => (d.password ? { ...d, password: "" } : d));
+          } else if (s !== "connecting") {
+            setObsProblem(null);
+            obsProblemSince.current = null;
+          }
           if (s === "connected") {
             lastTalkAt.current = Date.now();
+            setDraft((d) => (d.password ? { ...d, password: "" } : d));
+            setWelcomeConnect(false);
+            setTroubleOpen(false);
+            setTroubleHidden(false);
+            setObsCfg((c) => {
+              if (c.ok) return c;
+              const next = { ...c, ok: true };
+              saveObs(next);
+              return next;
+            });
             if (connectAsked.current) {
               connectAsked.current = false;
               setSheetOpen(false);
@@ -1091,7 +1137,7 @@ export default function LiveDock({
           <p className="ld-hint">
             {remotePanel ? "Mic and scene nudges come from your OBS panel." : "Open this link in an OBS panel on your computer to also get mic and scene nudges."}
           </p>
-        ) : (
+        ) : obsCfg.enabled || obsCard ? null : (
           <p className="ld-hint">
             <button type="button" onClick={() => setSheetOpen(true)}>
               Connect OBS
@@ -1176,9 +1222,110 @@ export default function LiveDock({
   const connect = () => {
     connectAsked.current = true;
     const port = Number(draft.port) || 4455;
-    updateObs({ enabled: true, port, password: draft.password });
+    // An empty box keeps the saved password, unless OBS just turned that one down.
+    const password = draft.password.trim() || (obsProblem === "password" ? "" : obsCfg.password);
+    updateObs({ enabled: true, port, password });
     setAttempt((n) => n + 1);
   };
+  const skipConnect = () => {
+    setConnectSkipped(true);
+    try {
+      localStorage.setItem(CONNECT_SKIP_KEY, "1");
+    } catch {}
+    // Stop trying with a password that never worked.
+    if (!obsCfg.ok) updateObs({ enabled: false });
+    flash("You can connect OBS any time from the OBS button up top.");
+  };
+
+  // Connecting OBS, in the open rather than behind a button: a card the
+  // first time (until it works or they say not now), and a line at the top
+  // when one that worked before stops.
+  const desktop = !isPhone && Boolean(state) && !dead;
+  const autoConnecting = obsCfg.enabled && obsStatus !== "error" && obsProblem === null && !connectAsked.current;
+  const obsCard = desktop && obsStatus !== "connected" && !obsCfg.ok && !connectSkipped && !showWelcome && !autoConnecting;
+  const obsTrouble =
+    desktop &&
+    obsStatus !== "connected" &&
+    obsCfg.ok &&
+    obsCfg.enabled &&
+    !troubleHidden &&
+    (troubleOpen || (obsProblem !== null && (obsProblem === "password" || now - (obsProblemSince.current ?? now) > OBS_GRACE_MS)));
+  const obsStatusLine =
+    obsStatus === "connected"
+      ? "Connected."
+      : obsProblem === "password"
+        ? obsCfg.password
+          ? "That password didn't work. Copy it again from Show Connect Info and paste it here."
+          : "OBS needs its password. Copy it from Show Connect Info and paste it here."
+        : obsProblem === "lost"
+          ? "Lost the connection to OBS. Trying again."
+          : obsProblem === "unreachable"
+            ? `Can't reach OBS yet. Check the WebSocket server is on and the port is ${obsCfg.port}. Trying again.`
+            : obsStatus === "connecting"
+              ? "Connecting…"
+              : null;
+
+  /** The steps, the password and Connect. Shown in the card, the welcome, the trouble line and the OBS sheet. */
+  const obsForm = (extra?: ReactNode, inSheet = false) => {
+    if (sheetOpen && !inSheet) return null;
+    return (
+      <div className="ld-cform">
+        {obsStatus !== "connected" && (
+          <ol className="ld-steps">
+            <li>
+              In OBS, open <b>Tools</b>, then <b>WebSocket Server Settings</b>, and tick <b>Enable WebSocket server</b>.
+            </li>
+            <li>
+              Click <b>Show Connect Info</b> and copy the <b>Server Password</b>.
+            </li>
+            <li>Paste it here and press Connect.</li>
+          </ol>
+        )}
+        <div className="ld-cfields">
+          <label className="ld-field">
+            <span>Password</span>
+            <input
+              type="password"
+              value={draft.password}
+              placeholder={obsCfg.password && obsProblem !== "password" ? "Saved on this computer" : "Paste it here"}
+              onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
+              onFocus={(e) => e.currentTarget.select()}
+              onKeyDown={(e) => e.key === "Enter" && connect()}
+              autoComplete="off"
+            />
+          </label>
+          <label className="ld-field ld-field-small">
+            <span>Port</span>
+            <input
+              inputMode="numeric"
+              value={draft.port}
+              onChange={(e) => setDraft((d) => ({ ...d, port: e.target.value.replace(/\D/g, "") }))}
+              onKeyDown={(e) => e.key === "Enter" && connect()}
+            />
+          </label>
+        </div>
+        <div className="ld-row">
+          <button type="button" className="ld-btn" onClick={connect}>
+            {obsStatus === "connected" ? "Reconnect" : "Connect"}
+          </button>
+          {extra}
+        </div>
+        {obsStatusLine && (
+          <p className="ld-status" data-state={obsStatus === "connected" ? "connected" : obsProblem ? "error" : "connecting"} role="status">
+            {obsStatusLine}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  if (dead) {
+    return (
+      <div className="ld">
+        <DeadLink />
+      </div>
+    );
+  }
 
   return (
     <div className="ld">
@@ -1212,6 +1359,35 @@ export default function LiveDock({
         <p className="ld-toast" role="status">
           {toast}
         </p>
+      )}
+
+      {obsTrouble && (
+        <section className="ld-trouble" aria-label="OBS isn't connected">
+          <div className="ld-trouble-h">
+            <p>{obsProblem === "password" ? "OBS says the password is wrong" : obsProblem ? "Can't reach OBS" : "Connecting to OBS…"}</p>
+            <button type="button" className="ld-link" onClick={() => setTroubleOpen((o) => !o)}>
+              {troubleOpen ? "Close" : obsProblem === "password" ? "Fix it" : "Help"}
+            </button>
+            {!troubleOpen && (
+              <button type="button" className="ld-x" onClick={() => setTroubleHidden(true)} aria-label="Hide this" title="Hide">
+                <X size={14} strokeWidth={2.2} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          {troubleOpen && obsForm()}
+        </section>
+      )}
+
+      {obsCard && (
+        <section className="ld-connect" aria-label="Connect OBS">
+          <p className="ld-connect-t">Connect OBS</p>
+          <p className="ld-connect-s">So it can tell when your mic is muted or you&apos;ve gone quiet.</p>
+          {obsForm(
+            <button type="button" className="ld-link" onClick={skipConnect}>
+              Not now
+            </button>
+          )}
+        </section>
       )}
 
       {showWelcome && (
@@ -1251,14 +1427,15 @@ export default function LiveDock({
                   <i aria-hidden="true" />
                   <span>Added to OBS</span>
                 </li>
-                <li data-done={obsStatus === "connected" ? "1" : "0"}>
+                <li data-done={obsStatus === "connected" ? "1" : "0"} data-open={welcomeConnect && obsStatus !== "connected" ? "1" : "0"}>
                   <i aria-hidden="true" />
                   <span>Connect OBS so it knows when your mic goes quiet</span>
-                  {obsStatus !== "connected" && (
-                    <button type="button" onClick={() => setSheetOpen(true)}>
+                  {obsStatus !== "connected" && !welcomeConnect && (
+                    <button type="button" onClick={() => setWelcomeConnect(true)}>
                       Connect
                     </button>
                   )}
+                  {welcomeConnect && obsStatus !== "connected" && obsForm()}
                 </li>
                 <li data-done="0">
                   <i aria-hidden="true" />
@@ -1361,7 +1538,7 @@ export default function LiveDock({
               </li>
             </ul>
           )}
-          {obsStatus !== "connected" && !showWelcome && (
+          {obsStatus !== "connected" && !obsCfg.enabled && !showWelcome && !obsCard && (
             <p className="ld-hint">
               <button type="button" onClick={() => setSheetOpen(true)}>
                 Connect OBS
@@ -1612,41 +1789,14 @@ export default function LiveDock({
             <p className="ld-help">
               Lets LevlCast hear when your mic goes quiet and see which scene is on. It all stays on this computer.
             </p>
-            <ol className="ld-steps">
-              <li>
-                In OBS, open <b>Tools</b>, then <b>WebSocket Server Settings</b>, and tick <b>Enable WebSocket server</b>.
-              </li>
-              <li>
-                Click <b>Show Connect Info</b> and copy the <b>Server Password</b>.
-              </li>
-              <li>Paste it here and press Connect.</li>
-            </ol>
-            <label className="ld-field">
-              <span>Password</span>
-              <input
-                type="password"
-                value={draft.password}
-                onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
-                autoComplete="off"
-              />
-            </label>
-            <label className="ld-field ld-field-small">
-              <span>Port</span>
-              <input inputMode="numeric" value={draft.port} onChange={(e) => setDraft((d) => ({ ...d, port: e.target.value.replace(/\D/g, "") }))} />
-            </label>
-            <div className="ld-row">
-              <button type="button" className="ld-btn" onClick={connect}>
-                {obsCfg.enabled ? "Reconnect" : "Connect"}
-              </button>
-              {obsCfg.enabled && (
+            {obsForm(
+              obsCfg.enabled && (
                 <button type="button" className="ld-link" onClick={() => updateObs({ enabled: false })}>
                   Disconnect
                 </button>
-              )}
-            </div>
-            <p className="ld-status" data-state={obsStatus}>
-              {obsStatus === "connected" ? "Connected." : obsStatus === "connecting" ? "Connecting…" : obsDetail ?? "Not connected."}
-            </p>
+              ),
+              true
+            )}
 
             {obsStatus === "connected" && micInputs.length > 0 && (
               <label className="ld-field">

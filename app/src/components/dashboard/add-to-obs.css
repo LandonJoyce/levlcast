@@ -73,6 +73,8 @@
   padding: 8px 10px;
 }
 .dash .ato-done { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink); font-size: 14px; }
+.dash .ato-note { margin: 6px 0 0; color: var(--ink-3); font-size: 13px; }
+.dash .ato-note b { color: var(--ink-2); }
 .dash .ato-err { margin: 10px 0 0; color: var(--danger); font-size: 13px; }
 .dash .ato-more { display: inline-block; margin-top: 10px; color: var(--ink-2); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 .dash .ato-more:hover { color: var(--ink); }

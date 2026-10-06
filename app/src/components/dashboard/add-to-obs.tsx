@@ -118,6 +118,9 @@ export function AddToObsModal({ open, onClose, pro = false }: { open: boolean; o
         </ol>
 
         <p className="ato-done">That&apos;s it. The panel opens in OBS, and you can drag it wherever you like.</p>
+        <p className="ato-note">
+          If it ever goes missing, click <b>Docks</b> in OBS and pick <b>LevlCast</b>. Your link stays the same.
+        </p>
         <LivePlans pro={pro} />
         {error && <p className="ato-err">{error}</p>}
         <Link href="/dashboard/live" className="ato-more" onClick={onClose}>

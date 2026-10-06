@@ -90,6 +90,10 @@ export default async function LivePage() {
           </li>
         </ol>
         <p className="lv-note">
+          Panel gone after a restart? Click <b>Docks</b> in OBS and pick <b>LevlCast</b>. Your link stays the same, so you don&apos;t
+          need a new one.
+        </p>
+        <p className="lv-note">
           The panel is part of OBS, not your stream, so viewers never see it. If you capture your whole screen, keep the panel
           on another monitor.
         </p>

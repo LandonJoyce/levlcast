@@ -283,13 +283,11 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-welcome-t { margin: 2px 0 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
 .ld-welcome-s { margin: 0; color: var(--ink-2); font-size: 13.5px; }
 .ld-checks { list-style: none; margin: 6px 0 4px; padding: 0; display: grid; gap: 2px; }
-.ld-checks li { display: flex; align-items: center; gap: 10px; min-height: 34px; font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--line); }
-.ld-checks li span { flex: 1; min-width: 0; }
-.ld-checks i { flex-shrink: 0; width: 16px; height: 16px; border: 1.5px solid var(--line-2); border-radius: 50%; position: relative; }
-.ld-checks li[data-done="1"] { color: var(--ink); }
-.ld-checks li[data-done="1"] i { background: var(--good); border-color: var(--good); }
-.ld-checks li[data-done="1"] i::after { content: ""; position: absolute; left: 4.5px; top: 1.5px; width: 4px; height: 8px; border: solid rgb(16, 13, 14); border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.ld-checks button { flex-shrink: 0; font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px 11px; cursor: pointer; }
+.ld-checks > li { display: flex; align-items: center; gap: 10px; min-height: 34px; font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--line); }
+.ld-checks > li > i { flex-shrink: 0; width: 16px; height: 16px; border: 1.5px solid var(--line-2); border-radius: 50%; position: relative; }
+.ld-checks > li[data-done="1"] { color: var(--ink); }
+.ld-checks > li[data-done="1"] > i { background: var(--good); border-color: var(--good); }
+.ld-checks > li[data-done="1"] > i::after { content: ""; position: absolute; left: 4.5px; top: 1.5px; width: 4px; height: 8px; border: solid rgb(16, 13, 14); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .ld-welcome .ld-btn { justify-self: start; }
 
 /* Settings */
@@ -317,3 +315,29 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 @media (max-width: 400px) { .ld-who { display: none; } }
 .ld-set-list { list-style: disc; }
 .ld-set-list li::marker { color: var(--ink-3); }
+
+/* Connecting OBS, right in the panel: a card the first time, a line when it stops working */
+.ld-checks > li > span { flex: 1; min-width: 0; }
+.ld-checks > li > button { flex-shrink: 0; font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px 11px; cursor: pointer; }
+.ld-checks > li[data-open="1"] { flex-wrap: wrap; padding-bottom: 12px; }
+.ld-checks > li[data-open="1"] .ld-cform { flex-basis: 100%; margin-top: 2px; }
+.ld-connect { display: grid; gap: 8px; padding: 14px 14px 15px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; }
+.ld-connect-t { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.ld-connect-s { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.ld-cform { display: grid; gap: 10px; }
+.ld-cfields { display: flex; align-items: end; gap: 8px; }
+.ld-cfields .ld-field:first-child { flex: 1; min-width: 0; }
+.ld-cfields .ld-field-small { width: 74px; flex-shrink: 0; }
+.ld-cfields .ld-field-small input { max-width: none; width: 100%; }
+.ld-field input::placeholder { color: var(--ink-3); }
+.ld-trouble { position: relative; display: grid; gap: 10px; padding: 9px 12px 10px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--nudge); border-radius: 10px; }
+.ld-trouble-h { display: flex; align-items: center; gap: 12px; min-height: 26px; padding-right: 26px; }
+.ld-trouble-h p { flex: 1; min-width: 0; margin: 0; font-weight: 700; color: var(--ink); }
+.ld-trouble .ld-x { top: 8px; }
+.ld-trouble:has(.ld-cform) .ld-trouble-h { padding-right: 0; }
+
+/* A link that was replaced */
+.ld-dead { display: grid; gap: 8px; margin-top: 4px; padding: 16px 15px 15px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; }
+.ld-dead-t { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.ld-dead-s { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.ld-dead-s b { color: var(--ink); }
