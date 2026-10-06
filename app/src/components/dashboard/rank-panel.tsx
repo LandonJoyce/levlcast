@@ -10,7 +10,7 @@ import { rankFromPoints, TIERS, TIER_HEX, DIVISION_SIZE, type Rank } from "@/lib
  * opening the page. Under reduced motion it just shows where you are.
  */
 
-function nextDivision(rank: Rank): string | null {
+export function nextDivision(rank: Rank): string | null {
   const i = TIERS.findIndex((t) => t.name === rank.tier);
   if (rank.division === null) return TIERS[i + 1]?.name ?? null;
   if (rank.division > 1) return `${rank.tier} ${["", "I", "II", "III", "IV"][rank.division - 1]}`;

@@ -1804,3 +1804,10 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
   .dash .vb-span { min-width: 14px; }
   .dash .vb-hint { display: none; }
 }
+
+/* Streams: the Live panel's stream at the top (?report=) */
+.dash .sl-focus { margin: 6px 0 18px; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: var(--r-lg); }
+.dash .sl-focus .sl { margin: 0; }
+.dash .sl-focus-k { margin: 0 0 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.dash .sl-focus-t { margin: 0; font-weight: 700; color: var(--ink); }
+.dash .sl-focus-s { margin: 4px 0 12px; color: var(--ink-2); font-size: 14px; }

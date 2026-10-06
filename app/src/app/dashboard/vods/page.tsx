@@ -13,6 +13,7 @@ import { isLocked, isSealed } from "@/lib/sealed";
 import { loadAnalysisProgress } from "@/lib/analysis-progress";
 import { FREE_COACHED_SECONDS } from "@/lib/limits";
 import { AnalysisBar } from "@/components/dashboard/analysis-bar";
+import { FindStream } from "@/components/dashboard/find-stream";
 
 /*
  * Every stream synced from Twitch, newest first, one row each. This was a
@@ -64,8 +65,10 @@ const TABS = [
   ["pending", "Not analyzed"],
 ] as const;
 
-export default async function StreamsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function StreamsPage({ searchParams }: { searchParams: Promise<{ tab?: string; report?: string }> }) {
   const params = await searchParams;
+  // The Live panel's "Get my report" lands here with the stream's VOD id.
+  const focusId = typeof params.report === "string" && /^\d{1,20}$/.test(params.report) ? params.report : null;
   const tab = TABS.some(([k]) => k === params.tab) ? (params.tab as (typeof TABS)[number][0]) : "all";
 
   const supabase = await createClient();
@@ -77,7 +80,7 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
   const [{ data: vods }, { data: clips }, usage] = await Promise.all([
     supabase
       .from("vods")
-      .select("id, title, duration_seconds, status, stream_date, created_at, updated_at, coach_report, thumbnail_url, failed_reason, rank_delta, rank_points_after, result_opened_at, sealed_extra_week")
+      .select("id, title, duration_seconds, status, stream_date, created_at, updated_at, coach_report, thumbnail_url, failed_reason, rank_delta, rank_points_after, result_opened_at, sealed_extra_week, twitch_vod_id")
       .eq("user_id", user.id)
       .order("stream_date", { ascending: false }),
     supabase.from("clips").select("vod_id").eq("user_id", user.id).eq("status", "ready"),
@@ -104,54 +107,9 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
     return true;
   });
 
-  return (
-    <>
-      <VodStatusPoller hasProcessing={hasProcessing} />
+  const focus = focusId ? list.find((v) => String(v.twitch_vod_id ?? "") === focusId) ?? null : null;
 
-      <div className="hm-hello">
-        <div>
-          <h1 className="page-title">Streams</h1>
-          {list.length > 0 && (
-            <p className="sl-sum">
-              {analyzed} analyzed · {notAnalyzed} not analyzed
-            </p>
-          )}
-        </div>
-        {list.length > 0 && <SyncButton />}
-      </div>
-
-      {/* Only worth asking while there's a report on the way. */}
-      {hasProcessing && <NotificationPrompt />}
-
-      {list.length === 0 ? (
-        <section className="sl-empty">
-          <p className="sl-empty-title">Pull in your streams to get started.</p>
-          <ol>
-            <li>Sync your last 20 Twitch streams.</li>
-            <li>Press Analyze on one.</li>
-            <li>Get your report, your rank and your clips.</li>
-          </ol>
-          <SyncButton primary />
-        </section>
-      ) : (
-        <>
-          <nav className="sl-tabs" aria-label="Filter streams">
-            {TABS.map(([k, label]) => (
-              <Link
-                key={k}
-                href={`/dashboard/vods${k === "all" ? "" : `?tab=${k}`}`}
-                aria-current={tab === k ? "page" : undefined}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-
-          {shown.length === 0 ? (
-            <p className="sl-none">Nothing here.</p>
-          ) : (
-            <ul className="sl">
-              {shown.map((v) => {
+  function renderRow(v: (typeof list)[number]) {
                 const ready = v.status === "ready";
                 const sealed = ready && isSealed(v);
                 const locked = sealed && isLocked(v, usage.plan === "pro");
@@ -255,7 +213,66 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
                     </div>
                   </li>
                 );
-              })}
+  }
+
+  return (
+    <>
+      <VodStatusPoller hasProcessing={hasProcessing} />
+
+      <div className="hm-hello">
+        <div>
+          <h1 className="page-title">Streams</h1>
+          {list.length > 0 && (
+            <p className="sl-sum">
+              {analyzed} analyzed · {notAnalyzed} not analyzed
+            </p>
+          )}
+        </div>
+        {list.length > 0 && <SyncButton />}
+      </div>
+
+      {/* Only worth asking while there's a report on the way. */}
+      {hasProcessing && <NotificationPrompt />}
+
+      {focusId &&
+        (focus ? (
+          <section className="sl-focus" aria-label="Your last stream">
+            <p className="sl-focus-k">Your last stream</p>
+            <ul className="sl">{renderRow(focus)}</ul>
+          </section>
+        ) : (
+          <FindStream twitchVodId={focusId} />
+        ))}
+
+      {list.length === 0 ? (
+        <section className="sl-empty">
+          <p className="sl-empty-title">Pull in your streams to get started.</p>
+          <ol>
+            <li>Sync your last 20 Twitch streams.</li>
+            <li>Press Analyze on one.</li>
+            <li>Get your report, your rank and your clips.</li>
+          </ol>
+          <SyncButton primary />
+        </section>
+      ) : (
+        <>
+          <nav className="sl-tabs" aria-label="Filter streams">
+            {TABS.map(([k, label]) => (
+              <Link
+                key={k}
+                href={`/dashboard/vods${k === "all" ? "" : `?tab=${k}`}`}
+                aria-current={tab === k ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+
+          {shown.length === 0 ? (
+            <p className="sl-none">Nothing here.</p>
+          ) : (
+            <ul className="sl">
+              {shown.map(renderRow)}
             </ul>
           )}
         </>

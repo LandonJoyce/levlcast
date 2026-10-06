@@ -54,6 +54,8 @@ export interface DockOwner {
   login: string;
   displayName: string;
   pro: boolean;
+  /** LevlCast rank points, or null before the first report places them. */
+  rankPoints: number | null;
 }
 
 export interface LiveSession {
@@ -79,6 +81,9 @@ export interface LiveState {
   /** Pro is coached all stream; free for the first freeCoachMinutes. */
   pro: boolean;
   freeCoachMinutes: number;
+  /** Their LevlCast rank points (null until placed), and what the latest opened result did to them. */
+  rankPoints: number | null;
+  lastDelta: number | null;
   /** The live session, or the last one when offline. */
   session: LiveSession | null;
   serverTime: string;
@@ -132,7 +137,7 @@ export async function ownerOfDock(token: string): Promise<DockOwner | null> {
   if (!dock?.user_id) return null;
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, twitch_id, twitch_login, twitch_display_name, plan, subscription_expires_at")
+    .select("id, twitch_id, twitch_login, twitch_display_name, plan, subscription_expires_at, rank_points")
     .eq("id", dock.user_id)
     .maybeSingle();
   if (!profile?.twitch_id || !profile.twitch_login) return null;
@@ -142,6 +147,7 @@ export async function ownerOfDock(token: string): Promise<DockOwner | null> {
     login: String(profile.twitch_login),
     displayName: String(profile.twitch_display_name || profile.twitch_login),
     pro: hasPaidPlan(profile as { plan?: string | null; subscription_expires_at?: string | null }),
+    rankPoints: typeof profile.rank_points === "number" ? profile.rank_points : null,
   };
 }
 
@@ -226,6 +232,8 @@ export async function pollLive(owner: DockOwner, opts: { panel?: boolean } = {})
     channel: { login: owner.login, displayName: owner.displayName },
     pro: owner.pro,
     freeCoachMinutes: FREE_COACH_MINUTES,
+    rankPoints: owner.rankPoints,
+    lastDelta: await lastOpenedDelta(admin, owner.userId),
     serverTime: new Date().toISOString(),
   };
   const state: LiveState = stream
@@ -346,7 +354,7 @@ async function closeAndSummarize(admin: Admin, owner: DockOwner): Promise<LiveSe
     .from("live_sessions")
     .select("*")
     .eq("user_id", owner.userId)
-    .order("started_at", { ascending: false })
+    .order("last_seen_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!last) return null;
@@ -366,6 +374,21 @@ async function closeAndSummarize(admin: Admin, owner: DockOwner): Promise<LiveSe
     followersNow: (last.followers_end as number | null) ?? null,
     panelSeenAt: (last.panel_seen_at as string | null) ?? null,
   };
+}
+
+/** What their latest opened report did to their rank, for the +34 next to it. Sealed ones stay hidden. */
+async function lastOpenedDelta(admin: Admin, userId: string): Promise<number | null> {
+  const { data } = await admin
+    .from("vods")
+    .select("rank_delta, rank_points_after, result_opened_at")
+    .eq("user_id", userId)
+    .eq("status", "ready")
+    .order("analyzed_at", { ascending: false })
+    .limit(1);
+  const v = ((data ?? [])[0] ?? null) as { rank_delta: number | null; rank_points_after: number | null; result_opened_at: string | null } | null;
+  if (!v || typeof v.rank_delta !== "number") return null;
+  if (v.rank_points_after != null && !v.result_opened_at) return null;
+  return v.rank_delta;
 }
 
 async function sessionByStream(admin: Admin, userId: string, streamId: string) {
@@ -760,4 +783,100 @@ export async function spendSpokenChars(owner: DockOwner, chars: number): Promise
   if (spent + chars > SPOKEN_CHARS_PER_STREAM) return false;
   await admin.from("live_sessions").update({ tts_chars: spent + chars }).eq("id", session.id);
   return true;
+}
+
+// ── The last stream's report, for the panel's end of stream screen ──────
+
+export interface StreamReport {
+  /** The stream the panel last saw, or null if it never saw one. */
+  stream: null | { id: string; title: string | null; endedAt: string | null; live: boolean };
+  /** Its VOD on Twitch, once Twitch has saved it. */
+  vod: null | { twitchId: string; title: string; durationSeconds: number | null };
+  /** Its LevlCast report, once one has been started. */
+  report: null | {
+    id: string;
+    status: string;
+    /** Ready but not opened yet: the result is still a surprise. */
+    sealed: boolean;
+    delta: number | null;
+    pointsAfter: number | null;
+  };
+}
+
+/** Twitch's "3h2m10s" as seconds. */
+function twitchDuration(s: unknown): number | null {
+  const m = String(s ?? "").match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  if (!m || !m[0]) return null;
+  return Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
+}
+
+/** A stream's VOD, looked up once it exists and remembered, misses for less time. */
+const vodCache = new Map<string, { at: number; vod: StreamReport["vod"] }>();
+
+async function vodForStream(twitchId: string, streamId: string): Promise<StreamReport["vod"]> {
+  const hit = vodCache.get(streamId);
+  if (hit && Date.now() - hit.at < (hit.vod ? 60 * 60_000 : 45_000)) return hit.vod;
+  let vod: StreamReport["vod"] = null;
+  try {
+    const res = await helix(`videos?user_id=${encodeURIComponent(twitchId)}&type=archive&first=10`);
+    if (res.ok) {
+      const rows = ((await res.json()) as { data?: Array<Record<string, unknown>> }).data ?? [];
+      const row = rows.find((r) => String(r.stream_id ?? "") === streamId);
+      if (row) vod = { twitchId: String(row.id), title: String(row.title ?? ""), durationSeconds: twitchDuration(row.duration) };
+    }
+  } catch {
+    // Not found this time; asked again shortly.
+  }
+  vodCache.set(streamId, { at: Date.now(), vod });
+  return vod;
+}
+
+/**
+ * Where the last stream's report is at: no VOD yet, ready to start, being
+ * made, sealed, or opened. Read-only: starting one happens on the
+ * dashboard, which knows the plan's limits.
+ */
+export async function streamReport(owner: DockOwner): Promise<StreamReport> {
+  const admin = createAdminClient();
+  const { data: last } = await admin
+    .from("live_sessions")
+    .select("twitch_stream_id, title, ended_at")
+    .eq("user_id", owner.userId)
+    .order("last_seen_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!last) return { stream: null, vod: null, report: null };
+  const stream = {
+    id: String(last.twitch_stream_id),
+    title: (last.title as string | null) ?? null,
+    endedAt: (last.ended_at as string | null) ?? null,
+    live: !last.ended_at,
+  };
+  if (stream.live) return { stream, vod: null, report: null };
+
+  const vod = await vodForStream(owner.twitchId, stream.id);
+  if (!vod) return { stream, vod: null, report: null };
+  const { data: row } = await admin
+    .from("vods")
+    .select("id, status, rank_delta, rank_points_after, result_opened_at")
+    .eq("user_id", owner.userId)
+    .eq("twitch_vod_id", vod.twitchId)
+    .limit(1)
+    .maybeSingle();
+  if (!row) return { stream, vod, report: null };
+  const ready = row.status === "ready";
+  const sealed = ready && !row.result_opened_at && row.rank_points_after != null;
+  // A sealed result's points stay on the server until it's opened.
+  const shown = ready && !sealed;
+  return {
+    stream,
+    vod,
+    report: {
+      id: String(row.id),
+      status: String(row.status),
+      sealed,
+      delta: shown ? ((row.rank_delta as number | null) ?? null) : null,
+      pointsAfter: shown ? ((row.rank_points_after as number | null) ?? null) : null,
+    },
+  };
 }

@@ -6,6 +6,8 @@ import { ObsLink, type ObsInput, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat } from "@/lib/live/chat";
 import { Voice, deviceVoices, loadVoicePick, saveVoicePick, voiceName, voiceNote, type VoicePick } from "@/lib/live/voice";
 import { LEVL_VOICES, SAMPLE_LINES } from "@/lib/live/voices";
+import { DIVISION_SIZE, TIER_HEX, rankFromPoints } from "@/lib/rank";
+import { nextDivision } from "@/components/dashboard/rank-panel";
 
 /**
  * The Live dock: what a streamer keeps open inside OBS while they stream.
@@ -70,8 +72,153 @@ interface LiveState {
   channel: { login: string; displayName: string };
   pro: boolean;
   freeCoachMinutes: number;
+  rankPoints: number | null;
+  lastDelta: number | null;
   session: Session | null;
   serverTime: string;
+}
+
+/** The last stream's report, from /api/live/<token>/report. */
+interface StreamReport {
+  stream: null | { id: string; title: string | null; endedAt: string | null; live: boolean };
+  vod: null | { twitchId: string; title: string; durationSeconds: number | null };
+  report: null | { id: string; status: string; sealed: boolean; delta: number | null; pointsAfter: number | null };
+}
+
+/** How long after a stream the panel still shows its end screen. */
+const END_SCREEN_MS = 12 * 60 * 60_000;
+
+/** Their LevlCast rank, the same one as on the dashboard. */
+function RankRow({ points, delta }: { points: number | null; delta: number | null }) {
+  if (points === null) return <p className="ld-rank-none">Unranked. Your first report puts you on the ladder.</p>;
+  const rank = rankFromPoints(points);
+  const next = nextDivision(rank);
+  const toNext = rank.division === null ? null : DIVISION_SIZE - (points % DIVISION_SIZE);
+  const gain = delta !== null && Math.abs(delta) < 200 ? delta : 0;
+  return (
+    <div className="ld-rank" style={{ ["--tier" as string]: TIER_HEX[rank.tier] ?? "#fff" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/ranks/${rank.tier.toLowerCase()}.png`} width={40} height={40} alt="" />
+      <div className="ld-rank-b">
+        <p className="ld-rank-t">
+          <b>{rank.label}</b>
+          <span>{points.toLocaleString("en-US")} points</span>
+          {gain !== 0 && (
+            <span className="ld-rank-d" data-sign={gain > 0 ? "up" : "down"}>
+              {gain > 0 ? `+${gain}` : `−${Math.abs(gain)}`}
+            </span>
+          )}
+        </p>
+        <div className="ld-rank-bar" aria-hidden="true">
+          <i style={{ width: `${rank.progress}%` }} />
+        </div>
+        <p className="ld-rank-n">{next && toNext !== null ? `${toNext} to ${next}` : next ? `${rank.progress}% of the way to ${next}` : "Top of the ladder"}</p>
+      </div>
+    </div>
+  );
+}
+
+/** A number that counts up when it first shows. Still under reduced motion. */
+function CountUp({ to, decimals = 0, prefix = "" }: { to: number; decimals?: number; prefix?: string }) {
+  const [v, setV] = useState(to);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || to === 0) return setV(to);
+    let raf = 0;
+    const t0 = performance.now() + 200;
+    const tick = (t: number) => {
+      const k = Math.min(1, Math.max(0, (t - t0) / 900));
+      setV(to * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    setV(0);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return (
+    <>
+      {prefix}
+      {v.toFixed(decimals)}
+    </>
+  );
+}
+
+/**
+ * The last stream's report: one click to get it, then how it's coming
+ * along, then the result. Links open in the streamer's own browser (OBS
+ * sends a dock's new-tab links there), where they're signed in.
+ */
+function ReportCard({ data, origin }: { data: StreamReport | null; origin: string }) {
+  if (!data || !data.stream || data.stream.live) return null;
+  const r = data.report;
+  const open = (href: string, label: string) => (
+    <a className="ld-report-go" href={href} target="_blank" rel="noopener noreferrer">
+      {label}
+    </a>
+  );
+  if (!data.vod) {
+    return (
+      <div className="ld-report">
+        <p className="ld-k">Your report</p>
+        <p className="ld-report-t">Twitch is saving your stream</p>
+        <p className="ld-report-s">It takes a few minutes after you end. Your report button shows up here when it&apos;s ready.</p>
+      </div>
+    );
+  }
+  const getIt = `${origin}/dashboard/vods?report=${data.vod.twitchId}`;
+  if (!r || r.status === "pending" || r.status === "failed") {
+    return (
+      <div className="ld-report">
+        <p className="ld-k">Your report</p>
+        <p className="ld-report-t">{r?.status === "failed" ? "The last try didn't finish" : "See how this one went"}</p>
+        <p className="ld-report-s">Your rank moves, your clips get found, and you get the one thing to fix next time.</p>
+        {open(getIt, r?.status === "failed" ? "Try again" : "Get my report")}
+      </div>
+    );
+  }
+  if (r.status === "transcribing" || r.status === "analyzing") {
+    return (
+      <div className="ld-report">
+        <p className="ld-k">Your report</p>
+        <p className="ld-report-t">Making your report</p>
+        <div className="ld-report-bar" aria-hidden="true">
+          <i />
+        </div>
+        <p className="ld-report-s">Usually about 5 minutes. This updates by itself.</p>
+      </div>
+    );
+  }
+  const result = `${origin}/dashboard/vods/${r.id}`;
+  if (r.sealed) {
+    return (
+      <div className="ld-report" data-state="sealed">
+        <p className="ld-k">Your report</p>
+        <p className="ld-report-t">Your result is in</p>
+        <p className="ld-report-s">Win or loss? Call it, then open it.</p>
+        {open(result, "Open my result")}
+      </div>
+    );
+  }
+  const d = r.delta;
+  const placed = d !== null && Math.abs(d) >= 200;
+  const after = r.pointsAfter !== null ? rankFromPoints(r.pointsAfter).label : null;
+  const before = r.pointsAfter !== null && d !== null && !placed ? rankFromPoints(r.pointsAfter - d).label : null;
+  const moved = before !== null && after !== null && before !== after ? (d! > 0 ? "up" : "down") : null;
+  return (
+    <div className="ld-report" data-state="done">
+      <p className="ld-k">Your report</p>
+      {d === null ? (
+        <p className="ld-report-t">Your report is ready</p>
+      ) : (
+        <p className="ld-report-res" data-r={placed ? "placed" : d >= 0 ? "win" : "loss"}>
+          {placed ? "Placed" : d >= 0 ? "Win" : "Loss"}
+          {!placed && <span>{d >= 0 ? `+${d}` : `−${Math.abs(d)}`}</span>}
+        </p>
+      )}
+      {moved === "up" && <p className="ld-report-up">Promoted</p>}
+      {after && <p className="ld-report-s">{moved === "down" ? `Dropped to ${after}.` : `You're ${after} now.`}</p>}
+      {open(result, "See the report")}
+    </div>
+  );
 }
 
 interface ObsConfig {
@@ -212,6 +359,9 @@ export default function LiveDock({
   const relayed = useRef(new Set<string>());
   const remoteAfter = useRef<string | null>(null);
   const remoteFirst = useRef(true);
+
+  // The last stream's report, for the end of stream screen.
+  const [report, setReport] = useState<StreamReport | null>(null);
 
   // The listening coach (Pro).
   const [coachStatus, setCoachStatus] = useState<CoachStatus | null>(null);
@@ -491,6 +641,31 @@ export default function LiveDock({
     };
   }, [voiceOn, live, coaching, token, speed, addServerCues]);
 
+  // Offline after a stream: check on its report now and then.
+  const lastSessionId = !live ? session?.id ?? null : null;
+  const reportWorking = report?.report?.status === "transcribing" || report?.report?.status === "analyzing";
+  useEffect(() => {
+    if (!lastSessionId) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/live/${token}/report`, { cache: "no-store" });
+        const json = await res.json();
+        if (alive && res.ok) setReport(json as StreamReport);
+      } catch {
+        // Next round.
+      } finally {
+        if (alive) timer = setTimeout(load, reportWorking ? 15_000 : 30_000);
+      }
+    };
+    void load();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [lastSessionId, token, reportWorking]);
+
   // Pro: the listening coach. Whichever device works out the nudges (the
   // OBS panel, or a phone on its own) asks the server to listen; any
   // screen open gets the tips.
@@ -687,6 +862,8 @@ export default function LiveDock({
 
       {!state && !pollError && <p className="ld-wait">Checking your stream…</p>}
 
+      {state && <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} />}
+
       {state && live && session && (
         <>
           {coaching ? (
@@ -814,7 +991,35 @@ export default function LiveDock({
         </>
       )}
 
-      {state && !live && (
+      {state && !live && session && session.endedAt && now - Date.parse(session.endedAt) < END_SCREEN_MS && (
+        <section className="ld-gg" aria-label="Your stream is over">
+          <p className="ld-gg-t">GG</p>
+          <p className="ld-gg-s">
+            Stream over &middot; {duration(Date.parse(session.endedAt) - Date.parse(session.startedAt))} &middot;{" "}
+            {new Date(session.startedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+          </p>
+          <div className="ld-stats">
+            <div>
+              <b>
+                <CountUp to={session.peak} />
+              </b>
+              <span>Peak</span>
+            </div>
+            <div>
+              <b>{session.avg === null ? "-" : <CountUp to={session.avg} decimals={session.avg < 10 ? 1 : 0} />}</b>
+              <span>Average</span>
+            </div>
+            <div>
+              <b>{followersGained === null ? "-" : <CountUp to={followersGained} prefix={followersGained >= 0 ? "+" : ""} />}</b>
+              <span>Followers</span>
+            </div>
+          </div>
+          {session.samples.length > 1 && <Spark samples={session.samples} />}
+          <ReportCard data={report} origin={typeof window === "undefined" ? "" : window.location.origin} />
+        </section>
+      )}
+
+      {state && !live && !(session && session.endedAt && now - Date.parse(session.endedAt) < END_SCREEN_MS) && (
         <section className="ld-off">
           <p className="ld-off-t">You&apos;re offline</p>
           <p className="ld-off-s">Go live and this fills in. Keep it open while you stream.</p>
@@ -839,6 +1044,7 @@ export default function LiveDock({
                 </div>
               </div>
               <Spark samples={session.samples} />
+              <ReportCard data={report} origin={typeof window === "undefined" ? "" : window.location.origin} />
             </div>
           ) : (
             <p className="ld-off-s">Your first stream with this open shows up here.</p>
