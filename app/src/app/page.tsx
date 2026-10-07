@@ -202,9 +202,6 @@ export default async function HomePage() {
           <p className="v3-sub">We coach you live inside OBS, and after every stream we tell you what to fix.</p>
           <div className="v3-live-cta">
             <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
-            <Link href="/analyze" className="v3-btn v3-btn-ghost">
-              Try a free report
-            </Link>
           </div>
           <p className="v3-fine">Free to start, no card needed. Only you can see the panel, never your viewers.</p>
         </div>
