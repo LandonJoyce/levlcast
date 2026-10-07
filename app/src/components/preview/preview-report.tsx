@@ -15,9 +15,8 @@
  * not stacked cards.
  */
 
-import { TIERS } from "@/lib/rank";
 import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
-import { FullReportButton } from "./full-report-button";
+import { FullReportButton, StickyFullReport } from "./full-report-button";
 import { WatchMoment } from "@/components/moment/watch-moment";
 
 export interface PreviewPayload {
@@ -133,8 +132,8 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
               that's the first 2 hours, and Pro is the rest. */}
           <p className="pr-cta-line">
             {total > FREE_COACHED_SECONDS
-              ? `Sign in with Twitch and get the first 2 hours coached free, your clips cut, and your rank on the ladder. Pro coaches all ${fmtDuration(total)}.`
-              : `Sign in with Twitch and get ${partial ? `the whole ${fmtDuration(total)}` : "the whole stream"} coached, your clips cut, and your rank on the ladder.`}
+              ? `Sign in with Twitch and we'll coach the first 2 hours free, plus give you a panel in OBS that coaches you while you're live. Pro coaches all ${fmtDuration(total)}.`
+              : `Sign in with Twitch and we'll coach ${partial ? `the whole ${fmtDuration(total)}` : "the whole stream"} free, plus give you a panel in OBS that coaches you while you're live.`}
           </p>
         </div>
         <div className="pr-cta-act">
@@ -225,26 +224,22 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
             ? `That was the first ${fmtDuration(analyzed)} of ${fmtDuration(total)}`
             : `That was the first ${fmtDuration(analyzed)}`}
         </p>
+        {/* Coaching first, rank last (2026-10-07): only about 1 in 4 people
+            who saw a free report pressed the button while this led with the
+            rank ladder, and the DMs that brought them talk about coaching. */}
         <div>
-          <ul className="pr-ladder" aria-label="The ladder, Iron to Grandmaster">
-            {TIERS.map((t) => (
-              <li key={t.name}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/ranks/${t.name.toLowerCase()}.png`} alt={t.name} width={384} height={384} />
-              </li>
-            ))}
-          </ul>
-          <h2 className="pr-more-h">Your first full report puts you on the ladder.</h2>
+          <h2 className="pr-more-h">Get coached on every stream.</h2>
           <ul className="pr-more-list">
-            <li>Every stream after it is a ranked game: beat your recent form and you climb</li>
             <li>The first 2 hours coached free, the whole stream on Pro, with the dead air timestamped</li>
+            <li>A panel in OBS that coaches you while you&apos;re live, free for the first 30 minutes</li>
             <li>Your best moments cut into clips with captions, ready to post</li>
-            <li>A weekly league against the streamers nearest your rank</li>
+            <li>A rank that climbs every time you beat your recent form</li>
           </ul>
           <FullReportButton vodId={preview.twitch_vod_id} />
           <p className="v3-fine">Sign in with Twitch. A report every week is free, no card.</p>
         </div>
       </section>
+      <StickyFullReport vodId={preview.twitch_vod_id} />
     </article>
   );
 }

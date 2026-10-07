@@ -227,10 +227,27 @@
 .v3 .pr-cta-act .v3-btn { margin-top: 0; }
 .v3 .pr-cta-act .v3-fine { margin: 0; }
 
-/* The ladder, above the closing pitch. */
-.v3 .pr-ladder { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 16px; padding: 0; list-style: none; }
-.v3 .pr-ladder li { width: 46px; height: 46px; }
-.v3 .pr-ladder img { width: 100%; height: 100%; object-fit: contain; }
+/* Phones: the sign-up button pinned while neither of the page's own is on
+   screen (StickyFullReport). Desktop always has one in reach. */
+.v3 .pr-stick { display: none; }
+@media (max-width: 700px) {
+  .v3 .pr-stick {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px var(--v3-pad) calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--ll-bg);
+    border-top: 1px solid var(--ll-line-soft);
+  }
+  .v3 .pr-stick p { margin: 0; font-size: 13px; color: var(--ll-fg-mute); }
+  .v3 .pr-stick .v3-btn { margin-top: 0; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .v3 .az-prog-track span { transition: none; }
