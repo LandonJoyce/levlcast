@@ -44,7 +44,7 @@ type Entry = Pick<Item, "key" | "author" | "comment" | "permalink" | "login" | "
 type Thread = { id: string; sub: string; title: string; url: string; created: number; comments: number; removed: boolean };
 
 /** Per sub: when the mods were asked, whether they said yes, when Post was last pressed. */
-type SubMarks = Record<string, { asked?: string; approved?: boolean; opened?: string }>;
+type SubMarks = Record<string, { asked?: string; approved?: boolean; declined?: boolean; opened?: string }>;
 
 const STORE_KEY = "lc-review-thread-v1";
 const SUBS_KEY = "lc-review-subs-v1";
@@ -330,6 +330,7 @@ export function ReviewThreadCard() {
           const latest = threads.find((t) => t.sub === s.name);
           const m = marks[s.name] ?? {};
           const canPost = s.status === "open" || (s.status === "ask" && m.approved);
+          const closed = s.status === "no" || (s.status === "ask" && m.declined);
           const justOpened = !!m.opened && !latest && Date.now() - Date.parse(m.opened) < 60 * 60 * 1000;
           return (
             <div
@@ -338,7 +339,7 @@ export function ReviewThreadCard() {
             >
               <div style={{ minWidth: 0 }}>
                 <div className="row gap-sm" style={{ alignItems: "baseline", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: s.status === "no" ? "var(--ink-3)" : "var(--ink)" }}>r/{s.name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: closed ? "var(--ink-3)" : "var(--ink)" }}>r/{s.name}</span>
                   <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
                     {s.members}
                   </span>
@@ -360,6 +361,8 @@ export function ReviewThreadCard() {
                     ? "Posted it? It shows up here within a few minutes."
                     : s.status === "ask" && m.approved
                       ? "The mods said yes."
+                      : s.status === "ask" && m.declined
+                        ? "The mods said no."
                       : s.status === "ask" && m.asked
                         ? `${s.rule} Asked the mods ${ago(Date.parse(m.asked) / 1000)}.`
                         : s.rule}
@@ -378,12 +381,17 @@ export function ReviewThreadCard() {
                     {latest ? "Post again" : "Post"}
                   </a>
                 )}
-                {s.status === "ask" && !m.approved && (
+                {s.status === "ask" && !m.approved && !m.declined && (
                   <>
                     {m.asked && (
-                      <button onClick={() => mark(s.name, { approved: true })} style={linkBtn}>
-                        They said yes
-                      </button>
+                      <>
+                        <button onClick={() => mark(s.name, { declined: true })} style={linkBtn}>
+                          They said no
+                        </button>
+                        <button onClick={() => mark(s.name, { approved: true })} style={linkBtn}>
+                          They said yes
+                        </button>
+                      </>
                     )}
                     <a
                       href={modmailUrl(s)}
