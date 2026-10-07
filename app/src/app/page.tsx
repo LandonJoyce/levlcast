@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import FaqAccordion from "@/components/FaqAccordion";
-import UrlPasteHero from "@/components/landing/UrlPasteHero";
 import ReferralLine from "@/components/landing/ReferralLine";
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
@@ -100,9 +99,10 @@ async function getSiteStats(): Promise<SiteStats | null> {
  *
  * The organising idea since 2026-10-06: the coach leads. The hero is the
  * panel that coaches you inside OBS while you're live (the user's call:
- * "this takes prio over ranking"), the next section is the report after
- * every stream, and the ranked game (match history, league, the ladder
- * drawn as a climb) follows further down. It was rank-first before, with a
+ * "this takes prio over ranking"), with the free report one button away
+ * (/analyze), and the ranked game (match history, league, the ladder
+ * drawn as a climb) follows further down. The report's own paste-box
+ * section was cut as a repeat of that button. It was rank-first before, with a
  * promotion screen as the hero (RankUp).
  *
  * It keeps the rules the current homepage wrote down, because they were
@@ -202,6 +202,9 @@ export default async function HomePage() {
           <p className="v3-sub">We coach you live inside OBS, and after every stream we tell you what to fix.</p>
           <div className="v3-live-cta">
             <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
+            <Link href="/analyze" className="v3-btn v3-btn-ghost">
+              Try a free report
+            </Link>
           </div>
           <p className="v3-fine">Free to start, no card needed. Only you can see the panel, never your viewers.</p>
         </div>
@@ -261,16 +264,6 @@ export default async function HomePage() {
             <b>Pro</b> coaches all of it, and listens to your stream to tell you what to do.
           </li>
         </ul>
-      </section>
-
-      {/* ── After the stream: the report, free on any stream ── */}
-      <section className="v3-sec" id="report">
-        <h2 className="v3-h2">After every stream, we tell you what to fix.</h2>
-        <p className="v3-shot-cap">Type your Twitch name to see it on your last stream.</p>
-        <div className="v3-paste">
-          <UrlPasteHero hint={null} />
-        </div>
-        <p className="v3-fine">Try it free on the first 12 minutes of any stream. No account needed.</p>
       </section>
 
       {/* ── Clips ── (moved up here when the example breakdown was cut) */}
@@ -452,9 +445,6 @@ export default async function HomePage() {
         </h2>
         <div className="v3-live-cta">
           <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
-          <Link href="/analyze" className="v3-btn v3-btn-ghost">
-            Try a free report
-          </Link>
         </div>
       </section>
 
