@@ -244,7 +244,10 @@ export default async function HomePage() {
       {/* ── The panel in OBS, and what each plan coaches ── */}
       <section className="v3-sec" id="obs">
         <h2 className="v3-h2">It sits right next to your stream.</h2>
-        <p className="v3-shot-cap">It coaches you while you&apos;re live, the way your report does after, and only you can see it.</p>
+        <p className="v3-shot-cap">
+          It coaches you while you&apos;re live, the way your report does after, and only you can see it. It uses your Twitch banner
+          and picture, so it looks like yours.
+        </p>
         <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

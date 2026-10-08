@@ -116,6 +116,22 @@ export default function ObsPage() {
         </section>
 
         <section className="v3-sec">
+          <h2 className="v3-h2">It looks like your channel.</h2>
+          <p className="v3-shot-cap">It uses your Twitch banner and picture, so the first thing you see when you open OBS is yours.</p>
+          <figure className="obs-yours">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/live/your-channel.webp"
+              alt="The panel before going live: the streamer's own Twitch banner and picture, Ready when you are, and their rank"
+              width={532}
+              height={380}
+              loading="lazy"
+              decoding="async"
+            />
+          </figure>
+        </section>
+
+        <section className="v3-sec">
           <h2 className="v3-h2">Set it up in about 3 minutes.</h2>
           <ol className="obs-steps">
             <li>
