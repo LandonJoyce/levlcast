@@ -148,7 +148,7 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
                         <div className="sl-failed">
                           <p>{(v.failed_reason as string | null) || "The analysis didn't finish."}</p>
                           <FeedbackButton
-                            label="Tell Landon what happened"
+                            label="Message support"
                             defaultCategory="failure"
                             trigger="vod-failed-card"
                             context={{
