@@ -43,6 +43,8 @@ interface ServerCue {
 interface CoachStatus {
   state: "listening" | "busy" | "offline" | "pro" | "cap" | "noaudio" | "error";
   heard: string | null;
+  /** Something worth doing that didn't clear the bar for a nudge: shown quietly in the card. */
+  idea?: { title: string; say: string; at: number } | null;
   usedHours?: number;
   capHours?: number;
 }
@@ -134,7 +136,7 @@ const FIX_VERDICT: Record<FixStatus, string> = {
 type SectionId = "rank" | "now" | "fix" | "coach" | "numbers" | "graph" | "status" | "earlier";
 
 const SECTIONS: Record<SectionId, string> = {
-  rank: "Rank and league",
+  rank: "Your channel and rank",
   now: "Nudges",
   fix: "Tonight's fix",
   coach: "Coach",
@@ -221,34 +223,94 @@ function ago(ms: number): string {
 const END_SCREEN_MS = 12 * 60 * 60_000;
 
 /** Their LevlCast rank, the same one as on the dashboard. */
-function RankRow({ points, delta, league }: { points: number | null; delta: number | null; league: LiveState["league"] }) {
-  if (points === null) return <p className="ld-rank-none">Unranked. Your first report puts you on the ladder.</p>;
-  const rank = rankFromPoints(points);
-  const next = nextDivision(rank);
-  const toNext = rank.division === null ? null : DIVISION_SIZE - (points % DIVISION_SIZE);
+/**
+ * Their channel and rank in one strip: their Twitch banner behind a frosted
+ * band with their picture, tier, league place and the bar. Offline (opening
+ * OBS) it's taller, shows more of the banner and says hello; live it's a
+ * slim glance.
+ */
+function RankRow({
+  points,
+  delta,
+  league,
+  look,
+  name,
+  live,
+}: {
+  points: number | null;
+  delta: number | null;
+  league: LiveState["league"];
+  look: LiveState["look"] | null;
+  name: string;
+  live: boolean;
+}) {
+  const rank = points === null ? null : rankFromPoints(points);
+  const next = rank ? nextDivision(rank) : null;
+  const toNext = rank && points !== null && rank.division !== null ? DIVISION_SIZE - (points % DIVISION_SIZE) : null;
   const gain = delta !== null && Math.abs(delta) < 200 ? delta : 0;
+  const banner = look?.banner ?? null;
   return (
-    <div className="ld-rank" style={{ ["--tier" as string]: TIER_HEX[rank.tier] ?? "#fff" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/ranks/${rank.tier.toLowerCase()}.png`} width={40} height={40} alt="" />
-      <div className="ld-rank-b">
-        <p className="ld-rank-t">
-          <b>{rank.label}</b>
-          <span>{points.toLocaleString("en-US")} points</span>
-          {gain !== 0 && (
-            <span className="ld-rank-d" data-sign={gain > 0 ? "up" : "down"}>
-              {gain > 0 ? `+${gain}` : `−${Math.abs(gain)}`}
-            </span>
+    <div
+      className="ld-head"
+      data-live={live ? "1" : "0"}
+      data-banner={banner ? "1" : "0"}
+      style={{ ["--tier" as string]: rank ? TIER_HEX[rank.tier] ?? "#fff" : "#fff", ...(banner && live ? { backgroundImage: `url("${banner}")` } : {}) }}
+    >
+      {/* Offline: the whole banner, then the band, with their picture over the edge like a profile header. */}
+      {banner && !live && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="ld-head-img" src={banner} alt="" />
+      )}
+      <div className="ld-head-in">
+        {look?.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="ld-head-a" src={look.avatar} alt="" width={44} height={44} />
+        ) : null}
+        <div className="ld-head-b">
+          {!live && <p className="ld-head-hi">Ready when you are, {name}.</p>}
+          {rank && points !== null ? (
+            <>
+              <p className="ld-head-t">
+                <b>{rank.label}</b>
+                {league && (
+                  <span>
+                    {ordinal(league.place)} of {league.size} in {league.name}
+                  </span>
+                )}
+                {live && gain !== 0 && (
+                  <span className="ld-rank-d" data-sign={gain > 0 ? "up" : "down"}>
+                    {gain > 0 ? `+${gain}` : `−${Math.abs(gain)}`}
+                  </span>
+                )}
+              </p>
+              <div className="ld-rank-bar" aria-hidden="true">
+                <i style={{ width: `${rank.progress}%` }} />
+              </div>
+              {!live && (
+                <p className="ld-head-n">
+                  {next && toNext !== null ? `${toNext} to ${next}` : next ? `${rank.progress}% of the way to ${next}` : "Top of the ladder"} ·{" "}
+                  {points.toLocaleString("en-US")} points
+                  {gain !== 0 && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      <span className="ld-rank-d" data-sign={gain > 0 ? "up" : "down"}>
+                        {gain > 0 ? `+${gain}` : `−${Math.abs(gain)}`}
+                      </span>
+                    </>
+                  )}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="ld-head-t">
+              <span>Unranked. Your first report puts you on the ladder.</span>
+            </p>
           )}
-        </p>
-        <div className="ld-rank-bar" aria-hidden="true">
-          <i style={{ width: `${rank.progress}%` }} />
         </div>
-        <p className="ld-rank-n">{next && toNext !== null ? `${toNext} to ${next}` : next ? `${rank.progress}% of the way to ${next}` : "Top of the ladder"}</p>
-        {league && (
-          <p className="ld-rank-l">
-            <b>{ordinal(league.place)}</b> of {league.size} in {league.name}
-          </p>
+        {rank && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="ld-head-e" src={`/ranks/${rank.tier.toLowerCase()}.png`} width={34} height={34} alt="" />
         )}
       </div>
     </div>
@@ -423,7 +485,8 @@ function duration(ms: number): string {
 }
 
 function Spark({ samples, height = 46 }: { samples: Array<[number, number]>; height?: number }) {
-  if (samples.length < 2) return <p className="ld-spark-empty">The viewer graph fills in as you stream.</p>;
+  // Nothing until there's a line to draw.
+  if (samples.length < 2) return null;
   const W = 300;
   const first = samples[0][0];
   const span = Math.max(1, samples[samples.length - 1][0] - first);
@@ -1003,7 +1066,14 @@ export default function LiveDock({
         const list = (json.cues ?? []) as ServerCue[];
         if (list.length) coachAfter.current = list[list.length - 1].createdAt;
         addServerCues(list, "s-");
-        setCoachStatus((c) => ({ state: json.state, heard: json.heard ?? c?.heard ?? null, usedHours: json.usedHours, capHours: json.capHours }));
+        setCoachStatus((c) => ({
+          state: json.state,
+          heard: json.heard ?? c?.heard ?? null,
+          // A new idea replaces the old one; a real tip clears it.
+          idea: json.idea ? { title: String(json.idea.title), say: String(json.idea.say), at: Date.now() } : json.cues?.length ? null : c?.idea ?? null,
+          usedHours: json.usedHours,
+          capHours: json.capHours,
+        }));
       } catch {
         setCoachStatus((c) => ({ ...(c ?? { heard: null }), state: "error" }));
       } finally {
@@ -1077,10 +1147,19 @@ export default function LiveDock({
   const current = rawCurrent && shownKind(rawCurrent) && !dismissed.has(cueKey(rawCurrent)) ? rawCurrent : null;
   const card = coaching ? nowCue(current, feed.filter((c) => shownKind(c) && !dismissed.has(cueKey(c))), now, speed) : null;
   const dismiss = (c: Cue) => setDismissed((d) => new Set(d).add(cueKey(c)));
-  const earlier = feed.filter(shownKind).slice(0, 5);
+  // Earlier is what already passed: the last two, never the one on the card right now. A state
+  // that's still true (quiet, muted, a long starting screen) also has a log line; that waits too.
+  const earlier = feed
+    .filter(shownKind)
+    .filter((c) => !card || (c.id !== card.id && !(SHOW_FOR[card.kind] === 0 && c.kind === card.kind && c.at >= card.at)))
+    .slice(0, 2);
   const coachTips = feed.filter((c) => c.kind === "coach");
   const latestTip = coachTips.find((c) => !dismissed.has(cueKey(c))) ?? null;
-  const olderTips = coachTips.filter((c) => c !== latestTip).slice(0, 3);
+  // A tip leads the Coach card for 10 minutes; after that it's history below.
+  const currentTip = latestTip && now - latestTip.at < 10 * 60_000 ? latestTip : null;
+  const olderTips = coachTips.filter((c) => c !== currentTip).slice(0, 2);
+  // The coach's smaller idea, while it's fresh and no real tip came after it.
+  const idea = coachStatus?.idea && now - coachStatus.idea.at < 6 * 60_000 && !(latestTip && latestTip.at > coachStatus.idea.at) ? coachStatus.idea : null;
 
   const updateLayout = (next: Layout) => {
     setLayout(next);
@@ -1145,15 +1224,14 @@ export default function LiveDock({
 
   const s = session;
   const sections: Record<SectionId, () => ReactNode> = {
-    rank: () => <RankRow points={state?.rankPoints ?? null} delta={state?.lastDelta ?? null} league={state?.league ?? null} />,
+    rank: () => <RankRow points={state?.rankPoints ?? null} delta={state?.lastDelta ?? null} league={state?.league ?? null} look={state?.look ?? null} name={displayName} live />,
     // Shown all stream, Free included: it's their own report, not a nudge.
+    // One quiet line tucked under the nudge, not a card of its own.
     fix: () =>
       fix ? (
-        <section className="ld-fix" aria-label="Tonight's fix">
-          <p className="ld-k">Tonight&apos;s fix</p>
-          <p className="ld-fix-t">{fix.line}</p>
-          <p className="ld-fix-s">From your last report. Your next report checks it.</p>
-        </section>
+        <p className="ld-fixline" title="From your last report. Your next report checks it.">
+          <span>Tonight&apos;s fix</span> {fix.line}
+        </p>
       ) : null,
     now: () =>
       coaching ? (
@@ -1233,21 +1311,22 @@ export default function LiveDock({
               {status}
             </span>
           </div>
-          {latestTip ? (
-            <div className="ld-tip" data-tone={latestTip.tone}>
-              <button type="button" className="ld-x" onClick={() => dismiss(latestTip)} aria-label="Dismiss this tip" title="Dismiss">
+          {/* A tip worth interrupting for; else the smaller idea it had, said quietly; else what it heard. */}
+          {currentTip ? (
+            <div className="ld-tip" data-tone={currentTip.tone}>
+              <button type="button" className="ld-x" onClick={() => dismiss(currentTip)} aria-label="Dismiss this tip" title="Dismiss">
                 <X size={14} strokeWidth={2.2} aria-hidden="true" />
               </button>
-              <p className="ld-tip-t">{latestTip.title}</p>
-              <p className="ld-tip-a">{latestTip.action}</p>
-              <p className="ld-tip-at">{ago(Date.now() - latestTip.at)}</p>
+              <p className="ld-tip-t">{currentTip.title}</p>
+              <p className="ld-tip-a">{currentTip.action}</p>
+              <p className="ld-tip-at">{ago(Date.now() - currentTip.at)}</p>
             </div>
-          ) : (
-            <p className="ld-coach-p">
-              Every couple of minutes it tells you one thing worth doing, like answering a question you missed or talking chat through a
-              play.
-            </p>
-          )}
+          ) : idea ? (
+            <div className="ld-idea">
+              <p className="ld-idea-k">Small one</p>
+              <p className="ld-idea-a">{idea.say}</p>
+            </div>
+          ) : null}
           {olderTips.length > 0 && (
             <ul className="ld-tips">
               {olderTips.map((c) => (
@@ -1284,19 +1363,32 @@ export default function LiveDock({
         </div>
       ) : null,
     graph: () => (s ? <Spark samples={s.samples} /> : null),
+    // Mic, chat and scene on one line: a glance, not a block.
     status: () => (
       <div className="ld-lines">
-        {obsStatus === "connected" ? (
-          <p>
-            <span className="ld-l">Mic</span>
-            <span className="ld-meter" aria-hidden="true">
-              <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
-            </span>
-            <span className="ld-v" data-muted={micMuted ? "1" : "0"}>
-              {micMuted ? "Muted in OBS" : talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}
-            </span>
-          </p>
-        ) : isPhone ? (
+        <p className="ld-statusline">
+          {obsStatus === "connected" && (
+            <>
+              <span className="ld-meter" aria-hidden="true">
+                <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
+              </span>
+              <span className="ld-v" data-muted={micMuted ? "1" : "0"}>
+                {micMuted ? "Muted in OBS" : talking ? "Talking" : `Quiet ${clock(quietFor * speed)}`}
+              </span>
+              <span className="ld-dot" aria-hidden="true">·</span>
+            </>
+          )}
+          <span className="ld-v">
+            {chatStatus === "connected" ? `Chat ${perMinute}/min` : chatStatus === "connecting" ? "Chat connecting…" : "Chat reconnecting…"}
+          </span>
+          {scene && (
+            <>
+              <span className="ld-dot" aria-hidden="true">·</span>
+              <span className="ld-v">{scene}</span>
+            </>
+          )}
+        </p>
+        {obsStatus === "connected" ? null : isPhone ? (
           <p className="ld-hint">
             {remotePanel ? "Mic and scene nudges come from your OBS panel." : "Open this link in an OBS panel on your computer to also get mic and scene nudges."}
           </p>
@@ -1306,18 +1398,6 @@ export default function LiveDock({
               Connect OBS
             </button>{" "}
             to get told when you go quiet or stay on your starting screen.
-          </p>
-        )}
-        <p>
-          <span className="ld-l">Chat</span>
-          <span className="ld-v">
-            {chatStatus === "connected" ? `${perMinute} ${perMinute === 1 ? "message" : "messages"} a minute` : chatStatus === "connecting" ? "Connecting…" : "Reconnecting…"}
-          </span>
-        </p>
-        {scene && (
-          <p>
-            <span className="ld-l">Scene</span>
-            <span className="ld-v">{scene}</span>
           </p>
         )}
       </div>
@@ -1498,10 +1578,6 @@ export default function LiveDock({
     <div className="ld" data-backdrop={backdrop ? "1" : "0"}>
       {backdrop && <div className="ld-backdrop" style={{ backgroundImage: `url("${backdrop}")` }} aria-hidden="true" />}
       <header className="ld-top">
-        {look?.avatar && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="ld-me" src={look.avatar} alt="" width={22} height={22} />
-        )}
         <span className="ld-state" data-live={live ? "1" : "0"}>
           <i aria-hidden="true" />
           {live ? <>Live {liveSince !== null ? clock(now - liveSince) : ""}</> : "Offline"}
@@ -1632,7 +1708,7 @@ export default function LiveDock({
       {!state && !pollError && <p className="ld-wait">Checking your stream…</p>}
 
       {state && !live && !layout.hidden.includes("rank") && (
-        <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} league={state.league ?? null} />
+        <RankRow points={state.rankPoints ?? null} delta={state.lastDelta ?? null} league={state.league ?? null} look={state.look ?? null} name={displayName} live={false} />
       )}
 
       {state && live && session && (
@@ -1675,19 +1751,8 @@ export default function LiveDock({
 
       {state && !live && !(showWelcome && !session) && !(session && session.endedAt && now - Date.parse(session.endedAt) < END_SCREEN_MS) && (
         <section className="ld-off">
-          {/* What they see when they open OBS: their own banner, sharp, before they go live. */}
-          {look?.banner && (
-            <div className="ld-hero">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="ld-hero-b" src={look.banner} alt="" />
-              {look.avatar && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img className="ld-hero-a" src={look.avatar} alt="" width={56} height={56} />
-              )}
-            </div>
-          )}
-          <p className="ld-off-t">{look?.banner ? `Ready when you are, ${displayName}.` : "You're offline"}</p>
-          <p className="ld-off-s">Go live and this fills in. Keep it open while you stream.</p>
+          {/* The hello and their banner are in the strip above (RankRow). */}
+          <p className="ld-off-s">Go live and this fills in.</p>
           {session ? (
             <div className="ld-last">
               <p className="ld-k">
@@ -1734,7 +1799,6 @@ export default function LiveDock({
 
       {pollError && <p className="ld-err">{pollError}</p>}
 
-      <footer className="ld-foot">{isPhone ? "Only you can see and hear this. Your viewers never will." : "Only you can see this. It's part of OBS, not your stream."}</footer>
 
       {voiceAsk && (
         <div className="ld-sheet" role="dialog" aria-modal="true" aria-label="Voice coaching">

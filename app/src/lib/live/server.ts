@@ -725,6 +725,12 @@ export interface ListenResult {
   heard?: string | null;
   /** The coach's tips since the dock's `after`, oldest first. */
   cues?: RelayedCue[];
+  /**
+   * When the coach looked this call and had nothing worth interrupting for
+   * (under COACH_MIN_USEFUL) but still a decent idea (5 or 6), that idea:
+   * the panel shows it quietly in the Coach card, never as a nudge or out loud.
+   */
+  idea?: { title: string; say: string } | null;
   usedHours?: number;
   capHours?: number;
 }
@@ -864,6 +870,7 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
 
     // ── Coach ──
     const coached: Record<string, unknown> = {};
+    let idea: ListenResult["idea"] = null;
     const coachedAt = session.coached_at ? Date.parse(String(session.coached_at)) : null;
     if (coachedAt === null) {
       // The first call starts the clock, so the first tip has a few minutes to go on.
@@ -883,6 +890,8 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
               .from("live_cues")
               .insert({ session_id: sessionId, kind: "coach", title: answer.tip.title, action: answer.tip.say, say: answer.tip.say, tone: answer.tip.tone, source: "coach" });
             if (error) throw new Error(error.message);
+          } else if (answer.candidate && (answer.candidate.useful ?? 0) >= 5) {
+            idea = { title: answer.candidate.title, say: answer.candidate.say };
           }
         }
       } catch (err) {
@@ -892,7 +901,7 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
     if (Object.keys(coached).length) await admin.from("live_sessions").update(coached).eq("id", sessionId);
     // Call again before the playlist rolls past what this call saw.
     const nextMs = pulled.windowSeconds ? Math.min(30_000, Math.max(8_000, (pulled.windowSeconds - 8) * 1000)) : 15_000;
-    return { state: "listening", nextMs, heard, cues: await coachCuesSince(admin, sessionId, input.after), usedHours, capHours };
+    return { state: "listening", nextMs, heard, cues: await coachCuesSince(admin, sessionId, input.after), idea, usedHours, capHours };
   } finally {
     await admin.from("live_sessions").update({ listen_lock_until: null }).eq("id", sessionId).eq("listen_lock_until", until);
   }

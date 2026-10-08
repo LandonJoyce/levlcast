@@ -489,11 +489,47 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 }
 .ld[data-backdrop="1"] .ld-top { background: rgba(16, 13, 14, 0.5); }
 
-/* Their picture, next to LIVE */
-.ld-me { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--glass-rim); }
+/* ═══ Tighter (2026-10-08) ═══════════════════════════════════════════════
+   One strip for their channel and rank, the nudge, one quiet line for
+   tonight's fix, the coach, one row of numbers, one status line, the last
+   two things that happened. A note appears once. */
 
-/* Opening OBS before going live: their banner, sharp */
-.ld-hero { position: relative; margin-bottom: 26px; }
-.ld-hero-b { display: block; width: 100%; aspect-ratio: 1138 / 480; object-fit: cover; border-radius: var(--radius); box-shadow: var(--glass-shadow); }
-.ld-hero-a { position: absolute; left: 14px; bottom: -22px; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px rgb(16, 13, 14), 0 6px 18px rgba(0, 0, 0, 0.45); }
-.ld-hero + .ld-off-t { margin-top: 2px; }
+/* Their channel and rank: banner behind a frosted band */
+.ld-head { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--glass) center / cover no-repeat; box-shadow: var(--glass-shadow); }
+.ld-head-img { display: block; width: 100%; aspect-ratio: 1138 / 480; object-fit: cover; }
+.ld-head-in { position: relative; display: flex; align-items: center; gap: 11px; padding: 11px 13px 12px; }
+.ld-head[data-live="1"][data-banner="1"] .ld-head-in { background: rgba(14, 11, 12, 0.62); -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3); }
+.ld-head[data-live="0"][data-banner="1"] .ld-head-in { align-items: flex-start; padding-top: 10px; }
+.ld-head[data-live="0"][data-banner="1"] .ld-head-a { width: 58px; height: 58px; margin-top: -36px; box-shadow: 0 0 0 3px rgb(22, 18, 19), 0 6px 18px rgba(0, 0, 0, 0.45); }
+.ld-head[data-live="0"][data-banner="1"] .ld-head-e { margin-top: 2px; }
+.ld-head-n .ld-rank-d[data-sign="up"] { color: var(--good); font-weight: 700; }
+.ld-head-n .ld-rank-d[data-sign="down"] { color: var(--live); font-weight: 700; }
+.ld-head[data-live="1"] .ld-head-in { padding: 8px 12px 9px; }
+.ld-head-a { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--glass-rim); }
+.ld-head[data-live="1"] .ld-head-a { width: 30px; height: 30px; }
+.ld-head-b { flex: 1; min-width: 0; }
+.ld-head-hi { margin: 0 0 3px; font-size: 15px; font-weight: 700; letter-spacing: -0.015em; color: var(--ink); }
+.ld-head-t { margin: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 7px; font-size: 12px; color: var(--ink-2); }
+.ld-head-t b { font-family: var(--numbers); font-size: 17px; font-weight: 700; letter-spacing: 0.02em; color: var(--tier, var(--ink)); }
+.ld-head-t span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ld-head-t .ld-rank-d[data-sign="up"] { color: var(--good); font-weight: 700; }
+.ld-head-t .ld-rank-d[data-sign="down"] { color: var(--live); font-weight: 700; }
+.ld-head .ld-rank-bar { height: 3px; margin-top: 6px; background: rgba(255, 244, 238, 0.1); }
+.ld-head-n { margin: 5px 0 0; font-size: 11px; color: var(--ink-3); }
+.ld-head-e { flex-shrink: 0; width: 34px; height: 34px; object-fit: contain; }
+.ld-head[data-live="1"] .ld-head-e { width: 26px; height: 26px; }
+
+/* Tonight's fix: one quiet line tucked under the nudge */
+.ld-fixline { margin: -5px 4px 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+.ld-fixline span { margin-right: 6px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+
+/* The coach's smaller idea: there if you want it, never in your ear */
+.ld-idea { padding: 9px 12px 10px; background: var(--glass-2); border-radius: 12px; box-shadow: inset 0 1px 0 var(--glass-hi); }
+.ld-idea-k { margin: 0 0 2px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.ld-idea-a { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+/* Mic, chat, scene: one line */
+.ld-statusline { margin: 0; display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12.5px; color: var(--ink-2); }
+.ld-statusline .ld-meter { width: 40px; }
+.ld-statusline .ld-v:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ld-dot { color: var(--ink-3); }
