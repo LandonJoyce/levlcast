@@ -22,6 +22,8 @@ import { transcribeClip } from "@/lib/deepgram";
 import { liveAudioPlaylistUrl, pullNewAudio } from "@/lib/live/listen";
 import { coachTip, streamerHistory, type CoachContext } from "@/lib/live/coach";
 import { digestChat } from "@/lib/live/chat-digest";
+import { currentFix } from "@/lib/live/fix";
+import type { LiveFix } from "@/lib/live/cues";
 
 /**
  * Free plans get the coaching for the first this-many minutes of each
@@ -92,6 +94,8 @@ export interface LiveState {
   session: LiveSession | null;
   /** Clips viewers made of the live stream, newest first. Empty offline. */
   clips: LiveClip[];
+  /** Tonight's fix: the last report's main recommendation, as one line. Null before their first report. */
+  fix: LiveFix | null;
   serverTime: string;
 }
 
@@ -346,6 +350,7 @@ export async function pollLive(owner: DockOwner, opts: { panel?: boolean } = {})
     rankPoints: owner.rankPoints,
     lastDelta: await lastOpenedDelta(admin, owner.userId),
     league: await leagueLine(admin, owner.userId),
+    fix: await currentFix(admin, owner.userId),
     serverTime: new Date().toISOString(),
   };
   let state: LiveState;
@@ -541,7 +546,7 @@ export interface RelayedCue {
   createdAt: string;
 }
 
-const CUE_KINDS = new Set(["raid", "newChatter", "clip", "quiet", "muted", "loudGame", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
+const CUE_KINDS = new Set(["raid", "newChatter", "clip", "quiet", "muted", "loudGame", "fix", "startingScene", "breakScene", "viewersDown", "viewersUp", "chatQuiet", "catchUp", "coach"]);
 const CUE_TONES = new Set(["nudge", "good", "info"]);
 /** At most this many nudges a minute per stream, whatever a panel sends. */
 const MAX_CUES_PER_MINUTE = 20;
@@ -856,13 +861,14 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
 /** Everything the coach gets to see for one look at the stream. */
 async function coachContext(admin: Admin, owner: DockOwner, session: Record<string, unknown>, input: ListenInput, now: number): Promise<CoachContext> {
   const since = (ms: number) => new Date(now - ms).toISOString();
-  const [{ data: lines }, { data: tips }, { data: shown }, { data: samples }, history, clips] = await Promise.all([
+  const [{ data: lines }, { data: tips }, { data: shown }, { data: samples }, history, clips, fix] = await Promise.all([
     admin.from("live_lines").select("said_at, text").eq("session_id", session.id).gte("said_at", since(4 * 60_000)).order("said_at", { ascending: true }).limit(80),
     admin.from("live_cues").select("title, say, created_at").eq("session_id", session.id).eq("source", "coach").gte("created_at", since(20 * 60_000)).order("created_at", { ascending: true }).limit(10),
     admin.from("live_cues").select("title, action, created_at").eq("session_id", session.id).neq("source", "coach").gte("created_at", since(10 * 60_000)).order("created_at", { ascending: true }).limit(10),
     admin.from("live_samples").select("minute, viewers").eq("session_id", session.id).order("minute", { ascending: false }).limit(15),
     streamerHistory(admin, owner.userId).catch(() => null),
     clipsSince(owner.twitchId, String(session.started_at)).catch(() => [] as LiveClip[]),
+    currentFix(admin, owner.userId),
   ]);
   const quiet = Number(input.quietSeconds);
   const streamTitle = (session.title as string | null) || null;
@@ -881,6 +887,7 @@ async function coachContext(admin: Admin, owner: DockOwner, session: Record<stri
     recentTips: ((tips ?? []) as Array<{ title: string; say: string | null; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: t.say || t.title })),
     shown: ((shown ?? []) as Array<{ title: string; action: string; created_at: string }>).map((t) => ({ agoSec: (now - Date.parse(t.created_at)) / 1000, text: `${t.title}. ${t.action}` })),
     history,
+    fix: fix?.line ?? null,
     // The last 10 minutes of clips, oldest first. A clip keeps the stream's
     // title unless whoever made it renamed it, and only a new name says anything.
     clips: clips
@@ -927,8 +934,13 @@ export interface StreamReport {
     sealed: boolean;
     delta: number | null;
     pointsAfter: number | null;
+    /** How the fix from the report before went this stream, once the result is open. */
+    fix: null | { status: FixStatus; evidence: string };
   };
 }
+
+type FixStatus = "fixed" | "partial" | "regressed" | "not_addressed" | "didnt_come_up";
+const FIX_STATUSES: FixStatus[] = ["fixed", "partial", "regressed", "not_addressed", "didnt_come_up"];
 
 /** Twitch's "3h2m10s" as seconds. */
 function twitchDuration(s: unknown): number | null {
@@ -995,6 +1007,15 @@ export async function streamReport(owner: DockOwner): Promise<StreamReport> {
   const sealed = ready && !row.result_opened_at && row.rank_points_after != null;
   // A sealed result's points stay on the server until it's opened.
   const shown = ready && !sealed;
+  // The verdict on the fix they were working on, read only once there's one to show.
+  let fix: NonNullable<StreamReport["report"]>["fix"] = null;
+  if (shown) {
+    const { data: full } = await admin.from("vods").select("coach_report").eq("id", row.id).maybeSingle();
+    const p = (full?.coach_report as { progress_on_prior_fix?: { status?: unknown; evidence?: unknown } } | null)?.progress_on_prior_fix;
+    if (p && FIX_STATUSES.includes(p.status as FixStatus) && typeof p.evidence === "string") {
+      fix = { status: p.status as FixStatus, evidence: p.evidence.slice(0, 300) };
+    }
+  }
   return {
     stream,
     vod,
@@ -1004,6 +1025,7 @@ export async function streamReport(owner: DockOwner): Promise<StreamReport> {
       sealed,
       delta: shown ? ((row.rank_delta as number | null) ?? null) : null,
       pointsAfter: shown ? ((row.rank_points_after as number | null) ?? null) : null,
+      fix,
     },
   };
 }

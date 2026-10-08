@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Settings, X } from "lucide-react";
-import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
+import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveFix, type LiveSignals } from "@/lib/live/cues";
 import { ObsLink, type ObsInput, type ObsProblem, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat, clipIdIn } from "@/lib/live/chat";
 import { AudioBalance } from "@/lib/live/balance";
@@ -82,6 +82,8 @@ interface LiveState {
   session: Session | null;
   /** Clips of the live stream, newest first, as Twitch lists them. */
   clips?: Clip[];
+  /** Tonight's fix, from their last report. Absent before their first report. */
+  fix?: LiveFix | null;
   serverTime: string;
 }
 
@@ -105,15 +107,34 @@ function ordinal(n: number): string {
 interface StreamReport {
   stream: null | { id: string; title: string | null; endedAt: string | null; live: boolean };
   vod: null | { twitchId: string; title: string; durationSeconds: number | null };
-  report: null | { id: string; status: string; sealed: boolean; delta: number | null; pointsAfter: number | null };
+  report: null | {
+    id: string;
+    status: string;
+    sealed: boolean;
+    delta: number | null;
+    pointsAfter: number | null;
+    /** How tonight's fix went, once the result is open. */
+    fix?: null | { status: FixStatus; evidence: string };
+  };
 }
 
+type FixStatus = "fixed" | "partial" | "regressed" | "not_addressed" | "didnt_come_up";
+/** The same words the report page uses for the verdict. */
+const FIX_VERDICT: Record<FixStatus, string> = {
+  fixed: "Did it",
+  partial: "Partly",
+  regressed: "Slipped",
+  not_addressed: "Not yet",
+  didnt_come_up: "Didn't come up",
+};
+
 /** The panel's sections, which a streamer can hide and reorder (Customize). */
-type SectionId = "rank" | "now" | "coach" | "numbers" | "graph" | "status" | "earlier";
+type SectionId = "rank" | "now" | "fix" | "coach" | "numbers" | "graph" | "status" | "earlier";
 
 const SECTIONS: Record<SectionId, string> = {
   rank: "Rank and league",
   now: "Nudges",
+  fix: "Tonight's fix",
   coach: "Coach",
   numbers: "Viewers, chatters, followers",
   graph: "Viewer graph",
@@ -125,6 +146,7 @@ const SECTIONS: Record<SectionId, string> = {
 const NUDGES: Array<[CueKind, string]> = [
   ["muted", "Muted mic"],
   ["loudGame", "Game louder than you"],
+  ["fix", "Tonight's fix reminder"],
   ["quiet", "Going quiet"],
   ["newChatter", "New chatters"],
   ["raid", "Raids"],
@@ -144,17 +166,25 @@ interface Layout {
   off: CueKind[];
 }
 
-const DEFAULT_LAYOUT: Layout = { order: ["rank", "now", "coach", "numbers", "graph", "status", "earlier"], hidden: [], off: [] };
+const DEFAULT_LAYOUT: Layout = { order: ["rank", "now", "fix", "coach", "numbers", "graph", "status", "earlier"], hidden: [], off: [] };
 const LAYOUT_KEY = "lc-live-layout-v1";
 
-/** The saved layout, with any section added since it was saved put back at the end. */
+/**
+ * The saved layout. A section added since it was saved goes in after the
+ * section it follows by default (the fix card after the nudges), not at
+ * the bottom where nobody would find it.
+ */
 function loadLayout(): Layout {
   try {
     const raw = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "null") as Partial<Layout> | null;
     if (!raw) return DEFAULT_LAYOUT;
     const known = (ids: unknown) => (Array.isArray(ids) ? ids.filter((id): id is SectionId => typeof id === "string" && id in SECTIONS) : []);
     const order = known(raw.order);
-    for (const id of DEFAULT_LAYOUT.order) if (!order.includes(id)) order.push(id);
+    DEFAULT_LAYOUT.order.forEach((id, i) => {
+      if (order.includes(id)) return;
+      const after = i > 0 ? order.indexOf(DEFAULT_LAYOUT.order[i - 1]) : -1;
+      order.splice(after + 1, 0, id);
+    });
     const kinds = new Set(NUDGES.map(([k]) => k));
     return {
       order,
@@ -321,6 +351,14 @@ function ReportCard({ data, origin }: { data: StreamReport | null; origin: strin
       )}
       {moved === "up" && <p className="ld-report-up">Promoted</p>}
       {after && <p className="ld-report-s">{moved === "down" ? `Dropped to ${after}.` : `You're ${after} now.`}</p>}
+      {r.fix && (
+        <div className="ld-report-fix" data-status={r.fix.status}>
+          <p>
+            Tonight&apos;s fix: <b>{FIX_VERDICT[r.fix.status]}</b>
+          </p>
+          <p className="ld-report-s">{r.fix.evidence}</p>
+        </div>
+      )}
       {open(result, "See the report")}
     </div>
   );
@@ -827,6 +865,15 @@ export default function LiveDock({
   coachingRef.current = coaching;
   freeOverRef.current = live && !pro && !coaching;
 
+  // Tonight's fix leans the nudges toward it: a reminder as the show
+  // starts, and the quiet or hello nudges when that's what it's about.
+  const fix = state?.fix ?? null;
+  const fixLine = fix?.line ?? null;
+  const fixOf = fix?.kind ?? null;
+  useEffect(() => {
+    if (engine.current) engine.current.fix = fixLine && fixOf ? { line: fixLine, kind: fixOf } : null;
+  }, [fixLine, fixOf]);
+
   // A phone in voice mode, with an OBS panel open elsewhere in the last
   // few minutes, speaks that panel's nudges instead of making its own.
   const remotePanel = voiceOn && panelSeenAt !== null && now - Date.parse(panelSeenAt) < 3 * 60_000;
@@ -1097,6 +1144,15 @@ export default function LiveDock({
   const s = session;
   const sections: Record<SectionId, () => ReactNode> = {
     rank: () => <RankRow points={state?.rankPoints ?? null} delta={state?.lastDelta ?? null} league={state?.league ?? null} />,
+    // Shown all stream, Free included: it's their own report, not a nudge.
+    fix: () =>
+      fix ? (
+        <section className="ld-fix" aria-label="Tonight's fix">
+          <p className="ld-k">Tonight&apos;s fix</p>
+          <p className="ld-fix-t">{fix.line}</p>
+          <p className="ld-fix-s">From your last report. Your next report checks it.</p>
+        </section>
+      ) : null,
     now: () =>
       coaching ? (
         <section className="ld-now" data-tone={card?.tone ?? "calm"}>

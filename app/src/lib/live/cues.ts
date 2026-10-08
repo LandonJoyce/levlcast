@@ -24,7 +24,32 @@ export type CueKind =
   | "catchUp"
   | "coach"
   | "muted"
-  | "loudGame";
+  | "loudGame"
+  | "fix";
+
+/**
+ * Tonight's fix: the main recommendation of their last report, the one the
+ * next report grades (progress_on_prior_fix in lib/analyze.ts), shortened
+ * to a line on the server (lib/live/fix.ts). `kind` says which nudges to
+ * lean toward it.
+ */
+export type FixKind = "opening" | "quiet" | "chat" | "other";
+export interface LiveFix {
+  line: string;
+  kind: FixKind;
+}
+
+const FIX_OPENING = /\b(open|opening|first (few )?minutes?|first \d+ (seconds|minutes)|cold open|starting screen|intro|warm.?up|go(ing)? live)\b/i;
+const FIX_QUIET = /\b(quiet|silen\w*|dead air|talk(ing)? through|narrat\w*|commentary|fill (the )?(gaps?|time))\b/i;
+const FIX_CHAT = /\b(chat|chatters?|by name|greet\w*|questions?|lurkers?)\b/i;
+
+/** What a fix is mostly about, from its words, when nothing better says so. */
+export function fixKind(text: string): FixKind {
+  if (FIX_OPENING.test(text)) return "opening";
+  if (FIX_QUIET.test(text)) return "quiet";
+  if (FIX_CHAT.test(text)) return "chat";
+  return "other";
+}
 
 export interface Cue {
   id: string;
@@ -83,6 +108,7 @@ export const PRIORITY: Record<CueKind, number> = {
   newChatter: 90,
   coach: 85,
   quiet: 80,
+  fix: 75, // once, as the show starts
   startingScene: 70,
   breakScene: 65,
   viewersDown: 60,
@@ -98,6 +124,7 @@ export const SHOW_FOR: Record<CueKind, number> = {
   newChatter: 30,
   clip: 60,
   loudGame: 45,
+  fix: 40,
   coach: 120,
   quiet: 0, // shown for as long as it's true
   startingScene: 0,
@@ -187,8 +214,17 @@ export class CueEngine {
   private quietLogged: number | null = null;
   private mutedLogged: number | null = null;
   private sceneLogged: number | null = null;
+  /** Tonight's fix, set by the panel from the live state. */
+  fix: LiveFix | null = null;
+  /** The stream (by when it started) whose fix reminder has been shown. */
+  private fixReminded: number | null = null;
 
   constructor(public tuning: CueTuning = DEFAULT_TUNING) {}
+
+  /** Seconds of quiet before the quiet nudge: a minute at most when quiet stretches are tonight's fix. */
+  private quietAfter(): number {
+    return this.fix?.kind === "quiet" ? Math.min(this.tuning.quietSeconds, 60) : this.tuning.quietSeconds;
+  }
 
   /** The next of several ways to say something. */
   private next<T>(key: string, options: T[]): T {
@@ -239,8 +275,9 @@ export class CueEngine {
 
     if (lastTalkAt !== null && !this.onSpecialScene(s)) {
       const quiet = s.now - lastTalkAt;
-      if (quiet >= this.ms(this.tuning.quietSeconds)) {
-        return make("quiet", `Quiet for ${clock(quiet * this.tuning.speed)}`, "Say what you're doing, or what you're thinking.", lastTalkAt, "nudge");
+      if (quiet >= this.ms(this.quietAfter())) {
+        const action = this.fix?.kind === "quiet" ? "Talk through what you're doing. That's tonight's fix." : "Say what you're doing, or what you're thinking.";
+        return make("quiet", `Quiet for ${clock(quiet * this.tuning.speed)}`, action, lastTalkAt, "nudge");
       }
     }
     return null;
@@ -261,7 +298,15 @@ export class CueEngine {
     }
     if (cur?.kind === "quiet" && this.quietLogged !== cur.at) {
       this.quietLogged = cur.at;
-      out.push(make("quiet", `Quiet for ${stretch(this.tuning.quietSeconds)}`, cur.action, now, "nudge", this.next("quiet", SAY.quiet)));
+      out.push(make("quiet", `Quiet for ${stretch(this.quietAfter())}`, cur.action, now, "nudge", this.next("quiet", SAY.quiet)));
+    }
+
+    // Tonight's fix, once a stream, as the show starts: once they're off the
+    // starting screen, or straight away when OBS isn't connected to say.
+    const streamKey = s.liveSince ?? watching;
+    if (this.fix && this.fixReminded !== streamKey && !this.onSpecialScene(s)) {
+      this.fixReminded = streamKey;
+      out.push(make("fix", "Tonight's fix", this.fix.line, now, "info", `Tonight's fix. ${this.fix.line}`));
     }
     if ((cur?.kind === "startingScene" || cur?.kind === "breakScene") && this.sceneLogged !== cur.at) {
       this.sceneLogged = cur.at;
@@ -339,7 +384,8 @@ export class CueEngine {
   }
 
   newChatter(name: string, now: number): Cue {
-    return make("newChatter", `New chatter: ${name}`, "Say hi by name.", now, "good", this.next("newChatter", SAY.newChatter)(name));
+    const action = this.fix?.kind === "chat" ? "Say hi by name. That's tonight's fix." : "Say hi by name.";
+    return make("newChatter", `New chatter: ${name}`, action, now, "good", this.next("newChatter", SAY.newChatter)(name));
   }
 }
 

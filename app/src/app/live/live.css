@@ -227,6 +227,18 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-now .ld-now-t, .ld-tip .ld-tip-t { padding-right: 26px; }
 
 .ld-coach { display: grid; gap: 8px; padding: 11px 13px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+
+/* Tonight's fix: the one thing from their last report, in view all stream */
+.ld-fix { display: grid; gap: 3px; padding: 10px 13px 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.ld-fix .ld-k { margin: 0; }
+.ld-fix-t { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); }
+.ld-fix-s { margin: 0; font-size: 12px; color: var(--ink-3); }
+.ld-report-fix { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
+.ld-report-fix p { margin: 0; font-size: 13.5px; }
+.ld-report-fix b { font-weight: 800; color: var(--ink-2); }
+.ld-report-fix[data-status="fixed"] b { color: var(--good); }
+.ld-report-fix[data-status="partial"] b { color: var(--nudge); }
+.ld-report-fix[data-status="regressed"] b { color: var(--live); }
 .ld-coach-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ld-coach-h .ld-k { margin: 0; }
 .ld-coach-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; color: var(--ink-3); }

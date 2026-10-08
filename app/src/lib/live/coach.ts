@@ -42,6 +42,8 @@ export interface CoachContext {
   /** The dock's quick nudges (new chatter, raid, quiet mic) shown lately, for the same reason. */
   shown: Array<{ agoSec: number; text: string }>;
   history: StreamerHistory | null;
+  /** Tonight's fix: the one thing from their last report that their next report checks (lib/live/fix.ts). */
+  fix?: string | null;
   /** Clips viewers made in the last few minutes, oldest first. Title only when someone renamed it. */
   clips?: Array<{ agoSec: number; creator: string; title: string | null }>;
   /** Chat boiled down: its speed and the questions several people asked. */
@@ -88,6 +90,7 @@ How to decide:
 - On a smaller stream, a first-time chatter should get a hello by name.
 - A quiet minute while they're focused is fine. Only bring up talking more once they've been quiet for close to two minutes.
 - If their reports flag a habit and it's happening right now, point it out in a way they can fix right now.
+- When you're given tonight's fix (the one thing from their last report that their next report checks), a moment that's a chance to do it, or a moment they just did it, is worth telling them.
 - When something just happened in the game (a big play, a clutch, a death, a funny moment), a good tip is often a specific way to talk chat through it: what you were thinking, what you'd do next, or a question for chat about it.
 - A new clip means viewers loved that moment. If the streamer hasn't brought it up, a good tip is a way to bring it back: tell chat what happened there, or what they were thinking.
 - When something just worked (chat came alive, a good story, a funny moment), say so in a few words. Praise is part of coaching.
@@ -134,6 +137,10 @@ export function coachPrompt(c: CoachContext): string {
     if (h.habits.length) parts.push(`What their LevlCast reports keep flagging:\n${h.habits.map((s) => `- ${s}`).join("\n")}`);
     if (h.goals.length) parts.push(`Goals from their last report:\n${h.goals.map((s) => `- ${s}`).join("\n")}`);
     if (h.strengths.length) parts.push(`What they do well:\n${h.strengths.map((s) => `- ${s}`).join("\n")}`);
+  }
+  if (c.fix) {
+    parts.push("");
+    parts.push(`Tonight's fix, the one thing their next report checks: ${c.fix}`);
   }
 
   parts.push("");
