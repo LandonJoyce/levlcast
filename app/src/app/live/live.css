@@ -353,3 +353,147 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-dead-t { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
 .ld-dead-s { margin: 0; color: var(--ink-2); font-size: 13.5px; }
 .ld-dead-s b { color: var(--ink); }
+
+/* â•â•â• Glass pass (2026-10-08) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   "Clean and more premium", "the Apple glass look without overdoing it".
+   Panels are translucent with a hairline rim, a brighter edge along the
+   top where light would catch, and a soft shadow under them; the top bar
+   is frosted and stays put while the panel scrolls under it. Tone is a
+   small dot by the label and a faint translucent tint, not a stripe down
+   the side. No gradients, no glows. */
+
+.ld-root {
+  --glass: rgba(255, 244, 238, 0.045);
+  --glass-2: rgba(255, 244, 238, 0.07);
+  --glass-hi: rgba(255, 244, 238, 0.09);
+  --glass-rim: rgba(255, 244, 238, 0.06);
+  --tint-nudge: rgba(252, 208, 147, 0.085);
+  --tint-good: rgba(163, 230, 53, 0.07);
+  --radius: 16px;
+  --glass-shadow: inset 0 1px 0 var(--glass-hi), inset 0 0 0 1px var(--glass-rim), 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+.ld { padding: 0 14px 16px; gap: 12px; }
+
+/* The top bar: frosted, and it stays put */
+.ld-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -14px;
+  padding: 12px 14px 10px;
+  background: rgba(16, 13, 14, 0.62);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: 0 1px 0 var(--glass-rim);
+}
+
+/* Panels: glass. No live blur on each one: the backdrop behind them is
+   already blurred once, and OBS is busy running the stream. */
+.ld-rank, .ld-now, .ld-fix, .ld-coach, .ld-report, .ld-welcome, .ld-connect, .ld-dead, .ld-trouble, .ld-sheet-in {
+  background: var(--glass);
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+}
+.ld-rank { padding: 12px 14px 12px 12px; gap: 13px; }
+.ld-now, .ld-coach, .ld-report { padding: 15px 16px 16px; }
+.ld-fix { padding: 13px 16px 14px; gap: 4px; }
+.ld-welcome, .ld-connect, .ld-dead { padding: 18px; }
+.ld-sheet-in { background: rgba(30, 26, 27, 0.86); padding: 16px 18px 18px; }
+.ld-sheet { background: rgba(8, 6, 7, 0.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+/* Labels: quieter, with a dot that carries the tone */
+.ld-k { font-size: 9.5px; letter-spacing: 0.14em; margin-bottom: 6px; }
+.ld-now .ld-k { display: flex; align-items: center; gap: 7px; }
+.ld-now .ld-k::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+.ld-now[data-tone="nudge"] { background: var(--tint-nudge); }
+.ld-now[data-tone="good"] { background: var(--tint-good); }
+.ld-now[data-tone="nudge"] .ld-k::before { background: var(--nudge); }
+.ld-now[data-tone="good"] .ld-k::before { background: var(--good); }
+.ld-now[data-tone="info"] .ld-k::before { background: var(--ink-2); }
+
+/* Type: lighter weights, tighter headlines */
+.ld-now-t { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.ld-now-a { margin-top: 5px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.ld-fix-t { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.ld-report-t, .ld-connect-t, .ld-dead-t, .ld-welcome-t { font-weight: 700; letter-spacing: -0.02em; }
+.ld-off-t { font-weight: 700; letter-spacing: -0.015em; }
+
+/* The coach's tip: a pane inside the pane */
+.ld-tip { background: var(--glass-2); border-left: 0; border-radius: 12px; padding: 11px 13px 12px; box-shadow: inset 0 1px 0 var(--glass-hi); }
+.ld-tip[data-tone="nudge"] { background: var(--tint-nudge); }
+.ld-tip[data-tone="good"] { background: var(--tint-good); }
+.ld-tip-t { font-size: 16px; font-weight: 700; letter-spacing: -0.015em; }
+
+/* Something's wrong with OBS: a tint and a dot, not a stripe */
+.ld-trouble { background: var(--tint-nudge); padding: 11px 14px 12px; }
+.ld-trouble-h p::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: var(--nudge); vertical-align: 2px; }
+
+/* Numbers: one calm row, hairlines between, none around */
+.ld-stats { border-top: 0; border-bottom: 0; }
+.ld-stats > div { padding: 4px 12px 2px; }
+.ld-stats > div + div { border-left-color: var(--glass-rim); }
+.ld-stats > div:first-child { padding-left: 4px; }
+.ld-stats b { font-size: 28px; font-weight: 700; }
+
+/* Top bar chips: small panes, no outlines */
+.ld-tier, .ld-obs, .ld-voice, .ld-icon { border: 0; background: var(--glass-2); box-shadow: inset 0 1px 0 var(--glass-hi); }
+.ld-tier:hover, .ld-obs:hover, .ld-voice:hover, .ld-icon:hover { background: rgba(255, 244, 238, 0.11); }
+.ld-obs, .ld-voice { padding: 4px 10px; }
+.ld-tier { padding: 4px 9px; }
+.ld-tier[data-pro="1"] { background: rgba(227, 179, 65, 0.14); }
+.ld-obs[data-state="connected"], .ld-voice[data-on="1"] { background: rgba(163, 230, 53, 0.12); }
+.ld-obs[data-state="error"] { background: var(--tint-nudge); }
+
+/* Buttons and fields: rounder, softer */
+.ld-btn, .ld-report-go { border-radius: 12px; font-weight: 700; }
+.ld-report-go { padding: 11px 14px; }
+.ld-field input, .ld-field select { background: var(--glass-2); border-color: transparent; border-radius: 10px; padding: 9px 11px; box-shadow: inset 0 0 0 1px var(--glass-rim); }
+.ld-field input:focus, .ld-field select:focus { outline: 2px solid var(--line-2); outline-offset: 0; }
+.ld-sheet-head button, .ld-play, .ld-checks > li > button, .ld-lay-move button { border: 0; background: var(--glass-2); border-radius: 9px; }
+.ld-voices li { border: 0; background: var(--glass); border-radius: 11px; box-shadow: inset 0 0 0 1px var(--glass-rim); }
+.ld-voices li[data-on="1"] { background: var(--tint-good); box-shadow: inset 0 0 0 1px rgba(163, 230, 53, 0.35); }
+
+/* Lines between parts of a panel stay, softer */
+.ld-plan, .ld-voiceline, .ld-report-fix, .ld-last { border-top-color: var(--glass-rim); }
+.ld-foot { border-top: 0; padding-top: 4px; }
+.ld-toast { background: rgba(36, 31, 32, 0.8); border: 0; box-shadow: var(--glass-shadow); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-radius: 12px; }
+
+/* A new nudge settles in instead of snapping */
+.ld-now-t, .ld-now-a { animation: ld-settle 240ms ease-out both; }
+@keyframes ld-settle { from { opacity: 0.3; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ld-now-t, .ld-now-a { animation: none; } }
+
+/* ═══ Their channel behind the glass (2026-10-08) ════════════════════════
+   The streamer's own Twitch banner (or offline image, or profile picture)
+   blurred and darkened behind everything, so the glass takes their
+   colours and the panel looks like theirs. Blurred once and fixed in
+   place, so scrolling never re-blurs it. Over it, the panels turn to
+   smoked glass so text keeps its contrast on any banner. */
+.ld { position: relative; isolation: isolate; }
+.ld-backdrop {
+  position: fixed;
+  inset: -80px;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  filter: blur(56px) saturate(1.35) brightness(0.4);
+  pointer-events: none;
+}
+.ld-backdrop::after { content: ""; position: absolute; inset: 0; background: rgba(16, 13, 14, 0.32); }
+.ld[data-backdrop="1"] {
+  --glass: rgba(18, 14, 15, 0.46);
+  --glass-2: rgba(255, 244, 238, 0.07);
+  --tint-nudge: rgba(62, 47, 34, 0.6);
+  --tint-good: rgba(40, 49, 25, 0.6);
+}
+.ld[data-backdrop="1"] .ld-top { background: rgba(16, 13, 14, 0.5); }
+
+/* Their picture, next to LIVE */
+.ld-me { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--glass-rim); }
+
+/* Opening OBS before going live: their banner, sharp */
+.ld-hero { position: relative; margin-bottom: 26px; }
+.ld-hero-b { display: block; width: 100%; aspect-ratio: 1138 / 480; object-fit: cover; border-radius: var(--radius); box-shadow: var(--glass-shadow); }
+.ld-hero-a { position: absolute; left: 14px; bottom: -22px; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px rgb(16, 13, 14), 0 6px 18px rgba(0, 0, 0, 0.45); }
+.ld-hero + .ld-off-t { margin-top: 2px; }

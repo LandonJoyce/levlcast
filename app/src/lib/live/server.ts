@@ -96,7 +96,46 @@ export interface LiveState {
   clips: LiveClip[];
   /** Tonight's fix: the last report's main recommendation, as one line. Null before their first report. */
   fix: LiveFix | null;
+  /** Their own channel art, so the panel looks like theirs. */
+  look: ChannelLook;
   serverTime: string;
+}
+
+/** A channel's banner (or offline image) and profile picture, from Twitch. */
+export interface ChannelLook {
+  banner: string | null;
+  avatar: string | null;
+}
+
+const GQL_URL = process.env.TWITCH_GQL_URL || "https://gql.twitch.tv/gql";
+/** Channel art barely changes: read every few hours per streamer, a failure retried after 10 minutes. */
+const lookCache = new Map<string, { at: number; ttl: number; look: ChannelLook }>();
+/** Only Twitch's own image host goes into the panel's page. */
+const TWITCH_IMAGE = /^https:\/\/static-cdn\.jtvnw\.net\/[\w./-]+\.(png|jpe?g|webp|gif)$/i;
+
+async function channelLook(login: string): Promise<ChannelLook> {
+  const hit = lookCache.get(login);
+  if (hit && Date.now() - hit.at < hit.ttl) return hit.look;
+  let look: ChannelLook = { banner: null, avatar: null };
+  let ttl = 10 * 60_000;
+  try {
+    const res = await fetch(GQL_URL, {
+      method: "POST",
+      headers: { "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko", "Content-Type": "application/json" },
+      body: JSON.stringify({ query: `query { user(login: ${JSON.stringify(login)}) { bannerImageURL offlineImageURL profileImageURL(width: 300) } }` }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const u = ((await res.json()) as { data?: { user?: Record<string, unknown> | null } }).data?.user ?? null;
+      const img = (v: unknown) => (typeof v === "string" && TWITCH_IMAGE.test(v) ? v : null);
+      look = { banner: img(u?.bannerImageURL) ?? img(u?.offlineImageURL), avatar: img(u?.profileImageURL) };
+      if (u) ttl = 6 * 60 * 60_000;
+    }
+  } catch {
+    // The panel looks fine without it; try again later.
+  }
+  lookCache.set(login, { at: Date.now(), ttl, look });
+  return look;
 }
 
 /** A clip someone made of the stream. */
@@ -351,6 +390,7 @@ export async function pollLive(owner: DockOwner, opts: { panel?: boolean } = {})
     lastDelta: await lastOpenedDelta(admin, owner.userId),
     league: await leagueLine(admin, owner.userId),
     fix: await currentFix(admin, owner.userId),
+    look: await channelLook(owner.login),
     serverTime: new Date().toISOString(),
   };
   let state: LiveState;

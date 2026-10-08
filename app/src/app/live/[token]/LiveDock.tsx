@@ -84,6 +84,8 @@ interface LiveState {
   clips?: Clip[];
   /** Tonight's fix, from their last report. Absent before their first report. */
   fix?: LiveFix | null;
+  /** Their banner and profile picture from Twitch: the panel is dressed in their channel. */
+  look?: { banner: string | null; avatar: string | null };
   serverTime: string;
 }
 
@@ -1162,8 +1164,9 @@ export default function LiveDock({
             </button>
           )}
           <p className="ld-k">Now</p>
-          <p className="ld-now-t">{card ? card.title : "Looking good"}</p>
-          <p className="ld-now-a">{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
+          {/* Keyed by the cue, so a new one settles in (live.css) instead of the old text swapping in place. */}
+          <p className="ld-now-t" key={`t-${card?.id ?? "calm"}`}>{card ? card.title : "Looking good"}</p>
+          <p className="ld-now-a" key={`a-${card?.id ?? "calm"}`}>{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
           {voiceOn && (
             <p className="ld-voiceline">
               {remotePanel ? "Speaking your OBS panel's nudges" : "Speaking your nudges"} in {pickLabel}&apos;s voice.{" "}
@@ -1485,9 +1488,18 @@ export default function LiveDock({
     );
   }
 
+  // Their own banner (or picture) blurred behind the glass, so the panel looks like theirs.
+  const look = state?.look ?? null;
+  const backdrop = look?.banner ?? look?.avatar ?? null;
+
   return (
-    <div className="ld">
+    <div className="ld" data-backdrop={backdrop ? "1" : "0"}>
+      {backdrop && <div className="ld-backdrop" style={{ backgroundImage: `url("${backdrop}")` }} aria-hidden="true" />}
       <header className="ld-top">
+        {look?.avatar && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="ld-me" src={look.avatar} alt="" width={22} height={22} />
+        )}
         <span className="ld-state" data-live={live ? "1" : "0"}>
           <i aria-hidden="true" />
           {live ? <>Live {liveSince !== null ? clock(now - liveSince) : ""}</> : "Offline"}
@@ -1661,7 +1673,18 @@ export default function LiveDock({
 
       {state && !live && !(showWelcome && !session) && !(session && session.endedAt && now - Date.parse(session.endedAt) < END_SCREEN_MS) && (
         <section className="ld-off">
-          <p className="ld-off-t">You&apos;re offline</p>
+          {/* What they see when they open OBS: their own banner, sharp, before they go live. */}
+          {look?.banner && (
+            <div className="ld-hero">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="ld-hero-b" src={look.banner} alt="" />
+              {look.avatar && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="ld-hero-a" src={look.avatar} alt="" width={56} height={56} />
+              )}
+            </div>
+          )}
+          <p className="ld-off-t">{look?.banner ? `Ready when you are, ${displayName}.` : "You're offline"}</p>
           <p className="ld-off-s">Go live and this fills in. Keep it open while you stream.</p>
           {session ? (
             <div className="ld-last">
