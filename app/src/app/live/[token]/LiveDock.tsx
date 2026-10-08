@@ -5,6 +5,8 @@ import { ChevronDown, ChevronUp, Settings, X } from "lucide-react";
 import { CueEngine, SHOW_FOR, clock, nowCue, spokenLine, type Cue, type CueKind, type LiveSignals } from "@/lib/live/cues";
 import { ObsLink, type ObsInput, type ObsProblem, type ObsStatus } from "@/lib/live/obs";
 import { TwitchChat, clipIdIn } from "@/lib/live/chat";
+import { AudioBalance } from "@/lib/live/balance";
+import { isQuestion } from "@/lib/live/chat-digest";
 import { Voice, deviceVoices, loadVoicePick, saveVoicePick, voiceName, voiceNote, type VoicePick } from "@/lib/live/voice";
 import { LEVL_VOICES, SAMPLE_LINES } from "@/lib/live/voices";
 import { DIVISION_SIZE, TIER_HEX, rankFromPoints } from "@/lib/rank";
@@ -122,6 +124,7 @@ const SECTIONS: Record<SectionId, string> = {
 /** The nudges a streamer can turn off, in the order they matter. */
 const NUDGES: Array<[CueKind, string]> = [
   ["muted", "Muted mic"],
+  ["loudGame", "Game louder than you"],
   ["quiet", "Going quiet"],
   ["newChatter", "New chatters"],
   ["raid", "Raids"],
@@ -171,6 +174,9 @@ function saveLayout(l: Layout): void {
 
 /** Pro, from the panel: the dashboard opens with the upgrade window (in their own browser). */
 const GET_PRO = "/dashboard?upgrade=1";
+
+/** Chat bots whose messages aren't people asking anything. */
+const CHAT_BOTS = new Set(["nightbot", "streamelements", "streamlabs", "moobot", "fossabot", "wizebot", "sery_bot", "soundalerts", "kofistreambot", "botrixoficial", "pokemoncommunitygame"]);
 const WELCOME_KEY = "lc-live-welcome-v1";
 
 /** "just now", "3 min ago". Real time, whatever the test speed. */
@@ -433,6 +439,9 @@ export default function LiveDock({
   /** The last few minutes of chat, for the listening coach. */
   const chatLog = useRef<Array<{ name: string; text: string; at: number; first: boolean }>>([]);
   const [chatterCount, setChatterCount] = useState(0);
+  /** Free plan, after its minutes run out: questions asked in chat since, to show what Pro's coach would have caught. */
+  const [freeQuestions, setFreeQuestions] = useState(0);
+  const freeOverRef = useRef(false);
 
   // OBS
   const [obsCfg, setObsCfg] = useState<ObsConfig>(DEFAULT_OBS);
@@ -456,6 +465,9 @@ export default function LiveDock({
   const [talking, setTalking] = useState(false);
   const [levelDb, setLevelDb] = useState(-Infinity);
   const levelShownAt = useRef(0);
+  /** Whether the game has been drowning out the voice, from both meters. */
+  const balance = useRef(new AudioBalance());
+  const gameLoud = useRef(false);
   const obsRef = useRef<ObsLink | null>(null);
 
   // Cues
@@ -646,6 +658,8 @@ export default function LiveDock({
       chatTimes.current = [];
       lastChatAt.current = null;
       setChatterCount(0);
+      setFreeQuestions(0);
+      balance.current.reset();
       setFeed([]);
     }
     sessionId.current = id;
@@ -668,6 +682,7 @@ export default function LiveDock({
             setChatterCount(chatters.current.size);
           }
           if (m.firstTime && engine.current) pushCue(engine.current.newChatter(m.name, Date.now()));
+          if (freeOverRef.current && !CHAT_BOTS.has(m.user.toLowerCase()) && isQuestion(m.text)) setFreeQuestions((n) => n + 1);
           // A !clip bot or someone sharing a clip: no need to wait for Twitch's list.
           const clipId = clipIdIn(m.text, channel);
           if (clipId && coachingRef.current && brainRef.current && !seenClips.current.has(clipId) && !askedClips.current.has(clipId)) {
@@ -738,8 +753,10 @@ export default function LiveDock({
             }
           }
         },
-        level: (db) => {
+        level: (db, gameDb) => {
           const t = Date.now();
+          balance.current.add(t, mutedSince.current === null && db > TALK_DB, db, gameDb);
+          gameLoud.current = balance.current.drowned();
           if (mutedSince.current !== null) {
             // Viewers hear none of it, so it's not talking.
           } else if (db > TALK_DB) {
@@ -808,6 +825,7 @@ export default function LiveDock({
   const coachLeftMs = liveSince !== null ? (freeMinutes * 60_000) / speed - (now - liveSince) : Infinity;
   const coaching = live && (pro || coachLeftMs > 0);
   coachingRef.current = coaching;
+  freeOverRef.current = live && !pro && !coaching;
 
   // A phone in voice mode, with an OBS panel open elsewhere in the last
   // few minutes, speaks that panel's nudges instead of making its own.
@@ -839,7 +857,7 @@ export default function LiveDock({
       lastChatAt: lastChatAt.current,
       obs:
         obsStatus === "connected"
-          ? { lastTalkAt: lastTalkAt.current, scene, sceneSince: sceneSince.current, mutedSince: mutedSince.current }
+          ? { lastTalkAt: lastTalkAt.current, scene, sceneSince: sceneSince.current, mutedSince: mutedSince.current, gameLoud: gameLoud.current }
           : null,
     }),
     [now, live, liveSince, viewerPoints, obsStatus, scene, micMuted]
@@ -1107,8 +1125,12 @@ export default function LiveDock({
         <section className="ld-now ld-now-off" data-tone="calm">
           <p className="ld-k">Nudges</p>
           <p className="ld-now-t">Off for the rest of this stream</p>
+          {/* Questions are counted from chat in the panel, no AI: it can't tell
+              which ones got answered, so it only says how many were asked. */}
           <p className="ld-now-a">
-            Free covers the first {freeMinutes} minutes of each stream. Pro covers all of it.{" "}
+            {freeQuestions > 0
+              ? `Since your free ${freeMinutes} minutes ended, chat has asked ${freeQuestions} ${freeQuestions === 1 ? "question" : "questions"}. Pro's coach listens and tells you which ones you missed.`
+              : `Free covers the first ${freeMinutes} minutes of each stream. Pro covers all of it.`}{" "}
             <a href={GET_PRO} target="_blank" rel="noopener noreferrer">
               See Pro
             </a>

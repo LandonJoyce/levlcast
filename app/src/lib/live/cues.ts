@@ -23,7 +23,8 @@ export type CueKind =
   | "chatQuiet"
   | "catchUp"
   | "coach"
-  | "muted";
+  | "muted"
+  | "loudGame";
 
 export interface Cue {
   id: string;
@@ -52,6 +53,8 @@ export interface LiveSignals {
     sceneSince: number | null;
     /** Since when the mic has been muted in OBS, or null when it isn't. */
     mutedSince?: number | null;
+    /** The game has been drowning out their voice (lib/live/balance.ts). */
+    gameLoud?: boolean;
   };
 }
 
@@ -76,6 +79,7 @@ export const PRIORITY: Record<CueKind, number> = {
   raid: 100,
   muted: 110, // above a raid: raiders who arrive to a muted mic hear nothing
   clip: 95, // a moment viewers loved, and a name to thank
+  loudGame: 92, // viewers can barely hear them, which matters more than one hello
   newChatter: 90,
   coach: 85,
   quiet: 80,
@@ -93,6 +97,7 @@ export const SHOW_FOR: Record<CueKind, number> = {
   muted: 0, // shown for as long as it's true
   newChatter: 30,
   clip: 60,
+  loudGame: 45,
   coach: 120,
   quiet: 0, // shown for as long as it's true
   startingScene: 0,
@@ -133,6 +138,11 @@ const SAY = {
     "Quiet for a bit. Tell chat what you're thinking.",
     "Say something. What's the plan right now?",
     "Little quiet. Ask chat what they'd do here.",
+  ],
+  loudGame: [
+    "Your game's drowning you out. Turn it down a bit.",
+    "The game's louder than you right now. Bring it down in OBS.",
+    "Viewers can barely hear you over the game. Turn it down a little.",
   ],
   chatQuiet: [
     "Chat's gone quiet. Ask them something easy to answer.",
@@ -256,6 +266,14 @@ export class CueEngine {
     if ((cur?.kind === "startingScene" || cur?.kind === "breakScene") && this.sceneLogged !== cur.at) {
       this.sceneLogged = cur.at;
       out.push({ ...cur, id: `${cur.id}-log`, at: now });
+    }
+
+    // The game drowning out their voice: they can't hear it from their side,
+    // viewers can. Once every 10 minutes at most, and not on a break screen
+    // where music over nothing is fine.
+    if (s.obs?.gameLoud && !this.onSpecialScene(s) && this.ready("loudGame", 600, now)) {
+      this.last.set("loudGame", now);
+      out.push(make("loudGame", "Your game is louder than your voice", "Turn the game or desktop audio down in OBS so viewers can hear you.", now, "nudge", this.next("loudGame", SAY.loudGame)));
     }
 
     // Viewers now against about five minutes ago.

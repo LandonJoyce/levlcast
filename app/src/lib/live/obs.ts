@@ -3,9 +3,10 @@
  * OBS 28 and later). It runs in the dock on the streamer's own computer:
  * the connection is to localhost, and the password never leaves the machine.
  *
- * It reads four things: how loud the mic is (to tell talking from quiet),
- * whether the mic is muted, which scene is on air, and whether OBS is
- * streaming. It never changes anything in OBS.
+ * It reads five things: how loud the mic is (to tell talking from quiet),
+ * how loud the game and desktop audio are next to it, whether the mic is
+ * muted, which scene is on air, and whether OBS is streaming. It never
+ * changes anything in OBS.
  */
 
 export type ObsStatus = "off" | "connecting" | "connected" | "error";
@@ -20,8 +21,12 @@ export interface ObsInput {
 
 export interface ObsHandlers {
   status(s: ObsStatus, problem?: ObsProblem): void;
-  /** The chosen mic's peak level in dB, about 20 times a second. -Infinity is silence. */
-  level(db: number): void;
+  /**
+   * The chosen mic's peak level in dB, about 20 times a second. -Infinity is
+   * silence. `gameDb` is the loudest unmuted desktop or app audio capture at
+   * the same moment, or null when there isn't one.
+   */
+  level(db: number, gameDb: number | null): void;
   /** The chosen mic was muted or unmuted in OBS. A muted mic still reports levels, so this decides. */
   muted(m: boolean): void;
   scene(name: string): void;
@@ -43,6 +48,18 @@ const SUB_VOLUME = 1 << 16;
 
 /** Inputs that are microphones on Windows, Mac and Linux. */
 const MIC_KIND = /input_capture/;
+/**
+ * Desktop audio and per-app capture (wasapi_output_capture,
+ * wasapi_process_output_capture, coreaudio_output_capture,
+ * pulse_output_capture): where the game's sound comes from.
+ */
+const GAME_KIND = /output_capture/;
+
+/** A meter reading's peak across channels, in dB. Each channel is [magnitude, peak, input peak], as multipliers. */
+function peakDb(levels: number[][] | undefined): number {
+  const peak = Math.max(0, ...(levels ?? []).map((ch) => Number(ch?.[1] ?? 0)));
+  return peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+}
 
 async function sha256b64(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -54,6 +71,9 @@ async function sha256b64(text: string): Promise<string> {
 export class ObsLink {
   private ws: WebSocket | null = null;
   private mic: string | null;
+  /** Desktop and app audio captures, and which of every input are muted. */
+  private gameInputs = new Set<string>();
+  private mutedInputs = new Set<string>();
   private pending = new Map<string, (data: Record<string, unknown> | null) => void>();
   private reqSeq = 0;
   private stopped = false;
@@ -113,6 +133,12 @@ export class ObsLink {
     if (r) this.on.muted(Boolean(r.inputMuted));
   }
 
+  private async checkGameMute(name: string): Promise<void> {
+    const r = await this.request("GetInputMute", { inputName: name });
+    if (r?.inputMuted) this.mutedInputs.add(name);
+    else this.mutedInputs.delete(name);
+  }
+
   private send(op: number, d: unknown): void {
     this.ws?.send(JSON.stringify({ op, d }));
   }
@@ -164,6 +190,8 @@ export class ObsLink {
       }
       this.on.inputs(list, this.mic);
       await this.checkMute();
+      this.gameInputs = new Set(list.filter((i) => GAME_KIND.test(i.kind)).map((i) => i.name));
+      await Promise.all([...this.gameInputs].map((name) => this.checkGameMute(name)));
       return;
     }
 
@@ -180,15 +208,30 @@ export class ObsLink {
       const data = d.eventData ?? {};
       switch (d.eventType) {
         case "InputVolumeMeters": {
-          const input = (data.inputs as Array<{ inputName: string; inputLevelsMul: number[][] }> | undefined)?.find((i) => i.inputName === this.mic);
+          const meters = (data.inputs ?? []) as Array<{ inputName: string; inputLevelsMul: number[][] }>;
+          const input = meters.find((i) => i.inputName === this.mic);
           if (!input) return;
-          // Each channel is [magnitude, peak, input peak], as multipliers.
-          const peak = Math.max(0, ...(input.inputLevelsMul ?? []).map((ch) => Number(ch?.[1] ?? 0)));
-          this.on.level(peak > 0 ? 20 * Math.log10(peak) : -Infinity);
+          let gameDb: number | null = null;
+          for (const m of meters) {
+            if (!this.gameInputs.has(m.inputName) || this.mutedInputs.has(m.inputName)) continue;
+            gameDb = Math.max(gameDb ?? -Infinity, peakDb(m.inputLevelsMul));
+          }
+          this.on.level(peakDb(input.inputLevelsMul), gameDb);
           return;
         }
         case "InputMuteStateChanged":
           if (data.inputName === this.mic) this.on.muted(Boolean(data.inputMuted));
+          if (data.inputMuted) this.mutedInputs.add(String(data.inputName));
+          else this.mutedInputs.delete(String(data.inputName));
+          return;
+        case "InputCreated":
+          if (GAME_KIND.test(String(data.inputKind ?? ""))) this.gameInputs.add(String(data.inputName));
+          return;
+        case "InputRemoved":
+          this.gameInputs.delete(String(data.inputName));
+          return;
+        case "InputNameChanged":
+          if (this.gameInputs.delete(String(data.oldInputName))) this.gameInputs.add(String(data.inputName));
           return;
         case "CurrentProgramSceneChanged":
           if (data.sceneName) this.on.scene(String(data.sceneName));
