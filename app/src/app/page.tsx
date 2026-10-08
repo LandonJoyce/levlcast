@@ -440,7 +440,7 @@ export default async function HomePage() {
           Get coached on your next stream<span className="v3-punct">.</span>
           <br />
           <span className="v3-soft">
-            It takes about a minute to set up<span className="v3-punct">.</span>
+            It takes about 3 minutes to set up<span className="v3-punct">.</span>
           </span>
         </h2>
         <div className="v3-live-cta">
