@@ -1164,9 +1164,11 @@ export default function LiveDock({
             </button>
           )}
           <p className="ld-k">Now</p>
-          {/* Keyed by the cue, so a new one settles in (live.css) instead of the old text swapping in place. */}
-          <p className="ld-now-t" key={`t-${card?.id ?? "calm"}`}>{card ? card.title : "Looking good"}</p>
-          <p className="ld-now-a" key={`a-${card?.id ?? "calm"}`}>{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
+          {/* Keyed by the cue, so a new one settles in (live.css) instead of the old text swapping in place.
+              By cueKey, not id: a cue that's true for a while (quiet, muted) is remade every tick with a new id,
+              and keying by that replayed the fade every second. */}
+          <p className="ld-now-t" key={`t-${card ? cueKey(card) : "calm"}`}>{card ? card.title : "Looking good"}</p>
+          <p className="ld-now-a" key={`a-${card ? cueKey(card) : "calm"}`}>{card ? card.action : talking ? "Keep it up." : "Keep talking to chat."}</p>
           {voiceOn && (
             <p className="ld-voiceline">
               {remotePanel ? "Speaking your OBS panel's nudges" : "Speaking your nudges"} in {pickLabel}&apos;s voice.{" "}
