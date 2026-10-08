@@ -125,7 +125,7 @@ export function FeedbackModal({
               Send Feedback
             </div>
             <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)", margin: 0, lineHeight: 1.25 }}>
-              Tell Landon what happened
+              Message support
             </h2>
             <p style={{ fontSize: 13, color: "var(--ink-4)", marginTop: 6, lineHeight: 1.5 }}>
               Goes straight to me. I read every message.

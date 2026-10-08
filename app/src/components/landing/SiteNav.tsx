@@ -59,7 +59,7 @@ const MORE: Item[] = [
   { href: "/leaderboard", title: "Leaderboard", blurb: "The top 50 streamers right now.", icon: Medal },
   { href: APP_STORE_URL, title: "iPhone app", blurb: "LevlCast on your iPhone.", icon: Smartphone, external: true },
   { href: "/how-to-grow-on-twitch", title: "Growth guide", blurb: "What actually grows a channel.", icon: BookOpen },
-  { href: "mailto:Landon@LevlCast.com", title: "Talk to Landon", blurb: "Questions, bugs or ideas.", icon: Mail, external: true },
+  { href: "mailto:Landon@LevlCast.com", title: "Message support", blurb: "Questions, bugs or ideas.", icon: Mail, external: true },
 ];
 
 function MenuItem({ item, onPick }: { item: Item; onPick: () => void }) {
