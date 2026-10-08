@@ -31,6 +31,16 @@ type Step = (typeof STEPS)[number];
 
 type Row = { visitor: string; ref: string | null; event: string; detail: string | null; created_at: string };
 
+/** The angles in lib/outreach.ts, plus the two retired on 2026-10-06 that older DMs still carry. */
+const ANGLE_LABEL: Record<string, string> = {
+  retention: "where viewers dropped off",
+  dead_air: "dead air",
+  cold_open: "the opening",
+  progress: "progress over time",
+  rank: "rank",
+  clipping: "clips",
+};
+
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -80,7 +90,14 @@ export async function GET(req: NextRequest) {
   const visitors = new Map<string, Visitor>();
   const refused = new Map<string, number>();
   let failed = 0;
+  // Signed-in visits by account, for "Came back another day". Kept out of the
+  // visitor steps: an app visit isn't a step toward an account.
+  const opensBy = new Map<string, string[]>();
   for (const e of (events ?? []) as Row[]) {
+    if (e.event === "app_open") {
+      if (e.detail) opensBy.set(e.detail, [...(opensBy.get(e.detail) ?? []), e.created_at]);
+      continue;
+    }
     let v = visitors.get(e.visitor);
     if (!v) {
       v = { ref: null, steps: new Set(), previews: new Set(), first: e.created_at, last: e.created_at };
@@ -129,6 +146,83 @@ export async function GET(req: NextRequest) {
   }
   people.sort((a, b) => (a.lastSeen < b.lastSeen ? 1 : -1));
 
+  // Which kind of DM gets clicked: the ones written around the person's own
+  // report against the general ones, by angle. Rows from before migration
+  // 034 have no report_vod_id column, so that read falls back without it.
+  const clickedCodes = new Set<string>();
+  const signedCodes = new Set<string>();
+  for (const v of visitors.values()) {
+    if (!v.ref?.startsWith("dm-")) continue;
+    clickedCodes.add(v.ref);
+    if (v.steps.has("signup")) signedCodes.add(v.ref);
+  }
+  const sentWithReport = await admin
+    .from("outreach_contacts")
+    .select("reddit_username, angle, report_vod_id")
+    .eq("status", "sent")
+    .gte("sent_at", dmsSince)
+    .limit(5000);
+  const sentList = (
+    sentWithReport.error
+      ? (await admin.from("outreach_contacts").select("reddit_username, angle").eq("status", "sent").gte("sent_at", dmsSince).limit(5000)).data
+      : sentWithReport.data
+  ) as Array<{ reddit_username: string | null; angle: string | null; report_vod_id?: string | null }> | null;
+  const kinds = new Map<string, { label: string; sent: number; clicked: number; signedUp: number }>();
+  for (const r of sentList ?? []) {
+    if (!r.reddit_username) continue;
+    const key = r.report_vod_id ? "report" : r.angle ?? "other";
+    const label = key === "report" ? "Built around their own report" : `General DM: ${ANGLE_LABEL[key] ?? key.replace(/_/g, " ")}`;
+    const k = kinds.get(key) ?? { label, sent: 0, clicked: 0, signedUp: 0 };
+    const code = dmRef(r.reddit_username);
+    k.sent++;
+    if (clickedCodes.has(code)) k.clicked++;
+    if (signedCodes.has(code)) k.signedUp++;
+    kinds.set(key, k);
+  }
+  const dmKinds = [...kinds.values()].sort((a, b) => b.sent - a.sent);
+
+  // After they sign up: of the accounts made in the window, who got a
+  // report, came back on a later day, set up the OBS panel, streamed with
+  // it, and went Pro. Each is a share of the signups, since they don't
+  // happen in a fixed order. "Came back" is the person opening the app
+  // (AppOpenPing, from 2026-10-07) or streaming with the panel on a later
+  // day. Reports don't count: background jobs make them with nobody there.
+  const { data: joined } = await admin
+    .from("profiles")
+    .select("id, created_at, plan")
+    .gte("created_at", since)
+    // The ids go into the query string below; 200 keeps it well under URL limits.
+    .limit(200);
+  const joinedList = (joined ?? []) as Array<{ id: string; created_at: string; plan: string | null }>;
+  const afterSignup = { signedUp: joinedList.length, report: 0, cameBack: 0, obsAdded: 0, obsStreamed: 0, pro: 0 };
+  if (joinedList.length > 0) {
+    const ids = joinedList.map((p) => p.id);
+    const [vodsRes, docksRes, sessionsRes] = await Promise.all([
+      admin.from("vods").select("user_id, analyzed_at").in("user_id", ids).eq("status", "ready").limit(5000),
+      admin.from("live_docks").select("user_id").in("user_id", ids),
+      admin.from("live_sessions").select("user_id, started_at").in("user_id", ids).limit(5000),
+    ]);
+    const reportsBy = new Map<string, string[]>();
+    for (const v of (vodsRes.data ?? []) as Array<{ user_id: string; analyzed_at: string | null }>) {
+      reportsBy.set(v.user_id, [...(reportsBy.get(v.user_id) ?? []), v.analyzed_at ?? ""]);
+    }
+    const streamsBy = new Map<string, string[]>();
+    for (const s of (sessionsRes.data ?? []) as Array<{ user_id: string; started_at: string }>) {
+      streamsBy.set(s.user_id, [...(streamsBy.get(s.user_id) ?? []), s.started_at]);
+    }
+    const docked = new Set(((docksRes.data ?? []) as Array<{ user_id: string }>).map((d) => d.user_id));
+    for (const p of joinedList) {
+      const reports = reportsBy.get(p.id) ?? [];
+      const streams = streamsBy.get(p.id) ?? [];
+      const dayAfter = new Date(Date.parse(p.created_at) + 86400000).toISOString();
+      if (reports.length > 0) afterSignup.report++;
+      if ([...(opensBy.get(p.id) ?? []), ...streams].some((at) => at > dayAfter)) afterSignup.cameBack++;
+      if (docked.has(p.id)) afterSignup.obsAdded++;
+      if (streams.length > 0) afterSignup.obsStreamed++;
+      if (p.plan === "pro") afterSignup.pro++;
+    }
+  }
+
   // Everyone who made an account in the window, newest first, with how
   // they got here where the funnel saw it. Worth a personal hello each.
   const { data: profiles } = await admin
@@ -173,5 +267,7 @@ export async function GET(req: NextRequest) {
     failed,
     people: people.slice(0, 60),
     newAccounts,
+    dmKinds,
+    afterSignup,
   });
 }

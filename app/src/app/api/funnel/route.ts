@@ -9,7 +9,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { CLIENT_EVENTS, REF_COOKIE, REF_PATTERN, VISITOR_COOKIE, type ClientEvent } from "@/lib/funnel";
 
@@ -35,7 +35,14 @@ export async function POST(request: NextRequest) {
   // The ref on the page wins for the landing itself; after that, the cookie.
   const rawRef = (body.ref ?? request.cookies.get(REF_COOKIE)?.value ?? "").toLowerCase();
   const ref = REF_PATTERN.test(rawRef) ? rawRef : null;
-  const detail = typeof body.detail === "string" ? body.detail.slice(0, 200) : null;
+  let detail = typeof body.detail === "string" ? body.detail.slice(0, 200) : null;
+
+  // An app visit belongs to whoever's session this is, not to an id the page sent.
+  if (event === "app_open") {
+    const { data: { user } } = await (await createClient()).auth.getUser();
+    if (!user) return new NextResponse(null, { status: 204 });
+    detail = user.id;
+  }
 
   try {
     await createAdminClient().from("funnel_events").insert({ visitor, ref, event, detail });

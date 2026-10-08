@@ -15,6 +15,11 @@ export const CLIENT_EVENTS = [
   "preview_failed",
   "cta",
   "signin_start",
+  // A signed-in person opened the app, once a day per browser. Not a funnel
+  // step: it's how the outreach page tells a user who came back from one
+  // whose reports were made by the background jobs. The server records it
+  // against the session's account, never an id the page sends.
+  "app_open",
 ] as const;
 export type ClientEvent = (typeof CLIENT_EVENTS)[number];
 export type FunnelEvent = ClientEvent | "signup";

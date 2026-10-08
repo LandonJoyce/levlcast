@@ -2,6 +2,7 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppBar from "@/components/dashboard/AppBar";
 import { PendingInviteHandler } from "@/components/dashboard/pending-invite-handler";
+import { AppOpenPing } from "@/components/funnel/app-open";
 import { currentWeekStart, getUserUsage } from "@/lib/limits";
 import { buildUpgradePitch } from "@/lib/upgrade-pitch";
 import { shoulders } from "../fonts";
@@ -85,6 +86,7 @@ export default async function DashboardLayout({
         collabPendingCount={collabPendingCount ?? 0}
       />
       <PendingInviteHandler />
+      <AppOpenPing />
       <main className="main">
         <div className="content">{children}</div>
       </main>

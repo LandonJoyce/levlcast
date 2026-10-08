@@ -26,6 +26,34 @@ interface FunnelData {
   failed: number;
   people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }>;
   newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "thread" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
+  dmKinds?: Array<{ label: string; sent: number; clicked: number; signedUp: number }>;
+  afterSignup?: { signedUp: number; report: number; cameBack: number; obsAdded: number; obsStreamed: number; pro: number };
+}
+
+/** What new accounts went on to do, each as a share of everyone who signed up. */
+function AfterRow({ a }: { a: NonNullable<FunnelData["afterSignup"]> }) {
+  const cells = [
+    { label: "Signed up", n: a.signedUp },
+    { label: "Got a finished report", n: a.report },
+    { label: "Came back another day", n: a.cameBack },
+    { label: "Added the OBS panel", n: a.obsAdded },
+    { label: "Streamed with the panel", n: a.obsStreamed },
+    { label: "Went Pro", n: a.pro },
+  ];
+  return (
+    <div className="fn-row">
+      {cells.map((c, i) => {
+        const pct = i > 0 && a.signedUp ? Math.round((c.n / a.signedUp) * 100) : null;
+        return (
+          <div key={c.label} className="fn-cell" data-zero={c.n === 0 ? "1" : "0"}>
+            <span className="fn-n">{c.n}</span>
+            <span className="fn-l">{c.label}</span>
+            {pct !== null && <span className="fn-pct" data-low={pct < 40 ? "1" : "0"}>{pct}%</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 const SOURCE: Record<FunnelData["newAccounts"][number]["source"], string> = {
@@ -133,6 +161,22 @@ export function FunnelCard() {
           <>
             <p className="fn-k">From your DMs</p>
             <Row first={data.dmsSent} firstLabel={`DMs sent since ${shortDate(data.dmsSince)}`} counts={data.dm} />
+            {data.dmKinds && data.dmKinds.length > 0 && (
+              <>
+                <p className="fn-k">Which DMs get clicked</p>
+                <ul className="fn-list">
+                  {data.dmKinds.map((k) => (
+                    <li key={k.label}>
+                      <span>
+                        {k.label} · {k.clicked} of {k.sent} clicked
+                        {k.signedUp > 0 ? ` · ${k.signedUp} signed up` : ""}
+                      </span>
+                      <b>{k.sent ? Math.round((k.clicked / k.sent) * 100) : 0}%</b>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
             {data.thread && data.thread.land > 0 && (
               <>
                 <p className="fn-k">From your review threads</p>
@@ -141,6 +185,12 @@ export function FunnelCard() {
             )}
             <p className="fn-k">Everyone else</p>
             <Row first={null} firstLabel={null} counts={data.other} landLabel="Opened the analyzer" />
+            {data.afterSignup && data.afterSignup.signedUp > 0 && (
+              <>
+                <p className="fn-k">After they sign up</p>
+                <AfterRow a={data.afterSignup} />
+              </>
+            )}
 
             {(data.refused.length > 0 || data.failed > 0) && (
               <>
@@ -212,7 +262,10 @@ export function FunnelCard() {
             <p className="fn-fine">
               Unique visitors in the last {data.days} days. Each step shows the share of the step before it. DMs sent
               before {shortDate(data.dmsSince)} had no tracking code, so clicks from them count under Everyone else, and
-              so does a sign-in that Twitch finished in a different browser.
+              so does a sign-in that Twitch finished in a different browser. After they sign up counts every account
+              made in these {data.days} days, wherever it came from, as a share of those signups. Came back another day means
+              they opened LevlCast on the website or streamed with the panel on a later day; website visits count from
+              Oct 7, and the iPhone app isn&apos;t counted.
             </p>
           </>
         )}
