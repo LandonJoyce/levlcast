@@ -52,7 +52,7 @@ function streamLine(report: Record<string, unknown> | null): string | null {
   const deadPct = typeof report.dead_air_pct === "number" ? report.dead_air_pct : null;
   const deadSecs = typeof report.dead_air_seconds === "number" ? report.dead_air_seconds : null;
   if (deadPct !== null && deadPct >= 10 && deadSecs) {
-    return `${Math.round(deadSecs / 60)} minutes of dead air, ${Math.round(deadPct)}% of the stream.`;
+    return `${Math.round(deadSecs / 60)} minutes of quiet, ${Math.round(deadPct)}% of the stream.`;
   }
   const improvements = Array.isArray(report.improvements) ? report.improvements : [];
   const first = improvements.find((s): s is string => typeof s === "string" && s.length > 0);

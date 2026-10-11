@@ -84,7 +84,7 @@ function TwoStreams() {
       <div className="xr-row">
         <p className="xr-k">This stream</p>
         <p className="xr-text">
-          <span className="xr-good">Fixed.</span> Dead air went from 17 minutes to 6.
+          <span className="xr-good">Fixed.</span> Quiet time went from 17 minutes to 6.
         </p>
       </div>
       <div className="xr-row">
@@ -115,7 +115,7 @@ export default function StreamCoachPage() {
         rows: [
           { k: "One fix", v: "The one thing to change next stream, picked because it's costing you the most right now." },
           { k: "Whether you fixed it", v: "The next report checks last stream's fix and tells you if it got better." },
-          { k: "What cost you viewers", v: "Dead air, slow starts and the habits behind them, with timestamps, next to what worked and is worth doing again." },
+          { k: "What cost you viewers", v: "Quiet stretches, slow starts and the habits behind them, with timestamps, next to what worked and is worth doing again." },
           { k: "Notes for your game", v: "The coaching changes with what you play, so a shooter stream and a cozy sim stream get different notes." },
           { k: "Your rank", v: "Every stream moves you up or down a ladder from Iron to Grandmaster, based on how it went against your own recent streams." },
         ],

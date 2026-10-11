@@ -233,7 +233,7 @@ export function replayFromVod(v: VodForReplay): ReplayData | null {
     })
   );
   deadAir.forEach((s) =>
-    candidates.push({ minute: s.start, text: `Dead air. ${plural(s.minutes, "minute")} of nobody talking.`, tone: "red", rank: 2 })
+    candidates.push({ minute: s.start, text: `Went quiet. ${plural(s.minutes, "minute")} of nobody talking.`, tone: "red", rank: 2 })
   );
   if (crash) candidates.push({ minute: crash.start, text: `Momentum crash. ${plural(Math.round(crash.minutes), "minute")} downhill.`, tone: "red", rank: 3 });
   let mutedRun = -1;
@@ -282,7 +282,7 @@ export function replayFromVod(v: VodForReplay): ReplayData | null {
     deadAir,
     crash,
     captions,
-    summary: `${plural(clips.length, "clip")}, ${plural(deadMinutes, "minute")} of dead air${rankBit}.`,
+    summary: `${plural(clips.length, "clip")}, ${plural(deadMinutes, "minute")} of quiet${rankBit}.`,
     score: typeof r.overall_score === "number" ? r.overall_score : 0,
     pointsBefore: 0,
     recentScores: [],
@@ -418,17 +418,17 @@ function buildExample(): ReplayData {
       { minute: 31.3, text: "First clutch of the night. Chat went off.", tone: "gold" },
       { minute: 36, text: "Riding the high. You're talking, chat's talking back.", tone: "plain" },
       { minute: 45, text: "The queue goes quiet, and so do you.", tone: "red" },
-      { minute: 52, text: "Dead air. Four minutes of nobody talking.", tone: "red" },
+      { minute: 52, text: "Went quiet. Four minutes of nobody talking.", tone: "red" },
       { minute: 56.2, text: "Back in a game. Chat's slow to come back.", tone: "plain" },
       { minute: 73.1, text: "Your best moment. 1v3 on the last round.", tone: "gold" },
       { minute: 80, text: "Chat stays loud for ten minutes after it.", tone: "plain" },
-      { minute: 101, text: "Dead air again. Three minutes this time.", tone: "red" },
+      { minute: 101, text: "Quiet again. Three minutes this time.", tone: "red" },
       { minute: 104.2, text: "You pick it back up faster this time.", tone: "plain" },
       { minute: 124.4, text: "Chat called the flank and you took it. Clipped.", tone: "gold" },
       { minute: 131, text: "Your strongest stretch of the night.", tone: "plain" },
       { minute: 150, text: "Winding down.", tone: "plain" },
     ],
-    summary: "Three clips, seven minutes of dead air, and better than your last five.",
+    summary: "Three clips, seven minutes of quiet, and better than your last five.",
     score: 64,
     pointsBefore: 1166,
     recentScores: [57, 55, 60, 52, 58],

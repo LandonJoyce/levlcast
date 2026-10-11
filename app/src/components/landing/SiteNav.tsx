@@ -44,7 +44,7 @@ interface Item {
 
 const FEATURES: Item[] = [
   { href: "/analyze", title: "Free stream report", blurb: "Paste any VOD. No account needed.", icon: ClipboardPaste },
-  { href: "/twitch-vod-analyzer", title: "VOD analyzer", blurb: "Dead air, slow starts and what landed, with timestamps.", icon: AudioWaveform },
+  { href: "/twitch-vod-analyzer", title: "VOD analyzer", blurb: "Quiet stretches, slow starts and what landed, with timestamps.", icon: AudioWaveform },
   { href: "/twitch-clip-generator", title: "Clip generator", blurb: "Finds the moments worth posting and cuts them.", icon: Scissors },
   { href: "/twitch-stream-coach", title: "Stream coach", blurb: "One fix per stream, checked next time.", icon: Target },
   { href: "/obs", title: "Live coach in OBS", blurb: "Coaches you while you're live. Only you can see it.", icon: MonitorPlay, tag: "New" },

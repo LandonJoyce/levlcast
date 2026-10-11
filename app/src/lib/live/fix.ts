@@ -19,7 +19,7 @@ const KINDS: FixKind[] = ["opening", "quiet", "chat", "other"];
 const SYSTEM = `You turn the main recommendation from a Twitch streamer's coaching report into one short line they keep in view while they're live.
 
 - One thing they can do during the stream, said as a plain instruction.
-- 12 words at most. Plain words. No dashes, quote marks or emojis.
+- 12 words at most. Plain words. No dashes, quote marks or emojis. Say "quiet", never "dead air".
 - Keep what's specific to them (their game, their bit, their habit). Drop praise and reasons.
 
 Also say what it's mostly about: "opening" (how the stream starts), "quiet" (talking through quiet stretches), "chat" (talking to chat or chatters), or "other".

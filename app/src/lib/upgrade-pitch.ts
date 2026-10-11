@@ -143,8 +143,8 @@ function composeReason(args: {
         : "flat";
     const deadAirNote = deadAirDelta != null && Math.abs(deadAirDelta) >= 2
       ? deadAirDelta < 0
-        ? ` Your dead air dropped ${Math.abs(deadAirDelta)} points. That's real progress, and it only shows up when you have more than one report to compare.`
-        : ` Your dead air climbed ${deadAirDelta} points. That's exactly the pattern Pro flags before it becomes a habit.`
+        ? ` Your quiet time dropped ${Math.abs(deadAirDelta)} points. That's real progress, and it only shows up when you have more than one report to compare.`
+        : ` Your quiet time climbed ${deadAirDelta} points. That's exactly the pattern Pro flags before it becomes a habit.`
       : "";
     return `You've analyzed ${reportCount} streams averaging ${avgScore}/100. Your latest stream came in ${direction} vs the one before.${deadAirNote} One report just diagnoses. Watching what changes between streams is where the coaching actually happens. Pro tracks every stream so you can prove what's working.`;
   }

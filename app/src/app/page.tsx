@@ -166,7 +166,7 @@ const KINDS: Array<{ k: string; v: string; games: Array<[name: string, slug: str
   },
   {
     k: "Everything else",
-    v: "Just Chatting, variety, anything. Every stream gets notes on your talking, pacing, dead air and chat.",
+    v: "Just Chatting, variety, anything. Every stream gets notes on your talking, pacing, quiet stretches and chat.",
     games: [
       ["Just Chatting", "just-chatting"],
       ["Grand Theft Auto V", "grand-theft-auto-v"],

@@ -238,7 +238,7 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
         <div>
           <h2 className="pr-more-h">Get coached on every stream.</h2>
           <ul className="pr-more-list">
-            <li>The first 2 hours coached free, the whole stream on Pro, with the dead air timestamped</li>
+            <li>The first 2 hours coached free, the whole stream on Pro, with every quiet stretch timestamped</li>
             <li>A panel in OBS that coaches you while you&apos;re live, free for the first 30 minutes</li>
             <li>Your best moments cut into clips with captions, ready to post</li>
             <li>A rank that climbs every time you beat your recent form</li>

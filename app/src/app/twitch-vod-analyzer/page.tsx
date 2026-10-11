@@ -86,7 +86,7 @@ export default function VodAnalyzerPage() {
         rows: [
           { k: "Your voice", v: "The stream is transcribed and filtered to you, so game audio, music and your duo don't get mixed into the feedback." },
           { k: "Chat", v: "The chat replay is lined up with the stream, so the report knows when a joke actually landed and when chat went quiet." },
-          { k: "Dead air", v: "Every quiet stretch long enough for a new viewer to leave, with the timestamp so you can go and watch it." },
+          { k: "Quiet stretches", v: "Every quiet stretch long enough for a new viewer to leave, with the timestamp so you can go and watch it." },
           { k: "Your opening", v: "How long the stream takes to get going. The first few minutes decide whether someone who just clicked in stays." },
           { k: "Best moments", v: "Up to five moments worth clipping, each with a timestamp and a note on why it works." },
         ],

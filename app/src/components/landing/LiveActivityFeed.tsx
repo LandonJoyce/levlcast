@@ -96,7 +96,7 @@ function pickHighlight(row: FeedRow, idx: number): Highlight | null {
 
   // NEGATIVES — concrete and specific
   if (deadPct >= 20 && deadSecs >= 180) {
-    candidates.push({ text: `${fmtSeconds(deadSecs)} dead air`, tone: "negative" });
+    candidates.push({ text: `${fmtSeconds(deadSecs)} quiet`, tone: "negative" });
   }
   if (report.cold_open?.score === "weak") {
     candidates.push({ text: "weak cold open", tone: "negative" });
@@ -112,7 +112,7 @@ function pickHighlight(row: FeedRow, idx: number): Highlight | null {
   }
   if (deadSecs >= 60 && deadPct < 20) {
     // Smaller dead air gap — still worth surfacing
-    candidates.push({ text: `${fmtSeconds(deadSecs)} dead air`, tone: "negative" });
+    candidates.push({ text: `${fmtSeconds(deadSecs)} quiet`, tone: "negative" });
   }
   if (peaks === 0 && score !== null && score < 55) {
     candidates.push({ text: "no clear peaks", tone: "negative" });

@@ -163,7 +163,7 @@ export default function StreamReplay({
               <p className="rpl-kicker">
                 Replay
                 <span>
-                  {data.clips.length} clips · {deadMinutes} min dead air · drag the bar to scrub
+                  {data.clips.length} clips · {deadMinutes} min quiet · drag the bar to scrub
                 </span>
               </p>
             ) : (
@@ -171,7 +171,7 @@ export default function StreamReplay({
                 {example && <span className="rpl-tag">Example</span>}
                 <h1 className="rpl-title">{data.title}</h1>
                 <p className="rpl-sub">
-                  {data.when} · {durationLabel(D)} · {data.clips.length} clips · {deadMinutes} min dead air
+                  {data.when} · {durationLabel(D)} · {data.clips.length} clips · {deadMinutes} min quiet
                 </p>
               </>
             )}
@@ -340,7 +340,7 @@ function Pin({
     stat = `chat hit ${Math.max(...data.chat.slice(Math.floor(c.minute), Math.floor(c.minute) + 3))}/min`;
   } else if (anchor.kind === "dead") {
     const s = data.deadAir[anchor.index];
-    kicker = `Dead air · ${shortClock(s.start)}`;
+    kicker = `Quiet · ${shortClock(s.start)}`;
     title = `${s.minutes} minutes, nobody talking`;
     at = s.start * 60;
   } else if (data.crash) {
@@ -443,7 +443,7 @@ function Result({ data, result, deadMinutes }: { data: ReplayData; result: Delta
           </div>
         )}
         <div>
-          <dt>Dead air</dt>
+          <dt>Quiet</dt>
           <dd>{deadMinutes}m</dd>
         </div>
       </dl>
