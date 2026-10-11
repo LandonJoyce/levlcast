@@ -1212,3 +1212,336 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 @media (max-width: 900px) { .v3 .v3-hero-panel { justify-self: start; } }
 /* "Coaching for / Twitch streamers." stays two lines beside the panel. */
 .v3 .v3-hero .v3-h1 { font-size: clamp(36px, 4.5vw, 58px); }
+
+/* ── 2026-10 refresh: floating bar, wide headlines, pill buttons, the hero grid ── */
+.v3 { --v3-head: var(--font-archivo, var(--ll-display)); }
+
+/* The bar: flat at the top; once you scroll it sticks as a floating frosted
+   bar. The glass is on ::before, not the header, so the menu sheet (fixed)
+   still covers the whole screen. Padding swaps for margin so the page
+   under it never jumps. */
+.v3 .v3-bar {
+  position: sticky;
+  top: 10px;
+  z-index: 40;
+  transition: padding 220ms ease, margin 220ms ease;
+}
+.v3 .v3-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 18px;
+  background: rgba(28, 24, 25, 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: inset 0 0 0 1px rgba(255, 238, 230, 0.09), 0 12px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.v3 .v3-bar[data-float] { padding-block: 12px; margin-bottom: 20px; padding-inline: 22px; }
+.v3 .v3-bar[data-float]::before { opacity: 1; }
+
+/* Nav in plain words, not spaced capitals */
+.v3 .v3-nav { font-family: inherit; font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; gap: 24px; }
+.v3 .v3-nav a, .v3 .nv-trigger { color: var(--ll-fg-mute); }
+.v3 .v3-nav a:hover, .v3 .nv-trigger:hover { color: var(--ll-fg); }
+.v3 .v3-nav .v3-signin { padding: 9px 18px; border: 0; border-radius: 999px; background: var(--ll-fg); color: rgb(16, 13, 14); font-weight: 700; }
+.v3 .v3-nav .v3-signin:hover { background: #fff; color: rgb(16, 13, 14); }
+.v3 .v3-nav .v3-ios { border: 0; padding: 0; }
+
+/* Headlines: wide and confident */
+.v3 .v3-h1,
+.v3 .v3-h2,
+.v3 .v3-close-h {
+  font-family: var(--v3-head);
+  font-stretch: 112%;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.v3 .v3-h1-soft { color: var(--v3-dim); }
+
+/* Pill buttons */
+.v3 .v3-btn { display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; padding: 15px 26px; font-size: 15.5px; }
+.v3 .v3-btn-ghost { padding: 14px 25px; border-color: rgba(255, 238, 230, 0.32); }
+.v3 .v3-btn svg { transition: transform 160ms ease; }
+.v3 .v3-btn:hover svg { transform: translateX(3px); }
+
+/* The hero: words on the left, a grid of the real product running off
+   the right edge, the way StreamElements shows real streams. */
+.v3 > .v3-hero {
+  max-width: none;
+  padding-right: 0;
+  padding-left: max(var(--v3-pad), calc((100vw - var(--v3-maxw)) / 2 + var(--v3-pad)));
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  padding-block: clamp(20px, 3vw, 40px) 0;
+}
+.v3 .v3-hero .v3-h1 { font-size: clamp(38px, 4.6vw, 62px); line-height: 1.04; margin-bottom: 8px; max-width: 13ch; }
+.v3 .v3-hero .v3-live-cta { margin-top: 36px; }
+.v3 .v3-hero .v3-live-cta .v3-btn { margin-top: 0; }
+.v3 .v3-hero .v3-fine { font-family: inherit; font-size: 13px; letter-spacing: 0; margin-top: 18px; }
+
+.v3 .v3-mosaic {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-rows: 300px 250px 220px;
+  gap: 8px;
+  height: 700px;
+  overflow: hidden;
+}
+.v3 .mz { margin: 0; position: relative; overflow: hidden; border-radius: 10px; background: #1b1718; }
+.v3 .mz img, .v3 .mz video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.v3 .mz-obs { grid-row: 1 / 3; }
+.v3 .mz-obs img { object-position: 100% 50%; }
+.v3 .mz-cream { background: #ede7dd; display: grid; place-items: center; padding: 22px; }
+.v3 .mz-cream img { height: auto; max-width: 340px; border-radius: 12px; box-shadow: 0 14px 30px rgba(40, 24, 16, 0.28); }
+.v3 .mz-win {
+  background: var(--v3-good);
+  color: rgb(16, 13, 14);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22px 24px;
+}
+.v3 .mz-win-d { font-family: var(--v3-display); font-weight: 900; font-size: 104px; line-height: 0.85; letter-spacing: -0.01em; }
+.v3 .mz-win-t { margin-top: 10px; font-weight: 700; font-size: 15px; }
+.v3 .mz-clip video { object-position: 50% 0; }
+.v3 .mz-rank { display: grid; place-items: center; background: #1f1a1b; }
+.v3 .mz-emb { width: 150px; height: 150px; }
+
+@media (max-width: 900px) {
+  .v3 > .v3-hero { grid-template-columns: minmax(0, 1fr); padding-left: var(--v3-pad); padding-top: 12px; }
+  .v3 .v3-hero .v3-h1 { max-width: 14ch; }
+  .v3 .v3-mosaic { grid-template-rows: 230px 170px 150px; height: 470px; gap: 6px; }
+  .v3 .mz-cream { padding: 14px; }
+  .v3 .mz-win { padding: 14px 16px; }
+  .v3 .mz-win-d { font-size: 64px; }
+  .v3 .mz-win-t { font-size: 13px; }
+  .v3 .mz-emb { width: 96px; height: 96px; }
+  .v3 .v3-bar[data-float] { padding-inline: 16px; }
+}
+.v3 .v3-hero .v3-h1 { font-size: clamp(36px, 3.9vw, 56px); max-width: 17ch; }
+.v3 .mz .mz-emb { width: 150px; height: 150px; object-fit: contain; }
+.v3 .v3-mosaic { height: 660px; }
+.v3 .v3-proof dt { font-family: inherit; font-size: 13px; letter-spacing: 0; text-transform: none; }
+@media (max-width: 900px) {
+  .v3 .v3-hero .v3-h1 { max-width: 15ch; }
+  .v3 .v3-mosaic { height: 470px; }
+  .v3 .mz .mz-emb { width: 96px; height: 96px; }
+}
+.v3 .v3-hero .v3-h1 { max-width: none; }
+.v3 .v3-h1-soft { display: block; }
+/* The labels are short words now, so the three numbers fit one row on a phone. */
+@media (max-width: 900px) {
+  .v3 .v3-proof-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .v3 .v3-proof-list > div,
+  .v3 .v3-proof-list > div:nth-child(n + 3) { padding: 14px 10px 16px 0; border-top: 0; }
+  .v3 .v3-proof-list > div + div,
+  .v3 .v3-proof-list > div:nth-child(odd) + div,
+  .v3 .v3-proof-list > div:nth-child(2n + 3) { padding-left: 12px; border-left: 1px solid var(--ll-line-soft); }
+  .v3 .v3-proof dt { font-size: 12px; }
+}
+/* The grid ends on a full row instead of being cut off under the fold. */
+.v3 .v3-mosaic { grid-template-rows: 280px 230px 200px; height: auto; }
+@media (max-width: 900px) {
+  .v3 .v3-mosaic { grid-template-rows: 230px 170px 150px; height: auto; }
+}
+.v3 .v3-proof { margin-top: clamp(24px, 4vw, 48px); }
+/* Small print in the body font, not code font, and room before a picture. */
+.v3 .v3-fine { font-family: inherit; font-size: 13px; letter-spacing: 0; }
+.v3 .v3-fine + .v3-shot { margin-top: 40px; }
+/* The Product menu: the same frosted glass as the floating bar, plain-word
+   section labels, and "New" as a green word instead of a pill. */
+.v3 .nv-panel {
+  border: 0;
+  border-radius: 18px;
+  background: rgba(28, 24, 25, 0.78);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: inset 0 0 0 1px rgba(255, 238, 230, 0.09), 0 30px 60px -24px rgba(0, 0, 0, 0.75);
+}
+.v3 .nv-h { font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.v3 .nv-tag { padding: 0; border: 0; border-radius: 0; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--v3-good); }
+.v3 .nv-ico { background: rgba(255, 238, 230, 0.06); border-color: rgba(255, 238, 230, 0.08); }
+/* The fade sits on the panel, not its wrapper: a fading wrapper stops the
+   panel's blur from reaching the page behind it. */
+.v3 .nv-drop { animation: none; }
+.v3 .nv-panel { animation: nv-in 140ms ease both; background: rgba(28, 24, 25, 0.8); }
+/* The stream tile: a real clip with the panel's nudge on top, like an
+   overlay on a webcam. The nudge sits at the top so the face stays clear. */
+.v3 .mz-stream { background: #050405; }
+.v3 .mz-live {
+  position: absolute; top: 12px; left: 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px; border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55); color: #fff;
+  font-size: 12px; font-weight: 700;
+}
+.v3 .mz-live i { width: 7px; height: 7px; border-radius: 50%; background: #ef4444; }
+.v3 .mz-nudge {
+  position: absolute; top: 46px; left: 12px; right: 12px; max-width: 320px;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 13px 15px; border-radius: 16px;
+  background: rgba(30, 26, 27, 0.8);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  box-shadow: inset 0 0 0 1px rgba(255, 238, 230, 0.1), 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+.v3 .mz-nudge-k { display: flex; align-items: center; gap: 7px; color: var(--ll-fg-faint); font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.v3 .mz-nudge-k i { width: 6px; height: 6px; border-radius: 50%; background: var(--v3-warn); }
+.v3 .mz-nudge-t { font-family: var(--ll-display); font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: var(--ll-fg); }
+.v3 .mz-nudge-a { font-size: 13.5px; line-height: 1.4; color: var(--ll-fg-mute); }
+@media (max-width: 900px) {
+  .v3 .mz-live { top: 8px; left: 8px; font-size: 10px; padding: 3px 7px; }
+  .v3 .mz-nudge { top: 34px; left: 8px; right: 8px; padding: 9px 11px; border-radius: 12px; gap: 2px; }
+  .v3 .mz-nudge-k { font-size: 10.5px; margin-bottom: 0; }
+  .v3 .mz-nudge-t { font-size: 14px; }
+  .v3 .mz-nudge-a { font-size: 11.5px; }
+}
+/* The stream is widescreen, so it runs across the top of the grid at 16:9
+   and the product tiles sit under it in two rows. */
+.v3 .v3-mosaic { grid-template-rows: auto 220px 190px; }
+.v3 .mz-stream { grid-column: 1 / -1; aspect-ratio: 16 / 9; }
+.v3 .mz-stream .mz-nudge { max-width: 300px; }
+@media (max-width: 900px) {
+  .v3 .v3-mosaic { grid-template-rows: auto 170px 150px; }
+  .v3 .mz-nudge-a { display: none; }
+  .v3 .mz-nudge { max-width: 190px; top: 30px; }
+}
+.v3 .mz-stream .mz-nudge { max-width: 250px; padding: 10px 12px; border-radius: 13px; gap: 2px; }
+.v3 .mz-stream .mz-nudge-k { font-size: 11px; margin-bottom: 0; }
+.v3 .mz-stream .mz-nudge-t { font-size: 16px; }
+.v3 .mz-stream .mz-nudge-a { font-size: 12px; }
+.v3 .mz-cream img { width: auto; max-width: 100%; max-height: 100%; }
+@media (max-width: 900px) {
+  .v3 .mz-stream .mz-nudge { max-width: 170px; padding: 7px 9px; border-radius: 10px; }
+  .v3 .mz-stream .mz-nudge-t { font-size: 13px; }
+}
+.v3 .mz-cream { display: flex; align-items: center; justify-content: center; }
+.v3 .mz-cream img { max-height: 100%; object-fit: contain; }
+/* A good moment, so a green dot, like the panel's "good" tone. */
+.v3 .mz-stream .mz-nudge-k i { background: var(--v3-good); }
+.v3 .mz-stream .mz-nudge { max-width: 270px; }
+/* Two alerts stacked under the Live tag; the second slides in a beat later. */
+.v3 .mz-nudges { position: absolute; top: 46px; left: 12px; display: flex; flex-direction: column; gap: 6px; width: min(260px, calc(100% - 24px)); }
+.v3 .mz-nudges .mz-nudge { position: static; max-width: none; }
+.v3 .mz-stream .mz-nudge[data-tone="good"] .mz-nudge-k i { background: var(--v3-good); }
+.v3 .mz-stream .mz-nudge[data-tone="nudge"] .mz-nudge-k i { background: var(--v3-warn); }
+.v3 .mz-nudges .mz-nudge + .mz-nudge { animation: mz-in 420ms cubic-bezier(.2, .8, .2, 1) 1.4s both; }
+@keyframes mz-in { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .v3 .mz-nudges .mz-nudge + .mz-nudge { animation: none; } }
+@media (max-width: 900px) {
+  .v3 .mz-nudges { top: 30px; left: 8px; gap: 4px; width: min(170px, calc(100% - 16px)); }
+}
+/* Four tiles: the stream across the top, the panel tall on the left, the
+   channel card and the result stacked on the right. */
+.v3 .v3-mosaic { grid-template-rows: auto 210px 210px; }
+.v3 .mz-clip { grid-column: 1; grid-row: 2 / 4; }
+.v3 .mz-cream { grid-column: 2; grid-row: 2; }
+.v3 .mz-win { grid-column: 2; grid-row: 3; }
+.v3 .mz-clip video { object-position: 50% 0; }
+@media (max-width: 900px) {
+  .v3 .v3-mosaic { grid-template-rows: auto 160px 160px; }
+}
+.v3 .mz-clip { background: #1b1718; } .v3 .mz-clip img { object-position: 50% 0; }
+@media (max-width: 900px) {
+  .v3 .mz-stream .mz-nudge-k { display: none; }
+  .v3 .mz-stream .mz-nudge { padding: 6px 9px; border-radius: 9px; }
+  .v3 .mz-stream .mz-nudge-t { font-size: 12px; }
+  .v3 .mz-nudges { width: auto; max-width: calc(100% - 16px); align-items: flex-start; }
+}
+/* Three tiles: the stream across the top, the panel and a vertical clip
+   made from that stream side by side under it. */
+.v3 .mz-vclip { grid-column: 2; grid-row: 2 / 4; background: #050405; }
+.v3 .mz-vclip video { object-position: 50% 0; }
+.v3 .mz-vclip-tag {
+  position: absolute; left: 10px; bottom: 10px;
+  padding: 6px 10px; border-radius: 999px;
+  background: var(--ll-fg); color: rgb(16, 13, 14);
+  font-size: 12px; font-weight: 700;
+}
+@media (max-width: 900px) {
+  .v3 .mz-vclip-tag { left: 6px; bottom: 6px; padding: 4px 8px; font-size: 10.5px; }
+}
+/* The live numbers tile, drawn like the bottom of the panel. */
+.v3 .mz-stats {
+  grid-column: 2; grid-row: 2 / 4;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 20px 20px 18px;
+  background: #1d191a;
+}
+.v3 .mz-nums { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 0; }
+.v3 .mz-nums div { display: flex; flex-direction: column; gap: 2px; padding-left: 14px; border-left: 1px solid rgba(255, 238, 230, 0.1); }
+.v3 .mz-nums div:nth-child(odd) { padding-left: 0; border-left: 0; }
+.v3 .mz-nums dd { margin: 0; order: -1; font-family: var(--v3-display); font-weight: 800; font-size: 36px; line-height: 1; color: var(--ll-fg); }
+.v3 .mz-nums dt { font-size: 12.5px; color: var(--ll-fg-faint); }
+.v3 .mz-spark { width: 100%; height: 44px; }
+.v3 .mz-spark polyline { fill: none; stroke: rgba(255, 250, 247, 0.85); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.v3 .mz-status { margin: 0; display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ll-fg-mute); }
+.v3 .mz-status i { width: 22px; height: 4px; border-radius: 2px; background: var(--v3-good); }
+.v3 .mz-earlier-k { margin: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--ll-fg-faint); }
+.v3 .mz-earlier { list-style: none; margin: -6px 0 0; padding: 0; display: grid; gap: 7px; font-size: 13px; color: var(--v3-good); }
+.v3 .mz-earlier li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; }
+.v3 .mz-earlier span { color: var(--ll-fg-faint); font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) {
+  .v3 .mz-stats { padding: 12px 12px 10px; gap: 9px; }
+  .v3 .mz-nums { gap: 9px 0; }
+  .v3 .mz-nums div { padding-left: 9px; }
+  .v3 .mz-nums dd { font-size: 24px; }
+  .v3 .mz-nums dt { font-size: 10.5px; }
+  .v3 .mz-spark { height: 28px; }
+  .v3 .mz-status { font-size: 11px; gap: 6px; }
+  .v3 .mz-status i { width: 14px; }
+  .v3 .mz-earlier-k { font-size: 10.5px; margin-top: 0; }
+  .v3 .mz-earlier { font-size: 11px; gap: 4px; margin-top: -4px; }
+  .v3 .mz-earlier li { grid-template-columns: 1fr; gap: 0; }
+}
+/* Phones: one column. The panel full width (top part), then the numbers in a row. */
+@media (max-width: 900px) {
+  .v3 .v3-mosaic { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .v3 .mz-clip { grid-column: 1; grid-row: auto; aspect-ratio: 585 / 470; }
+  .v3 .mz-stats { grid-column: 1; grid-row: auto; padding: 14px 14px 12px; }
+  .v3 .mz-nums { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .v3 .mz-nums div, .v3 .mz-nums div:nth-child(odd) { padding-left: 10px; border-left: 1px solid rgba(255, 238, 230, 0.1); }
+  .v3 .mz-nums div:first-child { padding-left: 0; border-left: 0; }
+  .v3 .mz-earlier li { grid-template-columns: 40px minmax(0, 1fr); gap: 8px; }
+}
+/* The live totals: big numbers that count up when you reach them, under a
+   green "Live" label so it's clear they're real and current. */
+.v3 .v3-proof { padding-top: clamp(32px, 5vw, 64px); }
+.v3 .v3-proof-live { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 18px; font-size: 13px; font-weight: 600; color: var(--ll-fg-mute); }
+.v3 .v3-proof-live i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--v3-good); }
+.v3 .v3-proof-live i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--v3-good); opacity: 0; animation: v3-ping 2.4s ease-out infinite; }
+@keyframes v3-ping { 0% { transform: scale(0.5); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .v3 .v3-proof-live i::after { animation: none; } }
+.v3 .v3-proof-list { border-top: 0; border-bottom: 0; }
+.v3 .v3-proof-list > div { display: flex; flex-direction: column; padding: 4px 24px 4px 0; }
+.v3 .v3-proof-list > div + div { padding-left: 28px; }
+.v3 .v3-proof-list dd { font-size: clamp(64px, 8.5vw, 120px); line-height: 0.86; letter-spacing: -0.01em; }
+.v3 .v3-proof-list dt { order: 2; margin: 12px 0 0; font-size: 15px; font-weight: 500; color: var(--ll-fg-mute); }
+@media (max-width: 900px) {
+  .v3 .v3-proof-list > div, .v3 .v3-proof-list > div:nth-child(n + 3) { padding: 2px 10px 2px 0; }
+  .v3 .v3-proof-list > div + div { padding-left: 14px; }
+  .v3 .v3-proof-list dd { font-size: 52px; }
+  .v3 .v3-proof-list dt { font-size: 12.5px; margin-top: 8px; }
+  .v3 .mz-clip { order: 1; }
+  .v3 .mz-stats { order: 2; }
+}
+/* Smaller alerts on the stream so the fight shows. */
+@media (min-width: 901px) {
+  .v3 .mz-nudges { top: 42px; left: 10px; width: 216px; gap: 5px; }
+  .v3 .mz-stream .mz-nudge { padding: 8px 10px; border-radius: 11px; gap: 1px; }
+  .v3 .mz-stream .mz-nudge-k { font-size: 10px; gap: 6px; }
+  .v3 .mz-stream .mz-nudge-k i { width: 5px; height: 5px; }
+  .v3 .mz-stream .mz-nudge-t { font-size: 13.5px; }
+  .v3 .mz-stream .mz-nudge-a { font-size: 11px; }
+  .v3 .mz-live { top: 10px; left: 10px; font-size: 11px; padding: 3px 8px; }
+}
+@media (min-width: 901px) { .v3 .mz-nudges { width: 240px; } }
+/* The strip centred: the line over it and each number in its column. */
+.v3 .v3-proof { text-align: center; }
+.v3 .v3-proof-live { display: block; }
+.v3 .v3-proof-list > div { align-items: center; }
+.v3 .v3-proof-list > div, .v3 .v3-proof-list > div + div { padding-inline: 12px; }

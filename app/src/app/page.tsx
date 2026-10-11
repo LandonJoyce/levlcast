@@ -6,12 +6,13 @@ import ReferralLine from "@/components/landing/ReferralLine";
 import SiteHeader from "@/components/landing/SiteHeader";
 import SiteFooter from "@/components/landing/SiteFooter";
 import ProPlan from "@/components/landing/ProPlan";
+import CountUp from "@/components/landing/CountUp";
 import AddToObsLink from "@/components/landing/AddToObsLink";
-import { Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
+import { ArrowRight, Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS, rankFromPoints } from "@/lib/rank";
 import { createAdminClient } from "@/lib/supabase/server";
-import { shoulders } from "./fonts";
+import { archivo, shoulders } from "./fonts";
 import "./home-ranked.css";
 
 /**
@@ -181,10 +182,9 @@ function Emblem({ tier, className, size }: { tier: string; className?: string; s
 
 export default async function HomePage() {
   const [stats, top] = await Promise.all([getSiteStats(), getTopStreamers()]);
-  const fmt = (n: number) => n.toLocaleString("en-US");
 
   return (
-    <div className={`ll-page v3 ${shoulders.variable}`}>
+    <div className={`ll-page v3 ${shoulders.variable} ${archivo.variable}`}>
       <SiteHeader />
 
       {/* ── Hero: the coach inside OBS. id="live" so old links to /#live land here. ── */}
@@ -193,49 +193,103 @@ export default async function HomePage() {
           {/* Only renders for visitors who came through a partner link. */}
           <ReferralLine />
           <h1 className="v3-h1">
-            {/* The marks are set apart so they can be pulled in: at this weight
-                and tracking the face leaves a gap before "." and "?". */}
-            Coaching for
-            <br />
-            Twitch streamers<span className="v3-punct">.</span>
+            Get better at streaming. <span className="v3-h1-soft">We coach you while you&apos;re live.</span>
           </h1>
-          <p className="v3-sub">We coach you live inside OBS, and after every stream we tell you what to fix.</p>
           <div className="v3-live-cta">
-            <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
+            <AddToObsLink className="v3-btn">
+              Add it to OBS <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />
+            </AddToObsLink>
             <Link href="/analyze" className="v3-btn v3-btn-ghost">
-              Try a free report
+              Try a free report <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />
             </Link>
           </div>
           <p className="v3-fine">Free to start, no card needed. Only you can see the panel, never your viewers.</p>
         </div>
 
-        <figure className="v3-hero-panel">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/live/levlcast-panel.webp"
-            alt="The LevlCast panel in OBS during a stream: rank, a nudge, and a coaching tip telling the streamer to answer a question from chat"
-            width={576}
-            height={680}
-            decoding="async"
-          />
-        </figure>
+        {/* Real pieces of the product, in a grid that runs off the edge. */}
+        <div className="v3-mosaic">
+          {/* A real stream (Landon's, TERA arena) with the panel's real clip nudge on top. */}
+          <figure className="mz mz-stream">
+            <video
+              src="/live/stream-wide.mp4"
+              poster="/live/stream-wide-poster.webp"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="A streamer mid-fight with their webcam on"
+            />
+            <span className="mz-live">
+              <i aria-hidden="true" />
+              Live
+            </span>
+            <span className="mz-nudges">
+              <span className="mz-nudge" data-tone="good">
+                <span className="mz-nudge-k">
+                  <i aria-hidden="true" />
+                  Now
+                </span>
+                <span className="mz-nudge-t">Someone clipped your stream</span>
+                <span className="mz-nudge-a">Tell chat what happened there.</span>
+              </span>
+              <span className="mz-nudge" data-tone="nudge">
+                <span className="mz-nudge-k">
+                  <i aria-hidden="true" />
+                  Now
+                </span>
+                <span className="mz-nudge-t">Your mic is muted</span>
+                <span className="mz-nudge-a">Unmute it in OBS. Viewers can&apos;t hear you.</span>
+              </span>
+            </span>
+          </figure>
+          {/* The bottom of the panel, live: the numbers, the viewer line and what it caught earlier. */}
+          <figure className="mz mz-stats" aria-label="The panel's live numbers: 27 viewers, 31 peak, 9 chatters, 6 new followers, and a raid and a new chatter it caught earlier">
+            <dl className="mz-nums">
+              <div><dd>27</dd><dt>Viewers</dt></div>
+              <div><dd>31</dd><dt>Peak</dt></div>
+              <div><dd>9</dd><dt>Chatters</dt></div>
+              <div><dd>+6</dd><dt>Followers</dt></div>
+            </dl>
+            <svg className="mz-spark" viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points="0.0,27.1 8.7,25.8 17.4,25.8 26.1,23.0 34.8,24.4 43.5,21.7 52.2,19.0 60.9,20.3 69.6,17.6 78.3,16.3 87.0,13.6 95.7,14.9 104.3,12.3 113.0,9.5 121.7,4.1 130.4,6.8 139.1,8.2 147.8,9.5 156.5,9.5 165.2,8.2 173.9,9.5 182.6,10.9 191.3,9.5 200.0,9.5" />
+            </svg>
+            <p className="mz-status"><i aria-hidden="true" />Talking · Chat 11/min</p>
+            <p className="mz-earlier-k">Earlier</p>
+            <ul className="mz-earlier">
+              <li><span>48:12</span>Raid from PixelHarbor with 18</li>
+              <li><span>47:30</span>New chatter: quietfox_gg</li>
+            </ul>
+          </figure>
+          <figure className="mz mz-clip">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/live/panel-tall.webp"
+              alt="The LevlCast panel live: rank, what to do now, tonight's fix and a coaching tip to answer a viewer's question"
+              width={585}
+              height={690}
+              decoding="async"
+            />
+          </figure>
+        </div>
       </section>
 
       {/* ── Proof: real numbers, live. Left out entirely if they can't load. ── */}
       {stats && (
         <section className="v3-proof" aria-label="LevlCast so far">
+          <p className="v3-proof-live">Real numbers from our streamers</p>
           <dl className="v3-proof-list">
             <div>
               <dt>Streams analyzed</dt>
-              <dd>{fmt(stats.streams)}</dd>
+              <dd><CountUp target={stats.streams} /></dd>
             </div>
             <div>
               <dt>Hours of streams</dt>
-              <dd>{fmt(stats.hours)}</dd>
+              <dd><CountUp target={stats.hours} /></dd>
             </div>
             <div>
               <dt>Streamers coached</dt>
-              <dd>{fmt(stats.streamers)}</dd>
+              <dd><CountUp target={stats.streamers} /></dd>
             </div>
           </dl>
         </section>

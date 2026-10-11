@@ -1,4 +1,4 @@
-import { Big_Shoulders, Roboto } from "next/font/google";
+import { Archivo, Big_Shoulders, Roboto } from "next/font/google";
 
 /**
  * The caption face. Clips are burned with Roboto Bold (src/lib/fonts), so
@@ -22,5 +22,18 @@ export const shoulders = Big_Shoulders({
   subsets: ["latin"],
   weight: ["800", "900"],
   variable: "--font-shoulders",
+  display: "swap",
+});
+
+/**
+ * The headline face: Archivo, set wide. Most generated sites ship Plus
+ * Jakarta or Geist for headings; a wide grotesk reads closer to the
+ * streamer tools people already trust. Exposed as --font-archivo, which
+ * home-ranked.css reads through --v3-head.
+ */
+export const archivo = Archivo({
+  subsets: ["latin"],
+  axes: ["wdth"],
+  variable: "--font-archivo",
   display: "swap",
 });

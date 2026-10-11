@@ -1,4 +1,5 @@
 ﻿import type { Metadata, Viewport } from "next";
+import { archivo } from "./fonts";
 import { Plus_Jakarta_Sans, Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -134,7 +135,7 @@ export default function RootLayout({
             page of the site, dashboard included, and had drifted from the
             questions anyone could actually see. */}
       </head>
-      <body className={`${plusJakarta.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${plusJakarta.variable} ${geist.variable} ${geistMono.variable} ${archivo.variable} font-sans antialiased`}>
         {children}
         <Analytics />
 

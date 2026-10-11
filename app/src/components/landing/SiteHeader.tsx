@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteNav from "./SiteNav";
+import FloatBar from "./FloatBar";
 
 /**
  * The bar across the top of the public pages: the homepage, /analyze,
@@ -12,9 +13,9 @@ import SiteNav from "./SiteNav";
  */
 export default function SiteHeader() {
   return (
-    <header className="v3-bar">
+    <FloatBar>
       <Link href="/" className="v3-mark">LevlCast</Link>
       <SiteNav />
-    </header>
+    </FloatBar>
   );
 }
