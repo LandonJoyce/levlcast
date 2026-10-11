@@ -315,17 +315,27 @@ export default async function HomePage() {
           <ol className="v3-matches">
             {MATCHES.map((m) => (
               <li key={m.title} className="v3-match" data-r={m.r} style={{ ["--tier" as string]: TIER_HEX[m.tier] } as CSSProperties}>
-                <span className="v3-match-res">
-                  <span className="v3-match-word">{m.r === "win" ? "Win" : "Loss"}</span>
-                  <span className="v3-match-delta">{m.delta}</span>
-                </span>
+                <span className="v3-match-delta">{m.delta}</span>
                 <span className="v3-match-main">
                   <span className="v3-match-title">{m.title}</span>
                   <span className="v3-match-meta">
-                    {m.meta} · <span className="v3-match-rank">{m.rank}</span>
+                    {m.r === "win" ? "Win" : "Loss"} · {m.meta}
                   </span>
                 </span>
-                {m.tag && <span className="v3-match-tag">{m.tag}</span>}
+                <span className="v3-match-rank">
+                  <Emblem tier={m.tier} className="v3-match-emb" size={256} />
+                  <span className="v3-match-rank-t">
+                    <span className="v3-match-rank-n">{m.rank}</span>
+                    {m.tag && (
+                      <span className="v3-match-tag">
+                        <svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">
+                          <path d="M5 2 L8.5 6.5 H1.5 Z" fill="currentColor" />
+                        </svg>
+                        {m.tag}
+                      </span>
+                    )}
+                  </span>
+                </span>
               </li>
             ))}
           </ol>

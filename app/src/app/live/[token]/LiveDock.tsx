@@ -1588,19 +1588,21 @@ export default function LiveDock({
             {pro ? "Pro" : "Free"}
           </button>
         )}
-        {(canVoice || voiceOn) && (
-          <button type="button" className="ld-voice" data-on={voiceOn ? "1" : "0"} onClick={toggleVoice} aria-pressed={voiceOn}>
-            {voiceOn ? "Voice on" : "Voice"}
+        <div className="ld-tools">
+          {(canVoice || voiceOn) && (
+            <button type="button" className="ld-voice" data-on={voiceOn ? "1" : "0"} onClick={toggleVoice} aria-pressed={voiceOn}>
+              Voice
+            </button>
+          )}
+          {!isPhone && (
+            <button type="button" className="ld-obs" data-state={obsStatus} onClick={() => setSheetOpen(true)} title={obsLabel}>
+              {obsStatus === "off" && !obsCfg.enabled ? "Connect OBS" : obsStatus === "connecting" ? "OBS…" : "OBS"}
+            </button>
+          )}
+          <button type="button" className="ld-icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" title="Settings">
+            <Settings size={14} strokeWidth={2} aria-hidden="true" />
           </button>
-        )}
-        {!isPhone && (
-          <button type="button" className="ld-obs" data-state={obsStatus} onClick={() => setSheetOpen(true)} title={obsLabel}>
-            {obsStatus === "off" && !obsCfg.enabled ? "Connect OBS" : obsStatus === "connecting" ? "OBS…" : "OBS"}
-          </button>
-        )}
-        <button type="button" className="ld-icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" title="Settings">
-          <Settings size={15} strokeWidth={2} aria-hidden="true" />
-        </button>
+        </div>
       </header>
 
       {toast && (

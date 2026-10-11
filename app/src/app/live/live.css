@@ -445,6 +445,54 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-obs[data-state="connected"], .ld-voice[data-on="1"] { background: rgba(163, 230, 53, 0.12); }
 .ld-obs[data-state="error"] { background: var(--tint-nudge); }
 
+/* The top bar, plainer: words in normal case, Pro as a word not a badge,
+   and Voice, OBS and settings in one control where a dot says what's on. */
+.ld-state { font-family: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+.ld-state i { width: 6px; height: 6px; }
+.ld-tier { font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; background: none; box-shadow: none; padding: 4px 2px; }
+.ld-tier[data-pro="1"] { background: none; }
+.ld-tier:hover { background: none; color: var(--ink); }
+.ld-tools {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--glass-2);
+  box-shadow: inset 0 1px 0 var(--glass-hi);
+}
+.ld-tools > button,
+.ld-tools > button[data-on="1"],
+.ld-tools > button[data-state] {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.ld-tools > .ld-icon { width: 28px; padding: 0; justify-content: center; }
+.ld-tools > button:hover { background: rgba(255, 244, 238, 0.08); color: var(--ink); }
+.ld-tools > .ld-voice[data-on="1"],
+.ld-tools > .ld-obs[data-state="connected"] { color: var(--ink); }
+.ld-tools > .ld-voice[data-on="1"]::before,
+.ld-tools > .ld-obs[data-state="connected"]::before,
+.ld-tools > .ld-obs[data-state="error"]::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin: 0 6px 0 0;
+  border-radius: 50%;
+  background: var(--good);
+}
+.ld-tools > .ld-obs[data-state="error"] { color: var(--nudge); }
+.ld-tools > .ld-obs[data-state="error"]::before { background: var(--nudge); }
+
 /* Buttons and fields: rounder, softer */
 .ld-btn, .ld-report-go { border-radius: 12px; font-weight: 700; }
 .ld-report-go { padding: 11px 14px; }
@@ -533,3 +581,17 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
 .ld-statusline .ld-meter { width: 40px; }
 .ld-statusline .ld-v:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ld-dot { color: var(--ink-3); }
+/* Section labels in normal case, not spaced-out capitals. The end-of-stream
+   result (WIN, PROMOTED) keeps its game look. */
+.ld-k,
+.ld-stats span,
+.ld-fixline span,
+.ld-idea-k,
+.ld-tag {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.ld-k, .ld-stats span, .ld-fixline span, .ld-idea-k { color: var(--ink-3); }

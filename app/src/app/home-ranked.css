@@ -630,39 +630,49 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 }
 .v3 .v3-col .v3-h2 { margin-bottom: 24px; }
 
-.v3 .v3-matches { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ll-line-soft); }
+/* One quiet card per list, hairlines between rows, colour only where it
+   means something: the points, the rank, and an arrow for a step up. */
+.v3 .v3-matches,
+.v3 .v3-league {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  border: 1px solid var(--ll-line-soft);
+  border-radius: 16px;
+  background: rgba(255, 238, 230, 0.025);
+}
+.v3 .v3-match,
+.v3 .v3-lg-row { position: relative; }
+.v3 .v3-match + .v3-match::before,
+.v3 .v3-lg-row + .v3-lg-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: var(--ll-line-soft);
+}
 .v3 .v3-match {
   --r: var(--v3-good);
   display: grid;
-  grid-template-columns: 66px minmax(0, 1fr) auto;
-  gap: 14px;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: center;
-  padding: 12px 14px 12px 14px;
-  border-bottom: 1px solid var(--ll-line-soft);
-  border-left: 3px solid var(--r);
-  background: color-mix(in oklab, var(--r) 6%, transparent);
+  padding: 16px 20px;
 }
 .v3 .v3-match[data-r="loss"] { --r: var(--v3-bad); }
-.v3 .v3-match-res { display: flex; flex-direction: column; gap: 2px; }
-.v3 .v3-match-word {
-  font-family: var(--ll-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--r);
-}
 .v3 .v3-match-delta {
   font-family: var(--v3-display);
   font-weight: 900;
   font-size: 30px;
-  line-height: 0.95;
+  line-height: 1;
   color: var(--r);
   font-variant-numeric: tabular-nums;
 }
-.v3 .v3-match-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.v3 .v3-match-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .v3 .v3-match-title {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ll-fg);
   overflow: hidden;
@@ -670,38 +680,37 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   white-space: nowrap;
 }
 .v3 .v3-match-meta {
-  font-family: var(--ll-mono);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ll-fg-faint);
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.v3 .v3-match-rank { color: var(--tier); }
+.v3 .v3-match-rank { display: flex; align-items: center; gap: 10px; }
+.v3 .v3-match-emb { width: 30px; height: 30px; display: block; }
+.v3 .v3-match-rank-t { display: flex; flex-direction: column; gap: 2px; min-width: 76px; }
+.v3 .v3-match-rank-n { font-size: 13px; font-weight: 700; color: var(--tier); white-space: nowrap; }
 .v3 .v3-match-tag {
-  font-family: var(--ll-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ll-fg-mute);
   white-space: nowrap;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--v3-good) 40%, transparent);
-  color: var(--v3-good);
 }
+.v3 .v3-match-tag svg { color: var(--v3-good); }
 
-.v3 .v3-league { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ll-line-soft); }
 /* The real top five from the leaderboard: position, picture, name, rank. */
 .v3 .v3-lg-row {
   display: grid;
   grid-template-columns: 18px 28px minmax(0, 1fr) 24px auto;
   gap: 12px;
   align-items: center;
-  padding: 10px 10px;
-  border-bottom: 1px solid var(--ll-line-soft);
+  padding: 12px 20px;
   font-size: 14px;
 }
-.v3 .v3-lg-pos { font-family: var(--ll-mono); font-size: 12px; color: var(--ll-fg-faint); text-align: right; }
+.v3 .v3-lg-pos { font-size: 13px; color: var(--ll-fg-faint); text-align: right; font-variant-numeric: tabular-nums; }
 .v3 .v3-lg-avatar {
   display: block;
   width: 28px;
@@ -1154,8 +1163,12 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-rung-name { font-size: 20px; flex: 1; }
   .v3 .v3-you { position: static; order: 3; }
   .v3 .v3-rung-floor { order: 4; }
-  .v3 .v3-match { grid-template-columns: 58px minmax(0, 1fr); }
-  .v3 .v3-match-tag { display: none; }
+  .v3 .v3-match { grid-template-columns: 50px minmax(0, 1fr) auto; gap: 12px; padding: 14px 16px; }
+  .v3 .v3-match-delta { font-size: 26px; }
+  .v3 .v3-match-rank-t { display: none; }
+  .v3 .v3-match-emb { width: 26px; height: 26px; }
+  .v3 .v3-match + .v3-match::before, .v3 .v3-lg-row + .v3-lg-row::before { left: 16px; right: 16px; }
+  .v3 .v3-lg-row { padding: 12px 16px; }
 }
 @media (max-width: 760px) {
   /* On a phone the bar keeps iOS and Sign in; everything else, the
