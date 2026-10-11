@@ -349,10 +349,10 @@ export default async function HomePage() {
         <figure className="v3-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/la/clip-editor.png"
-            alt="The LevlCast clip editor: trim sliders, an editable caption list, caption style picker, hook frame chooser, and format and destination options"
-            width={1697}
-            height={896}
+            src="/la/clip-editor-2026.webp"
+            alt="The LevlCast clip editor: the clip with its captions on it, a timeline you drag to trim, caption styles, and each caption line to edit"
+            width={2100}
+            height={1120}
             loading="lazy"
             decoding="async"
           />
@@ -362,6 +362,9 @@ export default async function HomePage() {
       {/* ── Coaching per kind of stream ── */}
       <section className="v3-sec" id="games">
         <h2 className="v3-h2">It knows what you&rsquo;re playing.</h2>
+        <p className="v3-shot-cap">
+          And whatever language you stream in. Your reports come in English, Spanish, Portuguese, French, German or Italian.
+        </p>
         <ul className="v3-kinds">
           {KINDS.map((kind) => (
             <li key={kind.k} className="v3-kind">

@@ -60,6 +60,10 @@ const FAQ = [
     a: "The nudges are simple rules that run in the panel. Pro's coach uses AI to listen to your stream and pick one useful thing to tell you.",
   },
   {
+    q: "Does it learn my stream?",
+    a: "It remembers your reports. It knows the fix from your last one and the habits they keep flagging, and points them out when they happen.",
+  },
+  {
     q: "It disappeared after I restarted OBS.",
     a: "OBS keeps closed docks hidden. Click Docks and pick LevlCast to bring it back. Your link stays the same.",
   },

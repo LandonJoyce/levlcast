@@ -22,6 +22,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { audibleParts, describeMuted, mutedMinutes, overlapSeconds, type TimeRange } from "./muted-audio";
 import { TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
+import { detectStreamLanguage } from "./stream-language";
 import { detectSustainedSilence, formatSustainedSilence, type ChatBucket } from "./chat-pulse";
 
 export interface Peak {
@@ -1527,6 +1528,15 @@ export async function generateCoachReport(
     if (segments.length === 0) return null;
   }
 
+  // The report is written in the language they stream in, when that's clear.
+  // Anything less than clear (a bilingual stream, a little Spanish in an
+  // English one, too little talking) stays English: see stream-language.ts.
+  const streamLanguage = detectStreamLanguage(segments.map((s) => s.text).join(" "));
+  if (streamLanguage) console.log(`[coach] Writing the report in ${streamLanguage.name}`);
+  const languageBlock = streamLanguage
+    ? `\nLANGUAGE: you talk in ${streamLanguage.name} on this stream, so the whole report is written in ${streamLanguage.name}. Every text field, labels included, in the same casual voice a ${streamLanguage.name}-speaking streamer friend would use. Keep the JSON keys and the fixed values (strong, average, weak, gaming, improving, fixed, partial and the rest) exactly as they are in English. anti_patterns quotes stay exactly as said.\n`
+    : "";
+
   const vodDuration = segments[segments.length - 1].end;
   const totalMinutes = Math.round(vodDuration / 60);
 
@@ -1818,7 +1828,7 @@ ${categoryGuideBlock}${gameModuleBlock}`;
       {
         role: "user",
         content: `Review this Twitch stream and produce a coaching report the streamer can act on immediately.
-${excerptInstructions(excerpt)}
+${excerptInstructions(excerpt)}${languageBlock}
 IMPORTANT: This transcript has been pre-filtered using speaker diarization to include ONLY the streamer's voice. Game audio, NPC dialogue, music, and other speakers have already been removed. Every line you read is something the streamer actually said.
 
 SILENCE CONTEXT — read this before judging dead air:

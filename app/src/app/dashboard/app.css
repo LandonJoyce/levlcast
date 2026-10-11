@@ -1811,3 +1811,20 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .sl-focus-k { margin: 0 0 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
 .dash .sl-focus-t { margin: 0; font-weight: 700; color: var(--ink); }
 .dash .sl-focus-s { margin: 4px 0 12px; color: var(--ink-2); font-size: 14px; }
+
+/* Clip editor in the public site's newer style: section labels and small
+   links in plain words, not spaced code-font capitals. The rest of the app
+   still uses the older labels. */
+.dash .ce-page .hm-k,
+.dash .ce-page .sp-back,
+.dash .ce-page .sp-meta,
+.dash .ce-dirty,
+.dash .ce-cam-tag {
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.dash .ce-page .hm-k { font-size: 13px; font-weight: 600; }
+.dash .ce-page .sp-back, .dash .ce-page .sp-meta { font-size: 13.5px; }
+.dash .ce-dirty, .dash .ce-cam-tag { font-size: 12px; font-weight: 600; }
+.dash .ce-page .sp-title { font-family: var(--font-archivo, inherit); font-stretch: 112%; font-weight: 700; letter-spacing: -0.025em; }

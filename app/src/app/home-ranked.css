@@ -1592,3 +1592,12 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-kind-art img { width: 52px; height: 69px; margin-left: -18px; }
   .v3 .v3-kind:hover .v3-kind-art img { margin-left: -12px; }
 }
+
+/* On hover the covers straighten and lift instead of spreading, so a row
+   of five never runs past its column. */
+.v3 .v3-kind:hover .v3-kind-art img { margin-left: -24px; transform: rotate(0deg) translateY(-4px); }
+.v3 .v3-kind:hover .v3-kind-art img:first-child { margin-left: 0; }
+@media (max-width: 900px) {
+  .v3 .v3-kind:hover .v3-kind-art img { margin-left: -18px; }
+  .v3 .v3-kind:hover .v3-kind-art img:first-child { margin-left: 0; }
+}

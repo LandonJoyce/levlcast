@@ -20,6 +20,7 @@ const SYSTEM = `You turn the main recommendation from a Twitch streamer's coachi
 
 - One thing they can do during the stream, said as a plain instruction.
 - 12 words at most. Plain words. No dashes, quote marks or emojis. Say "quiet", never "dead air".
+- Write it in the same language as the recommendation.
 - Keep what's specific to them (their game, their bit, their habit). Drop praise and reasons.
 
 Also say what it's mostly about: "opening" (how the stream starts), "quiet" (talking through quiet stretches), "chat" (talking to chat or chatters), or "other".
