@@ -34,12 +34,26 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
  * that is Reddit API keys (see the setup notes above).
  */
 export async function arcticShiftGet(kind: "posts" | "comments", sub: string): Promise<any[]> {
-  const url = `https://arctic-shift.photon-reddit.com/api/${kind}/search?subreddit=${encodeURIComponent(sub)}&limit=100`;
+  return arcticShiftFetch(`https://arctic-shift.photon-reddit.com/api/${kind}/search?subreddit=${encodeURIComponent(sub)}&limit=100`);
+}
+
+/**
+ * One person's latest posts or comments, newest first. One quick try: it's
+ * an extra the caller can do without, so it never holds up a run.
+ */
+export async function arcticShiftByAuthor(kind: "posts" | "comments", author: string): Promise<any[]> {
+  return arcticShiftFetch(
+    `https://arctic-shift.photon-reddit.com/api/${kind}/search?author=${encodeURIComponent(author)}&limit=100`,
+    { tries: 1, timeoutMs: 6_000 }
+  );
+}
+
+async function arcticShiftFetch(url: string, { tries = 2, timeoutMs = 10_000 } = {}): Promise<any[]> {
   let lastError = "no response";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < tries; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10_000);
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
       const r = await fetch(url, { headers: { "User-Agent": "LevlCast/1.0", Accept: "application/json" }, signal: ctrl.signal });
       if (r.ok) {

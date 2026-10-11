@@ -33,7 +33,8 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { OUTREACH_SUBS, arcticShiftGet } from "@/lib/reddit";
+import { OUTREACH_SUBS, arcticShiftByAuthor, arcticShiftGet } from "@/lib/reddit";
+import { getAppAccessToken } from "@/lib/twitch";
 import { createAdminClient } from "@/lib/supabase/server";
 import { inngest } from "@/lib/inngest/client";
 import { extractChannel } from "@/lib/twitch-input";
@@ -369,7 +370,7 @@ export type DraftResult =
  */
 function systemPrompt(angle: Angle, report?: ReportForDraft): string {
   const known = report
-    ? `You're sending a Reddit message to a streamer who posted asking for help. Their post linked their Twitch channel, so before messaging you ran their latest stream ("${report.streamTitle}") through LevlCast. You haven't watched it yourself. All you know about the stream is what their report found, below, so never claim more than that, and never make up numbers or details.
+    ? `You're sending a Reddit message to a streamer who posted asking for help. They've linked their Twitch channel on Reddit, so before messaging you ran their latest stream ("${report.streamTitle}") through LevlCast. You haven't watched it yourself. All you know about the stream is what their report found, below, so never claim more than that, and never make up numbers or details.
 
 WHAT THEIR REPORT FOUND
 ${report.fix ? `- The one thing to fix first: ${report.fix}\n` : ""}${report.working ? `- Something that worked: ${report.working}\n` : ""}`
@@ -541,6 +542,63 @@ export function finishDraft(subject: string, body: string, link: string = OUTREA
 
 /** Previews the harvest may start in one run. Each is about a nickel. */
 const MAX_REPORT_STARTS_PER_RUN = 2;
+/** Reddit histories the harvest may read in one run, a few seconds each. */
+const MAX_HISTORY_CHECKS_PER_RUN = 3;
+/** Above this, a channel they keep linking is someone they watch, not them. */
+const HISTORY_MAX_FOLLOWERS = 5000;
+
+/**
+ * Their Twitch channel from their own Reddit history, for a post that
+ * doesn't link it. DMs built on their own report got 2 sign-ups from 18,
+ * against 2 from about 117 general ones (funnel card, 2026-10-11), and
+ * about 1 in 10 people posting in the streamer subs has linked their
+ * channel somewhere. It has to be the channel they link most, at least
+ * twice, and small: one link, or a big channel, is as likely a streamer
+ * they're recommending, and a DM about a stranger's stream is worse than
+ * no report.
+ */
+export async function channelFromHistory(username: string): Promise<string | null> {
+  try {
+    const [posts, comments] = await Promise.all([
+      arcticShiftByAuthor("posts", username).catch(() => []),
+      arcticShiftByAuthor("comments", username).catch(() => []),
+    ]);
+    const counts = new Map<string, number>();
+    const texts = [
+      ...posts.map((p) => `${p?.title ?? ""} ${p?.selftext ?? ""} ${p?.url ?? ""}`),
+      ...comments.map((c) => String(c?.body ?? "")),
+    ];
+    for (const text of texts) {
+      const links = text.match(/(?:https?:\/\/)?(?:www\.|m\.)?twitch\.tv\/[A-Za-z0-9_]{3,25}(?:\/[A-Za-z]+)?/gi) ?? [];
+      for (const login of new Set(links.map((l) => extractChannel(l)).filter((l): l is string => !!l))) {
+        counts.set(login, (counts.get(login) ?? 0) + 1);
+      }
+    }
+    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const [top, next] = ranked;
+    if (!top || top[1] < 2 || (next && next[1] === top[1])) return null;
+
+    const followers = await followerCount(top[0]);
+    if (followers == null || followers > HISTORY_MAX_FOLLOWERS) return null;
+    return top[0];
+  } catch {
+    return null;
+  }
+}
+
+/** A channel's follower total, or null when Twitch won't say. */
+async function followerCount(login: string): Promise<number | null> {
+  const token = await getAppAccessToken();
+  const headers = { "Client-Id": process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${token}` };
+  const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, { headers });
+  if (!userRes.ok) return null;
+  const id = ((await userRes.json()) as { data?: Array<{ id: string }> }).data?.[0]?.id;
+  if (!id) return null;
+  const res = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${id}&first=1`, { headers });
+  if (!res.ok) return null;
+  const total = ((await res.json()) as { total?: number }).total;
+  return typeof total === "number" ? total : null;
+}
 /** The same daily ceiling the public analyzer holds; outreach counts toward it. */
 const PREVIEW_DAILY_CEILING = PREVIEWS_PER_DAY;
 
@@ -737,6 +795,7 @@ export async function fillOutreachQueue(
   let attempts = late.drafted + late.skipped;
   let waiting = 0;
   let reportsStarted = 0;
+  let historyChecks = 0;
   let seen = 0;
   const reportsOn = await reportsSupported(admin);
 
@@ -765,9 +824,14 @@ export async function fillOutreachQueue(
       angle: angle.id,
     };
 
-    // Their own report, when their post links their channel.
+    // Their own report, when their post links their channel, or failing
+    // that, their other posts and comments do.
     let report: ReportForDraft | undefined;
-    const channel = reportsOn ? findTwitchChannel(`${lead.title} ${lead.body}`) : null;
+    let channel = reportsOn ? findTwitchChannel(`${lead.title} ${lead.body}`) : null;
+    if (!channel && reportsOn && reportsStarted < MAX_REPORT_STARTS_PER_RUN && historyChecks < MAX_HISTORY_CHECKS_PER_RUN) {
+      historyChecks++;
+      channel = await channelFromHistory(lead.username);
+    }
     if (channel) {
       const prep = await prepareReport(admin, channel, reportsStarted < MAX_REPORT_STARTS_PER_RUN);
       if (prep.kind === "ready") report = prep.report;
