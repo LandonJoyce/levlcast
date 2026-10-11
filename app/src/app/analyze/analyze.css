@@ -264,3 +264,41 @@
   .v3 .pr-k { padding-top: 0; }
   .v3 .pr-fix { font-size: 17px; }
 }
+
+/* ── 2026-10 refresh: the homepage's type and plain labels ── */
+.v3 .pr-title { font-family: var(--v3-head); font-stretch: 112%; font-weight: 700; letter-spacing: -0.025em; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.06; }
+.v3 .pr-k, .v3 .pr-score-k, .v3 .pr-at, .v3 .pr-clip-at {
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.v3 .pr-k { padding-top: 3px; font-size: 13.5px; font-weight: 600; color: var(--ll-fg-faint); }
+.v3 .pr-score-k { font-size: 12.5px; font-weight: 600; }
+.v3 .pr-at, .v3 .pr-clip-at { font-variant-numeric: tabular-nums; }
+
+/* With their stream's picture: words on the left, the picture on the right
+   with the score sitting on it. */
+.v3 .pr-head[data-shot] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+  padding-bottom: 36px;
+}
+.v3 .pr-shot { position: relative; margin: 0; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--ll-line-soft), 0 20px 40px rgba(0, 0, 0, 0.35); }
+.v3 .pr-shot .pr-thumb { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 0; box-shadow: none; }
+.v3 .pr-shot .pr-score {
+  position: absolute; right: 12px; bottom: 12px;
+  padding: 12px 16px 11px; border-radius: 14px;
+  background: rgba(16, 13, 14, 0.78);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px rgba(255, 238, 230, 0.1);
+}
+.v3 .pr-shot .pr-score-v { font-size: 60px; }
+.v3 .pr-shot .pr-score-k { margin-top: 6px; color: var(--ll-fg-mute); }
+@media (max-width: 760px) {
+  .v3 .pr-head[data-shot] { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .v3 .pr-shot .pr-score-v { font-size: 44px; }
+  .v3 .pr-shot .pr-score { right: 8px; bottom: 8px; padding: 9px 12px 8px; }
+}
+.v3 .pr-more-h { font-family: var(--v3-head); font-stretch: 112%; font-weight: 700; letter-spacing: -0.025em; }

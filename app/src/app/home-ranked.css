@@ -1545,3 +1545,50 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 .v3 .v3-proof-live { display: block; }
 .v3 .v3-proof-list > div { align-items: center; }
 .v3 .v3-proof-list > div, .v3 .v3-proof-list > div + div { padding-inline: 12px; }
+.v3 .v3-proof-list dd { font-size: clamp(56px, 7vw, 96px); }
+
+/* ── 2026-10 refresh, the rest of the page ── */
+/* Labels in plain words everywhere, no spaced code-font capitals. The
+   ladder's tier names keep their game look. */
+.v3 .v3-label, .v3 .lv2-ref-k, .v3 .v3-rules dt, .v3 .v3-plan-n, .v3 .v3-foot-h, .v3 .xr-k,
+.v3 .v3-cycle button, .v3 .v3-kind-g, .v3 .v3-rung-floor, .v3 .ru-sub, .v3 .v3-result-top {
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.v3 .v3-label, .v3 .v3-plan-n, .v3 .v3-foot-h, .v3 .xr-k { font-size: 13px; font-weight: 600; color: var(--ll-fg-faint); }
+.v3 .v3-rules dt { font-size: 14px; font-weight: 600; color: var(--ll-fg); }
+.v3 .v3-kind-g { font-size: 13px; color: var(--ll-fg-faint); }
+.v3 .v3-kind-k { font-family: var(--v3-head); font-stretch: 112%; font-size: 18px; }
+.v3 .v3-rung-floor { font-size: 12px; }
+.v3 .v3-cycle button { font-size: 13px; font-weight: 600; }
+/* "You" on the ladder: a word in the tier's colour, not a pill. */
+.v3 .v3-you { border: 0; border-radius: 0; padding: 0; font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 13px; font-weight: 700; color: var(--tier); }
+
+/* The games: a small fan of real covers on each kind, spread on hover. */
+.v3 .v3-kind-art { display: flex; align-items: flex-end; height: 104px; margin: 0 0 22px; padding-left: 6px; }
+.v3 .v3-kind-art img {
+  width: 66px; height: 88px; flex-shrink: 0;
+  margin-left: -20px;
+  border-radius: 8px; object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 10px 22px rgba(0, 0, 0, 0.5);
+  transform: rotate(calc(var(--i) * 5deg)) translateY(calc(var(--i) * var(--i) * 2px));
+  transform-origin: 50% 100%;
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), margin 260ms cubic-bezier(.2, .8, .2, 1);
+}
+.v3 .v3-kind-art img:first-child { margin-left: 0; }
+.v3 .v3-kind:hover .v3-kind-art img { margin-left: -6px; transform: rotate(0deg) translateY(0); }
+.v3 .v3-kind:hover .v3-kind-art img:first-child { margin-left: 0; }
+.v3 .v3-kind-g { color: var(--ll-fg-mute); }
+@media (prefers-reduced-motion: reduce) { .v3 .v3-kind-art img { transition: none; } }
+@media (max-width: 900px) {
+  .v3 .v3-kind-art { height: 84px; margin-bottom: 16px; }
+  .v3 .v3-kind-art img { width: 52px; height: 69px; margin-left: -16px; }
+}
+/* Five covers fit a column: smaller, tighter, and a narrower spread on hover. */
+.v3 .v3-kind-art img { width: 58px; height: 77px; margin-left: -24px; }
+.v3 .v3-kind:hover .v3-kind-art img { margin-left: -14px; }
+@media (max-width: 900px) {
+  .v3 .v3-kind-art img { width: 52px; height: 69px; margin-left: -18px; }
+  .v3 .v3-kind:hover .v3-kind-art img { margin-left: -12px; }
+}

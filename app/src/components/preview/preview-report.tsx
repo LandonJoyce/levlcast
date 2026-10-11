@@ -89,15 +89,22 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
   const strengths = (r.strengths ?? []).slice(0, 3);
   const improvements = (r.improvements ?? []).slice(0, 3);
   const streamer = preview.streamer_display_name || preview.streamer_login || "This streamer";
+  const scoreBadge =
+    score !== null ? (
+      <div className="pr-score" data-tone={scoreTone(score)}>
+        <span className="pr-score-v">{score}</span>
+        {/* Labelled as an OPENING score, not a stream score. The model
+            only reads the first minutes, so presenting this as a verdict
+            on a multi-hour stream would be wrong and would insult the
+            streamer we are trying to convert. */}
+        <span className="pr-score-k">{partial ? "Opening score" : "Out of 100"}</span>
+      </div>
+    ) : null;
 
   return (
     <article className="pr">
       {/* What was read, and how much of it */}
-      <header className="pr-head">
-        {preview.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="pr-thumb" src={preview.thumbnail_url} alt="" width={320} height={180} />
-        ) : null}
+      <header className="pr-head" data-shot={preview.thumbnail_url ? "1" : undefined}>
         <div className="pr-head-main">
           <p className="v3-label">
             {streamer}
@@ -110,16 +117,17 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
               : `Coached the first ${fmtDuration(analyzed)}.`}
           </p>
         </div>
-        {score !== null ? (
-          <div className="pr-score" data-tone={scoreTone(score)}>
-            <span className="pr-score-v">{score}</span>
-            {/* Labelled as an OPENING score, not a stream score. The model
-                only reads the first minutes, so presenting this as a verdict
-                on a multi-hour stream would be wrong and would insult the
-                streamer we are trying to convert. */}
-            <span className="pr-score-k">{partial ? "Opening score" : "Out of 100"}</span>
-          </div>
-        ) : null}
+        {/* Their own stream's picture, with the score on it, so the first
+            thing they see is that this is about their stream. */}
+        {preview.thumbnail_url ? (
+          <figure className="pr-shot">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="pr-thumb" src={preview.thumbnail_url} alt="" width={640} height={360} />
+            {scoreBadge}
+          </figure>
+        ) : (
+          scoreBadge
+        )}
       </header>
 
       {/* Sign-up where people actually are. The report below is long and

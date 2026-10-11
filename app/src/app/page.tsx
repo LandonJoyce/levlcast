@@ -8,7 +8,7 @@ import SiteFooter from "@/components/landing/SiteFooter";
 import ProPlan from "@/components/landing/ProPlan";
 import CountUp from "@/components/landing/CountUp";
 import AddToObsLink from "@/components/landing/AddToObsLink";
-import { ArrowRight, Crosshair, Ghost, MessagesSquare, Sprout, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { FAQ, FAQ_STRUCTURED_DATA } from "@/components/landing/faq";
 import { TIER_HEX, TIERS, rankFromPoints } from "@/lib/rank";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -131,30 +131,49 @@ export const metadata: Metadata = {
  * module in lib/analyze.ts actually tells the coach to look for, so this
  * stays true as long as those do.
  */
-const KINDS: Array<{ k: string; v: string; games: string; icon: LucideIcon }> = [
+/** Each kind of stream, with the games people stream in it. Covers are Twitch's box art, saved in public/games. */
+const KINDS: Array<{ k: string; v: string; games: Array<[name: string, slug: string]>; more?: string }> = [
   {
     k: "Competitive",
     v: "Rounds, respawns and drafts leave dead time. It coaches you to fill it and to make the ranked climb the story.",
-    games: "VALORANT · CS2 · League · Fortnite · Marvel Rivals",
-    icon: Crosshair,
+    games: [
+      ["VALORANT", "valorant"],
+      ["Counter-Strike 2", "counter-strike"],
+      ["League of Legends", "league-of-legends"],
+      ["Fortnite", "fortnite"],
+      ["Marvel Rivals", "marvel-rivals"],
+    ],
   },
   {
     k: "Cozy and life sims",
     v: "Nothing's at stake on screen, so you're the show. It coaches the story, the build and the hangout.",
-    games: "The Sims · inZOI · Stardew · Animal Crossing · Minecraft",
-    icon: Sprout,
+    games: [
+      ["The Sims 4", "the-sims-4"],
+      ["inZOI", "inzoi"],
+      ["Stardew Valley", "stardew-valley"],
+      ["Animal Crossing", "animal-crossing-new-horizons"],
+      ["Minecraft", "minecraft"],
+    ],
   },
   {
     k: "Horror",
     v: "Your real reactions are the content. It flags the stretches where you go quiet or play it too cool.",
-    games: "Phasmophobia · Dead by Daylight",
-    icon: Ghost,
+    games: [
+      ["Phasmophobia", "phasmophobia"],
+      ["Dead by Daylight", "dead-by-daylight"],
+      ["Lethal Company", "lethal-company"],
+    ],
   },
   {
     k: "Everything else",
     v: "Just Chatting, variety, anything. Every stream gets notes on your talking, pacing, dead air and chat.",
-    games: "Any category",
-    icon: MessagesSquare,
+    games: [
+      ["Just Chatting", "just-chatting"],
+      ["Grand Theft Auto V", "grand-theft-auto-v"],
+      ["IRL", "irl"],
+      ["Art", "art"],
+    ],
+    more: "Any category",
   },
 ];
 
@@ -344,19 +363,29 @@ export default async function HomePage() {
       <section className="v3-sec" id="games">
         <h2 className="v3-h2">It knows what you&rsquo;re playing.</h2>
         <ul className="v3-kinds">
-          {KINDS.map((kind) => {
-            const Icon = kind.icon;
-            return (
-              <li key={kind.k} className="v3-kind">
-                <span className="v3-kind-ico" aria-hidden="true">
-                  <Icon size={18} strokeWidth={1.8} />
-                </span>
-                <p className="v3-kind-k">{kind.k}</p>
-                <p className="v3-kind-v">{kind.v}</p>
-                <p className="v3-kind-g">{kind.games}</p>
-              </li>
-            );
-          })}
+          {KINDS.map((kind) => (
+            <li key={kind.k} className="v3-kind">
+              <span className="v3-kind-art" aria-hidden="true">
+                {kind.games.map(([name, slug], i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={slug}
+                    src={`/games/${slug}.webp`}
+                    alt=""
+                    title={name}
+                    width={144}
+                    height={192}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ ["--i" as string]: i - (kind.games.length - 1) / 2 } as CSSProperties}
+                  />
+                ))}
+              </span>
+              <p className="v3-kind-k">{kind.k}</p>
+              <p className="v3-kind-v">{kind.v}</p>
+              <p className="v3-kind-g">{[...kind.games.map(([name]) => name), ...(kind.more ? [kind.more] : [])].join(" · ")}</p>
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -511,7 +540,9 @@ export default async function HomePage() {
           </span>
         </h2>
         <div className="v3-live-cta">
-          <AddToObsLink className="v3-btn">Add it to OBS</AddToObsLink>
+          <AddToObsLink className="v3-btn">
+            Add it to OBS <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />
+          </AddToObsLink>
         </div>
       </section>
 

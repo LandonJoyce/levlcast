@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { track } from "@/components/funnel/track";
 
 export const PENDING_VOD_COOKIE = "levlcast_pending_vod";
@@ -26,7 +27,7 @@ export function FullReportButton({ vodId, label = "Get my full report" }: { vodI
         }
       }}
     >
-      {label}
+      {label} <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />
     </a>
   );
 }
