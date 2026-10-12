@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   let detail = typeof body.detail === "string" ? body.detail.slice(0, 200) : null;
 
   // An app visit belongs to whoever's session this is, not to an id the page sent.
-  if (event === "app_open") {
+  if (event === "app_open" || event === "email_click") {
     const { data: { user } } = await (await createClient()).auth.getUser();
     if (!user) return new NextResponse(null, { status: 204 });
     detail = user.id;

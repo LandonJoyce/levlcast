@@ -20,6 +20,11 @@ export const CLIENT_EVENTS = [
   // whose reports were made by the background jobs. The server records it
   // against the session's account, never an id the page sends.
   "app_open",
+  // A signed-in person opened LevlCast from a link in one of our emails
+  // (?ref=email-<which>, added in lib/email.ts). Recorded against the
+  // session's account like app_open, so the outreach page can tell whether
+  // emails bring anyone back.
+  "email_click",
 ] as const;
 export type ClientEvent = (typeof CLIENT_EVENTS)[number];
 export type FunnelEvent = ClientEvent | "signup";

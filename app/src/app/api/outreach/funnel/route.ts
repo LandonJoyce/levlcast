@@ -93,7 +93,21 @@ export async function GET(req: NextRequest) {
   // Signed-in visits by account, for "Came back another day". Kept out of the
   // visitor steps: an app visit isn't a step toward an account.
   const opensBy = new Map<string, string[]>();
+  // Who opened LevlCast from an email button, and from which email.
+  const emailPeople = new Set<string>();
+  const emailKinds = new Map<string, Set<string>>();
+  let emailClicks = 0;
   for (const e of (events ?? []) as Row[]) {
+    if (e.event === "email_click") {
+      if (e.detail) {
+        emailClicks++;
+        emailPeople.add(e.detail);
+        opensBy.set(e.detail, [...(opensBy.get(e.detail) ?? []), e.created_at]);
+        const kind = (e.ref ?? "email-other").replace(/^email-/, "");
+        emailKinds.set(kind, (emailKinds.get(kind) ?? new Set<string>()).add(e.detail));
+      }
+      continue;
+    }
     if (e.event === "app_open") {
       if (e.detail) opensBy.set(e.detail, [...(opensBy.get(e.detail) ?? []), e.created_at]);
       continue;
@@ -263,6 +277,11 @@ export async function GET(req: NextRequest) {
     dm,
     thread,
     other,
+    emails: {
+      people: emailPeople.size,
+      clicks: emailClicks,
+      byKind: [...emailKinds.entries()].map(([kind, who]) => ({ kind, people: who.size })).sort((a, b) => b.people - a.people),
+    },
     refused: [...refused.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([reason, count]) => ({ reason, count })),
     failed,
     people: people.slice(0, 60),

@@ -28,7 +28,23 @@ interface FunnelData {
   newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "thread" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
   dmKinds?: Array<{ label: string; sent: number; clicked: number; signedUp: number }>;
   afterSignup?: { signedUp: number; report: number; cameBack: number; obsAdded: number; obsStreamed: number; pro: number };
+  emails?: { people: number; clicks: number; byKind: Array<{ kind: string; people: number }> };
 }
+
+/** The email each ?ref=email-... button came from (lib/email.ts). */
+const EMAIL_NAME: Record<string, string> = {
+  "ready-result": "Report ready",
+  "ready-placement": "First report ready",
+  "ready-locked": "Extra stream analyzed",
+  "new-vod": "New stream to analyze",
+  welcome: "Welcome",
+  activation: "First report reminder",
+  clip: "Clip ready",
+  pro: "Welcome to Pro",
+  support: "Support reply",
+  collab: "Collab",
+  payment: "Payment failed",
+};
 
 /** What new accounts went on to do, each as a share of everyone who signed up. */
 function AfterRow({ a }: { a: NonNullable<FunnelData["afterSignup"]> }) {
@@ -189,6 +205,31 @@ export function FunnelCard() {
               <>
                 <p className="fn-k">After they sign up</p>
                 <AfterRow a={data.afterSignup} />
+              </>
+            )}
+
+            {data.emails && (
+              <>
+                <p className="fn-k">Came back from an email</p>
+                {data.emails.people === 0 ? (
+                  <p className="fn-note">Nobody yet. Email links are counted from Oct 11.</p>
+                ) : (
+                  <ul className="fn-list">
+                    <li>
+                      <span>Opened LevlCast from an email</span>
+                      <b>
+                        {data.emails.people} {data.emails.people === 1 ? "person" : "people"}, {data.emails.clicks}{" "}
+                        {data.emails.clicks === 1 ? "click" : "clicks"}
+                      </b>
+                    </li>
+                    {data.emails.byKind.map((k) => (
+                      <li key={k.kind}>
+                        <span>{EMAIL_NAME[k.kind] ?? k.kind}</span>
+                        <b>{k.people}</b>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </>
             )}
 

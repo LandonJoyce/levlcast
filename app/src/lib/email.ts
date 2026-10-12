@@ -73,6 +73,18 @@ interface EmailSpec {
   /** Ends on Landon's name, for the ones he writes. */
   signed?: boolean;
   footer?: { label: string; href: string };
+  /** Which email this is, added to its button links as ?ref=email-... */
+  ref?: string;
+}
+
+/**
+ * Marks a link back to the site with the email it came from, so the
+ * outreach page's funnel can count who comes back from emails
+ * (components/funnel/app-open.tsx records it).
+ */
+function tagged(href: string, ref?: string): string {
+  if (!ref || !href.startsWith(SITE)) return href;
+  return `${href}${href.includes("?") ? "&" : "?"}ref=email-${ref}`;
 }
 
 function renderEmail(spec: EmailSpec): { html: string; text: string } {
@@ -126,10 +138,10 @@ function renderEmail(spec: EmailSpec): { html: string; text: string } {
     } else if ("button" in b) {
       parts.push(
         `<table cellpadding="0" cellspacing="0" style="margin:6px 0 24px;"><tr><td style="background:${C.ink};border-radius:9px;">` +
-          `<a href="${escapeHtml(b.href)}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:${C.bg};text-decoration:none;">${escapeHtml(b.button)}</a>` +
+          `<a href="${escapeHtml(tagged(b.href, spec.ref))}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:${C.bg};text-decoration:none;">${escapeHtml(b.button)}</a>` +
           `</td></tr></table>`
       );
-      text.push(`${b.button}: ${b.href}`, "");
+      text.push(`${b.button}: ${tagged(b.href, spec.ref)}`, "");
     } else {
       parts.push(`<p style="margin:0 0 14px;font-size:13px;color:${C.muted};line-height:1.6;">${escapeHtml(b.small)}</p>`);
       text.push(b.small, "");
@@ -181,7 +193,7 @@ export async function sendNewVodEmail(
 ): Promise<void> {
   const extra = optOut(userId);
   const subject = vodCount === 1 ? "Your latest stream is ready to analyze" : `${vodCount} new streams ready to analyze`;
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "new-vod",
     preheader: hasPriorAnalyses ? "See how it went next to your last one." : "Get your first report and your placement.",
     eyebrow: `Hey ${name}`,
     heading: vodCount === 1 ? "Your new stream is in." : "Your new streams are in.",
@@ -240,7 +252,7 @@ export async function sendVodReadyEmail(
   // The first report is the one moment a note from a real person matters
   // most, so it comes from Landon and a reply reaches him.
   const first = kind === "placement";
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: `ready-${kind}`,
     preheader: copy.body(title),
     eyebrow: `Hey ${name}`,
     heading: copy.heading,
@@ -304,7 +316,7 @@ const WELCOME: Record<FirstReport, { subject: string; preheader: string; lines: 
 
 export async function sendWelcomeEmail(to: string, name: string, firstReport: FirstReport = "started"): Promise<void> {
   const copy = WELCOME[firstReport];
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "welcome",
     preheader: copy.preheader,
     blocks: [
       { p: `Hey ${name},` },
@@ -319,7 +331,7 @@ export async function sendWelcomeEmail(to: string, name: string, firstReport: Fi
 }
 
 export async function sendProWelcomeEmail(to: string, name: string): Promise<void> {
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "pro",
     preheader: "Whole streams, 20 reports and 20 clips a month.",
     blocks: [
       { p: `Hey ${name},` },
@@ -356,7 +368,7 @@ export async function sendClipReadyEmail(
   userId?: string
 ): Promise<void> {
   const extra = optOut(userId);
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "clip",
     preheader: clipTitle,
     eyebrow: `Hey ${name}`,
     heading: "Your clip is ready.",
@@ -382,7 +394,7 @@ export async function sendClipReadyEmail(
 export async function sendActivationEmail(to: string, name: string, hasStreams = true, userId?: string): Promise<void> {
   const extra = optOut(userId);
   const { html, text } = hasStreams
-    ? renderEmail({
+    ? renderEmail({ ref: "activation",
         preheader: "Pick a stream and it's done in about ten minutes.",
         eyebrow: `Hey ${name}`,
         heading: "Your first report hasn't run yet.",
@@ -394,7 +406,7 @@ export async function sendActivationEmail(to: string, name: string, hasStreams =
         ],
         footer: extra.footer,
       })
-    : renderEmail({
+    : renderEmail({ ref: "activation",
         preheader: "Turn on Store past broadcasts and your first report starts by itself.",
         eyebrow: `Hey ${name}`,
         heading: "Twitch isn't saving your streams yet.",
@@ -428,7 +440,7 @@ export async function sendFeedbackReplyToUser(input: {
   originalMessage: string;
   reply: string;
 }): Promise<void> {
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "support",
     preheader: input.reply.slice(0, 120),
     blocks: [
       { p: `Hey ${input.name},` },
@@ -499,7 +511,7 @@ export async function sendCollabInterestEmail(
   senderName: string,
   introText: string
 ): Promise<void> {
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "collab",
     preheader: `${senderName} sent you a collab interest on LevlCast.`,
     eyebrow: `Hey ${recipientName}`,
     heading: `${senderName} wants to collab.`,
@@ -520,7 +532,7 @@ export async function sendCollabAcceptedEmail(
   recipientName: string,
   discordHandle: string
 ): Promise<void> {
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "collab",
     preheader: `${recipientName} accepted. Here's their Discord.`,
     eyebrow: `Hey ${senderName}`,
     heading: `${recipientName} said yes.`,
@@ -550,7 +562,7 @@ export async function sendCollabAcceptedEmail(
  * actions from the reader.
  */
 export async function sendPaymentFailedEmail(to: string, name: string, reason?: string | null): Promise<void> {
-  const { html, text } = renderEmail({
+  const { html, text } = renderEmail({ ref: "payment",
     preheader: "Your reports and rank are safe. Update your card and Pro turns back on.",
     blocks: [
       { p: `Hey ${name},` },
