@@ -23,7 +23,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
 
   try {
     const audio = await speakLine(text, voice);
-    return new NextResponse(audio, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, max-age=3600" } });
+    // The same line in the same voice is the same clip, so Vercel's CDN keeps
+    // it: a repeat ("Your mic is muted") is served without calling this
+    // route, which means without paying Deepgram or spending the budget
+    // again. The dock's token is part of the URL, so each streamer's lines
+    // stay theirs.
+    return new NextResponse(audio, {
+      headers: {
+        "Content-Type": "audio/mpeg",
+        "Cache-Control": "private, max-age=86400",
+        "Vercel-CDN-Cache-Control": "max-age=2592000",
+      },
+    });
   } catch (err) {
     console.error("[live] say failed:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Couldn't read that out." }, { status: 503 });

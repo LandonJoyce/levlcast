@@ -5,15 +5,15 @@
  * stops mishearing common gaming terms ("desync" → "this is decent",
  * "heart thrust" → "I thought", etc.).
  *
- * Three layers stack at transcription time:
- *   1. GENERAL          — streaming meta + casual reactions, every VOD
+ * Three layers stack at transcription time, only when the title names a
+ * game we have a pack for (keywordsForGame explains the cost):
+ *   1. GENERAL          — streaming meta + casual reactions
  *   2. CATEGORY         — broad MMO/FPS/MOBA/etc. jargon
  *   3. GAME (specific)  — champion names, abilities, maps, weapons for
  *                         the actual game detected from the VOD title
  *
- * Detection runs against the VOD title — most streamers tag the game
- * there. Add patterns/terms generously; over-coverage is cheap, missed
- * terms cost user trust.
+ * Detection runs against the VOD title. Add patterns and terms
+ * generously: more terms cost nothing extra once a game is detected.
  */
 
 export type GameCategory =
@@ -409,22 +409,27 @@ export function detectGame(title: string): GameDetection {
 }
 
 /**
- * Build the full keyword list (with boosts) to send to Deepgram.
- * Stacks all three layers; capped well under Deepgram's 200-keyword
- * per-request limit.
+ * The keyword list to send to Deepgram, or none.
  *
- * Boosts:
- *   1 — general meta (light nudge)
- *   2 — category jargon (gameplay verbs / nouns)
+ * Deepgram bills keyterms per minute of audio, not per term: any keyterm
+ * at all adds $0.0013/min, a quarter on top of the $0.0052 transcription.
+ * Until 2026-10-12 the general list went out with every VOD, so every
+ * report paid it for words like "stream" and "Twitch" that Nova-3 already
+ * gets right. Now the list only goes when the title names a game we have a
+ * pack for, where the champion, agent and map names are the words it
+ * actually flubs. Once that's paid for, the other layers ride along free.
+ *
+ * Most valuable first, since the URL builder keeps the first 100 terms:
  *   3 — game-specific vocab (champion/ability/map names — likeliest to flub)
+ *   2 — category jargon (gameplay verbs / nouns)
+ *   1 — general meta (light nudge)
  */
 export function keywordsForGame(detection: GameDetection): string[] {
-  const general = GENERAL.map((k) => `${k}:1`);
+  if (!detection.gameId) return [];
+  const game = KEYWORDS_BY_GAME[detection.gameId].map((k) => `${k}:3`);
   const category = (KEYWORDS_BY_CATEGORY[detection.category] ?? []).map((k) => `${k}:2`);
-  const game = detection.gameId
-    ? KEYWORDS_BY_GAME[detection.gameId].map((k) => `${k}:3`)
-    : [];
-  return [...general, ...category, ...game];
+  const general = GENERAL.map((k) => `${k}:1`);
+  return [...game, ...category, ...general];
 }
 
 // Backwards-compat shim — old callers that only need the category enum.

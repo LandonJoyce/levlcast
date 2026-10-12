@@ -39,8 +39,27 @@ const COACH_EVERY_MS = Number(process.env.LIVE_COACH_EVERY_MS) || 150_000;
 const LISTEN_LOCK_MS = 50_000;
 /** A playlist link this old is swapped for a fresh one, even if it still works. */
 const PLAYLIST_MAX_AGE_MS = 60 * 60_000;
-/** The natural voices: at most this many characters a stream, about 90 cents' worth. */
-const SPOKEN_CHARS_PER_STREAM = 30_000;
+/**
+ * The natural voices: at most this many characters a stream, about 36
+ * cents' worth (Aura-2 is $0.03 per 1,000). A busy 4-hour stream speaks
+ * roughly 7-12k; past the cap the phone's own voice reads the rest. It was
+ * 30k (90 cents) until 2026-10-12, which let voice alone cost more than a
+ * Pro month brings in. Repeats of a line come from the CDN for free
+ * (/api/live/[token]/say), so only new lines count.
+ */
+const SPOKEN_CHARS_PER_STREAM = 12_000;
+/**
+ * The listener skips Deepgram for audio that started after the OBS mic
+ * last heard talking, by at least this much (Twitch's clock and ours, and
+ * the encoder's delay, can be a few seconds apart).
+ */
+const QUIET_SKIP_MARGIN_MS = 15_000;
+/**
+ * A mic quiet for longer than this is more likely the wrong source picked
+ * in OBS than a silent streamer, so the audio is transcribed anyway and
+ * the coach doesn't go deaf.
+ */
+const QUIET_SKIP_MAX_SECONDS = 10 * 60;
 
 /** Twitch's API, overridable so the dock can be tested against a stand-in. */
 const HELIX = process.env.TWITCH_API_BASE || "https://api.twitch.tv";
@@ -778,6 +797,22 @@ async function listenedThisMonth(admin: Admin, userId: string): Promise<number> 
 }
 
 /**
+ * Whether the OBS mic was quiet for all of a stretch of stream audio:
+ * the panel sends how long the mic has been quiet, and the audio's start
+ * comes from Twitch's clock. No reading from OBS (panel not connected, or
+ * no talking seen yet) means it can't tell, so the audio gets heard.
+ */
+export function micQuietThrough(quietSeconds: unknown, audioStartAt: number | null, audioSeconds: number, now: number): boolean {
+  if (quietSeconds === null || quietSeconds === undefined) return false;
+  const quiet = Number(quietSeconds);
+  if (!Number.isFinite(quiet) || quiet < 0 || quiet > QUIET_SKIP_MAX_SECONDS) return false;
+  const lastTalk = now - quiet * 1000;
+  // Without Twitch's clock, assume the audio is as far behind as Twitch gets.
+  const start = audioStartAt ?? now - audioSeconds * 1000 - 30_000;
+  return lastTalk < start - QUIET_SKIP_MARGIN_MS;
+}
+
+/**
  * One call from an open dock: hear what the stream said since the last
  * call, and every COACH_EVERY_MS ask the coach whether there's a tip.
  * Only one dock at a time does this for a stream; the others get "busy".
@@ -845,7 +880,11 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
     }
 
     let heard: string | null = null;
-    if (pulled.audio) {
+    // While OBS says the mic has been quiet since before this audio began,
+    // there's nothing of theirs in it to hear, and Deepgram bills silence
+    // (and game audio) by the minute like anything else.
+    const nothingSaid = pulled.audio !== null && micQuietThrough(input.quietSeconds, pulled.startAt, pulled.seconds, now);
+    if (pulled.audio && !nothingSaid) {
       try {
         const { segments } = await transcribeClip(pulled.audio);
         // Twitch's own clock for the audio, else "just now, minus the clip".
