@@ -1760,7 +1760,7 @@ export default function LiveDock({
           {obsStatus === "connected" && (
             <p className="ld-off-mic" data-muted={micMuted ? "1" : "0"}>
               <span className="ld-meter" aria-hidden="true">
-                <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
+                <i style={{ width: `${micMuted ? 0 : meter}%` }} data-talking={talking ? "1" : "0"} />
               </span>
               <span>{micMuted ? "Your mic is muted in OBS." : talking ? "It can hear you. You're all set." : "Mic check: say something."}</span>
             </p>
