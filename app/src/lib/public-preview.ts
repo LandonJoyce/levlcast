@@ -70,11 +70,12 @@ export const MIN_PREVIEW_SECONDS = 5 * 60;
 
 /**
  * Hard ceiling on previews started in a day, from everywhere at once: the
- * analyzer, outreach and new sign-ups all count toward it. At roughly a
- * nickel each this caps preview spend near $10/day. Raise it when the
- * funnel is proven, never remove it.
+ * analyzer, outreach and new sign-ups all count toward it. A preview costs
+ * about 15 cents (12 minutes on Soniox, then the clip finder and the
+ * report), so this caps preview spend near $15 a day. It was 200 until
+ * 2026-10-12. Raise it when the funnel is proven, never remove it.
  */
-export const PREVIEWS_PER_DAY = 200;
+export const PREVIEWS_PER_DAY = 100;
 
 export interface PreviewVodMeta {
   twitchVodId: string;
