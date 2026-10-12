@@ -2024,3 +2024,5 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .cm-stream span { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 13px; }
 .dash .ce-tl-times .ce-tl-hint { font-family: var(--font-plus-jakarta), sans-serif; font-size: 12.5px; }
 .dash.dash-app .tbl th { font-family: var(--font-plus-jakarta), sans-serif; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+/* Match tags (Promoted, Division up, Shield...) as words in their colour, not outlined pills. */
+.dash .mh-tag, .dash .mh-tag[data-tag] { padding: 0; border: 0; border-radius: 0; background: none; font-size: 12.5px; font-weight: 700; }
