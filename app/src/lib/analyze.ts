@@ -1771,6 +1771,8 @@ GOOD: "you set up the matchup and hyped the team in the first minute. good start
 
 The test for every sentence: would a real person type this to a friend on Discord? If it sounds like a review in a magazine, rewrite it shorter and dumber. Plain beats clever every single time.
 
+NO METAPHORS OR CLEVER LINES. Say what literally happened. Never write things like "your best hour was hiding behind an 8 minute opening", "the real stream started at 12:40", "chat was the co-host" or "the clutch carried the stream". Those make people stop and work out what you mean. Write "You didn't talk for the first 8 minutes. After that, chat picked up."
+
 LABELS. Strength and improvement labels are two or three plain words naming the thing, not a clever title. "Silent Grind", "Rivalry Frame", "No Take" and "Cold Ending" are all wrong: they sound like album tracks and mean nothing on their own. Write "You went quiet", "You called out Lucky", "No opinions", "Ended abruptly". A label should be understandable with zero context.
 
 ADVICE THAT SOUNDS LIKE A REAL STREAMER. Every fix you give:
@@ -2057,7 +2059,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
     "time": "<MM:SS>",
     "description": "<EXACTLY 3 sentences, max 20 words each. No em-dashes. Use 'you'. Sentence 1: what was building before (e.g. 'You'd been quiet for three minutes and chat was sitting still.'). Sentence 2: what you did at this moment and why it landed (e.g. 'Then you went on a run that built from setup into a payoff nobody saw coming.'). Sentence 3: how to do it again next time (e.g. 'Call out the other team before the match starts so the trash talk means something when it hits.'). Actions only, no reconstructed words.>"
   },
-  "punch_line": "<ONE sentence, under 22 words, in plain words a 19 year old would text. The one thing worth taking into the next stream. Not a verdict, not blame. It should make you think 'okay, I can do that', not 'I suck'. Point at something you nearly did right and say how to finish it. Good examples: 'You already call chatters out by name. Do it once more per hour and it sticks.' or 'You almost had a clip at the boss kill. Wait two seconds before you react next time.' or 'The opening had real energy. Keep talking through the loading screen instead of going quiet.' No em dashes. No quoted words. No timestamps.>",
+  "punch_line": "<One or two short sentences, under 20 words in all, the first thing they read on the report. Say plainly what happened on this stream and the one thing to do next time, the way a friend would text it. No metaphors, no wordplay, no dramatic line, no verdict, no blame. Good: 'You didn't talk for the first 8 minutes. Say hi to chat as soon as you go live.' Good: 'You talked chat through every fight. Do the same in the queue.' Good: 'You went quiet after the deaths. Say what went wrong out loud.' Bad: 'Your best hour was hiding behind an 8 minute opening.' No em dashes. No quoted words from this stream. No timestamps.>",
   "recommendation": "<1-2 short sentences addressed to 'you'. The one thing to do on your next stream, said the way a big streamer would tell a smaller one: a concrete habit or a line to say, not a principle. Fits this stream. No buildup. Use contractions. Example of the right voice: 'When you load in, tell chat what tonight is. Ranked till Plat is enough.'>",
   "rewatch_moments": [
     { "time": "<MM:SS>", "kind": "best", "note": "<1 sentence telling 'you' what to watch for in the next 60 seconds. Specific behavior to study and repeat. No quoted words.>" },

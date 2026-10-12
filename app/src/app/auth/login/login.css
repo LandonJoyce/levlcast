@@ -158,3 +158,17 @@
   .v3 .au-perm,
   .v3 .au-terms { max-width: none; }
 }
+
+/* 2026-10 refresh: the homepage's headline face, plain labels, and the
+   side someone buying Pro sees (price, what they get, what happens next). */
+.v3 .au-h1 { font-family: var(--font-archivo, var(--ll-display)); font-stretch: 112%; font-weight: 700; letter-spacing: -0.025em; }
+.v3 .au-n { font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: 0; color: var(--ll-fg-faint); }
+.v3 .au-free { font-family: inherit; font-size: 13px; letter-spacing: 0; line-height: 1.5; }
+.v3 .au-price {
+  margin: 0 0 14px; display: flex; align-items: baseline; gap: 4px;
+  font-family: var(--v3-display); font-weight: 900; font-size: 64px; line-height: 0.95; color: var(--ll-fg);
+}
+.v3 .au-price span { font-family: var(--ll-body, inherit); font-size: 16px; font-weight: 500; color: var(--ll-fg-faint); }
+.v3 .au-get { list-style: none; margin: 0 0 30px; padding: 0; border-top: 1px solid var(--ll-line-soft); }
+.v3 .au-get li { padding: 12px 0; border-bottom: 1px solid var(--ll-line-soft); font-size: 15px; line-height: 1.45; color: var(--ll-fg-mute); }
+.v3 .au-then { margin-bottom: 4px; }

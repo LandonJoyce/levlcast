@@ -26,6 +26,21 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Your account didn't finish setting up. Try again, and if it keeps happening, email Landon@LevlCast.com.",
 };
 
+/** What each plan costs and gives, for the side of the page someone buying sees. */
+const PLAN_PRICE: Record<string, { price: string; per: string }> = {
+  monthly: { price: "$20", per: "/month" },
+  annual: { price: "$199", per: "/year" },
+  pro_plus: { price: "$29.99", per: "/month" },
+  pro_plus_annual: { price: "$299", per: "/year" },
+};
+const PRO_GETS = [
+  "Every stream coached start to finish, up to 8 hours",
+  "The coach in OBS listens and tells you what to say",
+  "20 streams and 20 clips a month",
+  "Clips post straight to YouTube",
+];
+const PRO_PLUS_GETS = ["Everything in Pro", "Streams up to 10 hours", "35 streams and 35 clips a month"];
+
 /** ?plan= values the "Go Pro" buttons send, and what to call each one. */
 const PLAN_NAMES: Record<string, string> = {
   monthly: "Pro",
@@ -60,11 +75,11 @@ export default async function LoginPage({
         <section className="au-signin" aria-labelledby="au-title">
           <p className="v3-label">{planName ? `${planName} checkout` : "Account"}</p>
           <h1 id="au-title" className="au-h1">
-            {planName ? `Sign in to get ${planName}` : "Sign in with Twitch"}
+            {planName ? `Get ${planName}` : "Sign in with Twitch"}
           </h1>
           <p className="au-sub">
             {planName
-              ? "Your LevlCast account is your Twitch account. Checkout opens as soon as you're signed in."
+              ? "First sign in with Twitch, which is your LevlCast account. Checkout opens right after."
               : "Your LevlCast account is your Twitch account, so there's no password to make or forget."}
           </p>
 
@@ -80,32 +95,68 @@ export default async function LoginPage({
           </p>
         </section>
 
-        <section className="au-next" aria-labelledby="au-next-title">
-          <p className="v3-label" id="au-next-title">First time here?</p>
-          <ol className="au-steps">
-            <li>
-              <span className="au-n" aria-hidden="true">01</span>
-              <p>
-                <b>Twitch asks if LevlCast can see your account.</b> Say yes and you&apos;re in.
-              </p>
-            </li>
-            <li>
-              <span className="au-n" aria-hidden="true">02</span>
-              <p>
-                <b>Your past broadcasts show up.</b> If the list is empty, Store past broadcasts is probably off in
-                your Twitch settings.
-              </p>
-            </li>
-            <li>
-              <span className="au-n" aria-hidden="true">03</span>
-              <p>
-                <b>We start your first report right away.</b> It&apos;s usually ready in about ten minutes, and it
-                places you on the ladder.
-              </p>
-            </li>
-          </ol>
-          <p className="au-free">Free is a report every week and 6 clips a month, no card. Each free report coaches the first 2 hours of a stream.</p>
-        </section>
+        {planKey ? (
+          <section className="au-next" aria-labelledby="au-next-title">
+            <p className="v3-label" id="au-next-title">What you get</p>
+            <p className="au-price">
+              {PLAN_PRICE[planKey].price}
+              <span>{PLAN_PRICE[planKey].per}</span>
+            </p>
+            <ul className="au-get">
+              {(planKey.startsWith("pro_plus") ? PRO_PLUS_GETS : PRO_GETS).map((g) => (
+                <li key={g}>{g}</li>
+              ))}
+            </ul>
+            <p className="v3-label au-then">What happens next</p>
+            <ol className="au-steps">
+              <li>
+                <span className="au-n" aria-hidden="true">1</span>
+                <p>
+                  <b>Twitch asks if LevlCast can see your account.</b> Say yes.
+                </p>
+              </li>
+              <li>
+                <span className="au-n" aria-hidden="true">2</span>
+                <p>
+                  <b>Checkout opens.</b> Stripe takes the payment, and you can cancel anytime from your account.
+                </p>
+              </li>
+              <li>
+                <span className="au-n" aria-hidden="true">3</span>
+                <p>
+                  <b>Your next stream gets coached start to finish.</b> The coach in OBS starts listening too.
+                </p>
+              </li>
+            </ol>
+          </section>
+        ) : (
+          <section className="au-next" aria-labelledby="au-next-title">
+            <p className="v3-label" id="au-next-title">First time here?</p>
+            <ol className="au-steps">
+              <li>
+                <span className="au-n" aria-hidden="true">1</span>
+                <p>
+                  <b>Twitch asks if LevlCast can see your account.</b> Say yes and you&apos;re in.
+                </p>
+              </li>
+              <li>
+                <span className="au-n" aria-hidden="true">2</span>
+                <p>
+                  <b>Your past broadcasts show up.</b> If the list is empty, Store past broadcasts is probably off in
+                  your Twitch settings.
+                </p>
+              </li>
+              <li>
+                <span className="au-n" aria-hidden="true">3</span>
+                <p>
+                  <b>We start your first report right away.</b> It&apos;s usually ready in about ten minutes, and it
+                  places you on the ladder.
+                </p>
+              </li>
+            </ol>
+            <p className="au-free">Free is a report every week and 6 clips a month, no card. Each free report coaches the first 2 hours of a stream.</p>
+          </section>
+        )}
       </main>
 
       <footer className="au-foot">

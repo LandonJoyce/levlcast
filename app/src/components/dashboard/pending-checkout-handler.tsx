@@ -61,13 +61,13 @@ export default function PendingCheckoutHandler() {
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok || !json?.url) {
-          setErrorMsg(json?.error || "Couldn't open Stripe checkout. Try the Upgrade button on this page.");
+          setErrorMsg(json?.error || "Couldn't open checkout. Press Free at the top right to try again, or email Landon@LevlCast.com.");
           setPhase("error");
           return;
         }
         window.location.href = json.url;
       } catch {
-        setErrorMsg("Network error during checkout. Try the Upgrade button on this page.");
+        setErrorMsg("Checkout didn't load. Press Free at the top right to try again.");
         setPhase("error");
       }
     })();

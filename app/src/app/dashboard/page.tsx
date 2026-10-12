@@ -280,12 +280,17 @@ export default async function DashboardPage({
 
       <div className="hm-hello">
         <h1 className="page-title">Hey, {displayName}.</h1>
+        {/* Analyzing a stream is what people open the app to do, so it's the
+            main button. "Add to OBS" only sits here once the OBS card below
+            is gone (they've used the panel), so it's never on screen twice. */}
         <div className="hm-hello-actions">
-          <AddToObsButton className="btn btn-ghost" pro={livePro}>
-            Add to OBS
-          </AddToObsButton>
-          <Link href="/dashboard/vods" className="btn btn-ghost">
-            <Icons.Twitch /> Analyze a stream
+          {!showLivePromo && (
+            <AddToObsButton className="btn btn-ghost" pro={livePro}>
+              Add to OBS
+            </AddToObsButton>
+          )}
+          <Link href="/dashboard/vods" className="btn btn-primary hm-analyze">
+            <Icons.Twitch /> Analyze a stream <Icons.Arrow />
           </Link>
         </div>
       </div>
