@@ -861,7 +861,7 @@ function Timeline({
       </div>
       <div className="ce-tl-times">
         <span>{fmt(start)}</span>
-        <span>Drag the ends to trim</span>
+        <span className="ce-tl-hint">Drag the ends to trim</span>
         <span>{fmt(end)}</span>
       </div>
     </div>

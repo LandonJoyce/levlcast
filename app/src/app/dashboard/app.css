@@ -2019,3 +2019,8 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
   .dash .ob-steps li { grid-template-columns: 28px minmax(0, 1fr); }
   .dash .ob-steps li > .ob-step-go, .dash .ob-steps li > :last-child:not(.ob-step-text):not(.ob-step-mark) { grid-column: 2; justify-self: start; }
 }
+
+/* Leftover labels found by the 2026-10-12 page check. */
+.dash .cm-stream span { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 13px; }
+.dash .ce-tl-times .ce-tl-hint { font-family: var(--font-plus-jakarta), sans-serif; font-size: 12.5px; }
+.dash.dash-app .tbl th { font-family: var(--font-plus-jakarta), sans-serif; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }

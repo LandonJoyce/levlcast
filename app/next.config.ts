@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
     "/api/inngest": ["./src/lib/fonts/Roboto-Bold.ttf"],
   },
 
+  // /v1 and /v2 are the homepages from before 2026-09-25, gradients and
+  // all. They're kept in the code for reference but forward to the real
+  // homepage, like /v3 does, so nobody lands on an old design by URL.
+  async redirects() {
+    return [
+      { source: "/v1", destination: "/", permanent: false },
+      { source: "/v2", destination: "/", permanent: false },
+    ];
+  },
+
   // Security headers — applied to every response
   async headers() {
     return [

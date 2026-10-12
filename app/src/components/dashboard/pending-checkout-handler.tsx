@@ -110,7 +110,7 @@ export default function PendingCheckoutHandler() {
         }}
       >
         <div className="flex-1">
-          <p className="text-[12px] font-extrabold uppercase tracking-widest mb-1" style={{ color: "#F87171" }}>
+          <p className="text-[13px] font-bold mb-1" style={{ color: "#F87171" }}>
             Checkout didn't open
           </p>
           <p className="text-[13px] text-white/80 m-0">{errorMsg}</p>

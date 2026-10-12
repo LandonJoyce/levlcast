@@ -595,3 +595,8 @@ body:has(.ld-root) { background: rgb(16, 13, 14); }
   text-transform: none;
 }
 .ld-k, .ld-stats span, .ld-fixline span, .ld-idea-k { color: var(--ink-3); }
+
+/* Before a stream, with OBS connected: a mic check that proves it hears you. */
+.ld-off-mic { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; font-size: 13px; color: var(--ink-2); }
+.ld-off-mic[data-muted="1"] { color: var(--nudge); }
+.ld-off-mic .ld-meter { flex: 0 0 64px; }

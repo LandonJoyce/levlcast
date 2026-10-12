@@ -1755,6 +1755,16 @@ export default function LiveDock({
         <section className="ld-off">
           {/* The hello and their banner are in the strip above (RankRow). */}
           <p className="ld-off-s">Go live and this fills in.</p>
+          {/* Before a stream: proof it can already hear them, so setting it
+              up feels finished instead of "wait until you're live". */}
+          {obsStatus === "connected" && (
+            <p className="ld-off-mic" data-muted={micMuted ? "1" : "0"}>
+              <span className="ld-meter" aria-hidden="true">
+                <i style={{ width: `${meter}%` }} data-talking={talking ? "1" : "0"} />
+              </span>
+              <span>{micMuted ? "Your mic is muted in OBS." : talking ? "It can hear you. You're all set." : "Mic check: say something."}</span>
+            </p>
+          )}
           {session ? (
             <div className="ld-last">
               <p className="ld-k">
