@@ -36,7 +36,7 @@ export default function ProPlan({ blurb }: { blurb?: React.ReactNode } = {}) {
       <p className="v3-plan-b">
         {blurb ?? (
           <>
-            For streamers going live more than once a week. Whole streams coached, twenty a month, twenty clips, posting
+            For streamers going live more than once a week. Whole streams coached, up to 20 streams and 30 hours a month, 20 clips posting
             straight to YouTube, and a coach in OBS that listens while you&apos;re live.
           </>
         )}

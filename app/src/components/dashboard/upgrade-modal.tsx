@@ -34,15 +34,15 @@ const PRICE: Record<Tier, Record<Cycle, { price: string; per: string; note: stri
 
 const FEATURES: Record<Tier, string[]> = {
   pro: [
-    "Every stream coached start to finish, up to 8 hours",
+    "Whole streams coached start to finish, up to 8 hours each",
     "The coach in OBS listens and tells you what to say",
-    "20 streams and 20 clips a month",
-    "Clips post straight to YouTube",
+    "Up to 20 streams and 30 hours a month",
+    "20 clips a month, posted straight to YouTube",
   ],
   pro_plus: [
     "Everything in Pro",
-    "Streams up to 10 hours",
-    "35 streams and 35 clips a month",
+    "Streams up to 10 hours each",
+    "Up to 35 streams and 50 hours a month, and 35 clips",
   ],
 };
 
@@ -112,7 +112,7 @@ export function UpgradeModal({ isOpen, onClose, reason, initialTier = "pro" }: U
 
         <p className="um-tier">{name}</p>
         <h2 id="um-title" className="um-h">
-          {tier === "pro_plus" ? "For streamers who are live most days." : "Get every stream coached."}
+          {tier === "pro_plus" ? "For streamers who are live most days." : "Get your whole stream coached."}
         </h2>
         {reason && tier === "pro" ? <p className="um-why">{reason}</p> : null}
 

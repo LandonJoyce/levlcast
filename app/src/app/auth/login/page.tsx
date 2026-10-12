@@ -34,12 +34,12 @@ const PLAN_PRICE: Record<string, { price: string; per: string }> = {
   pro_plus_annual: { price: "$299", per: "/year" },
 };
 const PRO_GETS = [
-  "Every stream coached start to finish, up to 8 hours",
+  "Whole streams coached start to finish, up to 8 hours each",
   "The coach in OBS listens and tells you what to say",
-  "20 streams and 20 clips a month",
-  "Clips post straight to YouTube",
+  "Up to 20 streams and 30 hours a month",
+  "20 clips a month, posted straight to YouTube",
 ];
-const PRO_PLUS_GETS = ["Everything in Pro", "Streams up to 10 hours", "35 streams and 35 clips a month"];
+const PRO_PLUS_GETS = ["Everything in Pro", "Streams up to 10 hours each", "Up to 35 streams and 50 hours a month, and 35 clips"];
 
 /** ?plan= values the "Go Pro" buttons send, and what to call each one. */
 const PLAN_NAMES: Record<string, string> = {

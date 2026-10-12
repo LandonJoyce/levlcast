@@ -181,8 +181,8 @@ export default function ObsPage() {
               blurb={
                 <>
                   The panel coaches your whole stream, and a coach listens to it and tells you what to say, like a question
-                  you missed or a play to talk chat through. Plus a report on every stream, twenty a month, and twenty
-                  clips.
+                  you missed or a play to talk chat through. Plus whole-stream reports, up to 20 streams and 30 hours a month,
+                  and 20 clips.
                 </>
               }
             />

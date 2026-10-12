@@ -21,7 +21,7 @@ export interface UpgradePitch {
   reason: string;
 }
 
-const FALLBACK = "Pro coaches every stream from start to finish, and the coach in OBS listens while you're live.";
+const FALLBACK = "Pro coaches your whole stream, start to finish, and the coach in OBS listens while you're live.";
 
 /** "3h 40m", "2h", "55m". */
 function length(seconds: number): string {
@@ -58,7 +58,7 @@ export async function buildUpgradePitch(userId: string, supabase: SupabaseClient
     };
   }
   if ((thisWeek ?? 0) >= 2) {
-    return { reason: `You went live ${thisWeek} times this week. Free coaches one stream a week. Pro coaches every one.` };
+    return { reason: `You went live ${thisWeek} times this week. Free coaches one stream a week. Pro coaches up to 20 a month.` };
   }
   return { reason: FALLBACK };
 }
