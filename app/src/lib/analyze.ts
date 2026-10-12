@@ -11,7 +11,8 @@
  *     then do a final re-ranking pass to pick the best 5 overall
  *
  * MODELS USED:
- *   - Peak detection: claude-sonnet-4-6 (high quality — this is the MVP feature)
+ *   - Peak detection: claude-sonnet-4-6 (Haiku 5.5 was tried and found
+ *     weaker clips, see runPeakDetection)
  *   - Coaching report: claude-sonnet-5 at high effort, medium on a retry and
  *     for the free preview (flagship feature)
  *
@@ -19,6 +20,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { replyText } from "./claude-models";
 import { audibleParts, describeMuted, mutedMinutes, overlapSeconds, type TimeRange } from "./muted-audio";
 import { TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
@@ -483,6 +485,10 @@ async function runPeakDetection(
 ): Promise<Peak[]> {
   const transcript = buildTranscript(segments);
 
+  // Stays on Sonnet 4.6 although it's a fifth of a report's cost. On
+  // 2026-10-12, side by side on 20 minutes of three real streams, Sonnet
+  // found 4 strong, specific clips; Haiku 5.5 found 1 weak one with
+  // thinking off and 2 weak ones with it on (lib/claude-models.ts).
   const response = await withRetry(() => anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 3000,
@@ -490,7 +496,7 @@ async function runPeakDetection(
     messages: [{ role: "user", content: buildPeakDetectionPrompt(vodTitle, transcript, chatPulse) }],
   }), 3, 1000);
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const text = replyText(response.content);
   const peaks = parsePeaksFromClaudeText(text);
   if (peaks === null) {
     console.error("Failed to parse Claude peak response (no JSON array found):", text.slice(0, 400));

@@ -108,11 +108,12 @@ Reply with JSON only: {"title": "...", "caption": "..."}`;
 
   try {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const { HAIKU, THINKING_OFF, replyText } = await import("@/lib/claude-models");
     const res = await new Anthropic().messages.create(
-      { model: "claude-haiku-4-5-20251001", max_tokens: 200, messages: [{ role: "user", content: prompt }] },
+      { model: HAIKU, max_tokens: 300, thinking: THINKING_OFF, messages: [{ role: "user", content: prompt }] },
       { timeout: 20_000, maxRetries: 1 }
     );
-    const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+    const text = replyText(res.content);
     const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as { title?: unknown; caption?: unknown };
     const title = tidyClipText(json.title, 70);
     const caption = tidyClipText(json.caption, 150);

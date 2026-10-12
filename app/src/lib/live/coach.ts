@@ -12,8 +12,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readReportJson, type CoachReport } from "@/lib/analyze";
 import type { CoachingArcData } from "@/lib/coaching-arc";
 import type { ChatDigest } from "./chat-digest";
+import { HAIKU, THINKING_OFF, replyText } from "@/lib/claude-models";
 
-export const COACH_MODEL = "claude-haiku-4-5-20251001";
+/** Haiku 5.5 since 2026-10-12 (it was Haiku 4.5); lib/claude-models.ts has its rules. */
+export const COACH_MODEL = HAIKU;
 
 export interface StreamerHistory {
   /** Problems their reports keep finding. */
@@ -71,8 +73,15 @@ export interface CoachAnswer {
  * Tips rated below this aren't shown. The coach always offers its best one
  * and rates it; the bar lives here rather than in its mood, so a streamer
  * who's already good still hears the things worth hearing.
+ *
+ * 8 since the move to Haiku 5.5 (2026-10-12). Over 45 minutes each of
+ * subroza and dantes, Haiku 4.5 answered {"say": null} to almost every
+ * look and showed 2 tips in 36; Haiku 5.5 rated 17 at 7 or more and 6 at
+ * 8 or more. 8 keeps it near a tip every 15 minutes on a busy stream, the
+ * pace that felt right on 2026-10-06. Its 5s to 7s still show as a small
+ * idea on the panel, never read out.
  */
-export const COACH_MIN_USEFUL = 7;
+export const COACH_MIN_USEFUL = 8;
 
 const SYSTEM = `You coach Twitch streamers live, as a voice in their ear. Every couple of minutes you get what the stream just sounded like, what chat said, and how many people are watching. You find the one thing most worth telling the streamer right now, and rate how useful it is to them.
 
@@ -209,16 +218,18 @@ export async function coachTip(c: CoachContext): Promise<CoachAnswer> {
   const res = await anthropic.messages.create(
     {
       model: COACH_MODEL,
-      max_tokens: 200,
-      // The same moment should get the same call: low randomness for a yes-or-no judgment.
-      temperature: 0.2,
+      max_tokens: 300,
+      // No temperature: Haiku 5.5 refuses anything but 1 (it was 0.2 so the
+      // same moment got the same call). The 1-10 scale in SYSTEM is what
+      // keeps its calls steady now.
+      thinking: THINKING_OFF,
       system: SYSTEM,
       messages: [{ role: "user", content: coachPrompt(c) }],
     },
     // A tip that takes longer than this is too late to be useful anyway.
     { timeout: 20_000, maxRetries: 1 }
   );
-  const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+  const text = replyText(res.content);
   const candidate = readTip(text);
   // No rating (an older style answer) counts as worth saying.
   const tip = candidate && (candidate.useful ?? 10) >= COACH_MIN_USEFUL ? candidate : null;

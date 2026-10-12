@@ -12,6 +12,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readReportJson } from "@/lib/analyze";
 import { COACH_MODEL } from "./coach";
+import { THINKING_OFF, replyText } from "@/lib/claude-models";
 import { fixKind, type FixKind, type LiveFix } from "./cues";
 
 const KINDS: FixKind[] = ["opening", "quiet", "chat", "other"];
@@ -51,14 +52,14 @@ export async function shortFix(recommendation: string): Promise<LiveFix> {
     const res = await new Anthropic().messages.create(
       {
         model: COACH_MODEL,
-        max_tokens: 100,
-        temperature: 0,
+        max_tokens: 150,
+        thinking: THINKING_OFF,
         system: SYSTEM,
         messages: [{ role: "user", content: recommendation }],
       },
       { timeout: 10_000, maxRetries: 1 }
     );
-    const json = readReportJson(res.content.map((b) => (b.type === "text" ? b.text : "")).join(""));
+    const json = readReportJson(replyText(res.content));
     const line = typeof json?.line === "string" ? tidy(json.line).replace(/[.!]*$/, ".") : "";
     if (line.length < 8 || line.length > 120) return fallback;
     const kind = KINDS.includes(json?.kind as FixKind) ? (json!.kind as FixKind) : fixKind(recommendation);

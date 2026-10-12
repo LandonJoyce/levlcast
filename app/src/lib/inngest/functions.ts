@@ -19,6 +19,7 @@ import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribePassThrough } from "@/lib/deepgram";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
+import { HAIKU, THINKING_OFF, replyObject } from "@/lib/claude-models";
 import { cutClip } from "@/lib/ffmpeg";
 import { detectGame, keywordsForGame } from "@/lib/game-keywords";
 import { uploadToR2, listR2Objects, deleteR2Objects } from "@/lib/r2";
@@ -1385,8 +1386,9 @@ export const computeBurnoutScores = inngest.createFunction(
                 .reverse();
 
               const msg = await anthropic.messages.create({
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 200,
+                model: HAIKU,
+                max_tokens: 300,
+                thinking: THINKING_OFF,
                 messages: [{
                   role: "user",
                   content: `A streamer's burnout signals this week:
@@ -1405,7 +1407,7 @@ JSON only: { "insight": "...", "recommendation": "..." }`,
                 }],
               });
 
-              const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+              const text = replyObject(msg.content);
               const parsed = JSON.parse(text);
               insight = parsed.insight || null;
               recommendation = parsed.recommendation || null;
@@ -1527,8 +1529,9 @@ export const computeContentReports = inngest.createFunction(
               .join("\n");
 
             const msg = await anthropic.messages.create({
-              model: "claude-haiku-4-5-20251001",
-              max_tokens: 200,
+              model: HAIKU,
+              max_tokens: 300,
+              thinking: THINKING_OFF,
               messages: [{
                 role: "user",
                 content: `A streamer's content performance breakdown (last 4 weeks):
@@ -1545,7 +1548,7 @@ JSON only: { "insight": "...", "recommendation": "..." }`,
               }],
             });
 
-            const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+            const text = replyObject(msg.content);
             const parsed = JSON.parse(text);
             insight = parsed.insight || null;
             recommendation = parsed.recommendation || null;
@@ -1696,8 +1699,9 @@ export const compileWeeklyDigest = inngest.createFunction(
           const anthropic = new Anthropic();
 
           const msg = await anthropic.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 300,
+            model: HAIKU,
+            max_tokens: 400,
+            thinking: THINKING_OFF,
             messages: [{
               role: "user",
               content: `You are a streamer's personal manager writing their Monday morning digest.
@@ -1720,7 +1724,7 @@ JSON only: { "headline": "...", "actions": ["...", "..."] }`,
             }],
           });
 
-          const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+          const text = replyObject(msg.content);
           const parsed = JSON.parse(text);
           if (parsed.headline) headline = parsed.headline;
           if (parsed.actions) actionItems = parsed.actions;

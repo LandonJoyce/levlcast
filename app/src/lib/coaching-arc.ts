@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { HAIKU, THINKING_OFF, replyText } from "@/lib/claude-models";
 
 export interface CoachingArcData {
   synthesis: string;
@@ -56,8 +57,9 @@ export async function generateCoachingArc(
 
   const anthropic = new Anthropic();
   const msg = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 700,
+    model: HAIKU,
+    max_tokens: 950,
+    thinking: THINKING_OFF,
     messages: [
       {
         role: "user",
@@ -78,7 +80,7 @@ Respond with valid JSON only: { "recurring": string[], "improved": string[], "sy
     ],
   });
 
-  const text = (msg.content[0] as { type: string; text: string }).text;
+  const text = replyText(msg.content);
 
   let parsed: { recurring: string[]; improved: string[]; synthesis: string; recurring_examples?: string[][] };
   try {

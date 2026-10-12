@@ -10,6 +10,7 @@ import { createClientFromRequest, createAdminClient } from "@/lib/supabase/serve
 import { getUserUsage } from "@/lib/limits";
 import { rateLimit } from "@/lib/rate-limit";
 import Anthropic from "@anthropic-ai/sdk";
+import { HAIKU, THINKING_OFF, replyText } from "@/lib/claude-models";
 
 export async function GET(request: Request) {
   try {
@@ -146,8 +147,9 @@ export async function POST(request: Request) {
     try {
       const anthropic = new Anthropic();
       const msg = await anthropic.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 300,
+        model: HAIKU,
+        max_tokens: 400,
+        thinking: THINKING_OFF,
         messages: [{
           role: "user",
           content: `You are a streamer's personal manager writing their weekly digest.
@@ -168,7 +170,7 @@ Generate:
 JSON only: { "headline": "...", "actions": ["...", "..."] }`,
         }],
       });
-      const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+      const text = replyText(msg.content);
       const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       const parsed = JSON.parse(cleaned);
       if (parsed.headline) headline = parsed.headline;
