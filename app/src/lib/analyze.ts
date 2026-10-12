@@ -812,6 +812,12 @@ export interface CoachReport {
    * Absent when it covers the whole stream.
    */
   coached_range?: { start: number; end: number; total: number; picked: boolean };
+  /**
+   * The language the report was written in, when the stream was clearly
+   * not English (lib/stream-language.ts). Absent means English. Kept so the
+   * OBS panel and emails can follow it later.
+   */
+  language?: "es" | "pt" | "fr" | "de" | "it";
 }
 
 /** Summary of a prior stream used for longitudinal coaching context. */
@@ -2135,6 +2141,7 @@ Omit the progress_on_prior_fix field entirely when no prior report history exist
     // reflects the magnitude of dead air, not just the worst-5-gaps cap.
     report.dead_air_seconds = Math.round(totalDeadAirSeconds);
     report.dead_air_pct = deadAirPct;
+    if (streamLanguage) report.language = streamLanguage.code;
     // The replay's raw material: words said in each minute of the VOD.
     const words = new Array<number>(Math.max(1, Math.ceil(vodDuration / 60))).fill(0);
     for (const s of segments) {
