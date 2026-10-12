@@ -61,7 +61,9 @@ type Block =
   | { list: Array<{ title: string; note?: string }> }
   | { button: string; href: string }
   /** A quieter line under the main text. */
-  | { small: string };
+  | { small: string }
+  /** A paragraph that ends in a text link, for a second, smaller ask. */
+  | { note: string; link: string; href: string };
 
 interface EmailSpec {
   /** The inbox preview line. */
@@ -94,7 +96,7 @@ function renderEmail(spec: EmailSpec): { html: string; text: string } {
 
   if (spec.eyebrow) {
     parts.push(
-      `<p style="margin:0 0 10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${C.muted};font-family:${MONO};">${escapeHtml(spec.eyebrow)}</p>`
+      `<p style="margin:0 0 10px;font-size:14px;font-weight:600;color:${C.muted};">${escapeHtml(spec.eyebrow)}</p>`
     );
   }
   if (spec.heading) {
@@ -113,7 +115,7 @@ function renderEmail(spec: EmailSpec): { html: string; text: string } {
       parts.push(
         `<div style="margin:4px 0 22px;padding:14px 16px;border:1px solid ${C.line};border-radius:10px;background:${C.box};">` +
           (b.label
-            ? `<p style="margin:0 0 6px;font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:${C.muted};font-family:${MONO};">${escapeHtml(b.label)}</p>`
+            ? `<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:${C.muted};">${escapeHtml(b.label)}</p>`
             : "") +
           `<p style="margin:0;font-size:${b.mono ? 17 : 15}px;color:${C.ink};line-height:1.5;${b.mono ? `font-family:${MONO};font-weight:600;` : ""}">${escapeHtml(b.quote).replace(/\n/g, "<br>")}</p>` +
           `</div>`
@@ -135,6 +137,11 @@ function renderEmail(spec: EmailSpec): { html: string; text: string } {
       );
       for (const item of b.list) text.push(`- ${item.title}${item.note ? `: ${item.note}` : ""}`);
       text.push("");
+    } else if ("note" in b) {
+      parts.push(
+        `<p style="margin:0 0 16px;font-size:15px;color:${C.body};line-height:1.6;">${escapeHtml(b.note)} <a href="${escapeHtml(tagged(b.href, spec.ref))}" style="color:${C.ink};text-decoration:underline;">${escapeHtml(b.link)}</a></p>`
+      );
+      text.push(`${b.note} ${b.link}: ${tagged(b.href, spec.ref)}`, "");
     } else if ("button" in b) {
       parts.push(
         `<table cellpadding="0" cellspacing="0" style="margin:6px 0 24px;"><tr><td style="background:${C.ink};border-radius:9px;">` +
@@ -323,6 +330,13 @@ export async function sendWelcomeEmail(to: string, name: string, firstReport: Fi
       { p: "Thanks for signing up. I'm Landon, I built LevlCast." },
       ...copy.lines.map((p) => ({ p })),
       { button: "Open LevlCast", href: `${SITE}/dashboard` },
+      // Most people never add the OBS panel (5 of 18 signups by 2026-10-11),
+      // and this is when they're most interested.
+      {
+        note: "If you stream with OBS, add the coach to it too. It takes about 3 minutes and coaches you while you're live, starting with your next stream.",
+        link: "Add it to OBS",
+        href: `${SITE}/dashboard?obs=1`,
+      },
       { p: "If anything looks off, reply to this email. It comes straight to me." },
     ],
     signed: true,

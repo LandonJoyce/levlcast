@@ -19,6 +19,7 @@
  */
 
 import Link from "next/link";
+import { NotificationPrompt } from "./notification-prompt";
 import { createClient } from "@/lib/supabase/server";
 import { TIERS } from "@/lib/rank";
 import { FREE_COACHED_SECONDS, getUserUsage } from "@/lib/limits";
@@ -115,6 +116,9 @@ export async function OnboardingHero({ syncing = false }: { syncing?: boolean })
               </Link>
             </div>
             <p className="ob-note">You can close this tab. It keeps going, and this page flips to your report when it&apos;s in.</p>
+            {/* The first report is when a ping matters most: they signed up,
+                it takes about ten minutes, and most people leave the tab. */}
+            <NotificationPrompt />
           </>
         ) : total === 0 && syncing ? (
           <>

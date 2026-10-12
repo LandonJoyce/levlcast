@@ -295,9 +295,10 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <OnboardingChecklist />
+      {/* Setup steps carry the OBS pitch here (its "Add the coach to OBS"
+          step), so the OBS card isn't shown next to them. */}
+      <OnboardingChecklist pro={livePro} />
       <AdminReplyCard />
-      {showLivePromo && <LivePromo pro={livePro} />}
 
       <section className="hm-top">
         {/* Keyed on the points so opening a result remounts it and the

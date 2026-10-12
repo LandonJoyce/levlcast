@@ -1999,3 +1999,23 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash.dash-app th, .dash.dash-app .vb-hint { font-family: var(--font-plus-jakarta), sans-serif; letter-spacing: 0; text-transform: none; font-size: 13px; }
 /* Page titles in the public site's wide headline face. */
 .dash .page-title { font-family: var(--font-archivo, var(--display)); font-stretch: 112%; font-weight: 700; letter-spacing: -0.025em; }
+
+/* ── Setup steps (onboarding-checklist.tsx) ── */
+.dash .ob-steps { margin: 0 0 28px; padding: 6px 0; border-radius: 18px; background: rgba(255, 238, 230, 0.025); box-shadow: inset 0 0 0 1px var(--line); }
+.dash .ob-steps-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 16px 22px 10px; }
+.dash .ob-steps-h h2 { margin: 0; font-family: var(--font-archivo, var(--display)); font-stretch: 112%; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.dash .ob-steps-h span { font-size: 13px; color: var(--ink-3); }
+.dash .ob-steps ol { list-style: none; margin: 0; padding: 0; }
+.dash .ob-steps li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px 22px; border-top: 1px solid var(--line); }
+.dash .ob-steps li[data-state="done"] { opacity: 0.55; }
+.dash .ob-steps li[data-state="later"] { opacity: 0.75; }
+.dash .ob-step-mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.dash .ob-steps li[data-state="done"] .ob-step-mark { background: var(--green); color: rgb(16, 13, 14); box-shadow: none; }
+.dash .ob-steps li[data-state="next"] .ob-step-mark { background: var(--ink); color: rgb(16, 13, 14); box-shadow: none; }
+.dash .ob-step-t { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.dash .ob-step-n { margin: 3px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-3); }
+.dash .ob-step-go { white-space: nowrap; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; }
+@media (max-width: 640px) {
+  .dash .ob-steps li { grid-template-columns: 28px minmax(0, 1fr); }
+  .dash .ob-steps li > .ob-step-go, .dash .ob-steps li > :last-child:not(.ob-step-text):not(.ob-step-mark) { grid-column: 2; justify-self: start; }
+}
