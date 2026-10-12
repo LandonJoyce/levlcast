@@ -26,7 +26,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { sendPush } from "@/lib/push";
 import { computeBurnout, burnoutLabel } from "@/lib/burnout";
 import { computeContentReport, categoryLabel } from "@/lib/monetization";
-import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail } from "@/lib/email";
+import { sendActivationEmail, sendVodReadyEmail, sendNewVodEmail, sendClipReadyEmail, sendRecapEmail } from "@/lib/email";
+import { buildRecap, monthBounds, monthKey } from "@/lib/recap";
 import { emailsOff } from "@/lib/email-optout";
 import { sendWebPush } from "@/lib/web-push";
 import { generateCoachingArc } from "@/lib/coaching-arc";
@@ -2568,5 +2569,61 @@ export const outreachDispatch = inngest.createFunction(
       console.log(`[outreach] sent to ${next.reddit_username} (${(sentToday ?? 0) + 1}/${DAILY_CAP} today)`);
       return { sent: 1, failed: 0 };
     });
+  }
+);
+
+// ─── Monthly recap email ────────────────────────────────────────────────────
+// The 1st of each month, 16:00 UTC (9am Pacific): everyone with at least one
+// analyzed stream last month gets "Your October", linking to their recap page
+// (dashboard/recap). One step per person, so a retry never sends twice, and
+// anyone who turned emails off is skipped.
+
+export const sendMonthlyRecaps = inngest.createFunction(
+  { id: "send-monthly-recaps" },
+  { cron: "0 16 1 * *" },
+  async ({ step }) => {
+    const now = new Date();
+    const month = monthKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)));
+    const { start, end, name: monthName } = monthBounds(month);
+
+    const userIds = await step.run("find-streamers", async () => {
+      const { data } = await createAdminClient()
+        .from("vods")
+        .select("user_id")
+        .eq("status", "ready")
+        .gte("stream_date", start)
+        .lt("stream_date", end);
+      return [...new Set(((data ?? []) as Array<{ user_id: string }>).map((r) => r.user_id))];
+    });
+
+    let sent = 0;
+    for (const userId of userIds) {
+      const ok = await step.run(`recap-${month}-${userId}`, async () => {
+        const supabase = createAdminClient();
+        if (await emailsOff(supabase, userId)) return false;
+        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+        if (!user?.email) return false;
+        const { data: profile } = await supabase.from("profiles").select("twitch_display_name").eq("id", userId).maybeSingle();
+        const r = await buildRecap(supabase, supabase, userId, month, now);
+        if (r.streams === 0) return false;
+        await sendRecapEmail(
+          user.email,
+          (profile?.twitch_display_name as string | null) || "Streamer",
+          {
+            month,
+            monthName,
+            streams: r.streams,
+            hours: r.hours,
+            rankFrom: r.rankStart?.label ?? null,
+            rankTo: r.rankEnd?.label ?? null,
+            fixesDone: r.fixes.done,
+          },
+          userId
+        );
+        return true;
+      });
+      if (ok) sent++;
+    }
+    return { month, sent, of: userIds.length };
   }
 );

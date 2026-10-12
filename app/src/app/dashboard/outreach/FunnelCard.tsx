@@ -45,6 +45,7 @@ const EMAIL_NAME: Record<string, string> = {
   support: "Support reply",
   collab: "Collab",
   payment: "Payment failed",
+  recap: "Monthly recap",
 };
 
 /** What new accounts went on to do, each as a share of everyone who signed up. */

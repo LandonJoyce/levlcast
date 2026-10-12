@@ -373,6 +373,56 @@ export async function sendProWelcomeEmail(to: string, name: string): Promise<voi
  * cut right after the report, which is still sealed, and a score here
  * would give the result away before they call it.
  */
+/**
+ * The monthly recap, on the 1st: their month in a sentence or two and a
+ * link to the recap page (dashboard/recap), which has a card to post.
+ */
+export async function sendRecapEmail(
+  to: string,
+  name: string,
+  recap: {
+    month: string;
+    monthName: string;
+    streams: number;
+    hours: number;
+    rankFrom: string | null;
+    rankTo: string | null;
+    fixesDone: number;
+  },
+  userId?: string
+): Promise<void> {
+  const extra = optOut(userId);
+  const streams = `${recap.streams} ${recap.streams === 1 ? "stream" : "streams"} and ${recap.hours} hours.`;
+  const climb = recap.rankTo
+    ? recap.rankFrom && recap.rankFrom !== recap.rankTo
+      ? `You went from ${recap.rankFrom} to ${recap.rankTo}.`
+      : recap.rankFrom
+        ? `You held ${recap.rankTo}.`
+        : `You placed in ${recap.rankTo}.`
+    : "";
+  const fixes = recap.fixesDone > 0 ? ` And you did ${recap.fixesDone} of the fixes your reports gave you.` : "";
+  const line = `${streams} ${climb}${fixes}`.replace(/\s+/g, " ").trim();
+  const { html, text } = renderEmail({ ref: "recap",
+    preheader: line,
+    eyebrow: `Hey ${name}`,
+    heading: `Your ${recap.monthName}`,
+    blocks: [
+      { p: line },
+      { button: "See your month", href: `${SITE}/dashboard/recap?month=${recap.month}` },
+      { small: "There's a card of your month you can post, too." },
+    ],
+    footer: extra.footer,
+  });
+  await resend.emails.send({
+    from: FROM_LEVLCAST,
+    to,
+    subject: `Your ${recap.monthName} on LevlCast`,
+    html,
+    text,
+    headers: extra.headers,
+  });
+}
+
 export async function sendClipReadyEmail(
   to: string,
   name: string,

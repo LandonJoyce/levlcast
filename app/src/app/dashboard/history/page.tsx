@@ -82,6 +82,13 @@ export default async function MatchesPage() {
           <h1 className="page-title">Matches</h1>
           <p className="page-sub mh-sub">Every analyzed stream is a ranked game. Beat your recent form and it&apos;s a win.</p>
         </div>
+        {matches.length > 0 && (
+          <div className="hm-hello-actions">
+            <Link href="/dashboard/recap" className="btn btn-ghost">
+              Your month
+            </Link>
+          </div>
+        )}
       </div>
 
       {matches.length === 0 ? (

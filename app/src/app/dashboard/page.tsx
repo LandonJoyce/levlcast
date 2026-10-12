@@ -16,6 +16,7 @@ import PendingVodHandler from "@/components/dashboard/pending-vod-handler";
 import PendingCheckoutHandler from "@/components/dashboard/pending-checkout-handler";
 import { UnpostedClipsCard } from "@/components/dashboard/unposted-clips-card";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
+import { defaultRecapMonth, monthBounds } from "@/lib/recap";
 import { OnboardingHero } from "@/components/dashboard/onboarding-hero";
 import { VodStatusPoller } from "@/components/dashboard/vod-status-poller";
 import { AdminReplyCard } from "@/components/dashboard/admin-reply-card";
@@ -157,6 +158,21 @@ export default async function DashboardPage({
     .eq("user_id", user.id);
   const showLivePromo = !liveCount;
 
+  // The first week of a month, last month's recap gets a card (dashboard/recap).
+  const recapMonth = new Date().getUTCDate() <= 7 ? defaultRecapMonth() : null;
+  let recapStreams = 0;
+  if (recapMonth) {
+    const { start, end } = monthBounds(recapMonth);
+    const { count } = await supabase
+      .from("vods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "ready")
+      .gte("stream_date", start)
+      .lt("stream_date", end);
+    recapStreams = count ?? 0;
+  }
+
   // ─── Empty state — no streams analyzed yet ─────────────
   if (totalAnalyzed === 0) {
     // Detect whether an analysis is currently running so we can poll the
@@ -294,6 +310,18 @@ export default async function DashboardPage({
           </Link>
         </div>
       </div>
+
+      {recapMonth && recapStreams > 0 && (
+        <Link href={`/dashboard/recap?month=${recapMonth}`} className="rc-promo">
+          <span>
+            <b>Your {monthBounds(recapMonth).name} is ready</b>
+            <span>
+              {recapStreams} {recapStreams === 1 ? "stream" : "streams"}, your climb, the fixes you did and a card to post.
+            </span>
+          </span>
+          <Icons.Arrow />
+        </Link>
+      )}
 
       {/* Setup steps carry the OBS pitch here (its "Add the coach to OBS"
           step), so the OBS card isn't shown next to them. */}

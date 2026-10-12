@@ -2028,3 +2028,74 @@ body:has(.dash-app) { background: rgb(16, 13, 14); }
 .dash .mh-tag, .dash .mh-tag[data-tag] { padding: 0; border: 0; border-radius: 0; background: none; font-size: 12.5px; font-weight: 700; }
 /* A long row of tabs (the outreach page's subreddits) wraps instead of running off the page. */
 .dash .tabs { flex-wrap: wrap; max-width: 100%; }
+
+/* ── Monthly recap (dashboard/recap) ── */
+.dash .rc { display: grid; gap: 28px; }
+.dash .rc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.dash .rc-who { margin: 0 0 6px; font-size: 14px; color: var(--ink-3); }
+.dash .rc-title { margin: 0; font-size: clamp(48px, 7vw, 84px); line-height: 0.95; }
+.dash .rc-title span { color: var(--ink-3); }
+.dash .rc-months { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255, 238, 230, 0.06); }
+.dash .rc-months a { padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ink-3); text-decoration: none; }
+.dash .rc-months a:hover { color: var(--ink); }
+.dash .rc-months a[aria-current="page"] { background: var(--ink); color: rgb(16, 13, 14); }
+
+.dash .rc-stats { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.dash .rc-stats div { display: flex; flex-direction: column; padding: 18px 20px 18px 0; }
+.dash .rc-stats div + div { padding-left: 20px; border-left: 1px solid var(--line); }
+.dash .rc-stats dd { order: -1; margin: 0; font-family: var(--numbers); font-weight: 900; font-size: clamp(44px, 5vw, 64px); line-height: 0.9; color: var(--ink); }
+.dash .rc-stats dd span { font-size: 0.5em; color: var(--ink-3); margin: 0 6px 0 2px; }
+.dash .rc-stats dd[data-tone="up"] { color: var(--green); }
+.dash .rc-stats dd[data-tone="down"] { color: var(--danger); }
+.dash .rc-stats dt { margin-top: 8px; font-size: 13.5px; color: var(--ink-3); }
+
+.dash .rc-climb { display: flex; align-items: center; gap: clamp(16px, 4vw, 48px); flex-wrap: wrap; }
+.dash .rc-arrow { color: var(--ink-3); }
+.dash .rc-tier { display: flex; align-items: center; gap: 16px; }
+.dash .rc-tier img { width: 96px; height: 96px; object-fit: contain; }
+.dash .rc-tier-l { margin: 0; font-family: var(--numbers); font-weight: 900; font-size: 44px; line-height: 1; text-transform: uppercase; color: var(--tier); }
+.dash .rc-tier-n { margin: 6px 0 0; font-size: 13.5px; color: var(--ink-3); }
+.dash .rc-sealed { margin: -10px 0 0; font-size: 14px; color: var(--ink-3); }
+.dash .rc-sealed a { color: var(--ink-2); }
+
+.dash .rc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.dash .rc-card { padding: 20px 22px 22px; border-radius: 18px; background: rgba(255, 238, 230, 0.025); box-shadow: inset 0 0 0 1px var(--line); }
+.dash .rc-k { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.dash .rc-k span { font-weight: 500; }
+.dash .rc-big { margin: 0; font-family: var(--numbers); font-weight: 900; font-size: 48px; line-height: 0.95; color: var(--ink); }
+.dash .rc-big span { font-family: var(--font-plus-jakarta), sans-serif; font-size: 16px; font-weight: 600; color: var(--ink-3); }
+.dash .rc-big[data-tone="up"] { color: var(--green); }
+.dash .rc-big-t { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink-2); }
+.dash .rc-note { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink-3); }
+.dash .rc-link { display: inline-block; margin-top: 10px; font-size: 15px; font-weight: 600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-2); }
+.dash .rc-lines { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.dash .rc-lines li { font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.dash .rc-lines li span { font-weight: 700; color: var(--green); margin-right: 4px; }
+.dash .rc-lines li[data-status="partial"] span { color: var(--warn, #fcd093); }
+.dash .rc-clip-link { display: grid; gap: 10px; color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 600; }
+.dash .rc-clip-link img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
+
+.dash .rc-next { padding: 22px 24px; border-radius: 18px; background: rgba(255, 238, 230, 0.04); }
+.dash .rc-next-t { margin: 0; font-family: var(--font-archivo, var(--display)); font-stretch: 112%; font-size: clamp(20px, 2.4vw, 26px); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; color: var(--ink); }
+.dash .rc-share { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dash .rc-share p { margin: 0; font-size: 14px; color: var(--ink-3); }
+.dash .rc-go { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 12px 20px; }
+.dash .rc-empty { display: grid; gap: 16px; justify-items: start; padding: 28px 0; font-size: 16px; color: var(--ink-2); }
+@media (max-width: 640px) {
+  .dash .rc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash .rc-stats div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .dash .rc-stats div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .dash .rc-tier img { width: 72px; height: 72px; }
+  .dash .rc-tier-l { font-size: 34px; }
+}
+.dash .rc-lines li em { font-style: normal; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .dash .rc-climb { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .dash .rc-arrow { transform: rotate(90deg); margin-left: 34px; }
+}
+/* Home, first week of a month: last month's recap. */
+.dash .rc-promo { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 24px; padding: 18px 22px; border-radius: 18px; background: rgba(255, 238, 230, 0.05); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); text-decoration: none; }
+.dash .rc-promo:hover { background: rgba(255, 238, 230, 0.08); }
+.dash .rc-promo > span { display: grid; gap: 4px; }
+.dash .rc-promo b { font-family: var(--font-archivo, var(--display)); font-stretch: 112%; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.dash .rc-promo span span { font-size: 14px; color: var(--ink-3); }
