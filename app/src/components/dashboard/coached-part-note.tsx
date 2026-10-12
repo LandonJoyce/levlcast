@@ -5,15 +5,16 @@ import { UpgradeModal } from "./upgrade-modal";
 import { streamLength } from "@/lib/analysis-progress";
 
 /**
- * On a free report that covers only the first 2 hours of a longer stream:
- * one line saying so, with the way to get the whole stream coached. The
- * report itself never mentions the plan (the coach is told not to), so
- * this is the only place it shows.
+ * On a free report that covers only the first part of a longer stream
+ * (the first hour; reports made before 2026-10-12 covered 2): one line
+ * saying so, with the way to get the whole stream coached. The report
+ * itself never mentions the plan (the coach is told not to), so this is
+ * the only place it shows.
  */
 export function CoachedPartNote({ coachedSeconds, totalSeconds }: { coachedSeconds: number; totalSeconds: number }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const hours = coachedSeconds / 3600;
-  const coached = Number.isInteger(hours) ? `${hours} ${hours === 1 ? "hour" : "hours"}` : streamLength(coachedSeconds);
+  const coached = hours === 1 ? "hour" : Number.isInteger(hours) ? `${hours} hours` : streamLength(coachedSeconds);
   return (
     <div className="sp-part">
       <p>

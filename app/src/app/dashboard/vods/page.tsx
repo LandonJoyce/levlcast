@@ -187,7 +187,7 @@ export default async function StreamsPage({ searchParams }: { searchParams: Prom
                         <AnalysisBar
                           input={{
                             status: v.status,
-                            // A free report coaches the first 2 hours.
+                            // A free report coaches the first hour.
                             durationSeconds:
                               usage.plan === "pro" || !v.duration_seconds
                                 ? v.duration_seconds

@@ -6,7 +6,7 @@
  * to be a paragraph of averages and "one report just diagnoses", with a
  * "top 15% of streamers" line nobody had measured.
  *
- * Only true statements: a stream longer than the 2 hours free coaches, or
+ * Only true statements: a stream longer than the hour free coaches, or
  * more streams this week than the one free report covers. Otherwise a
  * plain line about what Pro is.
  *
@@ -14,7 +14,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
+import { FREE_COACHED_SECONDS, FREE_COACHED_WORDS } from "@/lib/free-plan";
 
 export interface UpgradePitch {
   /** The line for the UpgradeModal reason field. */
@@ -50,11 +50,10 @@ export async function buildUpgradePitch(userId: string, supabase: SupabaseClient
   ]);
 
   const seconds = Number((latest as { duration_seconds?: number } | null)?.duration_seconds ?? 0);
-  const freeHours = Math.round(FREE_COACHED_SECONDS / 3600);
   // Only when the cut was real: at least 15 minutes went uncoached.
   if (seconds >= FREE_COACHED_SECONDS + 15 * 60) {
     return {
-      reason: `Your last stream was ${length(seconds)}, and free coached the first ${freeHours} hours. Pro coaches all of it.`,
+      reason: `Your last stream was ${length(seconds)}, and free coached the ${FREE_COACHED_WORDS}. Pro coaches all of it.`,
     };
   }
   if ((thisWeek ?? 0) >= 2) {

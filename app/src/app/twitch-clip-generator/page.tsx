@@ -45,7 +45,7 @@ const FAQS = [
   },
   {
     q: "What does it cost?",
-    a: "Free is a report every week and 6 clips a month, with no card, each report coaching the first 2 hours of a stream. Pro is $20 a month, or $199 a year, for whole streams coached, 20 reports and 20 clips a month, vertical export and posting to YouTube.",
+    a: "Free is a report every week and 6 clips a month, with no card, each report coaching the first hour of a stream. Pro is $20 a month, or $199 a year, for whole streams coached, 20 reports and 20 clips a month, vertical export and posting to YouTube.",
   },
 ];
 

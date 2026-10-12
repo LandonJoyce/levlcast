@@ -82,10 +82,10 @@ import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
  * learn whether you fixed anything, which is too slow to feel like cause
  * and effect.
  *
- * Cost: an hour of stream is about $0.35-0.45 to coach, and a free report
- * coaches at most the first 2 hours (FREE_COACHED_SECONDS), so one costs at
- * most about $0.90. Before that cap, two 4-hour streams plus a sealed extra
- * could cost more in a week than Pro pays in a month.
+ * Cost: a free report coaches at most the first hour (FREE_COACHED_SECONDS),
+ * about $0.48 to make (2026-10-12; it was the first 2 hours, about $0.83).
+ * Before any cap, two 4-hour streams plus a sealed extra could cost more in
+ * a week than Pro pays in a month.
  */
 export const FREE_WEEKLY_LIMITS = {
   // One a week since 2026-09-28 (it was two), when Pro went to $20: free
@@ -93,10 +93,11 @@ export const FREE_WEEKLY_LIMITS = {
   // stream that week be analyzed, sealed until Monday, so the loop above
   // still gets two points a week for anyone who waits for Monday.
   analyses_per_week: 1,
-  // One report of at most FREE_COACHED_SECONDS. It was 8, with free reports
+  // One report of at most FREE_COACHED_SECONDS (an hour). It was 2 while a
+  // free report covered 2 hours, and 8 before that, with free reports
   // covering streams up to 4 hours, which let a free streamer get more
   // hours coached than Pro's monthly allowance.
-  hours_per_week: 2,
+  hours_per_week: 1,
 };
 
 /**
@@ -107,10 +108,10 @@ export const FREE_CLIPS_PER_MONTH = 6;
 
 /**
  * FREE_COACHED_SECONDS (lib/free-plan.ts): a free report coaches the first
- * 2 hours of a stream, Pro the whole stream. It's the difference between
- * the plans that shows in every report, and it keeps Pro ahead: free is at
- * most two reports a week (the one plus the sealed extra) of 2 hours each,
- * about 17 hours a month, against Pro's 30.
+ * hour of a stream, Pro the whole stream. It's the difference between the
+ * plans that shows in every report, and it keeps Pro ahead: free is at most
+ * two reports a week (the one plus the sealed extra) of an hour each, about
+ * 9 hours a month, against Pro's 30.
  */
 export { FREE_COACHED_SECONDS };
 
@@ -126,7 +127,8 @@ export function hasPaidPlan(
 /**
  * The part of a stream a report covers, in seconds from its start, or null
  * for all of it. Paid plans get the whole stream, or the range they picked.
- * Free gets 2 hours from where they picked, or from the start.
+ * Free gets an hour (FREE_COACHED_SECONDS) from where they picked, or from
+ * the start.
  */
 export function coachedRange(
   paid: boolean,

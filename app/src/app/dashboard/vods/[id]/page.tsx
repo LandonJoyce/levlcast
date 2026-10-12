@@ -401,7 +401,7 @@ export default async function StreamPage({
           <>
             <VodProgress
               status={vod.status}
-              // A free report coaches the first 2 hours; that's what's being worked on.
+              // A free report coaches the first hour; that's what's being worked on.
               durationSeconds={
                 isPro || !vod.duration_seconds ? vod.duration_seconds : Math.min(vod.duration_seconds, FREE_COACHED_SECONDS)
               }
@@ -475,7 +475,7 @@ export default async function StreamPage({
         </div>
       ) : (
         <>
-          {/* A free report on a long stream covers its first 2 hours. */}
+          {/* A free report on a long stream covers its first hour. */}
           {!isPro && report?.coached_range && !report.coached_range.picked && (
             <CoachedPartNote coachedSeconds={report.coached_range.end} totalSeconds={report.coached_range.total} />
           )}

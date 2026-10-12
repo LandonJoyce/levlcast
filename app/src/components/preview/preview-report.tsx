@@ -15,7 +15,7 @@
  * not stacked cards.
  */
 
-import { FREE_COACHED_SECONDS } from "@/lib/free-plan";
+import { FREE_COACHED_SECONDS, FREE_COACHED_WORDS } from "@/lib/free-plan";
 import { FullReportButton, StickyFullReport } from "./full-report-button";
 import { WatchMoment } from "@/components/moment/watch-moment";
 
@@ -136,11 +136,11 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
       <section className="pr-cta">
         <div>
           <p className="pr-k">{partial ? `That's the first ${fmtDuration(analyzed)}` : "That's the free preview"}</p>
-          {/* Only what a free account really gets: on a stream over 2 hours
-              that's the first 2 hours, and Pro is the rest. */}
+          {/* Only what a free account really gets: on a stream over an hour
+              that's the first hour, and Pro is the rest. */}
           <p className="pr-cta-line">
             {total > FREE_COACHED_SECONDS
-              ? `Sign in with Twitch and we'll coach the first 2 hours free, plus give you a panel in OBS that coaches you while you're live. Pro coaches all ${fmtDuration(total)}.`
+              ? `Sign in with Twitch and we'll coach the ${FREE_COACHED_WORDS} free, plus give you a panel in OBS that coaches you while you're live. Pro coaches all ${fmtDuration(total)}.`
               : `Sign in with Twitch and we'll coach ${partial ? `the whole ${fmtDuration(total)}` : "the whole stream"} free, plus give you a panel in OBS that coaches you while you're live.`}
           </p>
         </div>
@@ -238,7 +238,7 @@ export function PreviewReport({ preview }: { preview: PreviewPayload }) {
         <div>
           <h2 className="pr-more-h">Get coached on your next streams too.</h2>
           <ul className="pr-more-list">
-            <li>The first 2 hours coached free, the whole stream on Pro, with every quiet stretch timestamped</li>
+            <li>The first hour coached free, the whole stream on Pro, with every quiet stretch timestamped</li>
             <li>A panel in OBS that coaches you while you&apos;re live, free for the first 30 minutes</li>
             <li>Your best moments cut into clips with captions, ready to post</li>
             <li>It remembers your streams, so every report checks the fix from your last one</li>

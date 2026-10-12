@@ -108,7 +108,7 @@ export function SubscriptionSection({
             <>
               <p>
                 {onTrial
-                  ? `Free gives you ${analysesLimit} ${analysesLimit === 1 ? "report" : "reports"} a week (reset every Monday) and ${clipsLimit} clips a month, each report on the first 2 hours of a stream. Pro coaches whole streams: 20 reports and 20 clips a month.`
+                  ? `Free gives you ${analysesLimit} ${analysesLimit === 1 ? "report" : "reports"} a week (reset every Monday) and ${clipsLimit} clips a month, each report on the first hour of a stream. Pro coaches whole streams: 20 reports and 20 clips a month.`
                   : "Pro is 20 reports and 20 clips a month, on whole streams up to 8 hours long."}
               </p>
               <button

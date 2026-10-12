@@ -814,7 +814,7 @@ export interface CoachReport {
   stream_start_seconds?: number;
   /**
    * Set when the report covers only the first part of the stream: a free
-   * report's first 2 hours, or a "First hour" someone picked. Seconds.
+   * report's first hour, or a "Last hour" someone picked. Seconds.
    * Absent when it covers the whole stream.
    */
   coached_range?: { start: number; end: number; total: number; picked: boolean };
@@ -1463,7 +1463,7 @@ export interface ExcerptContext {
  * What the coach is told when the transcript is only the first part of a
  * stream. A short opening (the free preview's 12 minutes) is scored as an
  * opening: whether it hooks a viewer who just landed. A long first part (a
- * free report's first 2 hours, or "First hour" picked) is coached and
+ * free report's first hour, or "Last hour" picked) is coached and
  * scored as what it is, a stream minus its end; and because the
  * transcript stops there, where it stops is not the stream's ending.
  */

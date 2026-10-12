@@ -2,6 +2,7 @@
 
 import { useAnalysisEstimate, timeLeftLine } from "./analysis-bar";
 import { streamLength, type AnalysisProgress } from "@/lib/analysis-progress";
+import { FREE_COACHED_WORDS } from "@/lib/free-plan";
 
 /**
  * A running analysis on the stream page: a bar for how close it is to done,
@@ -21,7 +22,7 @@ export function VodProgress({
   emailed = false,
 }: {
   status: string;
-  /** How much of the stream is being coached (a free report: the first 2 hours). */
+  /** How much of the stream is being coached (a free report: the first hour). */
   durationSeconds: number | null;
   /** Only the first part of a longer stream is being coached. */
   firstPartOnly?: boolean;
@@ -44,7 +45,7 @@ export function VodProgress({
       : estimate.streamSecondsDone && durationSeconds
         ? `Transcribing the audio: ${streamLength(estimate.streamSecondsDone)} of ${firstPartOnly ? "the first " : ""}${streamLength(durationSeconds)} done.`
         : firstPartOnly
-          ? "Transcribing the audio. Turning the first 2 hours into text."
+          ? `Transcribing the audio. Turning the ${FREE_COACHED_WORDS} into text.`
           : "Transcribing the audio. Turning the whole stream into text.";
 
   return (

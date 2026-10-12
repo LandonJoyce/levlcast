@@ -238,7 +238,7 @@ export default function PreviousHomePage() {
           <div className="lv2-plan">
             <p className="lv2-plan-n">Free</p>
             <p className="lv2-plan-p">$0</p>
-            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get a report <em>every week</em> and 6 clips a month, forever, each on the first 2 hours of a stream. Nothing in the report is held back.</p>
+            <p className="lv2-plan-b">Try it on any stream with no account. Sign in and you get a report <em>every week</em> and 6 clips a month, forever, each on the first hour of a stream. Nothing in the report is held back.</p>
             <Link href="/analyze" className="lv2-cta lv2-cta-ghost">Try it free</Link>
           </div>
           <div className="lv2-plan lv2-plan-lead">

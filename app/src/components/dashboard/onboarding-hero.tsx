@@ -97,7 +97,7 @@ export async function OnboardingHero({ syncing = false }: { syncing?: boolean })
             <AnalysisBar
               input={{
                 status: inProgress.status,
-                // A free report coaches the first 2 hours.
+                // A free report coaches the first hour.
                 durationSeconds:
                   usage.plan === "pro" || !inProgress.duration_seconds
                     ? inProgress.duration_seconds

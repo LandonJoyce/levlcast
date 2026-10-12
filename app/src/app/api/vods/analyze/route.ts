@@ -142,7 +142,7 @@ export async function POST(request: Request) {
   }
 
   // MAX duration, for paid plans only; founding members exempt. Free has no
-  // cap: a free report coaches the first 2 hours of any stream (the
+  // cap: a free report coaches the first hour of any stream (the
   // pipeline cuts it, see coachedRange in lib/limits.ts). Pro coaches whole
   // streams up to 8 hours and Pro Plus up to 10, the same caps
   // analyze-by-url enforces.

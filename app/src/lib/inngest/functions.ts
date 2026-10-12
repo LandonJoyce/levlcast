@@ -143,7 +143,7 @@ export const analyzeVod = inngest.createFunction(
 
         await supabase.from("vods").update({ game_category: detection.category }).eq("id", vodId);
 
-        // Free coaches the first 2 hours of a stream, paid plans all of it
+        // Free coaches the first hour of a stream, paid plans all of it
         // (lib/limits.ts). Decided here, once, so every way an analysis
         // starts (the Analyze button, sign-up, the rescue job, the iPhone
         // app) gets the same answer, and a retry can't change it.
@@ -442,7 +442,7 @@ export const analyzeVod = inngest.createFunction(
         // past generateCoachReport's 240-second cutoff, the step's retry
         // drops to medium, which finishes well inside it.
         // A report on the first part of a longer stream (a free report's
-        // first 2 hours, or "First hour" picked) is told so, and scores the
+        // first hour, or "Last hour" picked) is told so, and scores the
         // part it can see instead of judging the whole broadcast by it.
         const excerpt =
           coveredRange && coveredRange.start === 0 && vodSeconds > coveredEnd + 60

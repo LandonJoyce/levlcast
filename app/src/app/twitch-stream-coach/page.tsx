@@ -40,7 +40,7 @@ const FAQS = [
   },
   {
     q: "How often should I use it?",
-    a: "After every stream you want to get better at. Free covers a report every week, on the first 2 hours of a stream. Pro covers up to 20 whole streams and 30 hours a month, for people who stream more than that.",
+    a: "After every stream you want to get better at. Free covers a report every week, on the first hour of a stream. Pro covers up to 20 whole streams and 30 hours a month, for people who stream more than that.",
   },
   {
     q: "Can other people see my feedback?",

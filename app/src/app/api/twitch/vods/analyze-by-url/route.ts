@@ -151,7 +151,7 @@ export async function POST(request: Request) {
 
   // Per-plan duration cap, for paid plans: Pro / Founding 8h, Pro Plus 10h
   // (matches the chunked-transcription pipeline's tested ceiling). Free has
-  // no cap because a free report only coaches the first 2 hours of a
+  // no cap because a free report only coaches the first hour of a
   // stream (coachedRange in lib/limits.ts); each extra hour a paid plan
   // coaches adds Deepgram + Claude cost, hence plan-aligned ceilings.
   const dur = parseTwitchDuration(vodMeta.duration);

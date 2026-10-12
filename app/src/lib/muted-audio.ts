@@ -26,7 +26,7 @@ function segmentEnd(startTimes: number[], i: number): number {
 
 /**
  * The segments that overlap `range`, with their real start times, so a
- * report on part of a stream (a free report's first 2 hours, or a range
+ * report on part of a stream (a free report's first hour, or a range
  * someone picked) only transcribes that part.
  */
 export function segmentsWithin(
