@@ -1,123 +1,79 @@
 import { ImageResponse } from "next/og";
 import { createAdminClient } from "@/lib/supabase/server";
+import { OG, OG_SIZE, OgTop, ogFonts } from "@/lib/og";
 
+/**
+ * The link preview for a shared report: the streamer, their stream, the
+ * report's headline line and the score, in the site's faces and colours.
+ * It used to be purple with "AI Stream Coaching" and check marks the
+ * renderer couldn't draw.
+ */
 export const runtime = "nodejs";
-export const size = { width: 1200, height: 630 };
+export const size = OG_SIZE;
 export const contentType = "image/png";
+export const alt = "A LevlCast report on a Twitch stream";
 
-function scoreColor(score: number) {
-  if (score >= 75) return "#22c55e";
-  if (score >= 50) return "#eab308";
-  return "#ef4444";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function tone(score: number) {
+  if (score >= 75) return OG.good;
+  if (score >= 50) return OG.warn;
+  return "#F87171";
 }
 
-export default async function OgImage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default async function OgImage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const fonts = await ogFonts();
+  const blank = new ImageResponse(<div style={{ display: "flex", background: OG.bg, width: "100%", height: "100%" }} />, { ...OG_SIZE, fonts });
+  if (!UUID.test(token)) return blank;
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(token)) {
-    return new ImageResponse(<div style={{ background: "#0a0a0a", width: "100%", height: "100%" }} />);
-  }
-
-  const admin = createAdminClient();
-  const { data: vod } = await admin
+  const { data: vod } = await createAdminClient()
     .from("vods")
-    .select("title, stream_date, peak_data, coach_report, profiles(twitch_display_name, twitch_avatar_url)")
+    .select("title, coach_report, profiles(twitch_display_name, twitch_login, twitch_avatar_url)")
     .eq("share_token", token)
     .single();
+  const report = (vod?.coach_report ?? null) as { overall_score?: number; punch_line?: string; recommendation?: string } | null;
+  if (!vod || !report) return blank;
 
-  if (!vod) {
-    return new ImageResponse(<div style={{ background: "#0a0a0a", width: "100%", height: "100%" }} />);
-  }
-
-  const report = vod.coach_report as any;
-  const peaks = (vod.peak_data as any[]) || [];
-  const profile = vod.profiles as any;
-  const score = report?.overall_score ?? 0;
-  const color = scoreColor(score);
-  const name = profile?.twitch_display_name ?? "Streamer";
+  const profile = vod.profiles as { twitch_display_name?: string | null; twitch_login?: string | null; twitch_avatar_url?: string | null } | null;
+  const name = profile?.twitch_display_name || profile?.twitch_login || "A streamer";
+  const avatar = profile?.twitch_avatar_url && /^https:\/\/static-cdn\.jtvnw\.net\//.test(profile.twitch_avatar_url) ? profile.twitch_avatar_url : null;
+  const title = String(vod.title ?? "Untitled stream");
+  const line = report.punch_line || report.recommendation || "";
+  const score = typeof report.overall_score === "number" ? report.overall_score : null;
 
   return new ImageResponse(
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "#0f0f13",
-        display: "flex",
-        flexDirection: "column",
-        padding: "60px",
-        fontFamily: "sans-serif",
-        position: "relative",
-      }}
-    >
-      {/* Purple glow */}
-      <div style={{
-        position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
-        width: 600, height: 400, background: "rgba(124,58,237,0.15)",
-        borderRadius: "50%", filter: "blur(80px)",
-      }} />
-
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 48 }}>
-        <span style={{ fontSize: 28, fontWeight: 800, color: "#a78bfa" }}>LevlCast</span>
-        <span style={{ fontSize: 16, color: "#666" }}>AI Stream Coaching</span>
-      </div>
-
-      {/* Main content */}
-      <div style={{ display: "flex", alignItems: "center", gap: 48, flex: 1 }}>
-        {/* Score ring */}
-        <div style={{
-          width: 160, height: 160, borderRadius: "50%",
-          border: `6px solid ${color}`,
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 56, fontWeight: 800, color, lineHeight: 1 }}>{score}</span>
-          <span style={{ fontSize: 18, color: "#666" }}>/100</span>
-        </div>
-
-        {/* Info */}
-        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
-            {profile?.twitch_avatar_url && (
-              <img
-                src={profile.twitch_avatar_url}
-                style={{ width: 48, height: 48, borderRadius: "50%", border: "2px solid #333" }}
-              />
-            )}
-            <span style={{ fontSize: 24, fontWeight: 700, color: "#fff" }}>{name}</span>
-          </div>
-          <span style={{ fontSize: 20, color: "#ccc", marginBottom: 24, lineHeight: 1.3 }} >
-            {vod.title}
-          </span>
-          <div style={{ display: "flex", gap: 24 }}>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 32, fontWeight: 800, color: "#a78bfa" }}>{peaks.length}</span>
-              <span style={{ fontSize: 14, color: "#666" }}>Peak Moments</span>
+    (
+      <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: OG.bg, padding: "56px 64px" }}>
+        <OgTop path="levlcast.com" />
+        <div style={{ display: "flex", flex: 1, alignItems: "center", gap: 56 }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatar} width={44} height={44} style={{ borderRadius: 22 }} alt="" />
+              ) : null}
+              <div style={{ display: "flex", fontFamily: "Body", fontSize: 28, color: OG.mute }}>{name}</div>
             </div>
-            {report?.strengths?.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <span style={{ fontSize: 14, color: "#22c55e", fontWeight: 700 }}>✓ {String(report.strengths[0]).replace(/\*\*/g, "")}</span>
-                {report.strengths[1] && <span style={{ fontSize: 14, color: "#22c55e", fontWeight: 700 }}>✓ {String(report.strengths[1]).replace(/\*\*/g, "")}</span>}
+            <div style={{ display: "flex", fontFamily: "Display", fontSize: title.length > 40 ? 52 : 62, lineHeight: 1.05, letterSpacing: -1.6, color: OG.fg }}>
+              {title.length > 70 ? `${title.slice(0, 67)}...` : title}
+            </div>
+            {line ? (
+              <div style={{ display: "flex", fontFamily: "Body", fontSize: 28, lineHeight: 1.35, color: OG.dim, marginTop: 22 }}>
+                {line.length > 120 ? `${line.slice(0, 117)}...` : line}
               </div>
-            )}
+            ) : null}
           </div>
+          {score !== null ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+              <div style={{ display: "flex", fontFamily: "Numbers", fontSize: 190, lineHeight: 0.86, color: tone(score) }}>{score}</div>
+              <div style={{ display: "flex", fontFamily: "Body", fontSize: 24, color: OG.faint, marginTop: 10 }}>out of 100</div>
+            </div>
+          ) : null}
         </div>
+        <div style={{ display: "flex", fontFamily: "Body", fontSize: 24, color: OG.faint }}>Get one on your last stream, free.</div>
       </div>
-
-      {/* Footer */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 40, paddingTop: 24, borderTop: "1px solid #222" }}>
-        <span style={{ fontSize: 16, color: "#666" }}>
-          {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-        </span>
-        <span style={{ fontSize: 16, color: "#a78bfa", fontWeight: 700 }}>levlcast.com</span>
-      </div>
-    </div>,
-    { ...size }
+    ),
+    { ...OG_SIZE, fonts }
   );
 }

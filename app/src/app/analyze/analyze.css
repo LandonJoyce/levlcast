@@ -302,3 +302,8 @@
   .v3 .pr-shot .pr-score { right: 8px; bottom: 8px; padding: 9px 12px 8px; }
 }
 .v3 .pr-more-h { font-family: var(--v3-head); font-stretch: 112%; font-weight: 700; letter-spacing: -0.025em; }
+
+/* The shared report (/share/...): the streamer's picture before their name. */
+.v3 .pr-who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.v3 .pr-who img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+.v3 .pr-more .pr-story { margin: 8px 0 22px; }

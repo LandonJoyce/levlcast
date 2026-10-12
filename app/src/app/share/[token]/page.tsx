@@ -1,389 +1,204 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
-import { formatDuration } from "@/lib/utils";
+import Link from "next/link";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+import { createAdminClient } from "@/lib/supabase/server";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
+import { ReportItem, fmtDuration } from "@/components/preview/preview-report";
+import { WatchMoment } from "@/components/moment/watch-moment";
+import { shoulders } from "../../fonts";
+import "../../home-ranked.css";
+import "../../analyze/analyze.css";
 
-export async function generateMetadata(
-  { params }: { params: Promise<{ token: string }> }
-): Promise<Metadata> {
-  const { token } = await params;
-  const admin = createAdminClient();
+/**
+ * A report a streamer shared (the "Share report" button). Strangers land
+ * here from the streamer's own link, so it's one of the few pages that
+ * reaches new people, and it reads like the free report on /analyze: the
+ * same sections, type and rules. It used to be its own page with an
+ * orange-to-pink gradient, a glowing button and spaced capitals, and its
+ * button went to sign-in instead of the free report anyone can try.
+ */
 
-  const { data: vod } = await admin
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface Report {
+  overall_score?: number;
+  punch_line?: string;
+  stream_story?: string;
+  recommendation?: string;
+  strengths?: string[];
+  improvements?: string[];
+}
+
+interface Peak {
+  title?: string;
+  start?: number;
+  hook?: string;
+}
+
+async function load(token: string) {
+  if (!UUID.test(token)) return null;
+  const { data } = await createAdminClient()
     .from("vods")
-    .select("title, coach_report, profiles(twitch_display_name)")
+    .select("title, twitch_vod_id, stream_date, duration_seconds, peak_data, coach_report, profiles(twitch_display_name, twitch_login, twitch_avatar_url)")
     .eq("share_token", token)
     .single();
+  return data;
+}
 
-  if (!vod) return { title: "LevlCast Stream Report" };
+function streamerName(vod: NonNullable<Awaited<ReturnType<typeof load>>>): string {
+  const p = vod.profiles as { twitch_display_name?: string | null; twitch_login?: string | null } | null;
+  return p?.twitch_display_name || p?.twitch_login || "A streamer";
+}
 
-  const report = vod.coach_report as any;
-  const name = (vod.profiles as any)?.twitch_display_name ?? "Streamer";
-  const score = report?.overall_score ?? "?";
-
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  const vod = await load(token);
+  const report = (vod?.coach_report ?? null) as Report | null;
+  if (!vod || !report) return { title: "Stream report", robots: { index: false } };
+  const name = streamerName(vod);
+  const line = report.punch_line || report.recommendation || "A LevlCast report on a Twitch stream.";
+  const title = `${name}'s stream report`;
   return {
-    title: `${name}'s Stream Report: ${score}/100 | LevlCast`,
-    description: report?.recommendation ?? "AI-powered stream coaching report.",
-    openGraph: {
-      title: `${name} scored ${score}/100 on LevlCast`,
-      description: report?.recommendation ?? "AI-powered stream coaching report.",
-      images: [`/share/${token}/opengraph-image`],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${name} scored ${score}/100 on LevlCast`,
-      description: report?.recommendation ?? "AI-powered stream coaching report.",
-      images: [`/share/${token}/opengraph-image`],
-    },
+    title,
+    description: line,
+    robots: { index: false },
+    openGraph: { title: `${name} scored ${report.overall_score ?? "?"} on LevlCast`, description: line, images: [`/share/${token}/opengraph-image`] },
+    twitter: { card: "summary_large_image", title: `${name} scored ${report.overall_score ?? "?"} on LevlCast`, description: line, images: [`/share/${token}/opengraph-image`] },
   };
 }
 
-function scoreColor(score: number) {
-  if (score >= 75) return "#22c55e";
-  if (score >= 50) return "#eab308";
-  return "#ef4444";
+function scoreTone(n: number) {
+  if (n >= 75) return "good";
+  if (n >= 50) return "warn";
+  return "bad";
 }
 
-function parseItem(raw: string) {
-  const cleaned = raw.replace(/^RECURRING:\s*/i, "");
-  const m = cleaned.match(/^\*\*(.+?)\*\*\s*[—–-]\s*([\s\S]+)$/);
-  if (!m) return { label: "", body: cleaned, ts: null as string | null };
-  let body = m[2].trim();
-  const tsM = body.match(/\s+at\s+(\d{1,2}:\d{2}(?::\d{2})?)\.?\s*$/i);
-  const ts = tsM ? tsM[1] : null;
-  if (tsM) body = body.slice(0, tsM.index!).trim().replace(/\.$/, "");
-  return { label: m[1], body, ts };
+function clock(total: number) {
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = Math.floor(total % 60);
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const TREND_LABEL: Record<string, string> = {
-  building: "Building",
-  declining: "Declining",
-  consistent: "Consistent",
-  volatile: "Volatile",
-};
-
-export default async function SharePage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default async function SharePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(token)) notFound();
-
-  const admin = createAdminClient();
-
-  const { data: vod } = await admin
-    .from("vods")
-    .select("title, stream_date, duration_seconds, peak_data, coach_report, profiles(twitch_display_name, twitch_avatar_url, twitch_login)")
-    .eq("share_token", token)
-    .single();
-
+  const vod = await load(token);
   if (!vod) notFound();
+  const r = vod.coach_report as Report | null;
+  if (!r) notFound();
 
-  const report = vod.coach_report as any;
-  const peaks = (vod.peak_data as any[]) || [];
-  const profile = vod.profiles as any;
-
-  if (!report) notFound();
-
-  const score = report.overall_score ?? 0;
-  const color = scoreColor(score);
-  const trend = TREND_LABEL[report.energy_trend] ?? "Consistent";
-
-  const GRAD = "linear-gradient(135deg, rgb(255,88,0) 0%, rgb(242,97,121) 100%)";
-  const HELV = '"Helvetica Neue", "Helvetica", "Arial", system-ui, sans-serif';
-  const labelStyle: React.CSSProperties = {
-    fontFamily: HELV, fontSize: 11, fontWeight: 600,
-    letterSpacing: "0.06em", textTransform: "uppercase",
-    color: "rgba(255,255,255,0.45)", margin: 0,
-  };
+  const name = streamerName(vod);
+  const avatar = (vod.profiles as { twitch_avatar_url?: string | null } | null)?.twitch_avatar_url ?? null;
+  const score = typeof r.overall_score === "number" ? r.overall_score : null;
+  const peaks = ((vod.peak_data as Peak[] | null) ?? []).filter((p) => p && p.title).slice(0, 4);
+  const strengths = (r.strengths ?? []).slice(0, 3);
+  const improvements = (r.improvements ?? []).slice(0, 3);
+  const when = vod.stream_date
+    ? new Date(vod.stream_date as string).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : null;
+  const length = vod.duration_seconds ? fmtDuration(vod.duration_seconds as number) : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#08080d", color: "#ECF1FA", fontFamily: HELV }}>
-      {/* Background glow — purple/pink to match brand */}
-      <div style={{
-        position: "fixed", top: -100, left: "50%", transform: "translateX(-50%)",
-        width: 720, height: 520, borderRadius: "50%",
-        background: "radial-gradient(ellipse, rgba(255,88,0,0.18) 0%, rgba(242,97,121,0.08) 40%, transparent 70%)",
-        pointerEvents: "none", zIndex: 0,
-      }} />
-
-      <div style={{ position: "relative", maxWidth: 460, margin: "0 auto", padding: "24px 18px 56px", zIndex: 1 }}>
-
-        {/* Nav */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
-          <span style={{
-            fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em",
-            background: GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-          }}>
-            LevlCast
-          </span>
-          <a
-            href="https://www.levlcast.com/auth/login"
-            style={{
-              fontFamily: HELV, fontSize: 10, fontWeight: 700,
-              letterSpacing: "0.18em", textTransform: "uppercase",
-              color: "rgba(255,255,255,0.45)", textDecoration: "none",
-            }}
-          >
-            Get your report →
-          </a>
-        </div>
-
-        {/* Streamer + score combined card — the hero */}
-        <div style={{
-          background: "rgba(255,255,255,0.025)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 16, padding: "20px 18px", marginBottom: 10,
-          position: "relative", overflow: "hidden",
-        }}>
-          {/* Streamer identity row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-            {profile?.twitch_avatar_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.twitch_avatar_url}
-                alt={profile.twitch_display_name}
-                style={{ width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)" }}
-              />
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: "#ECF1FA" }}>
-                {profile?.twitch_display_name ?? "Streamer"}
+    <div className={`ll-page v3 ${shoulders.variable}`}>
+      <SiteHeader />
+      <main className="v3-sec">
+        <article className="pr">
+          <header className="pr-head">
+            <div className="pr-head-main">
+              <p className="v3-label pr-who">
+                {avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatar} alt="" width={22} height={22} />
+                ) : null}
+                {name}
+                {when ? ` · ${when}` : ""}
+                {length ? ` · ${length}` : ""}
               </p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, fontFamily: HELV }}>
-                @{profile?.twitch_login}
-              </p>
+              <h1 className="pr-title">{(vod.title as string | null) || "Untitled stream"}</h1>
+              {r.punch_line ? <p className="pr-scope">{r.punch_line}</p> : null}
             </div>
-            <span style={{
-              ...labelStyle,
-              padding: "4px 8px", borderRadius: 4,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.03)",
-              color: "rgba(255,255,255,0.55)",
-            }}>
-              Coach Report
-            </span>
-          </div>
-
-          {/* Score + recommendation */}
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <div style={{
-              flexShrink: 0, width: 96, height: 96, borderRadius: "50%",
-              background: `conic-gradient(${color} ${score * 3.6}deg, rgba(255,255,255,0.06) 0deg)`,
-              padding: 3,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <div style={{
-                width: "100%", height: "100%", borderRadius: "50%",
-                background: "#0d0d12",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{
-                  fontFamily: HELV, fontSize: 38, fontWeight: 800, lineHeight: 1, color, letterSpacing: "-0.025em",
-                }}>{score}</span>
-                <span style={{ fontSize: 9, fontFamily: HELV, color: "rgba(255,255,255,0.35)", marginTop: 2, letterSpacing: "0.1em" }}>/ 100</span>
+            {score !== null ? (
+              <div className="pr-score" data-tone={scoreTone(score)}>
+                <span className="pr-score-v">{score}</span>
+                <span className="pr-score-k">Out of 100</span>
               </div>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ ...labelStyle, marginBottom: 6 }}>The one thing</p>
-              {report.recommendation ? (
-                <p style={{
-                  fontFamily: HELV, fontSize: 15, fontWeight: 500, lineHeight: 1.45, letterSpacing: "-0.005em",
-                  color: "#ECF1FA", margin: 0,
-                }}>
-                  {report.recommendation}
-                </p>
-              ) : (
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", margin: 0 }}>No recommendation</p>
-              )}
-            </div>
-          </div>
+            ) : null}
+          </header>
 
-          {/* Stream title under score */}
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", margin: 0, fontWeight: 500, lineHeight: 1.4 }}>
-              {vod.title}
-            </p>
-            <p style={{ fontSize: 10, fontFamily: HELV, color: "rgba(255,255,255,0.3)", margin: "3px 0 0", letterSpacing: "0.04em" }}>
-              {new Date(vod.stream_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {formatDuration(vod.duration_seconds)}
-            </p>
-          </div>
-        </div>
+          {r.stream_story ? (
+            <section className="pr-sec">
+              <h2 className="pr-k">Summary</h2>
+              <p className="pr-story">{r.stream_story}</p>
+            </section>
+          ) : null}
 
-        {/* Stat strip — three small monospace pills */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 10,
-        }}>
-          {[
-            { value: peaks.length.toString(), label: "Clips", color: "#A3E635" },
-            { value: trend, label: "Energy", color: "#fff" },
-            {
-              value: (report.viewer_retention_risk ?? "—"),
-              label: "Retention",
-              color: report.viewer_retention_risk === "low" ? "#A3E635" : report.viewer_retention_risk === "medium" ? "#F59E0B" : "#F87171",
-            },
-          ].map(({ value, label, color: c }) => (
-            <div key={label} style={{
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: 10, padding: "10px 10px", textAlign: "center",
-            }}>
-              <p style={{
-                fontFamily: HELV, fontSize: 16, fontWeight: 700, margin: "0 0 3px",
-                textTransform: "capitalize", color: c, lineHeight: 1.1, letterSpacing: "-0.01em",
-              }}>{value}</p>
-              <p style={{
-                fontFamily: HELV, fontSize: 10, color: "rgba(255,255,255,0.45)",
-                margin: 0, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600,
-              }}>{label}</p>
-            </div>
-          ))}
-        </div>
+          {r.recommendation ? (
+            <section className="pr-sec">
+              <h2 className="pr-k">Fix this first</h2>
+              <p className="pr-fix">{r.recommendation}</p>
+            </section>
+          ) : null}
 
-        {/* Strengths */}
-        {report.strengths?.length > 0 && (
-          <div style={{
-            background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 12, padding: "16px 18px", marginBottom: 10,
-          }}>
-            <p style={{ ...labelStyle, marginBottom: 12, color: "#A3E635" }}>What worked</p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-              {report.strengths.slice(0, 3).map((s: string, i: number) => {
-                const { label, body, ts } = parseItem(s);
-                return (
-                  <li key={i} style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.78)" }}>
-                    {label && (
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
-                        <span style={{ color: "#ECF1FA", fontWeight: 700, fontSize: 13 }}>{label}</span>
-                        {ts && (
-                          <span style={{ fontFamily: HELV, fontSize: 10, color: "rgba(163,230,53,0.85)", letterSpacing: "0.04em" }}>{ts}</span>
-                        )}
-                      </div>
+          {strengths.length > 0 ? (
+            <section className="pr-sec">
+              <h2 className="pr-k">Working</h2>
+              <ul className="pr-list" data-tone="good">
+                {strengths.map((s, i) => (
+                  <ReportItem key={i} text={s.replace(/^RECURRING:\s*/i, "")} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {improvements.length > 0 ? (
+            <section className="pr-sec">
+              <h2 className="pr-k">To work on</h2>
+              <ul className="pr-list" data-tone="bad">
+                {improvements.map((s, i) => (
+                  <ReportItem key={i} text={s.replace(/^RECURRING:\s*/i, "")} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {peaks.length > 0 ? (
+            <section className="pr-sec">
+              <h2 className="pr-k">Best moments</h2>
+              <ol className="pr-clips">
+                {peaks.map((p, i) => (
+                  <li key={i}>
+                    {vod.twitch_vod_id ? (
+                      <WatchMoment vodId={vod.twitch_vod_id as string} seconds={p.start ?? 0} label={p.title} className="pr-clip-at">
+                        {clock(p.start ?? 0)}
+                      </WatchMoment>
+                    ) : (
+                      <span className="pr-clip-at">{clock(p.start ?? 0)}</span>
                     )}
-                    <span>{body}</span>
+                    <div>
+                      <p className="pr-clip-t">{p.title}</p>
+                      {p.hook ? <p className="pr-note">{p.hook}</p> : null}
+                    </div>
                   </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+                ))}
+              </ol>
+            </section>
+          ) : null}
 
-        {/* Improvements - teased */}
-        {report.improvements?.length > 0 && (
-          <div style={{
-            background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 12, padding: "16px 18px", marginBottom: 10, position: "relative", overflow: "hidden",
-          }}>
-            <p style={{ ...labelStyle, marginBottom: 12, color: "#F59E0B" }}>What to fix</p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-              {report.improvements.slice(0, 1).map((s: string, i: number) => {
-                const { label, body, ts } = parseItem(s);
-                return (
-                  <li key={i} style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.78)" }}>
-                    {label && (
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
-                        <span style={{ color: "#ECF1FA", fontWeight: 700, fontSize: 13 }}>{label}</span>
-                        {ts && (
-                          <span style={{ fontFamily: HELV, fontSize: 10, color: "rgba(245,158,11,0.85)", letterSpacing: "0.04em" }}>{ts}</span>
-                        )}
-                      </div>
-                    )}
-                    <span>{body}</span>
-                  </li>
-                );
-              })}
-              {report.improvements.length > 1 && (
-                <li style={{
-                  fontSize: 12, color: "rgba(255,255,255,0.25)",                   filter: "blur(4px)", userSelect: "none",
-                }}>
-                  {parseItem(report.improvements[1]).body || report.improvements[1]}
-                </li>
-              )}
-            </ul>
-            {report.improvements.length > 1 && (
-              <div style={{
-                position: "absolute", bottom: 0, left: 0, right: 0, height: 48,
-                background: "linear-gradient(to bottom, transparent, rgba(8,8,13,0.96))",
-                pointerEvents: "none",
-              }} />
-            )}
-          </div>
-        )}
-
-        {/* Best moment — pull quote with gradient accent */}
-        {report.best_moment && (
-          <div style={{
-            background: "linear-gradient(135deg, rgba(255,88,0,0.08), rgba(242,97,121,0.04))",
-            border: "1px solid rgba(255,88,0,0.22)",
-            borderRadius: 12, padding: "16px 18px", marginBottom: 24,
-            position: "relative",
-          }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-              <span style={{
-                ...labelStyle,
-                background: GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                color: "transparent",
-              }}>Best moment</span>
-              <span style={{
-                fontFamily: HELV, fontSize: 11, fontWeight: 700,
-                color: "rgba(242,97,121,0.95)", letterSpacing: "0.04em",
-              }}>{report.best_moment.time}</span>
+          <section className="pr-sec pr-more">
+            <p className="pr-k">Stream on Twitch?</p>
+            <div>
+              <h2 className="pr-more-h">Get a report like this on your last stream.</h2>
+              <p className="pr-story">Type your Twitch name and it reads your last broadcast. Free, and no account needed.</p>
+              <Link href="/analyze?ref=share" className="v3-btn">
+                Try it on my stream <ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" />
+              </Link>
             </div>
-            <p style={{
-              fontFamily: HELV, fontSize: 14, fontWeight: 400,
-              lineHeight: 1.45, color: "rgba(255,255,255,0.85)", margin: 0, letterSpacing: "-0.005em",
-            }}>
-              {report.best_moment.description}
-            </p>
-          </div>
-        )}
-
-        {/* CTA */}
-        <div style={{
-          background: "linear-gradient(135deg, rgba(255,88,0,0.12), rgba(242,97,121,0.08))",
-          border: "1px solid rgba(255,88,0,0.25)",
-          borderRadius: 14, padding: "22px 20px", textAlign: "center",
-        }}>
-          <p style={{ ...labelStyle, marginBottom: 10,
-            background: GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-            color: "transparent",
-          }}>
-            Want your score?
-          </p>
-          <p style={{
-            fontFamily: HELV, fontSize: 22, fontWeight: 700, margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.02em", color: "#ECF1FA",
-          }}>
-            Get your <span style={{
-              background: GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-            }}>free coach report.</span>
-          </p>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: "0 0 18px", lineHeight: 1.55, fontFamily: HELV }}>
-            Score, timestamps, and clips ready to post. From your last VOD.
-          </p>
-          <a
-            href="https://www.levlcast.com/auth/login"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: GRAD,
-              color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em",
-              padding: "11px 22px", borderRadius: 10, textDecoration: "none",
-              boxShadow: "0 6px 24px -6px rgba(255,88,0,0.5)",
-            }}
-          >
-            Analyze my stream free
-            <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-              <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </a>
-          <p style={{ fontFamily: HELV, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)", margin: "12px 0 0", textTransform: "uppercase", fontWeight: 700 }}>
-            No card · Connect Twitch · Free
-          </p>
-        </div>
-
-      </div>
+          </section>
+        </article>
+      </main>
+      <SiteFooter />
     </div>
   );
 }
