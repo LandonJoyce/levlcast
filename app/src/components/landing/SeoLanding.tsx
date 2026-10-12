@@ -48,7 +48,6 @@ export default function SeoLanding(p: SeoLandingProps) {
 
       <section className="v3-hero">
         <div>
-          <p className="v3-label">{p.label}</p>
           <h1 className="sl-h1">{p.title}</h1>
           <p className="v3-sub">{p.intro}</p>
           <div className="v3-paste">
@@ -60,7 +59,6 @@ export default function SeoLanding(p: SeoLandingProps) {
       </section>
 
       <section className="v3-sec">
-        <p className="v3-label">{p.what.label}</p>
         <h2 className="v3-h2">{p.what.title}</h2>
         <dl className="sl-rows">
           {p.what.rows.map((r) => (
@@ -74,7 +72,6 @@ export default function SeoLanding(p: SeoLandingProps) {
       </section>
 
       <section className="v3-sec">
-        <p className="v3-label">How it works</p>
         <h2 className="v3-h2">{p.how.title}</h2>
         <ol className="sl-steps">
           {p.how.steps.map((s, i) => (
@@ -89,7 +86,6 @@ export default function SeoLanding(p: SeoLandingProps) {
       </section>
 
       <section className="v3-sec" id="faq">
-        <p className="v3-label">Questions</p>
         <h2 className="v3-h2">{p.faq.title}</h2>
         <FaqAccordion items={p.faq.items} />
       </section>

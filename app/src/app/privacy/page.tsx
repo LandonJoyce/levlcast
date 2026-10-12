@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <SiteHeader />
       <main>
         <div className="max-w-[720px] pt-10 pb-24">
-          <h1 className="text-4xl font-extrabold tracking-tight mb-2">Privacy Policy</h1>
+          <h1 className="v3-h2" style={{ marginBottom: 8 }}>Privacy Policy</h1>
           <p className="text-sm text-muted mb-12">Last updated: April 4, 2026</p>
 
           <div className="space-y-10 text-sm text-muted leading-relaxed">

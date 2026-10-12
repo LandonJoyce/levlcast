@@ -19,3 +19,6 @@
 .v3 .iv-action { display: flex; flex-direction: column; align-items: flex-start; }
 .v3 .iv-error { margin: 12px 0 0; font-size: 14px; color: var(--v3-bad, #f87171); }
 .v3 .iv-how { margin: 32px 0 0; padding: 18px 0 0 18px; border-top: 1px solid var(--ll-line-soft); font-size: 14px; line-height: 1.9; color: var(--ll-fg-mute); }
+
+/* The "1v1 duel" / "Friend league" line in plain words. */
+.v3 .iv-k { font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }

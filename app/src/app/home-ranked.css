@@ -1601,3 +1601,20 @@ body:has(.v3) { background: rgb(16, 13, 14); }
   .v3 .v3-kind:hover .v3-kind-art img { margin-left: -18px; }
   .v3 .v3-kind:hover .v3-kind-art img:first-child { margin-left: 0; }
 }
+
+/* Example reports on the Google pages: a plain card, not the corner-marked frame. */
+.v3 .xr.xr-card {
+  padding: 24px 28px 28px;
+  border-radius: 16px;
+  background: rgba(255, 238, 230, 0.025);
+  box-shadow: inset 0 0 0 1px var(--ll-line-soft);
+}
+@media (max-width: 760px) { .v3 .xr.xr-card { padding: 20px 18px 24px; } }
+
+/* Every public page's main heading in the same wide face. */
+.v3 .az-h1, .v3 .az-run-title, .v3 .sl-h1, .v3 .gd-h1, .v3 .iv-title, .v3 .lb-h1, .lb-h1, .v3 .gd-body h2 {
+  font-family: var(--v3-head);
+  font-stretch: 112%;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}

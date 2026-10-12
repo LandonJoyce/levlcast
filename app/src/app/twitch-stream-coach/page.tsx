@@ -73,7 +73,7 @@ const STRUCTURED_DATA = [
 /** Two streams in a row, the loop the coach is built around. Made-up data. */
 function TwoStreams() {
   return (
-    <aside className="v3-frame xr" aria-label="Example: feedback across two streams">
+    <aside className="xr xr-card" aria-label="Example: feedback across two streams">
       <div className="v3-result-top">
         <span>Your last two streams</span>
       </div>

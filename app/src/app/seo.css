@@ -131,3 +131,6 @@
   .v3 .sl-related a { padding-right: 0; }
   .v3 .sl-related li + li a { padding-left: 0; border-left: 0; border-top: 1px solid var(--ll-line-soft); }
 }
+
+/* The date line in plain words. */
+.v3 .gd-date { font-family: inherit; font-size: 13px; letter-spacing: 0; text-transform: none; }

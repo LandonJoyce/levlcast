@@ -5,7 +5,7 @@
  */
 export default function ExampleReport() {
   return (
-    <aside className="v3-frame xr" aria-label="A free report">
+    <aside className="xr xr-card" aria-label="A free report">
       <div className="v3-result-top">
         <span>Free report</span>
         <span>First 12 min</span>
