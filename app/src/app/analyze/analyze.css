@@ -307,3 +307,12 @@
 .v3 .pr-who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .v3 .pr-who img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
 .v3 .pr-more .pr-story { margin: 8px 0 22px; }
+
+/* The wide headline face the homepage uses. This file loads after
+   home-ranked.css, so the rule lives here. */
+.v3 .az-h1, .v3 .az-run-title {
+  font-family: var(--font-archivo, var(--ll-display));
+  font-stretch: 112%;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}

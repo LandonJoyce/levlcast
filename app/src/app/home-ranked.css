@@ -1611,10 +1611,3 @@ body:has(.v3) { background: rgb(16, 13, 14); }
 }
 @media (max-width: 760px) { .v3 .xr.xr-card { padding: 20px 18px 24px; } }
 
-/* Every public page's main heading in the same wide face. */
-.v3 .az-h1, .v3 .az-run-title, .v3 .sl-h1, .v3 .gd-h1, .v3 .iv-title, .v3 .lb-h1, .lb-h1, .v3 .gd-body h2 {
-  font-family: var(--v3-head);
-  font-stretch: 112%;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}

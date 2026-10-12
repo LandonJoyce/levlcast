@@ -134,3 +134,12 @@
 
 /* The date line in plain words. */
 .v3 .gd-date { font-family: inherit; font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+/* The wide headline face the homepage uses. This file loads after
+   home-ranked.css, so the rule lives here. */
+.v3 .sl-h1, .v3 .gd-h1, .v3 .gd-body h2 {
+  font-family: var(--font-archivo, var(--ll-display));
+  font-stretch: 112%;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}

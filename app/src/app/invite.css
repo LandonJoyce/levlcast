@@ -22,3 +22,12 @@
 
 /* The "1v1 duel" / "Friend league" line in plain words. */
 .v3 .iv-k { font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+
+/* The wide headline face the homepage uses. This file loads after
+   home-ranked.css, so the rule lives here. */
+.v3 .iv-title {
+  font-family: var(--font-archivo, var(--ll-display));
+  font-stretch: 112%;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}

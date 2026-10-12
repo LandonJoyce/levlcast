@@ -100,3 +100,12 @@ a.lb-name:hover { text-decoration: underline; }
 
 /* Tier names in the body font, bold in the tier's colour, like the homepage's top five. */
 .lb-tier { font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+
+/* The wide headline face the homepage uses. This file loads after
+   home-ranked.css, so the rule lives here. */
+.lb-h1 {
+  font-family: var(--font-archivo, var(--ll-display));
+  font-stretch: 112%;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
