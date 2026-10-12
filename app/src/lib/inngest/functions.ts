@@ -2617,6 +2617,7 @@ export const sendMonthlyRecaps = inngest.createFunction(
             rankFrom: r.rankStart?.label ?? null,
             rankTo: r.rankEnd?.label ?? null,
             fixesDone: r.fixes.done,
+            fixesChecked: r.fixes.checked,
           },
           userId
         );

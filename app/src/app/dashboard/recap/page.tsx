@@ -114,16 +114,16 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
 
           <div className="rc-grid">
             <section className="rc-card">
-              <p className="rc-k">Fixes</p>
+              <p className="rc-k">Did your fix</p>
               {r.fixes.checked === 0 ? (
                 <p className="rc-big-t">Your next report checks your fix.</p>
               ) : (
                 <>
                   <p className="rc-big">
                     {r.fixes.done}
-                    <span> of {r.fixes.checked} done</span>
+                    <span> of {r.fixes.checked} {r.fixes.checked === 1 ? "stream" : "streams"}</span>
                   </p>
-                  {r.fixes.partly > 0 && <p className="rc-note">{r.fixes.partly} more partly.</p>}
+                  {r.fixes.partly > 0 && <p className="rc-note">Partly on {r.fixes.partly} more.</p>}
                   {r.fixes.lines.length > 0 && (
                     <ul className="rc-lines">
                       {r.fixes.lines.map((f) => (

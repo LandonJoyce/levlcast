@@ -93,8 +93,8 @@ export async function GET(request: Request) {
           {r.fixes.checked > 0 ? (
             <div style={{ display: "flex", fontFamily: "Body", fontSize: 36, color: OG.mute }}>
               {r.fixes.done > 0
-                ? `Worked on ${r.fixes.checked} fixes from my coach and nailed ${r.fixes.done}`
-                : `Worked on ${r.fixes.checked} fixes from my coach`}
+                ? `Did my coach's fix on ${r.fixes.done} of ${r.fixes.checked} streams`
+                : `Worked on my coach's fix for ${r.fixes.checked} streams`}
             </div>
           ) : null}
           {r.best ? (

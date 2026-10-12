@@ -388,6 +388,7 @@ export async function sendRecapEmail(
     rankFrom: string | null;
     rankTo: string | null;
     fixesDone: number;
+    fixesChecked: number;
   },
   userId?: string
 ): Promise<void> {
@@ -400,7 +401,7 @@ export async function sendRecapEmail(
         ? `You held ${recap.rankTo}.`
         : `You placed in ${recap.rankTo}.`
     : "";
-  const fixes = recap.fixesDone > 0 ? ` And you did ${recap.fixesDone} of the fixes your reports gave you.` : "";
+  const fixes = recap.fixesDone > 0 ? ` And you did your fix on ${recap.fixesDone} of ${recap.fixesChecked} streams.` : "";
   const line = `${streams} ${climb}${fixes}`.replace(/\s+/g, " ").trim();
   const { html, text } = renderEmail({ ref: "recap",
     preheader: line,
