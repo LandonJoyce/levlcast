@@ -21,11 +21,12 @@ interface FunnelData {
   dmsSent: number;
   dm: Counts;
   thread?: Counts;
+  share?: Counts;
   other: Counts;
   refused: Array<{ reason: string; count: number }>;
   failed: number;
   people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }>;
-  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "thread" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
+  newAccounts: Array<{ login: string | null; name: string | null; at: string; source: "dm" | "thread" | "share" | "preview" | "direct" | "untracked" | "unknown"; dmUsername: string | null }>;
   dmKinds?: Array<{ label: string; sent: number; clicked: number; signedUp: number }>;
   afterSignup?: { signedUp: number; report: number; cameBack: number; obsAdded: number; obsStreamed: number; pro: number };
   emails?: { people: number; clicks: number; byKind: Array<{ kind: string; people: number }> };
@@ -75,6 +76,7 @@ function AfterRow({ a }: { a: NonNullable<FunnelData["afterSignup"]> }) {
 const SOURCE: Record<FunnelData["newAccounts"][number]["source"], string> = {
   dm: "from your DM",
   thread: "from your review thread",
+  share: "from someone's shared report",
   preview: "after a free report",
   direct: "signed in directly",
   untracked: "no website visit recorded (iPhone app or another device)",
@@ -197,6 +199,12 @@ export function FunnelCard() {
               <>
                 <p className="fn-k">From your review threads</p>
                 <Row first={null} firstLabel={null} counts={data.thread} landLabel="Opened their report" />
+              </>
+            )}
+            {data.share && data.share.land > 0 && (
+              <>
+                <p className="fn-k">From shared reports</p>
+                <Row first={null} firstLabel={null} counts={data.share} landLabel="Opened the analyzer" />
               </>
             )}
             <p className="fn-k">Everyone else</p>

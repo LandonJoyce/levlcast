@@ -133,12 +133,14 @@ export async function GET(req: NextRequest) {
   const dm = blank();
   // People who came from a review-thread reply (links tagged ?ref=thread).
   const thread = blank();
+  // People who came from a streamer's shared report (/share/... links to /analyze?ref=share).
+  const share = blank();
   const other = blank();
   const people: Array<{ username: string | null; code: string; furthest: Step; previews: number; lastSeen: string; sentAt: string | null }> = [];
 
   for (const v of visitors.values()) {
     const fromDm = !!v.ref && v.ref.startsWith("dm-");
-    const bucket = fromDm ? dm : v.ref === "thread" ? thread : other;
+    const bucket = fromDm ? dm : v.ref === "thread" ? thread : v.ref === "share" ? share : other;
     let furthest: Step = "land";
     for (const s of STEPS) {
       if (v.steps.has(s)) {
@@ -255,9 +257,9 @@ export async function GET(req: NextRequest) {
       // No signup event: either the account is older than tracking, or the
       // sign-in never came back to a browser we saw (the iPhone app, or
       // Twitch finishing it on another device).
-      let source: "dm" | "thread" | "preview" | "direct" | "untracked" | "unknown" = p.created_at >= DM_CODES_SINCE ? "untracked" : "unknown";
+      let source: "dm" | "thread" | "share" | "preview" | "direct" | "untracked" | "unknown" = p.created_at >= DM_CODES_SINCE ? "untracked" : "unknown";
       if (s) {
-        source = ref?.startsWith("dm-") ? "dm" : ref === "thread" ? "thread" : v?.steps.has("preview_start") ? "preview" : "direct";
+        source = ref?.startsWith("dm-") ? "dm" : ref === "thread" ? "thread" : ref === "share" ? "share" : v?.steps.has("preview_start") ? "preview" : "direct";
       }
       return {
         login: p.twitch_login,
@@ -276,6 +278,7 @@ export async function GET(req: NextRequest) {
     dmsSent: dmsSent ?? 0,
     dm,
     thread,
+    share,
     other,
     emails: {
       people: emailPeople.size,
