@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import { promisify } from "util";
 import { writeFile, unlink, readFile, mkdtemp, access, chmod, copyFile, stat } from "fs/promises";
 import { join } from "path";
@@ -274,6 +274,31 @@ async function getFFmpegPath(): Promise<string> {
   }
 
   throw new Error("ffmpeg binary not found — install ffmpeg-static or ensure ffmpeg is on PATH");
+}
+
+/**
+ * Twitch audio (MPEG-TS, or fragmented MP4 with its init segment in front)
+ * as a plain AAC stream, the same audio copied out of its container, not
+ * re-encoded. For transcription services that don't read MPEG-TS
+ * (lib/soniox.ts). Takes about a second for an hour of audio.
+ */
+export async function audioToAdts(input: Buffer): Promise<Buffer> {
+  const ffmpegPath = await getFFmpegPath();
+  return new Promise((resolve, reject) => {
+    const proc = spawn(ffmpegPath, ["-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-vn", "-acodec", "copy", "-f", "adts", "pipe:1"]);
+    const out: Buffer[] = [];
+    let stderr = "";
+    proc.stdout.on("data", (d: Buffer) => out.push(d));
+    proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
+    proc.on("error", reject);
+    proc.on("close", (code) => {
+      if (code === 0 && out.length) resolve(Buffer.concat(out));
+      else reject(new Error(`ffmpeg couldn't copy the audio out (exit ${code}): ${stderr.slice(0, 300)}`));
+    });
+    // A closed stdin (ffmpeg exits early on bad input) must not crash the caller.
+    proc.stdin.on("error", () => {});
+    proc.stdin.end(input);
+  });
 }
 
 function ffmpegError(err: any): Error {

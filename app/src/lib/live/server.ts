@@ -18,7 +18,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getAppAccessToken, invalidateAppTokenCache } from "@/lib/twitch";
 import { hasPaidPlan } from "@/lib/limits";
 import { getLeagueView } from "@/lib/league";
-import { transcribeClip } from "@/lib/deepgram";
+import { transcribeLive } from "@/lib/transcribe";
 import { liveAudioPlaylistUrl, pullNewAudio } from "@/lib/live/listen";
 import { coachTip, streamerHistory, type CoachContext } from "@/lib/live/coach";
 import { digestChat } from "@/lib/live/chat-digest";
@@ -886,7 +886,7 @@ export async function listenOnce(owner: DockOwner, input: ListenInput): Promise<
     const nothingSaid = pulled.audio !== null && micQuietThrough(input.quietSeconds, pulled.startAt, pulled.seconds, now);
     if (pulled.audio && !nothingSaid) {
       try {
-        const { segments } = await transcribeClip(pulled.audio);
+        const { segments } = await transcribeLive(pulled.audio);
         // Twitch's own clock for the audio, else "just now, minus the clip".
         const start = pulled.startAt ?? now - pulled.seconds * 1000;
         const lines = segments

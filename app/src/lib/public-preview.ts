@@ -24,9 +24,10 @@
  * where the request and the IP are. This module is the pure pipeline.
  */
 
-import { getTwitchVodSegmentList, streamSegmentsToPassThrough, getAppAccessToken } from "@/lib/twitch";
+import { getTwitchVodSegmentList, getAppAccessToken } from "@/lib/twitch";
 import { mutedRanges, overlapSeconds, type TimeRange } from "@/lib/muted-audio";
-import { transcribePassThrough, type TranscriptSegment } from "@/lib/deepgram";
+import type { TranscriptSegment } from "@/lib/deepgram";
+import { transcribeSegments } from "@/lib/transcribe";
 import { detectPeaks, generateCoachReport } from "@/lib/analyze";
 import { detectGame, keywordsForGame } from "@/lib/game-keywords";
 import type { Peak } from "@/lib/analyze";
@@ -234,8 +235,7 @@ export async function transcribePreviewWindow(
   const muted = mutedRanges(list.startTimes.slice(0, urls.length), (list.muted ?? []).slice(0, urls.length));
   const window = analyzedSeconds || windowSeconds;
 
-  const stream = streamSegmentsToPassThrough(urls, initSegment);
-  const { segments } = await transcribePassThrough(stream, keywords);
+  const { segments } = await transcribeSegments(urls, initSegment, keywords);
 
   if (segments.length === 0) {
     if (overlapSeconds(0, window, muted) > window * 0.5) {

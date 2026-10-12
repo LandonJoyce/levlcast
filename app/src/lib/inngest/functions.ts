@@ -13,11 +13,11 @@
 
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { getTwitchVodSegmentList, streamSegmentsToPassThrough, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
+import { getTwitchVodSegmentList, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
 import { audibleStats, buildAudibleChunks, isMostlyMuted, mutedRanges, segmentsWithin, MOSTLY_MUTED_MESSAGE, type TimeRange } from "@/lib/muted-audio";
 import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
-import { transcribePassThrough } from "@/lib/deepgram";
+import { transcribeSegments } from "@/lib/transcribe";
 import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
 import { HAIKU, THINKING_OFF, replyObject } from "@/lib/claude-models";
 import { cutClip } from "@/lib/ffmpeg";
@@ -179,6 +179,8 @@ export const analyzeVod = inngest.createFunction(
       // finish well under 300s including worst-case slow Twitch CDN. At 12 min
       // per chunk: Deepgram typically returns in 30-60s, segments download in
       // 20-60s, so the step lands around 60-120s with comfortable headroom.
+      // Soniox (lib/transcribe.ts, since 2026-10-12) takes the whole part at
+      // once, so it's the download plus 15-25s of transcription: about the same.
       // Was 1200s (20 min) on Vercel Pro, dropped to 720s (12 min) on 2026-06-19
       // after a 2h 55m Storm VOD failed with "Could not find step" — Inngest's
       // hint that a step ran too long and its state got lost.
@@ -266,8 +268,7 @@ export const analyzeVod = inngest.createFunction(
           batch.map(({ chunk, index }) =>
             step.run(`transcribe-part-${index}`, async () => {
               console.log(`[analyze] Chunk ${index + 1}/${chunks.length}: ${chunk.urls.length} segments offset=${Math.round(chunk.timeOffset)}s${initSegment ? " (fMP4)" : ""}`);
-              const stream = streamSegmentsToPassThrough(chunk.urls, initSegment);
-              const { segments, words } = await transcribePassThrough(stream, segmentSetup.keywords);
+              const { segments, words } = await transcribeSegments(chunk.urls, initSegment, segmentSetup.keywords);
               return {
                 segments: segments.map((s) => ({ ...s, start: s.start + chunk.timeOffset, end: s.end + chunk.timeOffset })),
                 words: words.map((w) => ({ ...w, start: w.start + chunk.timeOffset, end: w.end + chunk.timeOffset })),
