@@ -18,7 +18,7 @@ import { audibleStats, buildAudibleChunks, isMostlyMuted, mutedRanges, segmentsW
 import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
 import { transcribeSegments } from "@/lib/transcribe";
-import { detectPeaks, generateCoachReport, PriorCoachSummary } from "@/lib/analyze";
+import { detectPeaks, generateCoachReport, oneStreamerAcrossParts, PriorCoachSummary } from "@/lib/analyze";
 import { HAIKU, THINKING_OFF, replyObject } from "@/lib/claude-models";
 import { cutClip } from "@/lib/ffmpeg";
 import { detectGame, keywordsForGame } from "@/lib/game-keywords";
@@ -289,9 +289,12 @@ export const analyzeVod = inngest.createFunction(
         await step.run(`progress-${partsDone}`, () => saveProgress(supabase, vodId, partsDone, chunks.length));
       }
 
-      const allWords = allChunkWords.flat();
+      // Speaker numbers start over in every part. Make the streamer speaker
+      // 0 in all of them, so no part's talking is dropped as another voice.
+      const parts = oneStreamerAcrossParts(allChunkSegments.map((segments, i) => ({ segments, words: allChunkWords[i] })));
+      const allWords = parts.flatMap((p) => p.words);
       const segments = ((): TranscriptSegment[] => {
-        const merged = allChunkSegments.flat();
+        const merged = parts.flatMap((p) => p.segments);
         console.log(`[analyze] Transcription complete: ${merged.length} segments, ${allWords.length} words across ${chunks.length} chunks`);
         if (merged.length === 0) {
           throw new Error("We couldn't hear any talking in this stream. If your mic was muted, that's why.");

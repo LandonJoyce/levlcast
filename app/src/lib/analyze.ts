@@ -22,7 +22,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { replyText } from "./claude-models";
 import { audibleParts, describeMuted, mutedMinutes, overlapSeconds, type TimeRange } from "./muted-audio";
-import { TranscriptSegment } from "./deepgram";
+import type { TranscribeResult, TranscriptSegment } from "./deepgram";
 import { withRetry } from "./retry";
 import { detectStreamLanguage } from "./stream-language";
 import { detectSustainedSilence, formatSustainedSilence, type ChatBucket } from "./chat-pulse";
@@ -37,6 +37,9 @@ export interface Peak {
   caption: string;
   hook: string;
 }
+
+/** Another speaker with this share of the top speaker's time is the streamer too. */
+const SECONDARY_KEEP_THRESHOLD = 0.20;
 
 /**
  * Filter transcript segments to keep only the streamer's voice.
@@ -62,6 +65,9 @@ export interface Peak {
  *   - Strips music vocals, game NPCs, voice clips played during BRB
  *
  * Falls back to the full segment list if no speaker data is present.
+ *
+ * Speaker numbers only mean the same voice across a report's parts once
+ * oneStreamerAcrossParts has run (analyzeVod does it before this).
  */
 function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment[] {
   const hasSpeakerData = segments.some((s) => s.speaker !== undefined);
@@ -80,7 +86,6 @@ function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment
   // Always keep the top speaker. Then add any speaker whose total time is
   // at least 20% of the top speaker's — almost certainly the same person
   // whose ID got split by diarization mid-stream.
-  const SECONDARY_KEEP_THRESHOLD = 0.20;
   const topSeconds = Number(entries[0][1]);
   const keepIds = new Set<number>();
   for (const [idStr, secs] of entries) {
@@ -100,6 +105,47 @@ function filterDominantSpeaker(segments: TranscriptSegment[]): TranscriptSegment
   }
 
   return filtered;
+}
+
+/**
+ * Give the streamer the same speaker number in every part of a report.
+ *
+ * analyzeVod transcribes a stream in 12-minute parts, and Soniox and
+ * Deepgram both number speakers afresh for each one, so "1" in one part
+ * and "1" in the next can be different voices. Merged as they came, the
+ * streamer could be speaker 1 for most of a stream and speaker 2 in one
+ * part, and filterDominantSpeaker dropped that part as a background
+ * voice. OnlySteven_HQ's first report (2026-10-13) lost its last 10
+ * minutes this way, sign-off included, and was told it went quiet and
+ * ended without a goodbye.
+ *
+ * Each part is sorted out on its own with filterDominantSpeaker's rule:
+ * its most-talking speaker, and anyone with at least 20% of that
+ * speaker's time, become speaker 0. Every other voice gets a number no
+ * other part uses, so a game voice in one part never adds up with a
+ * different voice in another.
+ */
+export function oneStreamerAcrossParts(parts: TranscribeResult[]): TranscribeResult[] {
+  let nextOther = 1;
+  return parts.map(({ segments, words }) => {
+    const speakerTime = new Map<number, number>();
+    for (const seg of segments) {
+      if (seg.speaker === undefined) continue;
+      speakerTime.set(seg.speaker, (speakerTime.get(seg.speaker) ?? 0) + (seg.end - seg.start));
+    }
+    const topSeconds = Math.max(0, ...speakerTime.values());
+    const ids = new Map<number, number>();
+    for (const [id, secs] of speakerTime) {
+      ids.set(id, secs >= topSeconds * SECONDARY_KEEP_THRESHOLD ? 0 : nextOther++);
+    }
+    const renumber = <T extends { speaker?: number }>(item: T): T => {
+      if (item.speaker === undefined) return item;
+      // A word whose speaker never got a line of their own.
+      if (!ids.has(item.speaker)) ids.set(item.speaker, nextOther++);
+      return { ...item, speaker: ids.get(item.speaker) };
+    };
+    return { segments: segments.map(renumber), words: words.map(renumber) };
+  });
 }
 
 /**
