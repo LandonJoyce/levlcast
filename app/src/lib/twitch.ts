@@ -38,6 +38,29 @@ export class TwitchAuthError extends Error {
 }
 
 /**
+ * Thrown when Twitch's playlist server (usher) refuses a VOD with 403.
+ * GQL still hands out a playback token for a subscriber-only VOD, so this
+ * is where those get caught. Retrying never helps.
+ */
+export class TwitchVodRestrictedError extends Error {
+  constructor() {
+    super(
+      "Twitch only lets subscribers watch this VOD, so it can't be analyzed. " +
+      "To fix it, open your Twitch Creator Dashboard, go to Settings then Stream, and turn off subscriber-only VODs, or pick a public VOD. Then hit Analyze again."
+    );
+    this.name = "TwitchVodRestrictedError";
+  }
+}
+
+/** The error to throw for a failed usher master playlist request. */
+async function usherError(vodId: string, res: Response): Promise<Error> {
+  const body = await res.text().catch(() => "");
+  console.error(`[twitch] usher ${res.status} for VOD ${vodId}: ${body.slice(0, 300)}`);
+  if (res.status === 403) return new TwitchVodRestrictedError();
+  return new Error(`Usher failed: ${res.status}`);
+}
+
+/**
  * Exchange a Twitch refresh token for a new access + refresh token pair.
  * Call this when a GQL or API request returns 401, then retry with the new token.
  */
@@ -256,7 +279,7 @@ export async function getTwitchVodAudioUrl(vodId: string, twitchUserToken?: stri
 
   const masterUrl = `https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`;
   const masterRes = await fetch(masterUrl);
-  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+  if (!masterRes.ok) throw await usherError(vodId, masterRes);
 
   const lines = (await masterRes.text()).split("\n");
 
@@ -339,7 +362,7 @@ export async function downloadTwitchVodAudio(
   });
 
   const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
-  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+  if (!masterRes.ok) throw await usherError(vodId, masterRes);
 
   const masterLines = (await masterRes.text()).split("\n");
   let streamUrl = "";
@@ -537,7 +560,7 @@ export async function downloadTwitchVodVideo(
   const masterCtrl = withTimeout(10000);
   const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`, { signal: masterCtrl.signal })
     .catch((err) => { throw new Error(`Twitch master playlist fetch timed out: ${err.message}`); });
-  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+  if (!masterRes.ok) throw await usherError(vodId, masterRes);
   const masterText = await masterRes.text();
   const masterLines = masterText.split("\n");
 
@@ -764,7 +787,7 @@ export function streamTwitchVodAudio(vodId: string, twitchUserToken?: string): P
     });
 
     const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
-    if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+    if (!masterRes.ok) throw await usherError(vodId, masterRes);
 
     const lines = (await masterRes.text()).split("\n");
     let streamUrl = "";
@@ -921,7 +944,7 @@ export async function getTwitchVodSegmentList(vodId: string): Promise<VodSegment
   });
 
   const masterRes = await fetch(`https://usher.ttvnw.net/vod/${vodId}.m3u8?${usherParams}`);
-  if (!masterRes.ok) throw new Error(`Usher failed: ${masterRes.status}`);
+  if (!masterRes.ok) throw await usherError(vodId, masterRes);
 
   const masterLines = (await masterRes.text()).split("\n");
   let streamUrl = "";

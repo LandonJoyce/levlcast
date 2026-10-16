@@ -13,7 +13,7 @@
 
 import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { getTwitchVodSegmentList, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError } from "@/lib/twitch";
+import { getTwitchVodSegmentList, downloadTwitchVodVideo, fetchTwitchVods, fetchTwitchVodChat, getAppAccessToken, mapVodToRow, refreshTwitchToken, TwitchAuthError, TwitchVodRestrictedError } from "@/lib/twitch";
 import { audibleStats, buildAudibleChunks, isMostlyMuted, mutedRanges, segmentsWithin, MOSTLY_MUTED_MESSAGE, type TimeRange } from "@/lib/muted-audio";
 import type { TranscriptSegment, CaptionWord } from "@/lib/deepgram";
 import { bucketChat, formatPulseForPrompt, type ChatBucket } from "@/lib/chat-pulse";
@@ -2142,7 +2142,11 @@ export const analyzePublicPreview = inngest.createFunction(
 
         // The first 12 minutes, or 24 when the opening is a quiet
         // starting-soon screen (transcribeOpening in lib/public-preview.ts).
-        const result = await transcribeOpening(twitchVodId, title, streamSeconds);
+        const result = await transcribeOpening(twitchVodId, title, streamSeconds).catch((err) => {
+          // Sub-only VOD: Twitch will refuse it on every retry too.
+          if (err instanceof TwitchVodRestrictedError) throw new NonRetriableError(err.message);
+          throw err;
+        });
         console.log(
           `[preview] ${previewId}: ${result.segments.length} segments over ${result.analyzedSeconds}s`
         );
